@@ -13,8 +13,10 @@ from sqlalchemy import create_engine, pool, text
 
 from hiretitan.platform.config.settings import Settings
 from hiretitan.platform.db import APP_SCHEMA, Base
+from hiretitan.platform.db.models import import_all_models
 
 config = context.config
+import_all_models()
 target_metadata = Base.metadata
 
 

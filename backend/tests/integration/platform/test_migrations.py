@@ -7,35 +7,65 @@ from datetime import datetime
 from uuid import UUID
 
 from alembic import command
+from alembic.autogenerate import compare_metadata
 from alembic.config import Config
+from alembic.migration import MigrationContext
+from alembic.script import ScriptDirectory
 from sqlalchemy import String, create_engine, inspect, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-from hiretitan.platform.db import IdTimestampMixin, uuid7
+from hiretitan.platform.db import Base, IdTimestampMixin, uuid7
+from hiretitan.platform.db.models import import_all_models
 
 
 def test_upgrade_and_downgrade_baseline(
     fresh_database_url: str, make_alembic_config: Callable[[str], Config]
 ) -> None:
+    """Every migration upgrades to head and downgrades cleanly back to base."""
     cfg = make_alembic_config(fresh_database_url)
+    head = ScriptDirectory.from_config(cfg).get_current_head()
     engine = create_engine(fresh_database_url)  # psycopg 3 serves sync and async
     try:
         command.upgrade(cfg, "head")
         with engine.connect() as conn:
             assert "app" in inspect(conn).get_schema_names()
             version = conn.execute(text("SELECT version_num FROM app.alembic_version")).scalar()
-            assert version is not None
-            assert version.startswith("0001")
+            assert version == head
 
         command.downgrade(cfg, "base")
         with engine.connect() as conn:
             rows = conn.execute(text("SELECT count(*) FROM app.alembic_version")).scalar()
             assert rows == 0
+            assert inspect(conn).get_table_names(schema="app") == ["alembic_version"]
 
-        command.upgrade(cfg, "head")  # the baseline can be re-applied
+        command.upgrade(cfg, "head")  # and can be re-applied
     finally:
         engine.dispose()
+
+
+def test_models_match_migrations(
+    fresh_database_url: str, make_alembic_config: Callable[[str], Config]
+) -> None:
+    """The ORM tables and the migrations describe the same schema (no drift)."""
+    command.upgrade(make_alembic_config(fresh_database_url), "head")
+    import_all_models()
+    engine = create_engine(fresh_database_url)
+    try:
+        with engine.connect() as conn:
+            context = MigrationContext.configure(
+                conn,
+                opts={
+                    "include_schemas": True,
+                    "include_name": lambda name, type_, _: type_ != "schema" or name == "app",
+                    "compare_type": True,
+                    "version_table_schema": "app",
+                },
+            )
+            diff = compare_metadata(context, Base.metadata)
+    finally:
+        engine.dispose()
+    assert diff == []
 
 
 def test_uuid7_ids_are_time_ordered() -> None:
