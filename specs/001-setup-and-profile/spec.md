@@ -34,12 +34,13 @@ A person who has just installed HireTitan uploads their resume (PDF or DOCX). Th
 1. **US1-AS1** — **Given** no profile exists and AI is working, **When** the user uploads a valid PDF or DOCX resume, **Then** the app shows extraction progress and, when it finishes, a review screen pre-filled with the extracted contact, summary, experience (employer, title, location, dates, bullets), education, skills, projects, certifications and links.
 2. **US1-AS2** — **Given** the review screen is open, **When** the user edits, adds or removes any field or list item and presses Confirm, **Then** a new profile version is saved with exactly the user's final values, linked to the uploaded resume file, and marked as the current profile.
 3. **US1-AS3** — **Given** the AI returned a skill, employer, title, date or number that does not appear in the resume text, **When** the review screen opens, **Then** that item is not in the profile, and a notice lists each dropped item with the reason "not found in your resume".
-4. **US1-AS4** — **Given** the PDF contains hidden text (e.g. white-on-white, tiny or off-page), **When** the review screen opens, **Then** the hidden text is shown to the user in a visible warning, and it is not used as profile content unless the user adds it by hand.
-5. **US1-AS5** — **Given** the resume text contains a high-severity injection signal (e.g. instructions addressed to an AI), **When** parsing finishes, **Then** the process pauses before extraction and shows the flagged text, and the user chooses either to continue with extraction or to stop and fill in the profile by hand.
-6. **US1-AS6** — **Given** the file is a scanned image-only PDF with no readable text, **When** parsing finishes, **Then** the user is told the text could not be read and is offered to paste the resume text or fill in the profile by hand.
-7. **US1-AS7** — **Given** the AI output is invalid even after one automatic repair attempt, **When** extraction ends, **Then** the user gets whatever partial profile passed checks (possibly empty), with the missing sections marked for manual entry, and nothing the user uploaded is lost.
-8. **US1-AS8** — **Given** a confirmed profile exists, **When** the user uploads a newer resume and extraction finishes, **Then** the review opens pre-filled with the new values, every changed field is marked with its current value beside it, and the current profile stays unchanged until the user confirms.
-9. **US1-AS9** — **Given** the user leaves the review screen without confirming, **When** they come back later, **Then** the pending review is still there with their unsaved edits kept, and no profile version has been created.
+4. **US1-AS3b** — **Given** the review lists a dropped item, **When** the user chooses "Add anyway" on it, **Then** the item is put back into the review draft as the user's own entry and becomes a profile fact only when the user confirms.
+5. **US1-AS4** — **Given** the PDF contains hidden text (e.g. white-on-white, tiny or off-page), **When** the review screen opens, **Then** the hidden text is shown to the user in a visible warning, and it is not used as profile content unless the user adds it by hand.
+6. **US1-AS5** — **Given** the resume text contains a high-severity injection signal (e.g. instructions addressed to an AI), **When** parsing finishes, **Then** the process pauses before extraction and shows the flagged text, and the user chooses either to continue with extraction or to stop and fill in the profile by hand.
+7. **US1-AS6** — **Given** the file is a scanned image-only PDF with no readable text, **When** parsing finishes, **Then** the user is told the text could not be read and is offered to paste the resume text or fill in the profile by hand.
+8. **US1-AS7** — **Given** the AI output is invalid even after one automatic repair attempt, **When** extraction ends, **Then** the user gets whatever partial profile passed checks (possibly empty), with the missing sections marked for manual entry, and nothing the user uploaded is lost.
+9. **US1-AS8** — **Given** a confirmed profile exists, **When** the user uploads a newer resume and extraction finishes, **Then** the review opens pre-filled with the new values, every changed field is marked with its current value beside it, and the current profile stays unchanged until the user confirms.
+10. **US1-AS9** — **Given** the user leaves the review screen without confirming, **When** they come back later, **Then** the pending review is still there with their unsaved edits kept, and no profile version has been created.
 
 ---
 
@@ -56,7 +57,7 @@ The person fills in what they are looking for: target roles, seniority, years of
 1. **US2-AS1** — **Given** preferences have never been saved, **When** the user opens Preferences, **Then** the form shows the documented defaults (see FR-024) and nothing person-specific.
 2. **US2-AS2** — **Given** the form is filled, **When** the user saves, **Then** the values persist across reloads and app restarts, and the last-saved time is shown.
 3. **US2-AS3** — **Given** a confirmed profile exists, **When** the user opens Preferences, **Then** the app offers the profile's skills and most recent job title as one-click suggestions for key skills and target roles; nothing is added until the user picks it.
-4. **US2-AS4** — **Given** the user enters invalid values (e.g. minimum pay above maximum, negative years, empty role list), **When** they save, **Then** the save is refused and each problem is shown next to its field.
+4. **US2-AS4** — **Given** the user enters invalid values (e.g. minimum pay above target pay, negative years, empty role list), **When** they save, **Then** the save is refused and each problem is shown next to its field.
 5. **US2-AS5** — **Given** the currency is INR, **When** pay is entered or shown, **Then** it uses lakhs per annum (LPA); for other currencies it uses the annual amount in that currency.
 
 ---
@@ -130,7 +131,7 @@ The person can delete an uploaded resume file, or wipe all their HireTitan data 
 - **FR-008a**: Before any AI call, the system MUST extract email addresses, phone numbers and profile links from the resume text without AI, and replace them with placeholders in the text sent to the AI. The extracted values go straight into the review's contact section. The name is not masked.
 - **FR-009**: The system MUST use AI to extract a structured profile: contact (name, location; email, phone and links come from FR-008a), headline and summary, experience entries (employer, title, location, start and end dates or "current", bullet points), education entries (institution, qualification, field, dates, grade if stated), skills, projects (name, description, technologies, link), and certifications (name, issuer, date).
 - **FR-010**: The extraction output MUST be validated against the expected structure and rules (dates in order, no experience entry without employer or title). Invalid output gets one automatic repair attempt, then falls back to the valid part, with the rest marked for manual entry.
-- **FR-011**: Every extracted skill, employer, title, institution, date and number MUST be checked against the resume text; any item not found MUST be dropped and listed to the user with the reason.
+- **FR-011**: Every extracted skill, employer, title, institution, date and number MUST be checked against the resume text; any item not found MUST be dropped and listed to the user with the reason. Each drop MUST be undoable: the user can add a dropped item back into the review with one action (US1-AS3b).
 - **FR-012**: Each extraction MUST record the prompt version and model used, and each AI call MUST be logged with provider, model, tokens, cost, time taken and outcome.
 - **FR-013**: Extraction MUST run in the background with visible progress, and MUST survive an app restart without losing the upload.
 
@@ -178,7 +179,7 @@ The person can delete an uploaded resume file, or wipe all their HireTitan data 
 - **Preferences**: the person's job-search preferences (FR-023), with last-saved time.
 - **Settings**: budget cap, model per tier (fixed defaults in this slice), key status (status only, never the key).
 - **AI call log**: one record per AI call: provider, model, task, prompt version, tokens, cost, time taken, outcome.
-- **Background task**: a unit of AI work (e.g. extraction) with state: queued, running, paused (key or budget problem, or waiting for the user), done, failed.
+- **Workflow run**: one run of a background AI workflow (e.g. resume extraction) with state: queued, running, awaiting review (waiting for the user's decision), paused (key or budget problem), done, failed, cancelled.
 
 ## Success Criteria *(mandatory)*
 

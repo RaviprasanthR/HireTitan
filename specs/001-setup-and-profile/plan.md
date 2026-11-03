@@ -33,7 +33,7 @@ Versions and licences: research R1.
 
 **Project Type**: web application (backend api + worker, frontend SPA served by the api).
 
-**Performance Goals**: extraction of a two-page resume ≤ 60 s p95 (SC-002); UI pages interactive < 1 s locally; upload accepted < 2 s for 10 MB.
+**Performance Goals**: extraction of a two-page resume ≤ 60 s p95 (SC-002, measured by the eval in T051/T067); a 10 MB upload accepted (202) in < 2 s (asserted in T042).
 
 **Constraints**:
 - local only (127.0.0.1), no login;
@@ -55,14 +55,14 @@ Versions and licences: research R1.
 | **I. Human in the loop, no outbound actions** | Extraction ends in a review interrupt; nothing becomes the profile until the user confirms (FR-017). The high-severity injection pause hands the decision to the user (FR-007). Dropped items are shown with reasons (FR-011). No sending code exists; the architecture no-send test is added in this slice. | ✅ | ✅ |
 | **II. Truthful profile** | The deterministic grounding check drops anything not in the resume text (R5). Only the confirmed version is visible to other modules (FR-022, public `profile.application.get_current_profile`). Item ids enable later citation. | ✅ | ✅ |
 | **III. Untrusted input is data** | Sanitize → screen → mask → delimit → quarantined `extract_profile` (no tools, strict bounded schema). Hidden text is excluded and shown (R6). Flags are stored and shown (R7). An attack test set ships. | ✅ | ✅ |
-| **IV. Validated, versioned, provider-agnostic AI** | One `LlmPort`. The OpenAI adapter comes first, with the others before the public release (ADR-02, approved). Schema → rules → grounding, one repair, then fallback. The prompt is a versioned file with provenance on every artifact. Every call is logged. The budget guard blocks before the call. Native structured output, or JSON mode + strict parse as fallback (degrade gracefully). Eval runner for SC-003 (gate from v2). | ✅ | ✅ |
-| **V. Test-first** | Every task starts with failing tests named after FR/US/SC ids (contract matrix in [profile-ingest-workflow.md](contracts/profile-ingest-workflow.md)). Real Postgres via Testcontainers. Fakes only for the LLM, clock and file storage where needed. Respx contract tests for the OpenAI adapter. | ✅ | ✅ |
+| **IV. Validated, versioned, provider-agnostic AI** | One `LlmPort`. The OpenAI adapter comes first; Anthropic, Gemini and OpenAI-compatible adapters land before the public release (ADR-02, approved; **recorded deviation D1**). Schema → rules → grounding, one repair, then fallback. The prompt is a versioned file with provenance on every artifact. Every call is logged. The budget guard blocks before the call. Native structured output, or JSON mode + strict parse as fallback (degrade gracefully). Eval runner for SC-003 (gate from v2). | ✅ | ✅ |
+| **V. Test-first** | Every task starts with failing tests named after FR/US/SC ids (contract matrix in [profile-ingest-workflow.md](contracts/profile-ingest-workflow.md)). Real Postgres via Testcontainers. Fakes only for the LLM provider and the clock; file storage uses a real temporary folder. Respx contract tests for the OpenAI adapter. | ✅ | ✅ |
 | **VI. Lean architecture** | Ports only for the LLM, file storage and clock. The document parser, sanitizer and grounding check are plain functions, not ports. SQLAlchemy is used directly in `infra/`. Pure `domain/` packages enforced by import-linter. Three feature modules (`profile`, `preferences`, `setup`) + `platform`. | ✅ | ✅ |
 | **VII. Permitted sources only** | No job sources in this slice. The only outbound host is the OpenAI API (allowlisted). | ✅ n/a | ✅ n/a |
-| **VIII. Self-hosted privacy and portability** | Local only; key in `.env`; contact masking (FR-008a); no telemetry; logs redact resume text; delete-file and delete-all (FR-034/035); synthetic fixtures only; `docker compose up` works on all three OSes (R14); defaults documented and nothing person-specific (FR-024). | ✅ | ✅ |
+| **VIII. Self-hosted privacy and portability** | Local only; key in `.env`; contact masking (FR-008a); no telemetry; logs redact resume text; delete-file and delete-all (FR-034/035); synthetic fixtures only; `docker compose up` works on all three OSes (R14); defaults documented and nothing person-specific (FR-024). The guided first-run wizard is replaced by the Home setup checklist in this slice (**recorded deviation D2**). | ✅ | ✅ |
 | **Quality gates** | CI runs ruff, mypy --strict, import-linter, pytest with coverage gates, frontend typecheck/lint/tests, and licence + vulnerability checks (R15). Per-story reviews: python, FastAPI, security, database and React reviewers. The prompt eval report goes in the PR. | ✅ | ✅ |
 
-**Result**: passes before research and after design. There are no violations, so Complexity Tracking lists only the notable additions.
+**Result**: passes before research and after design, with two recorded, time-limited deviations (D1, D2 in Complexity Tracking), both approved by Ravi and both required to be closed before the first public release.
 
 ## Project Structure
 
@@ -163,7 +163,16 @@ Each user story is reviewed (python/FastAPI, security, database, React reviewers
 
 ## Complexity Tracking
 
-No constitution violations. Notable additions, recorded for transparency:
+### Recorded deviations (constitution governance: deviations recorded and justified here)
+
+| ID | Principle | Deviation | Justification | Closing condition |
+|---|---|---|---|---|
+| D1 | IV (OpenAI, Anthropic, Gemini and OpenAI-compatible MUST be supported) | Only the OpenAI adapter is built in this slice | ADR-02, decided by Ravi 2026-11-03: build and evaluate with one provider first. The port, fake LLM and all tests are provider-neutral, so adding adapters changes no callers | The other three adapters, each with recorded-fixture contract tests, are merged before the first public release (tracked as a follow-up in T070) |
+| D2 | VIII (`docker compose up` plus a first-run setup wizard) | No guided wizard; the Home setup checklist links each step | Spec Out of scope: wizard polish comes later in 001. The checklist covers the same steps (key, resume, profile, preferences) | A guided first-run wizard ships before the first public release (tracked as a follow-up in T070) |
+
+### Notable additions
+
+Recorded for transparency (not deviations):
 
 | Addition | Why needed | Simpler alternative rejected because |
 |---|---|---|

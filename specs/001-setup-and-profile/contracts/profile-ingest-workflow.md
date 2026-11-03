@@ -26,7 +26,7 @@ flowchart TD
 | Node | Input → Output (state keys) | Failure behaviour |
 |---|---|---|
 | `store_file` | resume_file_id → file present in storage | already done by the api (upload transaction); the node verifies the hash |
-| `parse_document` | file → `visible_text`, `hidden_text[]`, `page_count`, `parse_status` | corrupt → run `failed` with message; `< 200` visible chars → `no_text`, run `done` with outcome `no_text` (UI offers paste/manual) |
+| `parse_document` | file → `visible_text`, `hidden_text[]`, `page_count`, `parse_status` | corrupt → run `failed` with message; `< 200` visible chars → `resume_files.parse_status = no_text`, run `done`; the UI reads the file status and offers paste/manual |
 | `sanitize_and_screen` | visible_text → `clean_text`, `truncated_at`, `flags[]` | pure; hidden runs screened too, flagged `location=hidden` |
 | `mask_contacts` | clean_text → `masked_text`, `contacts {emails, phones, links}` | pure |
 | `extract_profile` | masked_text → `ExtractedProfile` via `LlmPort` (tier `fast`, prompt `extract_profile` v1) | `AiUnavailable` → run `paused` (R9); provider error → Procrastinate retry (10 s, 1 min, 5 min) → `failed` |
@@ -66,7 +66,7 @@ The budget guard runs before the adapter call and returns `budget_blocked` witho
 | `test_US1_AS3_ungrounded_items_dropped` | output with a planted skill/employer | items absent, listed in `dropped_items` |
 | `test_US1_AS4_hidden_text_reported_not_used` | asserts prompt lacks the hidden string | hidden text in flags |
 | `test_US1_AS5_high_injection_pauses_before_llm` | must not be called | `waiting_for = injection_decision` |
-| `test_US1_AS6_no_text_pdf` | must not be called | outcome `no_text` |
+| `test_US1_AS6_no_text_pdf` | must not be called | run `done`, file `parse_status = no_text` |
 | `test_US1_AS7_invalid_then_invalid_falls_back` | invalid ×2 | partial profile, outcome `fallback`, 2 `llm_calls` |
 | `test_US1_AS8_reupload_marks_changes` | valid output differing from current | `changed_paths` correct, current unchanged |
 | `test_US3_AS2_key_rejected_pauses_run` | raises key rejected | run `paused`, reason `key_rejected` |

@@ -92,6 +92,7 @@ Constraint: partial unique index `ON (status) WHERE status = 'open'`, so at most
 | source_file_id | uuid FK → resume_files null | ON DELETE SET NULL |
 | source_deleted | bool | true after the source file is deleted (FR-034) |
 | review_id | uuid FK → profile_reviews null | when created from a review; ON DELETE SET NULL (the review is removed with its file) |
+| prompt_name / prompt_version / provider / model | text null | copied from the review when `created_by = extraction`, so provenance survives file deletion (constitution IV); null for manual versions |
 | created_at | timestamptz | |
 
 The immutability trigger allows only the deletion bookkeeping: `source_file_id → NULL`, `review_id → NULL`, `source_deleted → true`. `content` can never change.
