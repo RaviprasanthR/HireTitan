@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import asyncio
 import sys
+import uuid
 from collections.abc import AsyncIterator, Callable, Iterator, Mapping
 from datetime import UTC, datetime
 from pathlib import Path
@@ -20,10 +21,12 @@ from pathlib import Path
 import pytest
 from alembic import command
 from alembic.config import Config
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
+from sqlalchemy import create_engine, make_url, text
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 from testcontainers.community.postgres import PostgresContainer
 
 from hiretitan.platform.clock import FakeClock
+from hiretitan.platform.db import create_engine as create_engine_for
 
 BACKEND = Path(__file__).resolve().parents[1]
 POSTGRES_IMAGE = "postgres:16"
@@ -46,16 +49,43 @@ def alembic_config(url: str) -> Config:
 
 
 @pytest.fixture(scope="session")
-def postgres_url() -> Iterator[str]:
+def make_alembic_config() -> Callable[[str], Config]:
+    return alembic_config
+
+
+@pytest.fixture(scope="session")
+def postgres_container() -> Iterator[PostgresContainer]:
     with PostgresContainer(POSTGRES_IMAGE, driver="psycopg") as container:
-        url = container.get_connection_url()
-        command.upgrade(alembic_config(url), "head")
-        yield url
+        yield container
+
+
+@pytest.fixture(scope="session")
+def postgres_url(postgres_container: PostgresContainer) -> str:
+    """The shared test database, migrated to head once per session."""
+    url = postgres_container.get_connection_url()
+    command.upgrade(alembic_config(url), "head")
+    return url
+
+
+@pytest.fixture
+def fresh_database_url(postgres_container: PostgresContainer) -> Iterator[str]:
+    """An empty, unmigrated database for migration tests; dropped afterwards."""
+    name = f"t_{uuid.uuid4().hex[:12]}"
+    admin_url = postgres_container.get_connection_url()
+    admin = create_engine(admin_url, isolation_level="AUTOCOMMIT")
+    with admin.connect() as conn:
+        conn.execute(text(f'CREATE DATABASE "{name}"'))
+    try:
+        yield make_url(admin_url).set(database=name).render_as_string(hide_password=False)
+    finally:
+        with admin.connect() as conn:
+            conn.execute(text(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)'))
+        admin.dispose()
 
 
 @pytest.fixture(scope="session")
 async def db_engine(postgres_url: str) -> AsyncIterator[AsyncEngine]:
-    engine = create_async_engine(postgres_url)
+    engine = create_engine_for(postgres_url)
     yield engine
     await engine.dispose()
 
