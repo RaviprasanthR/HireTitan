@@ -4,7 +4,7 @@
 
 PostgreSQL 16, database `hiretitan`, schema `app` (our tables), schema `lg` (LangGraph checkpoints, managed by `langgraph-checkpoint-postgres`) and Procrastinate's own tables. Conventions (architecture §8): UUID primary keys (`uuid7` generated in the app), `created_at` / `updated_at` as `timestamptz` UTC, and every AI-produced row carries `prompt_name`, `prompt_version`, `provider` and `model`.
 
-Ownership: the **profile** module owns `resume_files`, `profile_reviews`, `profiles` and `profile_versions`; **preferences** owns `preferences`; **setup** owns `settings`, `provider_status` and data deletion; **platform/runtime** owns `workflow_runs`; **platform/llm** owns `llm_calls`.
+Ownership: the **profile** module owns `resume_files`, `profile_reviews`, `profiles` and `profile_versions`; **preferences** owns `preferences`; **setup** owns `settings` and data deletion; **platform/runtime** owns `workflow_runs`; **platform/llm** owns `llm_calls` and `provider_status` (platform never imports feature modules, so the budget guard gets the cap through an injected provider).
 
 ---
 
@@ -104,7 +104,7 @@ Single row (`singleton` key). Columns map 1:1 to `Preferences` below; `content j
 
 Single row: `budget_cap_usd numeric(8,2) DEFAULT 25.00 CHECK (budget_cap_usd >= 0)`, `updated_at`. Tier → model mapping is **not** stored in this slice (fixed in `models.yaml`, clarification Q2).
 
-### `app.provider_status` (setup)
+### `app.provider_status` (platform/llm)
 
 | Column | Type | Rules |
 |---|---|---|
