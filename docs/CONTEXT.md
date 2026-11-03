@@ -26,6 +26,7 @@ This file captures project decisions so work can resume in a new session without
 | File | Role |
 |---|---|
 | `docs/clarified-requirements.md` | **Approved requirements baseline** (2026-11-03) |
+| `docs/architecture.md` | System design: processes, layers, AI layer, workflow catalogue, ADRs (DRAFT) |
 | `.specify/memory/constitution.md` | Binding principles and quality gates |
 | `CONTRIBUTING.md` | Branching, commit format, PR flow |
 | `docs/archive/specs-v0/` | Earlier monolithic specs (requirements, design, prompts, tasks, open decisions, analysis). Input only, not binding |
@@ -38,10 +39,12 @@ This file captures project decisions so work can resume in a new session without
 - **2026-11-03 (sources):** Built-in global company list (company name, city, website, careers URL, resolved board; no HR contacts) → career-ops ATS boards; careers-page fetch + AI extraction with a "check manually" fallback; Gmail job alerts (read-only); Adzuna/Jooble/Careerjet with the user's own key; career-ops free boards optional; manual paste. No scraping or paid scraped-data APIs. ATS discovery recon: 14/62 seed companies resolve automatically.
 - **2026-11-03 (setup):** Baseline approved. Spec Kit 1.2.6 initialised (Claude integration, Python scripts). Constitution v1.0.0 ratified, amended to **v1.1.0** (master branch, PR merges, project commit format). Old specs archived and redacted of personal data. Pre-spec backend code removed from the repo. **First commit = repository skeleton** on `master`: README, LICENSE, CONTRIBUTING, editor/git config, `.env.example`, `backend/` and `frontend/` placeholders, `specs/`, commit-msg hook and `commit` skill.
 
+- **2026-11-03 (architecture):** `master` pushed to GitHub. On branch `001-setup-and-profile`: **`docs/architecture.md`** (modular monolith api + worker + Postgres; LangGraph workflows W1–W9 with interrupts; LLM port with own adapters; validation chain; untrusted-input quarantine; ADR-01…11). Decisions: company list in a Postgres `companies` table seeded from the repo, editable, CSV import/export; one resume template + optional AI content suggestions (W9); **job search is rules first, AI optional** (W3 makes no LLM calls by default; W3b "Check with AI" on demand); **OpenAI first** (other adapters before the public release); **local only**, no hosting, no login. Company-source test run: `docs/research/2026-11-03-company-source-feasibility.md` (9/62 verified via board APIs, ≈23 reachable today, 35–40 after a manual pass; Keka robots.txt issue to resolve before 002).
+
 ## 5. Next steps
 
-1. Push `master` to the HireTitan remote (when Ravi says so).
-2. `git switch -c 001-setup-and-profile master`, then `/speckit-specify` for **001-setup-and-profile** (install, setup wizard, resume upload + extraction, profile editing, re-upload diff, preferences), then clarify → plan → tasks → analyze, each approved by Ravi.
+1. **Start the first basic work (Ravi, 2026-11-03): user preferences, resume parsing, and a first-level UI.** That's the core of feature 001. Run `/speckit-specify` for **001-setup-and-profile** scoped to these first (preferences form, resume upload + parsing + AI extraction with OpenAI, profile view/edit, a basic dashboard shell), then clarify → plan → tasks → analyze. Each is approved by Ravi before any code.
+2. Later in 001 or after: setup wizard polish, re-upload diff, career-ops import; other LLM adapters before the public release.
 3. Open items from `docs/clarified-requirements.md` §13: missing careers URLs, fuzzy dedup rules, aggregator terms check, Gmail OAuth guide, default models per provider, offer comparison, pay handling when unstated.
 
 ## 6. How to resume in a new session
