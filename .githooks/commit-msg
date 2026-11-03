@@ -1,0 +1,42 @@
+#!/bin/sh
+# HireTitan commit-msg hook: enforces the project commit format.
+#
+#   [<branch> - <feature>] - If applied this commit will <change>
+#
+# Enable once per clone:  git config core.hooksPath .githooks
+# See CONTRIBUTING.md and .claude/skills/commit/SKILL.md.
+
+msg_file="$1"
+# First non-comment, non-empty line is the subject.
+subject=$(grep -v '^#' "$msg_file" | sed '/^[[:space:]]*$/d' | head -n 1)
+
+# Let git-generated messages through (merges, reverts, autosquash).
+case "$subject" in
+  "Merge "*|"Revert "*|"fixup! "*|"squash! "*|"amend! "*) exit 0 ;;
+esac
+
+fail() {
+  echo "commit-msg: $1" >&2
+  echo "" >&2
+  echo "  Expected: [<branch> - <feature>] - If applied this commit will <change>" >&2
+  echo "  Example:  [001-setup-and-profile - resume upload] - If applied this commit will add PDF and DOCX resume upload with size limits" >&2
+  echo "  Got:      $subject" >&2
+  exit 1
+}
+
+pattern='^\[[A-Za-z0-9._/-]+ - [^]]*[^] ]\] - If applied this commit will,? [a-z].{9,}$'
+echo "$subject" | grep -Eq "$pattern" || fail "subject does not match the HireTitan commit format."
+
+# The <branch> part must name the branch being committed to (skipped when HEAD is detached, e.g. during a rebase).
+branch=$(git symbolic-ref --quiet --short HEAD 2>/dev/null)
+if [ -n "$branch" ]; then
+  named=$(echo "$subject" | sed -E 's/^\[([^ ]+) - .*/\1/')
+  [ "$named" = "$branch" ] || fail "subject names branch '$named' but you are on '$branch'."
+fi
+
+# Subject should not end with a period.
+case "$subject" in
+  *.) fail "subject must not end with a period." ;;
+esac
+
+exit 0

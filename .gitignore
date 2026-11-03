@@ -1,0 +1,43 @@
+# Secrets and local config
+.env
+.env.*
+!.env.example
+
+# Maintainer's personal notes and local backups (never committed)
+docs/private/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+*.egg-info/
+dist/
+build/
+
+# Node / frontend
+node_modules/
+frontend/dist/
+*.tsbuildinfo
+
+# App runtime data (resumes, exports, database volumes)
+/data/
+uploads/
+exports/
+*.sqlite3
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
