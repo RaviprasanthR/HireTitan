@@ -1,6 +1,6 @@
 # HireTitan — Architecture
 
-Status: **DRAFT, awaiting Ravi's review** · Date: 2026-11-03 · Branch: `001-setup-and-profile`
+Status: **APPROVED by Ravi 2026-11-03** (section-by-section review) · Branch: `001-setup-and-profile`
 
 This is the system-wide design every feature plan (`specs/NNN-*/plan.md`) builds on. It covers what cuts across features: processes, layers, the AI layer, workflow conventions, the workflow/node catalogue, data ownership and the open technical choices (§12 ADRs). Per-feature details (exact tables, endpoints, prompts, screens) belong in each feature's plan. It must comply with the [constitution](../.specify/memory/constitution.md); where they differ, the constitution wins. Changes after approval go through a PR like any other change.
 
@@ -43,8 +43,8 @@ Nothing in the system can send email, messages or applications (constitution I).
 | Process | What it runs | Notes |
 |---|---|---|
 | `db` | `postgres:16` | Named volume. One database `hiretitan`, schemas `app` (our tables) and `lg` (LangGraph checkpoints). |
-| `api` | FastAPI (uvicorn) | REST `/api/v1`, SSE event stream, serves the built SPA as static files. Bound to `127.0.0.1` by default. Never calls an LLM itself; it enqueues tasks. |
-| `worker` | Python task runner | Claims tasks from Postgres (`FOR UPDATE SKIP LOCKED`), runs LangGraph workflows, source fetches, career-ops subprocesses, rendering. Runs N concurrent tasks inside one process (asyncio). |
+| `api` | FastAPI (uvicorn) | REST `/api/v1`, SSE event stream, serves the built SPA as static files. Bound to `127.0.0.1` only (local only, no login). Never calls an LLM itself; it enqueues tasks. |
+| `worker` | Procrastinate worker | Claims tasks from the Postgres queue, runs LangGraph workflows, source fetches, career-ops subprocesses, rendering. Runs N concurrent tasks inside one process (asyncio). |
 | `web` (dev only) | Vite dev server | In production the SPA is built into the backend image and served by `api`. |
 
 **One backend image** (Python 3.12 + Node 22 + career-ops pinned at v1.38.0) is used for both `api` and `worker` with different commands. A one-shot `migrate` step (Alembic) runs before `api` starts.
@@ -53,28 +53,41 @@ Development (Ravi): `db` in Docker; `api`, `worker` and `web` run natively with 
 
 ## 3. Backend layers and module layout
 
+**Package by feature, layers inside** (the usual modular-monolith layout):
+
 ```
 backend/
   src/hiretitan/
-    domain/          pure Python: entities, value objects, state machines, rules (no framework imports)
-    application/     use cases + LangGraph workflows; depends on domain and on ports (interfaces)
-      ports/         LlmPort, JobSourcePort, FileStoragePort, ClockPort, CareerOpsPort
-      workflows/     one module per graph (profile_ingest, search_run, …)
-    adapters/        port implementations: llm/{openai,anthropic,gemini,openai_compat}, sources/*, storage/local, careerops/
-    infra/           SQLAlchemy models + repositories, Alembic, task queue, settings, secrets, logging
-    api/             FastAPI routers, request/response schemas, SSE
-    worker/          task runner entrypoint, task handlers
+    profile/         resume upload, parsing, profile versions          (001)
+    preferences/     job preferences                                    (001)
+    companies/       company list, seed loader, CSV import/export       (002)
+    jobs/            search rules, search runs, rule filter, AI check, scoring (002)
+    applications/    tracking, follow-ups, data export                  (003)
+    outreach/        drafts                                             (004)
+    resumes/         tailoring, content suggestions, rendering          (005)
+    interviews/      (006, R2)
+      └─ each module: domain/ · application/ · infra/ · api/ (+ adapters/ only where it owns a boundary)
+    platform/        shared building blocks
+      llm/           LlmPort, OpenAI adapter (others later), budget guard, validation chain, prompt registry
+      runtime/       Procrastinate app + task definitions, workflow runs, LangGraph checkpointer, events/SSE
+      untrusted/     sanitize · screen · delimit · hidden-text detection
+      storage/ clock/ config/ db/ security/ careerops/
+    api_main.py      FastAPI composition root
+    worker_main.py   worker composition root
     prompts/         versioned prompt files + output schemas (see §5.4)
+  seed/              companies.yaml (company columns only)
   evals/             evaluation sets and runner (per prompt)
-  tests/             unit / integration / contract / workflow / architecture
+  tests/             unit / integration / contract / workflow / api / architecture / security
 ```
 
 Rules (enforced by import-linter, constitution VI):
-- `domain` imports nothing from the project's other layers or from frameworks (no FastAPI, SQLAlchemy, LangGraph, pydantic-settings).
-- `application` may import `domain` and `application.ports`, plus LangGraph and Pydantic. It does not import `adapters`, `api` or `infra` directly; those are wired in at startup.
-- `api` and `worker` are the only composition roots.
-- Persistence: SQLAlchemy is used directly in repositories in `infra/`, with no extra repository-interface layer (lean architecture). Application code receives repositories by dependency injection.
-- **No-send rule:** an architecture test fails the build if any module imports `smtplib`, an email-sending SDK or a messaging SDK, or if an outbound HTTP adapter uses a non-GET method against a host outside the allowlist (LLM providers, aggregator APIs, Google OAuth).
+- Inside every module: `api → application → domain`; `infra` implements what `application` needs; `domain` imports nothing from frameworks (no FastAPI, SQLAlchemy, LangGraph, pydantic-settings).
+- Modules don't reach into each other's internals: they call only another module's public `application` functions (e.g. `jobs` asks `preferences` for the current rules; it never reads its tables).
+- Every module may use `platform`; `platform` never imports a feature module.
+- `api_main` and `worker_main` are the only composition roots.
+- Persistence: SQLAlchemy is used directly in each module's `infra/`, with no extra repository-interface layer (lean architecture). Application code receives repositories by dependency injection.
+- **No-send rule:** an architecture test fails the build if any module imports `smtplib`, an email-sending SDK or a messaging SDK, or if an outbound HTTP adapter uses a non-GET method against a host outside the allowlist (OpenAI and other LLM providers, aggregator APIs, Google OAuth).
+- **career-ops request allowlist:** career-ops is Node code, so the Python test above can't see it. Each enabled career-ops provider has an allowlist of hosts and HTTP methods (e.g. Workday search is a POST to `*.myworkdayjobs.com`). A contract test runs career-ops against recorded responses through a recording proxy and fails on any request outside the list. Before a provider is enabled, its request paths are checked against the target's robots.txt (see `docs/research/2026-11-03-company-source-feasibility.md`, Keka finding).
 
 ## 4. Task and workflow execution
 
@@ -100,12 +113,13 @@ sequenceDiagram
 ```
 
 Conventions:
-- **Tasks table** (`app.tasks`): type, payload, status (`queued → running → done | failed | dead`), attempts, `run_after`, lease expiry. Retries with backoff, then `dead` (visible in the UI). A crashed worker's lease expires and the task is reclaimed.
+- **Queue: Procrastinate** (ADR-03) on the same Postgres. The API defers a task in the same transaction as the data it belongs to; the worker picks it up with `SELECT … FOR UPDATE SKIP LOCKED`, woken by `LISTEN/NOTIFY` (with polling as a fallback). Retries with backoff (e.g. 10 s, 1 min, 5 min), then failed (visible in the UI). Stalled tasks from a crashed worker are detected and retried. Queueing locks limit per-type concurrency (e.g. one search run at a time). Procrastinate's periodic tasks run the daily date check.
 - **Workflow runs** (`app.workflow_runs`): one row per graph execution, with the LangGraph `thread_id`, status (`running | awaiting_review | done | failed | cancelled`), and what's waiting for the user. The UI's "Needs your review" list is built from this table.
 - **Human approval** uses LangGraph `interrupt()`. Resuming is a new task carrying the user's decision. A paused run costs nothing while it waits.
 - **Idempotent nodes:** a node checks for its existing output (keyed by input hash and prompt version) before calling the LLM, so a retried task never pays twice.
 - **Progress** goes out as Postgres `NOTIFY` events → `api` → SSE to the browser. No Redis.
-- **Manual triggers only** for search runs (requirements §3). The only scheduled job in R1 is the daily `no_response` / follow-up date check, a cheap SQL job.
+- **Manual triggers only** for search runs (requirements §3). The only scheduled job in R1 is the daily `no_response` / follow-up date check, a cheap SQL job (a Procrastinate periodic task).
+- **Invalid API key:** when OpenAI rejects the key (401/403), the provider is marked "key invalid", AI tasks are **paused, not failed**, and the dashboard shows a banner to update `OPENAI_API_KEY` in `.env` and restart. Paused tasks continue after that; nothing is lost.
 
 ## 5. AI layer
 
@@ -134,7 +148,8 @@ class LlmResult(Generic[T]):
 ```
 
 - One adapter per provider family: **OpenAI**, **Anthropic**, **Google Gemini**, and **OpenAI-compatible** (base URL + key; covers Ollama, OpenRouter, Groq, Azure OpenAI and others). Each adapter uses the provider's own SDK and its native structured-output feature when the model supports it. Otherwise it falls back to JSON in the prompt plus strict parsing (constitution IV, "degrade gracefully").
-- **Model tiers**: workflows ask for `fast` or `strong`, never a model name. Settings map each tier to a model per provider. Defaults per provider are chosen in feature 001's plan after measuring cost and quality.
+- **OpenAI first** (ADR-02): feature 001 builds only the OpenAI adapter; the others land before the first public release. The port, the fake LLM and all tests are provider-neutral from day one.
+- **Model tiers**: workflows ask for `fast` or `strong`, never a model name. Settings map each tier to a model per provider. **Profile extraction uses `fast` for now** (cost); the 001 cost/quality test decides whether to change it.
 - **Budget guard** (wraps every adapter): estimates the cost before the call and blocks it with `budget_blocked` if the month's spend plus the estimate would pass the cap. Logs every call to `app.llm_calls` (provider, model, task, prompt version, tokens, cost, latency, outcome). Batch actions (e.g. relevance check on 80 jobs) show an estimate before the user confirms.
 - Prices come from a versioned price table shipped with the app and editable in settings, since OpenAI-compatible endpoints vary.
 
@@ -142,14 +157,14 @@ class LlmResult(Generic[T]):
 
 Every LLM output passes, in order:
 1. **Schema**: parse into the Pydantic model (bounded lengths, enums, required fields).
-2. **Business rules** per task, e.g. relevance reason non-empty; queries ≤ N; dates sane.
+2. **Business rules** per task, e.g. relevance reason non-empty; rule count ≤ N; dates sane.
 3. **Truthfulness check** for profile-derived outputs (drafts, tailored resume, answer reviews): every number, employer, date and skill in the output must appear in the cited profile facts (constitution II). This is deterministic code, not another LLM call.
 4. **Safety**: no URLs or emails other than allowed ones, no echoed injection phrases.
 
 On failure: **one repair attempt** (the error list goes back to the model), then a **defined fallback** per task (e.g. relevance → "unsure", shown to the user; extraction → partial profile marked for manual entry). A failed AI step never crashes a workflow or loses data.
 
 ### 5.3 Model use per node
-See §7. Rule of thumb: `fast` for extraction, classification and query proposal; `strong` for drafting and tailoring.
+See §7. Rule of thumb: `fast` for extraction, classification and search-rule proposal; `strong` for drafting and tailoring.
 
 ### 5.4 Prompts and evals
 - Prompts live as files: `prompts/<task>/v<N>/{system.md, user.md.j2, schema.py, meta.yaml}`. `meta.yaml` holds version, tier, max tokens and changelog.
@@ -168,6 +183,16 @@ All external text (resumes, job descriptions, careers pages, emails, aggregator 
 
 A resume is the user's own file but is still treated as untrusted: it could contain hidden text.
 
+Further layers (approved 2026-11-03):
+
+6. **Capability limits** (the strongest layer): the app can't send anything, AI steps have no tools and no internet access, and AI text is rendered as plain text (never HTML or Markdown, which blocks image-link exfiltration).
+7. **Grounding check on extraction**: every skill, employer, title, date and number an extraction step returns must appear in the source text (deterministic check); anything not found is dropped and reported. Planted claims can't become facts, and the user still confirms the profile.
+8. **Hidden-text detection in PDFs**: while parsing, text that is white-on-white, tiny or outside the page is detected and shown to the user during profile review.
+9. **High-severity flags pause the workflow** for the user instead of letting it continue automatically.
+10. **Attack test set**: injected job posts, hidden-text PDFs, emails with fake system messages, link-exfiltration attempts. The tests assert bounded fields, raised flags, unchanged rule decisions and no planted links in drafts. They run on every build; the eval variants run on prompt changes.
+
+Residual risk: a source can still simply lie (e.g. claim "remote"). That's bad data the user can see, not an AI takeover.
+
 ## 7. Workflow catalogue
 
 Legend: **D** deterministic code · **L** LLM node (tier) · **⏸** interrupt for user approval · **S** source/IO.
@@ -178,24 +203,28 @@ Trigger: resume upload (first time or re-upload).
 | # | Node | Type | Input → Output |
 |---|---|---|---|
 | 1 | `store_file` | D | upload → content-addressed file (sha256); type/size checks (PDF/DOCX) |
-| 2 | `parse_document` | D | file → plain text + layout hints (sections, bullets) |
+| 2 | `parse_document` | D | file → plain text + layout hints (sections, bullets) + **hidden-text report** |
 | 3 | `sanitize` | D | text → sanitized text + injection flags |
 | 4 | `extract_profile` | L fast | sanitized text → `ExtractedProfile` (contact, summary, experience[] with bullets, education, skills, certifications, links) |
-| 5 | `validate_profile` | D | schema + rules (dates ordered, no empty roles); repair/fallback |
+| 5 | `validate_profile` | D | schema + rules (dates ordered, no empty roles) + **grounding check against the source text**; repair/fallback |
 | 6 | `diff_with_current` | D | only if a confirmed profile exists → field-level diff |
 | 7 | `review_profile` | ⏸ | first time: user edits/approves the profile; re-upload: user accepts/rejects each diff item |
-| 8 | `save_profile_version` | D | new immutable profile version; becomes the source of truth |
+| 8 | `save_profile_version` | D | new immutable profile version, **linked to the resume file it came from**; becomes the source of truth |
 
-### W2 `query_proposal` (feature 002)
-Trigger: user asks for suggestions, or the profile or preferences change.
+Preferences are not a workflow: a plain form saved directly through the `preferences` module (no AI, no pause).
+
+### W2 `search_rules_proposal` (feature 002)
+Trigger: user asks for suggestions, or the profile or preferences change. The user can also skip the AI and write the rules by hand.
+
+"Search rules" replace the earlier "search queries": job boards return a company's whole list, so what matters is the rule set the W3 `rule_filter` applies. One concept: AI proposes, the user approves, the rules filter.
 
 | # | Node | Type | Input → Output |
 |---|---|---|---|
 | 1 | `build_context` | D | confirmed profile + preferences (roles, stack, locations weighted highest) |
-| 2 | `propose_queries` | L fast | context → `QueryProposal[]` (role keywords, locations, per-source query, rationale) |
-| 3 | `validate_queries` | D | bounds, dedup against existing queries |
-| 4 | `approve_queries` | ⏸ | user edits/approves/rejects each query |
-| 5 | `save_queries` | D | approved queries stored with version |
+| 2 | `propose_rules` | L fast | context → `SearchRules` (title include/exclude keywords, synonyms, stack keywords, locations + work mode, max posting age, rationale) |
+| 3 | `validate_rules` | D | bounds, conflicts (same word included and excluded), dedup against existing rules |
+| 4 | `approve_rules` | ⏸ | user edits/approves/rejects each rule |
+| 5 | `save_rules` | D | approved rule set stored with version; used by W3 |
 
 ### W3 `search_run` (features 002 / 002b)
 Trigger: user clicks "Run search". **Rules first, AI optional**: the default run makes **no LLM calls**. AI appears only as a fallback for unstructured pages/emails (opt-in per source, cost shown) and in the separate, optional W3b.
@@ -216,7 +245,7 @@ flowchart LR
 
 | Node | Type | Notes |
 |---|---|---|
-| `plan_run` | D | approved queries × enabled sources → fetch plan; pushes location/keyword filters into the source request where the board's search supports it |
+| `plan_run` | D | approved search rules × enabled sources → fetch plan; pushes location/keyword filters into the source request where the board's search supports it |
 | `fetch_*` | S | one branch per source (LangGraph `Send`), **isolated**: a failure is recorded on that source's run and doesn't stop the others (constitution VII). career-ops: HireTitan writes its `portals.yml` from the company list and runs `node scan.mjs --json` in its own data folder |
 | careers-page parsing | D, then L fast (opt) | 1) schema.org `JobPosting` JSON-LD; 2) generic job-link/title heuristics; 3) only if enabled for that source: `extract_jobs_from_page` (quarantined). robots.txt + rate limit + cache first; failure → "check manually" list |
 | alert parsing | D, then L fast (opt) | per-sender template parsers (Naukri, LinkedIn, Indeed, …); `parse_alert_email` (quarantined) only as an opt-in fallback when a template changes |
@@ -282,10 +311,10 @@ Exact schemas are designed per feature. Ownership by area:
 
 | Area | Main tables (indicative) | Owner feature |
 |---|---|---|
-| Setup | `settings`, `provider_configs` (encrypted keys), `budget` | 001 |
-| Profile | `resume_files`, `profiles`, `profile_versions`, `preferences`, `style_guides` | 001 (style guide: 004) |
-| Runtime | `tasks`, `workflow_runs`, `llm_calls`, `events` | 001 (foundation) |
-| Search | `companies` (built-in seed + user), `sources`, `search_queries`, `source_runs`, `jobs`, `job_sources`, `job_facts`, `relevance_decisions`, `job_scores` | 002 |
+| Setup | `settings` (budget cap, tier → model mapping; **no API keys**, those live in `.env`) | 001 |
+| Profile | `resume_files`, `profiles`, `profile_versions` (each linked to its source resume file), `preferences`, `style_guides` | 001 (style guide: 004) |
+| Runtime | `workflow_runs`, `llm_calls`, `events`, plus Procrastinate's own queue tables | 001 (foundation) |
+| Search | `companies` (built-in seed + user), `sources`, `search_rules`, `source_runs`, `jobs`, `job_sources`, `job_facts`, `filter_decisions` (rule and AI), `job_scores` | 002 |
 | Applications | `applications`, `application_events`, `contacts` (entered by the user), `offers` | 003 |
 | Outreach | `drafts`, `draft_versions` | 004 |
 | Resumes | `tailored_resumes` | 005 |
@@ -297,10 +326,14 @@ Cross-cutting rules: UUID primary keys; `created_at`/`updated_at`; AI-produced r
 
 **Files**: `FileStoragePort` → local volume `data/files/<sha256[:2]>/<sha256>`; content-addressed, deduplicated, deleted when no row references them.
 
+**Export all my data** (feature 003, small item): one click produces a zip with the profile versions, preferences, search rules, companies (CSV), jobs, applications, drafts, tailored resumes and the original files, plus a JSON manifest. It's for backups and moving to a new machine. A matching import is not planned for R1.
+
+**Backups and deletion**: all user data lives in the Postgres volume and the data folder; backing up both is a full backup. "Delete all my data" wipes both.
+
 ## 9. Security and privacy
 
 - **Local only** (Ravi, 2026-11-03: "we are not gonna host it anywhere. anyone wanna use should pull the repo and run locally"). `api` binds to `127.0.0.1` and there is no login. There's no hosted version and no network-exposure setting in R1; docker compose publishes ports on `127.0.0.1` only.
-- API keys are stored **encrypted at rest** (Fernet). The key lives in `data/secret.key`, is generated on first run and is never logged. Keys are never sent back to the browser after entry (masked).
+- **API keys live only in `.env`** (`OPENAI_API_KEY`), never in the database (ADR-09). The setup wizard checks that the key is set and makes a test call; if it's missing or rejected, it explains how to set it and restart. The key is never logged and never sent to the browser; Settings shows only its status ("found, working" / "missing" / "rejected").
 - No telemetry. Logs are structured JSON with secrets and resume text redacted.
 - Careers-page fetching: honest User-Agent (`HireTitan/<version> (+repo URL)`), robots.txt, per-host rate limit, cache, timeouts, size caps. HTML is parsed, never executed.
 - Uploads: type sniffing (not just the extension), size limit, parsed in the worker.
@@ -308,9 +341,25 @@ Cross-cutting rules: UUID primary keys; `created_at`/`updated_at`; AI-produced r
 
 ## 10. Frontend
 
-React 18 + Vite + TypeScript strict. React Router; **TanStack Query** for server state; **Tailwind + shadcn/ui** components; react-hook-form + zod for forms; a TypeScript API client generated from FastAPI's OpenAPI schema (`openapi-typescript`), so types match the backend; EventSource for SSE. Tests: Vitest + Testing Library; Playwright end-to-end for the main journeys.
+React (current stable; exact version pinned in the 001 plan) + Vite + TypeScript strict. React Router; **TanStack Query** for server state; **Tailwind + shadcn/ui** components; react-hook-form + zod for forms; a TypeScript API client generated from FastAPI's OpenAPI schema (`openapi-typescript`), so types match the backend; EventSource for SSE. Tests: Vitest + Testing Library; Playwright end-to-end for the main journeys.
 
-Main screens (R1): Setup wizard · Profile (view/edit, re-upload diff) · Preferences · Queries · Jobs (list, filters, hidden-with-reason, job detail) · Applications · Drafts · Tailored resumes · Needs your review (paused runs) · Settings (provider, budget, sources) · Usage (AI spend).
+**Theme: dark only in R1**, built from Ravi's palette. All colours are theme variables (Tailwind/shadcn CSS variables), so a light theme can be added later without touching components. Contrast meets WCAG AA (verified in implementation).
+
+| Token | Colour | Use |
+|---|---|---|
+| `background` | `#261f32` | page |
+| `surface` | `#41394f` | sidebar, cards, inputs |
+| `divider` / hover | `#625d73` | dividers, hover, disabled (decorative only) |
+| `muted` | `#86819e` | icons, input outlines, muted text ≥ 14px |
+| `muted-small` | `#938eab` | small hint/label text (5.0:1) |
+| `primary` | `#594ba0` | buttons, active nav, selected items (white text 6.8:1) |
+| `accent` | `#a99ce6` | links, keyboard focus ring (≈7:1) |
+| `text` | `#fbfafb` | body text, button text (15:1) |
+| `success` / `warning` / `danger` | `#5fc9a0` / `#e0b25a` / `#e07a8a` | status badges |
+
+**First-level UI (001):** a sidebar shell with **Home** (setup checklist: key found and working, resume uploaded, profile confirmed, preferences set) · **Profile** (upload, extraction progress, review/edit/confirm, hidden-text and injection flags) · **Preferences** (form) · **Review** (items waiting for approval) · **Settings** (budget cap, key status, tier → model mapping, usage and spend).
+
+Later screens, each added by its feature: Search rules · Companies · Jobs (match / maybe / hidden with reasons, job detail) · Applications · Drafts · Tailored resumes · Export.
 
 ## 11. Testing strategy (constitution V)
 
@@ -321,42 +370,46 @@ Main screens (R1): Setup wizard · Profile (view/edit, re-upload diff) · Prefer
 | Contract | each source adapter and LLM adapter against recorded fixtures | pytest + respx / recorded JSON |
 | Workflow | each graph end to end with a **fake LLM** (scripted outputs, including invalid ones to exercise repair/fallback) and interrupt/resume | pytest + LangGraph |
 | API | routers via `httpx.AsyncClient` against real Postgres | pytest |
-| Architecture | import-linter contracts, the no-send test | import-linter + pytest |
+| Architecture | import-linter contracts (module and layer rules), the no-send test, the career-ops request allowlist | import-linter + pytest |
+| Security | the attack test set (§6): injected job posts, hidden-text PDFs, fake system messages in emails, link-exfiltration attempts | pytest (every build) |
 | Frontend | components and hooks; e2e journeys against a seeded backend with the fake LLM | Vitest, Playwright |
 | Evals | prompt quality against real providers; run manually and in PRs that change prompts | `evals/` runner |
 
-Test names reference requirement/scenario IDs. Coverage gates: ≥ 90% domain + application, ≥ 80% overall.
+Test names reference requirement/scenario IDs. Coverage gates: ≥ 90% domain + application, ≥ 80% overall. Normal test runs never call OpenAI; only evals do (small, on demand, counted against the budget cap). All test data is synthetic.
 
 ## 12. Architecture decisions (ADRs)
 
-Each ADR: decision · why · alternatives. All are **proposed** until Ravi approves this document.
+Each ADR: decision · why · alternatives. **Approved by Ravi 2026-11-03.**
 
-**ADR-01 Modular monolith, two processes.** One codebase, `api` + `worker`, one Postgres. *Why:* the simplest design that keeps LLM calls and fetches out of request handlers, with an easy `docker compose up`. *Alt:* microservices (overkill for one user); a single process (long runs would block or die with HTTP requests).
+**ADR-01 Modular monolith, two processes, organised by feature.** One codebase, `api` + `worker`, one Postgres. Code is packaged by feature module with layers inside each, plus a shared `platform/` (§3). *Why:* the simplest design that keeps LLM calls and fetches out of request handlers, with an easy `docker compose up`. *Alt:* microservices (overkill for one user); a single process (long runs would block or die with HTTP requests).
 
 **ADR-02 Own thin LLM adapters, not LiteLLM.** Four adapters behind `LlmPort` using the official SDKs (`openai`, `anthropic`, `google-genai`). *Why:* we need provider-specific structured output, refusal handling and accurate usage/cost data, and our validation, budget and logging layer sits on top anyway. Four adapters are small and well-testable, bring fewer heavy transitive dependencies, and show real design work. *Alt:* LiteLLM (100+ providers for free, but a large dependency whose structured-output behaviour varies by provider; our layer would wrap it anyway). Revisit if users ask for many more native providers; the OpenAI-compatible adapter already covers most. **Decided (Ravi, 2026-11-03): OpenAI first.** Feature 001 builds only the OpenAI adapter, and development and evals use Ravi's OpenAI key. The Anthropic, Gemini and OpenAI-compatible adapters are separate tasks that must land before the first public release (constitution IV unchanged). The port, fake LLM and contract tests are provider-neutral from day one.
 
-**ADR-03 Postgres as the task queue.** `tasks` table + `SELECT … FOR UPDATE SKIP LOCKED` + `LISTEN/NOTIFY`. *Why:* no extra service (Redis/RabbitMQ), transactional with app data, plenty for one user. *Alt:* Celery/RQ + Redis (another container to run).
+**ADR-03 Postgres as the task queue, via Procrastinate.** [Procrastinate](https://github.com/procrastinate-org/procrastinate) (MIT; version and licence confirmed in the 001 plan before pinning) uses `SELECT … FOR UPDATE SKIP LOCKED` + `LISTEN/NOTIFY`, with retries, periodic tasks, queueing locks and asyncio support. *Why:* no extra service (Redis/RabbitMQ), tasks are created in the same transaction as their data, plenty for one user, and a proven implementation instead of our own leases and retries. Our `workflow_runs` table and the LangGraph checkpointer stay ours; Procrastinate only moves tasks. *Alt:* our own `tasks` table (about 200 lines, but we'd own every edge case); Celery/RQ + Redis (another container to run).
 
 **ADR-04 LangGraph with the Postgres checkpointer.** `langgraph-checkpoint-postgres` in schema `lg` of the same database; `thread_id` = `workflow_runs.id`; human approval via `interrupt()` / `Command(resume=…)`. *Why:* durable pause/resume for approvals and crash recovery, without writing our own state machine for every workflow. *Alt:* plain async functions + our own state tables (one less dependency, but we would rebuild interrupts and checkpointing).
 
-**ADR-05 career-ops as a pinned subprocess.** Node 22 + career-ops v1.38.0 baked into the backend image with `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1`. The scanner uses plain HTTP (checked: `scan.mjs` doesn't import Playwright); browser-based scripts aren't used. HireTitan owns a separate career-ops data folder, generates its `portals.yml` from the company list and approved queries, and reads `scan.mjs --json` output through `CareerOpsPort`. *Why:* reuses mature ATS providers (Greenhouse, Lever, Ashby, Workday, …) instead of rewriting them; a pinned version keeps contract tests stable. *Alt:* port the providers to Python (lots of work, loses upstream fixes); call the user's own career-ops install (breaks "anyone can clone it").
+**ADR-05 career-ops as a pinned subprocess.** Node 22 + career-ops v1.38.0 baked into the backend image with `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1`. The scanner uses plain HTTP (checked: `scan.mjs` doesn't import Playwright); browser-based scripts aren't used. HireTitan owns a separate career-ops data folder, generates its `portals.yml` from the company list and approved queries, and reads `scan.mjs --json` output through `CareerOpsPort`. Each enabled provider has a request allowlist with a recorded-response contract test, and a robots.txt check before it's enabled (§3). *Why:* reuses mature ATS providers (Greenhouse, Lever, Ashby, Workday, …) instead of rewriting them; a pinned version keeps contract tests stable. *Alt:* port the providers to Python (lots of work, loses upstream fixes); call the user's own career-ops install (breaks "anyone can clone it").
 
-**ADR-06 Resume parsing: pypdf / pdfplumber + python-docx.** Permissive licences, pure Python. PyMuPDF is excluded: it's AGPL, which conflicts with shipping under MIT. Scanned (image-only) PDFs get no OCR in R1; the user is told and can paste the text or edit the profile by hand.
+**ADR-06 Resume parsing: pypdf / pdfplumber + python-docx.** Permissive licences, pure Python. PyMuPDF is excluded: it's AGPL, which conflicts with shipping under MIT. Scanned (image-only) PDFs get no OCR in R1; the user is told and can paste the text or edit the profile by hand. pdfplumber's per-character colour and size data is used for hidden-text detection (§6).
 
 **ADR-07 Resume rendering: one document model → WeasyPrint (PDF) and python-docx (DOCX).** An HTML/CSS template (Jinja2) for the PDF, so the browser preview matches the PDF; the DOCX is built from the same model. **Exactly one ATS-friendly single-column template** (decided by Ravi); improvement happens through content (W6 tailoring, W9 suggestions), not layout. *Alt:* career-ops `generate-pdf.mjs` (needs Playwright + Chromium in the image, about 300 MB); LaTeX (heavy, poor DOCX story).
 
 **ADR-08 Realtime via SSE over LISTEN/NOTIFY.** One-way server → browser updates (run progress, "needs review"). *Alt:* WebSockets (two-way isn't needed); polling (kept as a fallback only).
 
-**ADR-09 Secrets encrypted in the database.** Fernet, with a generated key file in the data volume; env vars can override for advanced users. *Why:* the setup wizard must be able to save keys, and plain-text storage would be careless. *Alt:* OS keychain (not portable inside Docker).
+**ADR-09 API keys in `.env` only.** `OPENAI_API_KEY` (and later the other providers' keys) are read from the environment; nothing is stored in the database, so no encryption layer is needed. *Why:* simplest and standard for self-hosted, local-only apps; updating an expired key is "edit `.env`, restart". An invalid key pauses AI tasks with a banner instead of failing them (§4). *Alt:* encrypted keys in the database, set from the dashboard (no restart, but more code); decided against by Ravi.
 
-**ADR-10 Frontend stack.** React + Vite + TS, TanStack Query, React Router, Tailwind + shadcn/ui, generated OpenAPI client. *Why:* common, well documented, fast to build, typed end to end.
+**ADR-10 Frontend stack.** Current stable React + Vite + TS, TanStack Query, React Router, Tailwind + shadcn/ui, generated OpenAPI client; dark theme from Ravi's palette (§10). *Why:* common, well documented, fast to build, typed end to end.
 
-**ADR-11 Default models per provider (deferred).** Decided in feature 001's plan, after a small eval on synthetic resumes that measures extraction quality and cost per provider for the `fast` and `strong` tiers.
+**ADR-11 Default models per provider (deferred).** Profile extraction uses the `fast` tier for now (cost). Final defaults are decided after a small eval on synthetic resumes in feature 001 that measures extraction quality and cost for the `fast` and `strong` tiers.
 
 ## 13. Open questions for Ravi
 
 1. ~~ADR-02~~ decided: own adapters, OpenAI first; the other providers before the public release.
 2. ~~ADR-07 templates~~ decided: one template; optional content suggestions (W9).
 3. ~~Network exposure~~ decided: local only, no hosting, no login.
-4. Anything in the workflow catalogue (§7) you'd add, drop or reorder, especially which steps should pause for your approval?
+4. ~~Workflow catalogue~~ approved; W2 became "search rules".
+6. ~~Queue~~ decided: Procrastinate. ~~Key storage~~ decided: `.env` only. ~~Theme~~ decided: dark, Ravi's palette. ~~Export~~ decided: "Export all my data" in feature 003.
+
+No open questions remain.
 5. ~~Company list storage~~ decided: Postgres `companies` table seeded from the repo, editable in the app, CSV import/export (§8).

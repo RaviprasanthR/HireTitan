@@ -16,7 +16,7 @@ This replaces the assumptions in `docs/archive/specs-v0/01`–`05` wherever they
 ## 2. Install and first run
 
 - **One command:** `docker compose up` (only Docker needed). Native `uv`/`npm` run documented for contributors.
-- **First-run setup wizard** in the web app: pick the LLM provider → paste the API key (verified with a test call) → set the monthly budget → upload a resume → confirm the extracted profile → set job preferences → review the proposed search queries. Keys are stored locally; `.env` also works for advanced users.
+- **First-run setup wizard** in the web app: check the LLM key (read from `.env`, verified with a test call; if missing or rejected, the wizard explains how to set it and restart) → set the monthly budget → upload a resume → confirm the extracted profile → set job preferences → review the proposed search rules. **API keys live only in `.env`, never in the database** (Ravi, 2026-11-03: ".env is enough").
 - Works on Windows, macOS and Linux.
 - The repo ships **synthetic demo data** (a fake resume and jobs) and never contains anyone's real data.
 
@@ -26,19 +26,19 @@ This replaces the assumptions in `docs/archive/specs-v0/01`–`05` wherever they
    - The **confirmed, edited profile is the source of truth** for all AI work. The AI may only use facts in it, never invent.
    - Uploading a newer resume: AI extracts it, the app **shows a diff against the current profile**, and the user accepts changes. The old file is kept as a version.
 2. **Preferences** captured: roles, seniority, stack, locations and work mode, pay and availability (currency-aware), company preferences. **Roles, stack and location weigh most.** They are *weighted* in scoring; nothing is hard-filtered by them.
-3. **Search.** AI **proposes search queries** per source from the profile. The user **approves or edits** them, and they're saved. Runs happen **only on manual trigger** ("search now"), never scheduled.
+3. **Search.** AI **proposes search rules** (title include/exclude keywords, synonyms, stack keywords, locations, max posting age) from the profile; "search rules" replace the earlier "search queries" (architecture W2). The user **approves or edits** them, and they're saved. Runs happen **only on manual trigger** ("search now"), never scheduled.
    - **Rules first, AI optional** (Ravi, 2026-11-03). A search run uses **no AI by default**: fetch → dedup → **rule filter** → sort. Rules come from the user's preferences: title keywords (include/exclude), location and work mode, posting age, seniority words, years of experience parsed from the description, and stack keywords matched against the description (match score). Each job lands in **match / maybe / hidden**, always with the rule that decided it ("hidden: location Pune is in your blocked list"). Hidden jobs are kept and can be restored. Only the user's explicit exclusions (blocked cities, excluded title words) hide jobs; weighted preferences only rank them.
    - **Optional "Check with AI"**: on the "maybe" jobs or jobs the user picks, the AI gives relevant / not relevant with a visible reason, after showing the cost. Undoable.
    - Structured sources need no AI. Careers pages are read from embedded schema.org `JobPosting` data or generic parsing first; AI page extraction is only a fallback, and so is AI parsing of job-alert emails (per-sender parsers first).
    - Results are one **deduplicated list, newest first**.
-   - When the profile changes, the app **proposes** updated queries and offers to re-score open jobs. Nothing changes until the user approves.
+   - When the profile changes, the app **proposes** updated search rules and offers to re-score open jobs. Nothing changes until the user approves.
 4. **Scoring is optional** because it costs money: an explicit action on jobs the user picks. Output: score, matched skills, gaps, verdict.
 5. **Act on a job** (first release): **application tracking**, **outreach drafts**, **tailored resume**.
 
 ## 4. Sources
 
 - **career-ops is a required dependency**: its portal scanner is a core job source.
-  - *(Claude's interpretation)* HireTitan **bundles career-ops at a pinned version in its Docker image** and **manages its own career-ops data folder** inside HireTitan's data volume. It writes the scanner config from the user's approved queries and preferences, so users never configure career-ops by hand. **Before relying on this, check that career-ops' licence allows redistribution.**
+  - *(Claude's interpretation)* HireTitan **bundles career-ops at a pinned version in its Docker image** and **manages its own career-ops data folder** inside HireTitan's data volume. It writes the scanner config from the user's approved search rules and preferences, so users never configure career-ops by hand. **Before relying on this, check that career-ops' licence allows redistribution.**
   - Users with an existing career-ops setup can import from it (read-only).
 - **Manual paste** (URL + JD text) is always available.
 - **Built-in curated company list** (Ravi's answer: "hardcoded, our internal source, updated later"): HireTitan ships a versioned data file of companies + careers URLs, seeded from Ravi's Google Sheet (names + careers URLs) and updated through project releases. The app resolves each careers URL to its ATS (Greenhouse, Lever, Ashby, …) and scans it through the bundled career-ops scanner using **public job-board APIs**. Users can add their own companies and hide built-in ones locally *(Claude's call)*. No Google Sheets integration in the app.
@@ -82,7 +82,7 @@ This replaces the assumptions in `docs/archive/specs-v0/01`–`05` wherever they
 
 ## 9. AI and cost
 
-- AI is required for profile extraction, query proposal, drafts, tailored resumes, transcript split and answer review. **Optional for job finding** (the AI relevance check, AI careers-page extraction fallback, AI alert-parsing fallback), **scoring** and **resume content suggestions**.
+- AI is required for profile extraction, search-rule proposal (the user can also write rules by hand), drafts, tailored resumes, transcript split and answer review. **Optional for job finding** (the AI relevance check, AI careers-page extraction fallback, AI alert-parsing fallback), **scoring** and **resume content suggestions**.
 - **Bring your own key, any provider where possible.** Guaranteed: **OpenAI, Anthropic, Google Gemini**. Plus **any OpenAI-compatible endpoint** (Ollama/local, OpenRouter, Groq, LM Studio…) *(Claude's call for how "any" is met)*. The user picks the provider and model per task (with sensible defaults per provider).
 - **Build order (Ravi, 2026-11-03): OpenAI first.** The OpenAI adapter is built in feature 001 and used for development with Ravi's key. Anthropic, Gemini and OpenAI-compatible adapters follow before the first public release. Own thin adapters behind one port, no LiteLLM.
 - Features must degrade gracefully when the chosen model lacks a capability (e.g. no native structured output → JSON mode + validation + repair).
@@ -107,10 +107,10 @@ This replaces the assumptions in `docs/archive/specs-v0/01`–`05` wherever they
 
 | # | Feature | Release |
 |---|---|---|
-| 001 | `setup-and-profile`: install, first-run wizard (provider + key + budget), resume upload + AI extraction, job profile, manual edit, resume diff on re-upload, career-ops import | R1 |
-| 002 | `job-search`: AI-proposed queries + approval, manual runs, built-in company list (Postgres table, editable, CSV import/export) → career-ops (bundled) + manual paste, dedup, rule filter (match / maybe / hidden with reasons), newest-first list, optional AI relevance check, optional scoring | R1 |
+| 001 | `setup-and-profile`: install, first-run wizard (key check from `.env` + budget), resume upload + AI extraction, job profile, manual edit, resume diff on re-upload, career-ops import, first-level dark-theme UI. **Built first: preferences, resume parsing + extraction, first-level UI** | R1 |
+| 002 | `job-search`: AI-proposed search rules + approval, manual runs, built-in company list (Postgres table, editable, CSV import/export) → career-ops (bundled) + manual paste, dedup, rule filter (match / maybe / hidden with reasons), newest-first list, optional AI relevance check, optional scoring | R1 |
 | 002b | `more-sources`: Gmail job-alert parsing, Adzuna/Jooble/Careerjet adapters | R1 or R1.1 |
-| 003 | `applications`: tracking, channel/referral/recruiter/offer fields, no-response, follow-up reminders, inbound opportunities | R1 |
+| 003 | `applications`: tracking, channel/referral/recruiter/offer fields, no-response, follow-up reminders, inbound opportunities, **"Export all my data"** (zip of everything, for backup and moving machines) | R1 |
 | 004 | `outreach`: four draft types, style guide, approval | R1 |
 | 005 | `tailored-resume`: AI tailoring, preview/edit, one ATS-friendly template, PDF + DOCX, versions, optional content suggestions | R1 |
 | 006 | `interviews`: paste-and-split, answer review, weak-topic analysis | R2 |
