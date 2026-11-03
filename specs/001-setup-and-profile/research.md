@@ -158,3 +158,8 @@ Versions and licences were checked on PyPI and npm on 2026-11-03. They are **flo
   - frontend: `tsc --noEmit`, `eslint`, `vitest --coverage`, `npm audit --omit=dev`, `license-checker` with the same allowlist;
   - a Playwright smoke journey against the compose stack with the fake LLM (`HIRETITAN_LLM=fake`).
 - **Rationale**: constitution gates. The fake LLM keeps CI free of keys and cost.
+- **Implementation notes (T005, 2026-11-04)**:
+  - Backend licences are checked by `backend/scripts/check_licenses.py`, not `pip-licenses --allow-only`: package metadata mixes SPDX expressions (`MPL-2.0 AND (Apache-2.0 OR MIT)`), classifier names and full licence texts, which an exact-match list can't judge. Two reviewed overrides, each pinned to the exact reported string: `regex` (`Apache-2.0 AND CNRI-Python`; CNRI-Python is permissive and OSI-approved) and `pypdfium2` (BSD-3-Clause/Apache-2.0, bundled PDFium BSD-3-Clause).
+  - The frontend allowlist adds **OFL-1.1** for the bundled Geist font (shadcn/ui default) and excludes the private `hiretitan-frontend` package itself.
+  - TypeScript is pinned to **5.9**: typescript-eslint 8.72 supports `<6.1` and openapi-typescript 7.13 needs `^5.x`, so the Vite template's TypeScript 7 can't be used yet.
+  - The Playwright smoke journey joins this workflow with the polish-phase journey task.

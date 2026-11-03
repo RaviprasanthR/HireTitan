@@ -1,0 +1,100 @@
+# Quality gates (constitution V, research R15). Runs on every PR to master.
+name: CI
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend gates
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      HIRETITAN_LLM: fake  # no keys and no cost in CI
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+
+      - name: Install
+        run: uv sync --locked
+
+      - name: Lint (ruff)
+        run: uv run ruff check .
+
+      - name: Format (ruff)
+        run: uv run ruff format --check .
+
+      - name: Types (mypy --strict)
+        run: uv run mypy --strict src
+
+      - name: Import contracts (import-linter)
+        run: uv run lint-imports --no-logo
+
+      - name: Tests with coverage (real PostgreSQL 16 via Testcontainers)
+        run: uv run pytest --cov --cov-report=term --cov-report=json:coverage.json
+
+      - name: Coverage gate (domain + application >= 90%, overall >= 80%)
+        run: uv run python scripts/check_coverage.py coverage.json
+
+      - name: Vulnerability audit (pip-audit)
+        run: uv run pip-audit --skip-editable
+
+      - name: Licence gate (runtime dependencies)
+        run: |
+          packages=$(uv export --locked --no-dev --no-hashes --no-emit-project --no-header --no-annotate \
+            | grep -v '^#' | sed -E 's/[=<>;[ ].*//' | grep -v '^$' | tr '\n' ' ')
+          uv run pip-licenses --packages $packages --from=mixed --format=json > licenses.json
+          uv run python scripts/check_licenses.py licenses.json
+
+  frontend:
+    name: Frontend gates
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Types (tsc)
+        run: npm run typecheck
+
+      - name: Lint (eslint)
+        run: npm run lint
+
+      - name: Tests with coverage (vitest)
+        run: npm test -- --coverage
+
+      - name: Vulnerability audit (production dependencies)
+        run: npm audit --omit=dev
+
+      - name: Licence gate (production dependencies)
+        # Same allowlist as the backend; OFL-1.1 covers the bundled Geist font only.
+        run: >
+          npx --yes license-checker@25.0.1 --production --excludePrivatePackages
+          --onlyAllow "MIT;MIT-0;BSD;BSD-2-Clause;BSD-3-Clause;0BSD;Apache-2.0;ISC;PSF;Python-2.0;MPL-2.0;LGPL-2.1;LGPL-3.0;OFL-1.1"
