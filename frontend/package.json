@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
     "test": "vitest run",
-    "gen:api": "openapi-typescript http://127.0.0.1:8000/api/v1/openapi.json -o src/api/schema.d.ts"
+    "gen:api": "uv run --project ../backend python ../backend/scripts/export_openapi.py ../backend/openapi.json && openapi-typescript ../backend/openapi.json -o src/api/schema.d.ts"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.3.0",
