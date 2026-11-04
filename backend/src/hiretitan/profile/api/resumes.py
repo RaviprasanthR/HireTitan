@@ -7,12 +7,13 @@ from datetime import datetime
 from typing import Annotated, Any, Final
 from uuid import UUID
 
-from fastapi import APIRouter, Query, UploadFile
+from fastapi import APIRouter, Query, Response, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from hiretitan.platform.storage.port import FileStoragePort
 from hiretitan.platform.web.problems import ProblemError
+from hiretitan.profile.application.files import ResumeFileNotFoundError, delete_resume_file
 from hiretitan.profile.application.ingest import (
     MAX_PASTED_CHARS,
     MIN_PASTED_CHARS,
@@ -23,6 +24,8 @@ from hiretitan.profile.application.ingest import (
     ingest_file,
     ingest_text,
 )
+from hiretitan.profile.application.manual import ReadingInProgressError
+from hiretitan.profile.infra.file_delete_store import SqlFileDeleteStore
 from hiretitan.profile.infra.ingest_store import SqlIngestStore
 from hiretitan.profile.infra.parsing.sniff import (
     MAX_BYTES,
@@ -171,5 +174,18 @@ def create_resumes_router(deps: ProfileApiDeps) -> APIRouter:
             )
             for f in files
         ]
+
+    @router.delete("/resumes/{resume_id}", status_code=204)
+    async def delete_resume(resume_id: UUID) -> Response:
+        try:
+            async with deps.sessions() as session:
+                await delete_resume_file(
+                    resume_id, store=SqlFileDeleteStore(session), storage=deps.storage
+                )
+        except ResumeFileNotFoundError:
+            raise ProblemError(404, "That resume file was not found.") from None
+        except ReadingInProgressError as error:
+            raise ProblemError(409, str(error)) from None
+        return Response(status_code=204)
 
     return router
