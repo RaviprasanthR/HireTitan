@@ -145,7 +145,7 @@ description: "Task list for 001-setup-and-profile (first slice)"
   - `profile_versions`: `number` unique per profile, `created_by ∈ {extraction, manual, manual_edit}`, `source_file_id` ON DELETE SET NULL, `review_id` ON DELETE SET NULL, `source_deleted`, nullable provenance columns `prompt_name`, `prompt_version`, `provider` and `model` (copied from the review for `created_by = extraction`), and an immutability trigger allowing only `source_file_id → NULL`, `review_id → NULL`, `source_deleted → true`.
 
   Tests first in `backend/tests/integration/profile/test_profile_repos.py`: `test_edge_case_only_one_open_review`, `test_FR017_version_content_immutable`, `test_FR034_file_delete_nulls_version_source`, `test_version_numbers_increment`, `test_FR012_extraction_version_keeps_provenance_after_file_delete`.
-- [ ] T042 [US1] Implement upload and paste in `hiretitan/profile/application/ingest.py` and the router `hiretitan/profile/api/resumes.py`:
+- [X] T042 [US1] Implement upload and paste in `hiretitan/profile/application/ingest.py` and the router `hiretitan/profile/api/resumes.py`:
   - `POST /api/v1/resumes` (multipart; 415/413/422 as in contracts/rest-api.md; `409 {open_review_id}` unless `?discard_open_review=true`, which discards the open review and cancels its run);
   - `POST /api/v1/resumes/text` (`text: str 200–60000`, stored as `pasted_text`);
   - `GET /api/v1/resumes`.

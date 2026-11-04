@@ -9,7 +9,8 @@ from __future__ import annotations
 
 import asyncio
 import sys
-from collections.abc import Callable, Sequence
+from collections.abc import AsyncIterator, Callable, Sequence
+from contextlib import asynccontextmanager
 from http import HTTPStatus
 from pathlib import Path
 from typing import Any, Final
@@ -18,15 +19,19 @@ import uvicorn
 from fastapi import APIRouter, FastAPI, HTTPException, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.responses import FileResponse, Response
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from starlette.types import ASGIApp, Message, Receive, Scope, Send
+from starlette.types import ASGIApp, Lifespan, Message, Receive, Scope, Send
 
 from hiretitan.platform.config.settings import Settings, get_settings
+from hiretitan.platform.db import create_engine, session_factory
 from hiretitan.platform.runtime.api import create_events_router
+from hiretitan.platform.runtime.procrastinate import create_runtime
+from hiretitan.platform.storage.local import LocalFileStorage
+from hiretitan.platform.web.problems import ProblemError, problem
+from hiretitan.profile.api.resumes import ProfileApiDeps, create_resumes_router
 
 API_PREFIX: Final = "/api/v1"
-PROBLEM_JSON: Final = "application/problem+json"
 DEFAULT_DIST: Final = Path(__file__).resolve().parents[3] / "frontend" / "dist"
 
 CSP: Final = "; ".join(
@@ -65,21 +70,6 @@ class SecurityHeadersMiddleware:
         await self.app(scope, receive, send_with_headers)
 
 
-def problem(
-    status: int, detail: str, *, errors: list[dict[str, str]] | None = None
-) -> JSONResponse:
-    title = HTTPStatus(status).phrase
-    body: dict[str, Any] = {
-        "type": f"https://httpstatuses.io/{status}",
-        "title": title,
-        "status": status,
-        "detail": detail,
-    }
-    if errors is not None:
-        body["errors"] = errors
-    return JSONResponse(body, status_code=status, media_type=PROBLEM_JSON)
-
-
 def _field_path(loc: Sequence[Any]) -> str:
     parts = [str(part) for part in loc if part not in ("body", "query", "path")]
     return ".".join(parts)
@@ -92,6 +82,11 @@ async def _validation_handler(request: Request, exc: Exception) -> Response:
         for error in jsonable_encoder(exc.errors())
     ]
     return problem(422, "Some fields are not valid.", errors=errors)
+
+
+async def _problem_handler(request: Request, exc: Exception) -> Response:
+    assert isinstance(exc, ProblemError)
+    return problem(exc.status, exc.detail, extra=exc.extra)
 
 
 async def _http_handler(request: Request, exc: Exception) -> Response:
@@ -119,12 +114,14 @@ def create_app(
     *,
     frontend_dist: Path | None = None,
     routers: Sequence[APIRouter] = (),
+    lifespan: Lifespan[FastAPI] | None = None,
 ) -> FastAPI:
     settings = settings or get_settings()
-    app = FastAPI(title="HireTitan", docs_url=None, redoc_url=None)
+    app = FastAPI(title="HireTitan", docs_url=None, redoc_url=None, lifespan=lifespan)
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_exception_handler(RequestValidationError, _validation_handler)
     app.add_exception_handler(StarletteHTTPException, _http_handler)
+    app.add_exception_handler(ProblemError, _problem_handler)
 
     api = APIRouter()
 
@@ -148,10 +145,30 @@ def server_loop_factory() -> Callable[[], asyncio.AbstractEventLoop]:
     return asyncio.SelectorEventLoop if sys.platform == "win32" else asyncio.new_event_loop
 
 
+def build_app(settings: Settings | None = None) -> FastAPI:
+    """The real application: database, file storage and job queue wired to the routers."""
+    settings = settings or get_settings()
+    engine = create_engine(settings.database_url)
+    runtime = create_runtime(settings.database_url)
+    deps = ProfileApiDeps(
+        sessions=session_factory(engine),
+        storage=LocalFileStorage(settings.data_dir),
+        queue=runtime.queue,
+    )
+
+    @asynccontextmanager
+    async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+        async with runtime.app.open_async():  # the job queue connection, to defer jobs
+            yield
+        await engine.dispose()
+
+    return create_app(settings, routers=[create_resumes_router(deps)], lifespan=lifespan)
+
+
 def main() -> None:
     settings = get_settings()
     config = uvicorn.Config(
-        create_app(settings), host=settings.host, port=settings.port, loop="none"
+        build_app(settings), host=settings.host, port=settings.port, loop="none"
     )
     asyncio.run(uvicorn.Server(config).serve(), loop_factory=server_loop_factory())
 

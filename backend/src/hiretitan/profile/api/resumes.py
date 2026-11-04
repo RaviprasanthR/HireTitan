@@ -1,0 +1,170 @@
+"""Resume endpoints: upload, paste and list (contracts/rest-api.md, "Resumes and ingestion")."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Annotated, Any, Final
+from uuid import UUID
+
+from fastapi import APIRouter, Query, UploadFile
+from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
+from hiretitan.platform.storage.port import FileStoragePort
+from hiretitan.platform.web.problems import ProblemError
+from hiretitan.profile.application.ingest import (
+    MAX_PASTED_CHARS,
+    MIN_PASTED_CHARS,
+    Accepted,
+    Inspected,
+    JobQueue,
+    OpenReviewError,
+    ingest_file,
+    ingest_text,
+)
+from hiretitan.profile.infra.ingest_store import SqlIngestStore
+from hiretitan.profile.infra.parsing.sniff import (
+    MAX_BYTES,
+    CorruptFileError,
+    EncryptedFileError,
+    FileTooLargeError,
+    IntakeError,
+    PasswordProtectedOrLegacyDocError,
+    TooManyPagesError,
+    UnsupportedTypeError,
+    sniff,
+)
+from hiretitan.profile.infra.repos import ResumeFilesRepo, ReviewsRepo
+
+CHUNK: Final = 1024 * 1024
+
+_STATUS_FOR: Final[dict[type[IntakeError], int]] = {
+    UnsupportedTypeError: 415,
+    PasswordProtectedOrLegacyDocError: 415,
+    FileTooLargeError: 413,
+    EncryptedFileError: 422,
+    CorruptFileError: 422,
+    TooManyPagesError: 422,
+}
+
+
+@dataclass(frozen=True, slots=True)
+class ProfileApiDeps:
+    sessions: async_sessionmaker[AsyncSession]
+    storage: FileStoragePort
+    queue: JobQueue
+
+
+class AcceptedOut(BaseModel):
+    resume_file_id: UUID
+    run_id: UUID
+
+
+class TextIn(BaseModel):
+    text: str = Field(min_length=MIN_PASTED_CHARS, max_length=MAX_PASTED_CHARS)
+
+
+class ResumeFileOut(BaseModel):
+    id: UUID
+    kind: str
+    original_name: str
+    size_bytes: int
+    page_count: int | None
+    parse_status: str
+    created_at: datetime
+    has_open_review: bool
+
+
+def _inspect(data: bytes) -> Inspected:
+    sniffed = sniff(data)
+    return Inspected(sniffed.kind, sniffed.page_count)
+
+
+async def _read_upload(file: UploadFile) -> bytes:
+    """Read the upload in chunks, stopping as soon as it passes the 10 MB limit."""
+    parts: list[bytes] = []
+    total = 0
+    while chunk := await file.read(CHUNK):
+        total += len(chunk)
+        if total > MAX_BYTES:
+            raise FileTooLargeError
+        parts.append(chunk)
+    return b"".join(parts)
+
+
+def _problem_for(error: Exception) -> ProblemError:
+    if isinstance(error, IntakeError):
+        return ProblemError(_STATUS_FOR.get(type(error), 422), str(error))
+    if isinstance(error, OpenReviewError):
+        return ProblemError(
+            409,
+            "A profile review is already open. Finish it, or replace it with this resume.",
+            open_review_id=str(error.open_review_id),
+        )
+    raise error
+
+
+def create_resumes_router(deps: ProfileApiDeps) -> APIRouter:
+    router = APIRouter(tags=["resumes"])
+
+    @router.post("/resumes", status_code=202)
+    async def upload_resume(
+        file: UploadFile,
+        discard_open_review: Annotated[bool, Query()] = False,
+    ) -> AcceptedOut:
+        try:
+            data = await _read_upload(file)
+            async with deps.sessions() as session:
+                accepted: Accepted = await ingest_file(
+                    data=data,
+                    filename=file.filename,
+                    inspect=_inspect,
+                    storage=deps.storage,
+                    store=SqlIngestStore(session),
+                    queue=deps.queue,
+                    discard_open_review=discard_open_review,
+                )
+        except (IntakeError, OpenReviewError) as error:
+            raise _problem_for(error) from None
+        return AcceptedOut(resume_file_id=accepted.resume_file_id, run_id=accepted.run_id)
+
+    @router.post("/resumes/text", status_code=202)
+    async def paste_resume(
+        body: TextIn,
+        discard_open_review: Annotated[bool, Query()] = False,
+    ) -> AcceptedOut:
+        try:
+            async with deps.sessions() as session:
+                accepted = await ingest_text(
+                    text=body.text,
+                    storage=deps.storage,
+                    store=SqlIngestStore(session),
+                    queue=deps.queue,
+                    discard_open_review=discard_open_review,
+                )
+        except OpenReviewError as error:
+            raise _problem_for(error) from None
+        return AcceptedOut(resume_file_id=accepted.resume_file_id, run_id=accepted.run_id)
+
+    @router.get("/resumes")
+    async def list_resumes() -> list[ResumeFileOut]:
+        async with deps.sessions() as session:
+            files = await ResumeFilesRepo(session).list()
+            review: Any = await ReviewsRepo(session).get_open()
+        open_file_id = review.resume_file_id if review else None
+        return [
+            ResumeFileOut(
+                id=f.id,
+                kind=f.kind,
+                original_name=f.original_name,
+                size_bytes=f.size_bytes,
+                page_count=f.page_count,
+                parse_status=f.parse_status,
+                created_at=f.created_at,
+                has_open_review=f.id == open_file_id,
+            )
+            for f in files
+        ]
+
+    return router
