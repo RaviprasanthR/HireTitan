@@ -56,7 +56,7 @@ description: "Task list for 001-setup-and-profile (first slice)"
   - `hiretitan/worker_main.py` as the composition root.
 
   Tests first in `backend/tests/workflow/platform/test_runner.py`, with a toy two-node graph: `test_FR013_run_survives_worker_restart` (kill after the first node, re-run, completes without repeating it), `test_interrupt_sets_awaiting_review`, `test_resume_continues_after_interrupt`, `test_FR030_ai_unavailable_pauses_not_fails`, `test_retries_then_failed`.
-- [ ] T015 Implement events in `hiretitan/platform/runtime/events.py` (`publish(event, data)` via `NOTIFY hiretitan_events`, and a `LISTEN` async iterator) and the SSE router `GET /api/v1/events` in `hiretitan/platform/runtime/api.py` using sse-starlette, with event types `run.updated`, `status.updated` and `profile.updated` as in contracts/rest-api.md. The runner publishes `run.updated` on every status change. Tests first: `backend/tests/api/test_events.py::test_run_status_change_streams_run_updated`.
+- [X] T015 Implement events in `hiretitan/platform/runtime/events.py` (`publish(event, data)` via `NOTIFY hiretitan_events`, and a `LISTEN` async iterator) and the SSE router `GET /api/v1/events` in `hiretitan/platform/runtime/api.py` using sse-starlette, with event types `run.updated`, `status.updated` and `profile.updated` as in contracts/rest-api.md. The runner publishes `run.updated` on every status change. Tests first: `backend/tests/api/test_events.py::test_run_status_change_streams_run_updated`.
 - [ ] T016 Implement the API composition root `hiretitan/api_main.py`:
   - FastAPI app with the `/api/v1` router and `GET /api/v1/health`;
   - RFC 9457 `application/problem+json` handlers for validation errors (`errors: [{field, message}]`), 404, 409, 413, 415 and 422;

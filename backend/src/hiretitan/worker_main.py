@@ -13,6 +13,7 @@ from collections.abc import Mapping
 from hiretitan.platform.config.settings import Settings, get_settings
 from hiretitan.platform.db import create_engine, session_factory
 from hiretitan.platform.runtime.checkpointer import open_checkpointer
+from hiretitan.platform.runtime.events import EventPublisher, run_notifier
 from hiretitan.platform.runtime.procrastinate import Runtime, create_runtime
 from hiretitan.platform.runtime.runner import WorkflowDef, WorkflowRunner
 
@@ -24,11 +25,15 @@ def workflow_registry() -> Mapping[str, WorkflowDef]:
 
 async def run_worker(settings: Settings, *, wait: bool = True) -> None:
     engine = create_engine(settings.database_url)
+    publisher = EventPublisher(engine)
     runtime: Runtime = create_runtime(settings.database_url)
     try:
         async with open_checkpointer(settings.database_url) as checkpointer:
             runtime.holder.runner = WorkflowRunner(
-                session_factory(engine), checkpointer, workflow_registry()
+                session_factory(engine),
+                checkpointer,
+                workflow_registry(),
+                run_notifier(publisher),
             )
             async with runtime.app.open_async():
                 await runtime.app.run_worker_async(wait=wait)
