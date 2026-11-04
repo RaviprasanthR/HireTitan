@@ -43,3 +43,6 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 *.swp
+
+# Brainstorm mockups (superpowers visual companion)
+.superpowers/

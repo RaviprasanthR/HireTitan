@@ -19,17 +19,19 @@ docker compose up --build
 
 | Step | Expected | Covers |
 |---|---|---|
-| 1. Open the app with no key | Dark dashboard, sidebar Home · Profile · Preferences · Review · Settings. Banner: "OpenAI key missing: add OPENAI_API_KEY to .env and restart". Checklist shows the key step not done. | US3-AS1, FR-027/028 |
-| 2. Preferences → check defaults → set a role, Chennai/IN, hybrid, 18–24 LPA → Save | Saved time shown; values survive a reload and `docker compose restart` | US2-AS1/2/5, FR-026 |
-| 3. Save with min pay > target | Refused; error next to the pay field | US2-AS4 |
-| 4. Profile → upload `synthetic-mid-2page.pdf` | Run is queued, then shows "Paused: key missing" in Review | US3-AS2, FR-030 |
-| 5. Put a valid key in `.env`, then `docker compose restart api worker` | Banner gone, status "found, working"; the paused extraction continues by itself and the review opens | US3-AS3 |
-| 6. In review: check contact (email/phone filled in), edit a title, delete a skill → Confirm | Version 1 created, linked to the file; Home checklist shows "profile confirmed" | US1-AS1/2, FR-008a/017 |
-| 7. Preferences again | Suggestions offer the latest title and the profile's skills | US2-AS3 |
-| 8. Upload `synthetic-mid-2page-v2.docx` | Review opens pre-filled; changed fields marked with their current values | US1-AS8, FR-014 |
-| 9. Leave the review, reopen it from Review | Edits still there | US1-AS9 |
-| 10. Settings → cap $0.00 → upload again | Run paused "monthly AI budget reached"; raise the cap → it continues | US3-AS4/5 |
-| 11. Settings → Delete all my data → type DELETE | Back to the first-run checklist; no files remain in `data/files` | US4-AS2, SC-008 |
+| 1. Open any URL on a fresh install | Setup card "Step 1 of 4" asking for a name; no sidebar. Enter a name → step 2 greets you by it. Close the tab and reopen: still step 2. | US5-AS1/2/3, FR-037/038 |
+| 2. Step 2 with no key | Banner and card say a key is needed; "Type it in myself" is offered. Choose it, type a name and a skill, close the tab, reopen: step 3 shows what you typed. Press "Back to upload" and confirm to return to step 2. | US5-AS5/6, FR-041 |
+| 3. Step 2 → upload `synthetic-mid-2page.pdf` | The card shows the run, then "Paused: key missing" | US3-AS2, US5-AS4, FR-030 |
+| 4. Put a valid key in `.env`, then `docker compose restart api worker` | Banner gone, status "found, working"; the paused extraction continues by itself and the review opens | US3-AS3 |
+| 5. Step 3 (review): check contact (email/phone filled in), edit a title, delete a skill → Confirm | Version 1 created, linked to the file; the usual app opens | US1-AS1/2, US5-AS7, FR-008a/017 |
+| 6. Step 4 (preferences): check the defaults → set a role, Chennai/IN, hybrid, 18–24 LPA → Save | Saved time shown; values survive a reload and `docker compose restart` | US2-AS1/2/5, FR-026 |
+| 7. Save with min pay > target | Refused; error next to the pay field | US2-AS4 |
+| 8. Finish setup → the usual app | Dark dashboard, sidebar Home · Profile · Preferences · Review · Settings; Home greets you by name. Banner: "OpenAI key missing: add OPENAI_API_KEY to .env and restart". | US5-AS7, US3-AS1, FR-027/028 |
+| 9. Preferences page again | Suggestions offer the latest title and the profile's skills | US2-AS3 |
+| 10. Upload `synthetic-mid-2page-v2.docx` | Review opens pre-filled; changed fields marked with their current values | US1-AS8, FR-014 |
+| 11. Leave the review, reopen it from Review | Edits still there | US1-AS9 |
+| 12. Settings → cap $0.00 → upload again | Run paused "monthly AI budget reached"; raise the cap → it continues | US3-AS4/5 |
+| 13. Settings → Delete all my data → type DELETE | Back to setup step 1; no files remain in `data/files` | US4-AS2, SC-008, FR-035 |
 
 ## B. Security fixtures (fake LLM, no key needed)
 

@@ -15,7 +15,7 @@ description: "Task list for 001-setup-and-profile (first slice)"
 ## Format: `[ID] [P?] [Story] Description`
 
 - **[P]**: can run in parallel (different files, no dependency on an unfinished task)
-- **[Story]**: US1–US4 from spec.md; Setup, Foundational and Polish tasks have no story label
+- **[Story]**: US1–US5 from spec.md; Setup, Foundational and Polish tasks have no story label
 - Paths: `backend/src/hiretitan/…` (shortened to `hiretitan/…` below), `backend/tests/…`, `frontend/src/…`
 
 ---
@@ -257,7 +257,7 @@ description: "Task list for 001-setup-and-profile (first slice)"
 
   Tests first in `frontend/src/features/preferences/PreferencesPage.test.tsx`: `US2_AS1_shows_defaults`, `US2_AS3_suggestion_added_only_on_click`, `US2_AS4_errors_next_to_fields`, `US2_AS5_inr_shows_lpa`.
 
-**Checkpoint**: US2 complete and reviewed; preferences work with or without a profile or a working key.
+**Checkpoint**: US2 complete and reviewed; preferences work with or without a profile or a working key (API; the app shows them after a profile, US5).
 
 ---
 
@@ -283,6 +283,29 @@ description: "Task list for 001-setup-and-profile (first slice)"
 
 ---
 
+## Phase 5b: User Story 5 - Get set up step by step (Priority: P1, added 2026-11-04)
+
+**Goal**: a fresh user sees four setup cards (name, resume, review, preferences) instead of the shell, comes back to the card they left, and gets the usual app after "Finish setup". Design: `docs/superpowers/specs/2026-11-04-first-run-onboarding-design.md`.
+
+**Independent Test**: fresh install → any URL shows step 1 with no sidebar; name → upload → close and reopen during review (step 3, edits kept) → confirm → preferences → Finish setup → Home greets by name; a later upload does not bring the cards back (quickstart A0, A0b, A1).
+
+- [ ] T071 [US5] Implement the onboarding state in the setup module:
+  - migration `0009_onboarding`: `app.settings.display_name text null` (1–120) and `setup_completed_at timestamptz null`; the upgrade sets `setup_completed_at = now()` when a confirmed profile **and** saved preferences already exist (FR-040);
+  - pure `hiretitan/setup/domain/onboarding.py::setup_step(...)` with the FR-038 order (completed → `done`; no name → 1; open review → 3; active run (queued, running, paused, awaiting `injection_decision`) → 2; no confirmed profile → 2; otherwise 4);
+  - `hiretitan/setup/application/onboarding.py`: `get_onboarding()`, `set_display_name()`, `complete_setup()` (refuses unless the profile is confirmed and preferences are saved); `SetupFacts` gains `active_run_id()` and `open_review_id()` (implemented in `setup_wiring.py`).
+
+  Tests first: `backend/tests/unit/setup/test_onboarding_step.py` (`test_FR038_step_order` table-driven over every row, `test_FR040_completed_wins_over_open_review`), `backend/tests/integration/setup/test_onboarding_migration.py` (`test_FR040_existing_install_counts_as_set_up`, `test_fresh_install_starts_at_step_1`).
+- [ ] T072 [US5] Implement the onboarding router `hiretitan/setup/api/onboarding.py`: `GET /api/v1/onboarding`, `PUT /api/v1/onboarding/name`, `POST /api/v1/onboarding/complete` (contracts/rest-api.md, "First-run setup"), wired in `api_main`. Tests first in `backend/tests/api/setup/test_onboarding_api.py`: `test_US5_AS1_fresh_install_is_step_1`, `test_US5_AS2_name_saved_moves_to_step_2`, `test_US5_AS3_step_from_saved_state` (open review → 3, paused run → 2, confirmed profile → 4), `test_US5_AS7_complete_requires_profile_and_preferences`, `test_US5_AS7_upload_after_completion_stays_done`, `test_FR039_name_validated`.
+- [ ] T073 [US5] Implement manual reviews (FR-019, US5-AS6): migration `0010_manual_reviews` adds `profile_reviews.origin` (`extraction` · `manual`), makes the provenance columns nullable with a CHECK (required for `extraction`; `manual` has no file and no provenance); W1 gains a manual start (no file: straight to `manual_extraction` → `open_review`, reusing the injection-decision manual path); `start_manual_review()` in `hiretitan/profile/application/ingest.py` and `POST /api/v1/profile/reviews/manual` (`409 {open_review_id}`; `409 {active_run_id}` unless `?cancel_active_run=true`, which cancels that run first). Confirming a manual review creates a `manual` version (`manual_edit` if a current version exists) with no provenance. Tests first: `backend/tests/workflow/profile/test_profile_manual_review.py` (`test_US5_AS6_manual_review_autosaves_and_confirms`, `test_FR019_manual_version_has_no_provenance`), `backend/tests/api/profile/test_manual_review_api.py` (`test_FR041_cancel_active_run_then_open_manual_review`, `test_manual_review_conflicts_with_open_review`), and a migration test that existing reviews become `origin = extraction`.
+- [ ] T074 [US5] Implement the setup layout and guard: `frontend/src/features/setup/useOnboarding.ts` (`GET /onboarding`, refetched on `run.updated` and `profile.updated`), `SetupLayout.tsx` (centred card, "Step N of 4" bar, the AI banner, a footer link to Settings, palette gradients, keyboard and phone-width friendly) and `SetupGate.tsx` around the shell: while `step !== "done"` every route renders the setup card for that step; `/settings` renders inside `SetupLayout` with "Back to setup". Remove the earlier "Preferences hidden until a profile is confirmed" gate (`useProfileConfirmed`, commit `8fc4e3f`). Tests first in `frontend/src/features/setup/SetupGate.test.tsx`: `US5_AS1_any_url_shows_setup_card_without_sidebar`, `US5_AS3_resumes_at_saved_step` (each step from the API), `US5_AS7_done_shows_the_shell`, `FR041_settings_reachable_during_setup`, `FR030_banner_on_setup_cards`; update `Shell.test.tsx` for the new guard.
+- [ ] T075 [US5] Implement setup steps 1 and 2 in `frontend/src/features/setup/`: `NameStep.tsx` (name, Continue → `PUT /onboarding/name`) and `ResumeStep.tsx` (greets by name; upload, paste and progress reused from the Profile page by extracting them into `features/profile/ResumeIntake.tsx`; the run's pause message and injection-decision dialog shown in the card; a key note when the AI status is `missing` or `rejected`; "Type it in myself" → `POST /profile/reviews/manual`, asking to stop an active run first; Back → step 1). Tests first in `ResumeStep.test.tsx` and `NameStep.test.tsx`: `US5_AS2_name_then_resume_step`, `US5_AS4_progress_then_moves_to_review`, `US5_AS5_missing_key_offers_type_it_in`, `FR041_type_it_in_stops_active_run_after_confirm`; the Profile page tests still pass.
+- [ ] T076 [US5] Implement setup steps 3 and 4: `ReviewStep.tsx` embeds `ReviewEditor` (an `embedded` mode without page chrome; the name from step 1 pre-fills an empty `contact.name` as a form default, FR-039; "Back to upload" discards after confirmation) and `PreferencesStep.tsx` embeds the preferences form with a "Finish setup" button (save, then `POST /onboarding/complete`, then the usual app on Home). Tests first in `ReviewStep.test.tsx` and `PreferencesStep.test.tsx`: `US5_AS6_manual_entry_autosaves_in_card`, `FR039_name_prefills_empty_review`, `FR041_back_to_upload_discards_after_confirm`, `US5_AS7_finish_setup_opens_home`.
+- [ ] T077 [US5] Greet the user on Home (`HomePage.tsx` reads `display_name` from `GET /onboarding`) and record the change in the docs: `docs/architecture.md` §10 (setup cards, then the shell) and `docs/CONTEXT.md`. Tests first in `HomePage.test.tsx::US5_AS7_greets_by_name` and `::greets_without_a_name`.
+
+**Checkpoint**: US5 complete and reviewed; a fresh install can be set up without seeing an empty page, and no step is a dead end.
+
+---
+
 ## Phase 6: User Story 4 - Delete my data (Priority: P3)
 
 **Goal**: delete one resume file, or wipe everything back to the first-run state.
@@ -290,8 +313,8 @@ description: "Task list for 001-setup-and-profile (first slice)"
 **Independent Test**: upload, confirm, then "Delete all my data" → profile, preferences, files and AI logs are gone and Home shows a fresh checklist (quickstart A11).
 
 - [ ] T063 [US4] Implement file deletion: `delete_resume_file(id)` in `hiretitan/profile/application/files.py` and `DELETE /api/v1/resumes/{id}` (`204`). It cancels any open review and its run (Procrastinate abort + run `cancelled`), deletes the row (the review cascades; versions get `source_file_id = NULL`, `review_id = NULL`, `source_deleted = true`), and deletes the stored file and its `.txt` sidecar when no other row references the hash. Tests first in `backend/tests/api/profile/test_delete_file_api.py`: `test_US4_AS1_file_and_pending_review_removed`, `test_US4_AS1_versions_keep_content_show_source_deleted`, `test_shared_hash_file_kept_while_referenced`.
-- [ ] T064 [US4] Implement delete-all: a public `delete_all()` in `profile.application`, `preferences.application` and `platform/llm` / `platform/runtime` (calls, provider status, runs), orchestrated by `hiretitan/setup/application/delete_all.py`. It cancels all non-final runs and aborts queued jobs, then in one transaction truncates every `app` table, the `lg` checkpoint tables and the Procrastinate job tables; then it calls `FileStoragePort.delete_all()` and re-seeds defaults (settings row, provider status `unknown`, then defers a key check). It never touches `.env`. Router `POST /api/v1/data/delete-all` with body `{confirm: "DELETE"}` → `204`; anything else → `422`. Tests first in `backend/tests/api/setup/test_delete_all_api.py`: `test_US4_AS2_returns_to_first_run_state`, `test_SC008_no_rows_or_files_left` (counts rows in every `app` and `lg` table and files in the data dir), `test_FR035_wrong_confirm_word_rejected`.
-- [ ] T065 [US4] Implement the deletion UI: a delete action per file in the Profile page's resume list (confirm dialog explaining that versions keep their content) and a "Delete all my data" danger zone in Settings (typed `DELETE` confirmation, then redirect to Home). Files: `frontend/src/features/profile/ResumeFiles.tsx`, `frontend/src/features/settings/DeleteAllData.tsx`. Tests first in `frontend/src/features/settings/DeleteAllData.test.tsx::US4_AS2_requires_typed_word` and `frontend/src/features/profile/ResumeFiles.test.tsx::US4_AS1_confirm_then_delete`.
+- [ ] T064 [US4] Implement delete-all: a public `delete_all()` in `profile.application`, `preferences.application` and `platform/llm` / `platform/runtime` (calls, provider status, runs), orchestrated by `hiretitan/setup/application/delete_all.py`. It cancels all non-final runs and aborts queued jobs, then in one transaction truncates every `app` table, the `lg` checkpoint tables and the Procrastinate job tables; then it calls `FileStoragePort.delete_all()` and re-seeds defaults (settings row with no `display_name` and no `setup_completed_at`, provider status `unknown`, then defers a key check), so the app is back at setup step 1 (FR-035, US5). It never touches `.env`. Router `POST /api/v1/data/delete-all` with body `{confirm: "DELETE"}` → `204`; anything else → `422`. Tests first in `backend/tests/api/setup/test_delete_all_api.py`: `test_US4_AS2_returns_to_first_run_state`, `test_SC008_no_rows_or_files_left` (counts rows in every `app` and `lg` table and files in the data dir), `test_FR035_wrong_confirm_word_rejected`, `test_FR035_back_to_setup_step_1`.
+- [ ] T065 [US4] Implement the deletion UI: a delete action per file in the Profile page's resume list (confirm dialog explaining that versions keep their content) and a "Delete all my data" danger zone in Settings (typed `DELETE` confirmation, then the app shows setup step 1). Files: `frontend/src/features/profile/ResumeFiles.tsx`, `frontend/src/features/settings/DeleteAllData.tsx`. Tests first in `frontend/src/features/settings/DeleteAllData.test.tsx::US4_AS2_requires_typed_word` and `frontend/src/features/profile/ResumeFiles.test.tsx::US4_AS1_confirm_then_delete`.
 
 **Checkpoint**: all four stories complete and reviewed.
 
@@ -299,11 +322,11 @@ description: "Task list for 001-setup-and-profile (first slice)"
 
 ## Phase 7: Polish and cross-cutting concerns
 
-- [ ] T066 Add the end-to-end journey in `frontend/e2e/setup-and-profile.spec.ts` (Playwright) covering quickstart A1–A11 against the compose stack with `HIRETITAN_LLM=fake` and FakeLlm scripts in `backend/tests/fixtures/fake_llm/e2e/`; the key-missing and key-fixed steps toggle a fake provider status. Add an `e2e` job to `.github/workflows/ci.yml`. Test: the spec itself (`SC001_journey_completes`, `SC006_no_data_lost_across_pause`). SC-001's 10-minute target is a human timing that automation can't measure: Ravi does one timed manual run of quickstart A with a working key and records the time in the PR.
+- [ ] T066 Add the end-to-end journey in `frontend/e2e/setup-and-profile.spec.ts` (Playwright) covering quickstart A0–A11 (starting with the setup cards) against the compose stack with `HIRETITAN_LLM=fake` and FakeLlm scripts in `backend/tests/fixtures/fake_llm/e2e/`; the key-missing and key-fixed steps toggle a fake provider status. Add an `e2e` job to `.github/workflows/ci.yml`. Test: the spec itself (`SC001_journey_completes`, `SC006_no_data_lost_across_pause`). SC-001's 10-minute target is a human timing that automation can't measure: Ravi does one timed manual run of quickstart A with a working key and records the time in the PR.
 - [ ] T067 Run the extraction eval with Ravi's key (`python -m evals.run extract_profile --models fast,strong,nano`, after Ravi approves the printed cost estimate), commit the report to `backend/evals/reports/`, check SC-002 / SC-003 / SC-007, and set the `fast` default in `hiretitan/platform/llm/models.yaml` per ADR-11 (record the decision in `docs/architecture.md` ADR-11). Test: `backend/tests/unit/platform/llm/test_models.py::test_defaults_match_latest_eval_report` (the report's chosen model equals `models.yaml` fast).
 - [ ] T068 [P] Write the docs: `README.md` (run with `docker compose up`, dev setup with db in Docker + `uv`/`npm`, `git config core.hooksPath .githooks`), `docs/user-guide/getting-started.md` (key in `.env`, restart, budget, what is sent to OpenAI and what is masked) and `docs/user-guide/preference-defaults.md` (every FR-024 default and why). Test: `backend/tests/unit/test_docs.py::test_FR024_documented_defaults_match_code` (parses the defaults table in the doc and compares it with `preferences/domain/defaults.py`).
 - [ ] T069 Do a cross-OS check: run `docker compose up` on Windows 11 (Ravi's machine) and in CI on Linux (`ubuntu-latest` job runs compose + `GET /api/v1/health` + one fake-LLM upload); note the macOS status in the README. Fix any path or line-ending issues found. Test: the CI `compose-smoke` job.
-- [ ] T070 Update `docs/CONTEXT.md` (history line, next steps: the remaining 001 items such as per-item diff and career-ops import, plus the two deviations that must close before the first public release: **D1** the Anthropic, Gemini and OpenAI-compatible adapters, and **D2** the guided first-run wizard) and tick the spec checklists; verify every SC in spec.md maps to a passing test or report (list them in the PR description).
+- [ ] T070 Update `docs/CONTEXT.md` (history line, next steps: the remaining 001 items such as per-item diff and career-ops import, plus the deviation that must close before the first public release: **D1** the Anthropic, Gemini and OpenAI-compatible adapters; D2 was closed by US5) and tick the spec checklists; verify every SC in spec.md maps to a passing test or report (list them in the PR description).
 
 ---
 
@@ -317,7 +340,8 @@ description: "Task list for 001-setup-and-profile (first slice)"
 - **US1 → US2 seam**: W1 masking uses an injected `DefaultCountryProvider` (default `IN`); T053 plugs in the real preferences value, so neither story waits for the other.
 - **US2 (T052–T055)**: after Foundational; T053's suggestions use `profile.application.get_current_profile()` (T046) but return an empty list without a profile, so US2 can be built in parallel with US1 against a stub of that function.
 - **US3 (T056–T062)**: after Foundational; T057/T058 read profile and preferences state (T045, T053); T059 needs T044.
-- **US4 (T063–T065)**: after US1 (T041–T046); T064 also needs T053 and T056.
+- **US5 (T071–T077)**: after US3 (status, banner, Settings) and US2 (preferences form). T071 → T072; T073 after T044/T045; T074 after T072; T075 after T073/T074; T076 after T075; T077 after T072.
+- **US4 (T063–T065)**: after US1 (T041–T046) and US5; T064 also needs T053, T056 and T071.
 - **Polish (T066–T070)**: after all stories.
 
 ### Within each task
@@ -359,12 +383,13 @@ Task: "T037 [US1] hidden-text detection in hiretitan/platform/untrusted/hidden_t
 
 4. US2 (T052–T055) → validate quickstart A2–A3 and A7.
 5. US3 (T056–T062) → validate A1, A4–A5 and A10.
-6. US4 (T063–T065) → validate A11.
-7. Polish (T066–T070) → full quickstart, eval report, docs, then the PR to `master`.
+6. US5 (T071–T077) → validate A0, A0b and A1.
+7. US4 (T063–T065) → validate A11.
+8. Polish (T066–T070) → full quickstart, eval report, docs, then the PR to `master`.
 
 ## Notes
 
-- Total: **70 tasks**. Setup 6 · Foundational 22 · US1 23 · US2 4 · US3 7 · US4 3 · Polish 5.
+- Total: **77 tasks**. Setup 6 · Foundational 22 · US1 23 · US2 4 · US3 7 · US5 7 (T071–T077, added 2026-11-04, built before US4) · US4 3 · Polish 5.
 - No task calls the real OpenAI API except T019 (manual price check, no call) and T067 (eval, after Ravi approves the cost).
 - Every story ends with the reviewers (python/FastAPI, security, database, React) before it's marked done (constitution workflow).
 - Don't commit `.env`, real resumes or anything from `docs/private/`.

@@ -67,10 +67,11 @@ failed → queued ("Try again")
 | changed_paths | jsonb | list of field paths that differ from `compare_to_version_id` |
 | draft | jsonb null | user's unsaved edits (FR-016); `ProfileContent` shape |
 | draft_saved_at | timestamptz null | |
-| prompt_name / prompt_version / provider / model | text | provenance (FR-012) |
+| origin | text | `extraction` · `manual` (US5: "Type it in myself", no file, no AI) |
+| prompt_name / prompt_version / provider / model | text null | provenance (FR-012); required when `origin = extraction`, null when `manual` (CHECK) |
 | created_at / updated_at | timestamptz | |
 
-Constraint: partial unique index `ON (status) WHERE status = 'open'`, so at most one open review exists.
+Constraint: partial unique index `ON (status) WHERE status = 'open'`, so at most one open review exists. A `manual` review has `resume_file_id IS NULL` (CHECK). Confirming a `manual` review creates a version with `created_by = manual` (or `manual_edit` when a current version exists).
 
 ### `app.profiles` (profile)
 
@@ -103,7 +104,7 @@ Single row (`singleton` key). Columns map 1:1 to `Preferences` below; `content j
 
 ### `app.settings` (setup)
 
-Single row: `budget_cap_usd numeric(8,2) DEFAULT 25.00 CHECK (budget_cap_usd >= 0)`, `updated_at`. Tier → model mapping is **not** stored in this slice (fixed in `models.yaml`, clarification Q2).
+Single row: `budget_cap_usd numeric(8,2) DEFAULT 25.00 CHECK (budget_cap_usd >= 0)`, `display_name text null CHECK (char_length(display_name) BETWEEN 1 AND 120)` (setup step 1, FR-039), `setup_completed_at timestamptz null` (FR-040; migration `0009` sets it for installs that already have a confirmed profile and saved preferences), `updated_at`. Tier → model mapping is **not** stored in this slice (fixed in `models.yaml`, clarification Q2).
 
 ### `app.provider_status` (platform/llm)
 

@@ -29,6 +29,16 @@ Base `http://127.0.0.1:8000/api/v1` · JSON · no auth (local only) · errors fo
 | `POST /profile/reviews/{id}/confirm` | `ProfileContent` → `202 {run_id}`, or `422` with confirm-rule errors | FR-017/018; resumes the run, which saves the version |
 | `POST /profile/reviews/{id}/discard` | → `204` | cancels the run; the current profile is unchanged |
 
+| `POST /profile/reviews/manual` | `?cancel_active_run=true` optional → `201 {review_id, run_id}` | FR-019, US5-AS6. Opens an empty, autosaved review with no file (W1 manual mode). `409 {open_review_id}` when a review is open; `409 {active_run_id}` when a resume is still being read, unless `cancel_active_run=true`. |
+
+## First-run setup (setup)
+
+| Method & path | Body → Response | Notes |
+|---|---|---|
+| `GET /onboarding` | → `{step: 1 \| 2 \| 3 \| 4 \| "done", display_name: str \| null, open_review_id: uuid \| null, active_run_id: uuid \| null}` | FR-037/038/040. `done` once `setup_completed_at` is set. |
+| `PUT /onboarding/name` | `{display_name: str 1–120}` → `200 {display_name}`, or `422` | FR-039 |
+| `POST /onboarding/complete` | → `200 {setup_completed_at}`, or `409` when the profile is not confirmed or preferences are not saved | FR-040 |
+
 ## Profile and versions (profile)
 
 | Method & path | Body → Response | Notes |
