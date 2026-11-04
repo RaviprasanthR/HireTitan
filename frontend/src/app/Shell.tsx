@@ -1,4 +1,5 @@
 import { Outlet, NavLink } from 'react-router'
+import { useProfileConfirmed } from '@/features/profile/useProfileConfirmed'
 import { cn } from '@/lib/utils'
 
 const sections = [
@@ -10,12 +11,15 @@ const sections = [
 ] as const
 
 export function Shell() {
+  // Preferences only make sense once a profile exists, so the section stays hidden until then.
+  const profileConfirmed = useProfileConfirmed() === true
+  const visible = sections.filter((s) => s.to !== '/preferences' || profileConfirmed)
   return (
     <div data-testid="app-root" className="flex min-h-screen bg-background text-foreground">
       <aside className="flex w-56 shrink-0 flex-col gap-6 bg-surface p-4">
         <span className="px-3 text-lg font-semibold">HireTitan</span>
         <nav aria-label="Main" className="flex flex-col gap-1">
-          {sections.map(({ to, label, end }) => (
+          {visible.map(({ to, label, end }) => (
             <NavLink
               key={to}
               to={to}

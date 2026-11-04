@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
-import { useParams } from 'react-router'
-import { PreferencesPage } from '@/features/preferences/PreferencesPage'
+import { Navigate, useParams } from 'react-router'
+import { PreferencesPage as PreferencesForm } from '@/features/preferences/PreferencesPage'
+import { useProfileConfirmed } from '@/features/profile/useProfileConfirmed'
 import { ProfileEditor } from '@/features/profile/ProfileEditor'
 import { ProfilePage } from '@/features/profile/ProfilePage'
 import { ReviewEditor } from '@/features/profile/ReviewEditor'
@@ -22,8 +23,15 @@ export function ProfileReviewPage() {
   const { reviewId } = useParams()
   return reviewId ? <ReviewEditor reviewId={reviewId} /> : <Page title="Review your profile" />
 }
+/** Preferences are not shown, or even loaded, until a profile has been confirmed. */
+export function PreferencesPage() {
+  const confirmed = useProfileConfirmed()
+  if (confirmed === undefined) return <p>Loading…</p>
+  if (!confirmed) return <Navigate to="/profile" replace />
+  return <PreferencesForm />
+}
 export const ReviewPage = () => <Page title="Review" />
 export const SettingsPage = () => <Page title="Settings" />
 export const NotFoundPage = () => <Page title="Page not found" />
 
-export { PreferencesPage, ProfileEditor, ProfilePage, VersionView as ProfileVersionPage, VersionsList as ProfileVersionsPage }
+export { ProfileEditor, ProfilePage, VersionView as ProfileVersionPage, VersionsList as ProfileVersionsPage }

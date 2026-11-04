@@ -49,6 +49,8 @@ This file captures project decisions so work can resume in a new session without
 
 - **2026-11-04 (US2 built, not yet committed or reviewed):** Phase 4 (T052-T055) done: preferences domain/rules/defaults (`preferences/domain/`), migration `0008_preferences` (singleton row, `content jsonb`), service (`get/save/suggestions/get_default_country`), `GET/PUT /api/v1/preferences`, and the Preferences page. `default_country_provider` is wired into `worker_main` (W1 contact masking now uses the saved country). Decisions: rule errors are collected together and returned as field-level 422s; country/currency lists are static (ISO) in `preferences/domain/iso.py` and `frontend/.../iso.ts`; INR pay is typed in LPA and stored as annual rupees. Backend 661 tests, frontend 89 tests green.
 
+- **2026-11-04 (UI change after US2):** Ravi decided Preferences are neither shown nor loaded until a profile is confirmed: the sidebar hides "Preferences" and `/preferences` redirects to `/profile` (frontend only; the API still works without a profile). This departs from FR-026 / US2 ("works without a profile") and FR-027 (five sections); update the spec when convenient.
+
 ## 5. Next steps
 
 1. **US1 and US2 are built; Ravi still has to review Phase 4, then start Phase 5 (US3, T056 onwards)** with `/speckit-implement`, stopping at the end of each phase. Phase 4 changes are in the working tree, uncommitted (commit per task when Ravi asks). Start Docker Desktop first; tests use Testcontainers. Dev databases created before the 2026-11-04 `0007` edit need re-creating (the DB limit changed to 5 MB and new constraints were added).
