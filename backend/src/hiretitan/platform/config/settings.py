@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     host: str = Field(default="127.0.0.1", validation_alias="HIRETITAN_HOST")
     port: int = Field(default=8000, ge=1, le=65535, validation_alias="HIRETITAN_PORT")
     llm: LlmMode = Field(default="openai", validation_alias="HIRETITAN_LLM")
+    fake_llm_dir: Path | None = Field(default=None, validation_alias="HIRETITAN_FAKE_LLM_DIR")
 
     explicit_database_url: SecretStr | None = Field(default=None, validation_alias="DATABASE_URL")
     postgres_user: str = Field(default="hiretitan", validation_alias="POSTGRES_USER")
@@ -42,7 +43,7 @@ class Settings(BaseSettings):
     postgres_host: str = Field(default="127.0.0.1", validation_alias="POSTGRES_HOST")
     postgres_port: int = Field(default=5432, ge=1, le=65535, validation_alias="POSTGRES_PORT")
 
-    @field_validator("openai_api_key", "explicit_database_url", mode="before")
+    @field_validator("openai_api_key", "explicit_database_url", "fake_llm_dir", mode="before")
     @classmethod
     def _blank_is_missing(cls, value: object) -> object:
         if isinstance(value, SecretStr):

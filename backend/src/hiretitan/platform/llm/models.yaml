@@ -17,3 +17,13 @@ providers:
         input: "10.00"
         cached_input: "1.00"
         output: "50.00"
+  # Used with HIRETITAN_LLM=fake: scripted replies, no network, no cost.
+  fake:
+    tiers:
+      fast: fake-model
+      strong: fake-model
+    models:
+      fake-model:
+        input: "0"
+        cached_input: "0"
+        output: "0"

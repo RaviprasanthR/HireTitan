@@ -75,3 +75,18 @@ def test_retry_strategy_follows_the_delay_schedule() -> None:
             seconds.append(round((decision.retry_at - now).total_seconds() / 10) * 10)
     assert seconds == [10, 60, 300, None]
 
+
+async def test_worker_main_starts_checks_the_key_and_exits_when_idle(
+    database_url: str, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    from hiretitan.platform.config.settings import Settings
+    from hiretitan.platform.llm.infra.provider_status_repo import ProviderStatusRepo
+    from hiretitan.worker_main import run_worker
+
+    settings = Settings(DATABASE_URL=database_url, HIRETITAN_LLM="fake")
+    await run_worker(settings, wait=False)
+
+    async with sessions() as session:
+        status = await ProviderStatusRepo(session).get("fake")
+    assert status is not None
+    assert status.status == "working"

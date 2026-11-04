@@ -1,7 +1,8 @@
 """Worker composition root: ``python -m hiretitan.worker_main``.
 
-Wires settings, the database, the checkpointer, the workflow registry and the job queue,
-then runs jobs until stopped.
+Wires settings, the database, the AI platform, the checkpointer, the workflow registry and
+the job queue; checks the AI key at start-up (resuming runs it had paused); then runs jobs
+until stopped.
 """
 
 from __future__ import annotations
@@ -10,12 +11,16 @@ import asyncio
 import sys
 from collections.abc import Mapping
 
+from hiretitan.platform.clock import SystemClock
 from hiretitan.platform.config.settings import Settings, get_settings
 from hiretitan.platform.db import create_engine, session_factory
+from hiretitan.platform.llm.factory import build_llm
 from hiretitan.platform.runtime.checkpointer import open_checkpointer
 from hiretitan.platform.runtime.events import EventPublisher, run_notifier
 from hiretitan.platform.runtime.procrastinate import Runtime, create_runtime
+from hiretitan.platform.runtime.resume_paused import resume_on_startup
 from hiretitan.platform.runtime.runner import WorkflowDef, WorkflowRunner
+from hiretitan.setup.infra.settings_repo import budget_cap_provider
 
 
 def workflow_registry() -> Mapping[str, WorkflowDef]:
@@ -25,17 +30,20 @@ def workflow_registry() -> Mapping[str, WorkflowDef]:
 
 async def run_worker(settings: Settings, *, wait: bool = True) -> None:
     engine = create_engine(settings.database_url)
+    sessions = session_factory(engine)
     publisher = EventPublisher(engine)
     runtime: Runtime = create_runtime(settings.database_url)
+    built = build_llm(
+        settings, sessions, budget_cap_provider(sessions), SystemClock(), publisher.publish
+    )
+    runtime.provider_status = built.provider_status
     try:
         async with open_checkpointer(settings.database_url) as checkpointer:
             runtime.holder.runner = WorkflowRunner(
-                session_factory(engine),
-                checkpointer,
-                workflow_registry(),
-                run_notifier(publisher),
+                sessions, checkpointer, workflow_registry(), run_notifier(publisher)
             )
             async with runtime.app.open_async():
+                await resume_on_startup(built.provider_status, sessions, runtime.queue)
                 await runtime.app.run_worker_async(wait=wait)
     finally:
         await engine.dispose()
