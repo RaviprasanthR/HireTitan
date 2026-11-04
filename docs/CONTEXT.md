@@ -1,6 +1,6 @@
 # Project context — read this first in a new session
 
-Last updated: 2026-11-04 (end of session 4) · Maintainer: Ravi Prasanth R · Summary kept by Claude (Claude Code)
+Last updated: 2026-11-04 (end of session 5) · Maintainer: Ravi Prasanth R · Summary kept by Claude (Claude Code)
 
 This file captures project decisions so work can resume in a new session without the old conversation. Keep it updated at the end of every working session. It holds **project facts only**; the maintainer's personal job-search notes live in the gitignored `docs/private/` folder.
 
@@ -51,9 +51,11 @@ This file captures project decisions so work can resume in a new session without
 
 - **2026-11-04 (UI change after US2):** Ravi decided Preferences are neither shown nor loaded until a profile is confirmed: the sidebar hides "Preferences" and `/preferences` redirects to `/profile` (frontend only; the API still works without a profile). This departs from FR-026 / US2 ("works without a profile") and FR-027 (five sections); update the spec when convenient.
 
+- **2026-11-04 (US3 built, uncommitted):** Phase 5 (T056-T062) done: settings API (cap 0-10000, spend, read-only tiers; raising the cap re-queues budget-paused runs), status API (`ai`, `checklist`, `budget`; "Check again" defers `check_provider_key`), review-items API (profile reviews, injection decisions, paused runs; newest first), `setup_wiring.py` (the composition-level `SetupFacts` adapter over the profile and preferences repos, because setup may not import other features), end-to-end key/budget pause tests (no gaps found in T014/T021/T025/T044), and the AI banner, Home checklist, Review and Settings pages. Backend 682 tests, frontend 116 tests green.
+
 ## 5. Next steps
 
-1. **US1 and US2 are built; Ravi still has to review Phase 4, then start Phase 5 (US3, T056 onwards)** with `/speckit-implement`, stopping at the end of each phase. Phase 4 changes are in the working tree, uncommitted (commit per task when Ravi asks). Start Docker Desktop first; tests use Testcontainers. Dev databases created before the 2026-11-04 `0007` edit need re-creating (the DB limit changed to 5 MB and new constraints were added).
+1. **US1, US2 and US3 are built; Ravi still has to review Phase 5, then start Phase 6 (US4, T063 onwards)** with `/speckit-implement`, stopping at the end of each phase. Phase 4 changes are in the working tree, uncommitted (commit per task when Ravi asks). Start Docker Desktop first; tests use Testcontainers. Dev databases created before the 2026-11-04 `0007` edit need re-creating (the DB limit changed to 5 MB and new constraints were added).
    - **Review findings not fixed yet** (decide whether to do them before the PR): eval runner uses a hard-coded `IN` phone region, ignores year-only dates, and overwrites the same-day report; API contract drift (`current` vs `current_version`, `source_file_name`, `parse_result` not in the contract) and OpenAPI error responses; N+1 queries and unbounded lists on `/profile/versions` and `/resumes`; no DELETE guard on `profile_versions`; PDF invisible text (render mode 3, z-order) not detected; "Changed" badges don't update while typing; `retry` enqueue is not atomic with the state change. `DELETE /resumes/{id}` is T063, not missing.
    - **Fix-up needed:** `nano` is not in `models.yaml` (no verified price), so `--models nano` is rejected; add it with a checked price before T067. Date grounding does not know non-English month abbreviations (the Spanish eval case loses the month of "ene 2020").
    - **Running the UI locally** (nothing is saved between sessions): start a Postgres 16 container (host port 15432; 5433 is blocked on Ravi's Windows machine), run `alembic upgrade head`, then `python -m hiretitan.api_main`, `python -m hiretitan.worker_main` and `npm run dev` in `frontend/`, with `HIRETITAN_LLM=fake`, `HIRETITAN_FAKE_LLM_DIR` pointing at a folder holding an `extract_profile.json` list of extraction outputs, `POSTGRES_PORT=15432`, `POSTGRES_PASSWORD`.
