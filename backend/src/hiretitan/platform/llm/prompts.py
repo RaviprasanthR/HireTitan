@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import importlib.util
 import re
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Final, cast
@@ -59,6 +60,8 @@ def _load_schema(path: Path) -> type[BaseModel]:
     if spec is None or spec.loader is None:
         raise ValueError(f"Cannot load prompt schema {path}")
     module = importlib.util.module_from_spec(spec)
+    # Registered before running, so pydantic can resolve names in postponed annotations.
+    sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     schema = getattr(module, "Output", None)
     if not (isinstance(schema, type) and issubclass(schema, BaseModel)):

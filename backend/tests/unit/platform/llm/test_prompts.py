@@ -71,3 +71,24 @@ def test_meta_must_match_folder_version_and_known_tier(tmp_path: Path) -> None:
     write_prompt(tmp_path, "b", 1, tier="huge")
     with pytest.raises(ValueError, match="tier"):
         PromptRegistry(tmp_path).load("b")
+
+
+NESTED_SCHEMA = """from __future__ import annotations
+
+from pydantic import BaseModel
+
+
+class Inner(BaseModel):
+    value: int
+
+
+class Output(BaseModel):
+    inner: Inner
+"""
+
+
+def test_schema_with_nested_models_and_postponed_annotations_loads(tmp_path: Path) -> None:
+    write_prompt(tmp_path, "nested", 1)
+    (tmp_path / "nested" / "v1" / "schema.py").write_text(NESTED_SCHEMA)
+    schema = PromptRegistry(tmp_path).load("nested").output_schema
+    assert schema.model_validate({"inner": {"value": 3}}).inner.value == 3
