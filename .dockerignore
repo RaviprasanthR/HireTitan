@@ -1,0 +1,17 @@
+# Secrets and personal data never enter an image (constitution VIII).
+.env
+.env.*
+!.env.example
+data
+docs/private
+
+# Build noise
+.git
+**/node_modules
+**/__pycache__
+**/.venv
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/coverage
+frontend/dist

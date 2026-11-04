@@ -1,0 +1,69 @@
+# HireTitan: `docker compose up`, then open http://127.0.0.1:8000
+# Copy .env.example to .env first. Ports are published on localhost only: there is no login.
+
+x-app: &app
+  build: .
+  env_file: .env
+  environment: &app-env
+    POSTGRES_HOST: db
+    POSTGRES_PORT: "5432"
+    HIRETITAN_DATA_DIR: /data
+    DATABASE_URL: ""  # build the URL from POSTGRES_* inside the stack
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-hiretitan}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-hiretitan}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  migrate:
+    <<: *app
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    <<: *app
+    command: ["python", "-m", "hiretitan.api_main"]
+    environment:
+      <<: *app-env
+      HIRETITAN_HOST: 0.0.0.0  # inside the container only; the published port is localhost
+      HIRETITAN_PORT: "8000"
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - app-data:/data
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  worker:
+    <<: *app
+    command: ["python", "-m", "hiretitan.worker_main"]
+    volumes:
+      - app-data:/data
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+volumes:
+  db-data:
+  app-data:

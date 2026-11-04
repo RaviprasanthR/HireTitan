@@ -135,7 +135,7 @@ def create_app(
         api.include_router(router)
     app.include_router(api, prefix=API_PREFIX)
 
-    dist = DEFAULT_DIST if frontend_dist is None else frontend_dist
+    dist = frontend_dist or settings.frontend_dist or DEFAULT_DIST
     if (dist / "index.html").is_file():
         _add_spa(app, dist)
     return app
