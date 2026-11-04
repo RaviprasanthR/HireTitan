@@ -3,17 +3,24 @@
 :root {
   color-scheme: dark;
 
-  --ht-background: #261f32;
-  --ht-surface: #41394f;
-  --ht-divider: #625d73;
-  --ht-muted: #86819e;
-  --ht-muted-small: #938eab;
-  --ht-primary: #594ba0;
-  --ht-accent: #a99ce6;
-  --ht-text: #fbfafb;
-  --ht-success: #5fc9a0;
-  --ht-warning: #e0b25a;
-  --ht-danger: #e07a8a;
+  /* Deep Obsidian, Steel Grey, Titan Blue, Slate Muted, Ice White. Titan Blue is the
+     accent; button fills use a darker blue so Ice White text keeps 4.5:1. */
+  --ht-background: #0d1117;
+  --ht-surface: #161b22;
+  --ht-divider: #30363d;
+  --ht-muted: #8b949e;
+  --ht-muted-small: #8b949e;
+  --ht-primary: #0060cc;
+  --ht-accent: #007fff;
+  --ht-text: #f0f6fc;
+  --ht-success: #3fb950;
+  --ht-warning: #d29922;
+  --ht-danger: #f85149;
+  --ht-on-primary: var(--ht-text);
+  --ht-gradient-page: radial-gradient(900px 500px at 88% -8%, rgb(0 127 255 / 0.16), transparent 60%),
+    linear-gradient(180deg, #0d1117 0%, #090c10 100%);
+  --ht-gradient-surface: linear-gradient(160deg, #1c232d 0%, #161b22 55%, #12161c 100%);
+  --ht-gradient-primary: linear-gradient(135deg, #004fb3 0%, #0069e0 100%);
 
   /* shadcn variables */
   --background: var(--ht-background);
@@ -23,7 +30,7 @@
   --popover: var(--ht-surface);
   --popover-foreground: var(--ht-text);
   --primary: var(--ht-primary);
-  --primary-foreground: var(--ht-text);
+  --primary-foreground: var(--ht-on-primary);
   --secondary: var(--ht-surface);
   --secondary-foreground: var(--ht-text);
   --muted: var(--ht-surface);
@@ -37,7 +44,7 @@
   --sidebar: var(--ht-surface);
   --sidebar-foreground: var(--ht-text);
   --sidebar-primary: var(--ht-primary);
-  --sidebar-primary-foreground: var(--ht-text);
+  --sidebar-primary-foreground: var(--ht-on-primary);
   --sidebar-accent: var(--ht-divider);
   --sidebar-accent-foreground: var(--ht-text);
   --sidebar-border: var(--ht-divider);
@@ -52,4 +59,24 @@
   --color-success: var(--ht-success);
   --color-warning: var(--ht-warning);
   --color-danger: var(--ht-danger);
+}
+
+/* Gradients: page glow, panels and primary actions. Text keeps AA contrast on every stop. */
+body {
+  background: var(--ht-gradient-page) fixed;
+  background-color: var(--ht-background);
+  min-height: 100vh;
+}
+.bg-background {
+  background: transparent;
+}
+.bg-surface {
+  background-image: var(--ht-gradient-surface);
+}
+.bg-primary {
+  background-image: var(--ht-gradient-primary);
+  color: var(--ht-on-primary);
+}
+.bg-primary:hover {
+  filter: brightness(1.12);
 }

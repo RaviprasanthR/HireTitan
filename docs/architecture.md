@@ -347,15 +347,16 @@ React (current stable; exact version pinned in the 001 plan) + Vite + TypeScript
 
 | Token | Colour | Use |
 |---|---|---|
-| `background` | `#261f32` | page |
-| `surface` | `#41394f` | sidebar, cards, inputs |
-| `divider` / hover | `#625d73` | dividers, hover, disabled (decorative only) |
-| `muted` | `#86819e` | icons, input outlines, muted text ≥ 14px |
-| `muted-small` | `#938eab` | small hint/label text (5.0:1) |
-| `primary` | `#594ba0` | buttons, active nav, selected items (white text 6.8:1) |
-| `accent` | `#a99ce6` | links, keyboard focus ring (≈7:1) |
-| `text` | `#fbfafb` | body text, button text (15:1) |
-| `success` / `warning` / `danger` | `#5fc9a0` / `#e0b25a` / `#e07a8a` | status badges |
+| `background` | `#0d1117` (Deep Obsidian) | page |
+| `surface` | `#161b22` (Steel Grey) | sidebar, cards, inputs |
+| `divider` / hover | `#30363d` | dividers, hover, disabled (decorative only) |
+| `muted` / `muted-small` | `#8b949e` (Slate Muted) | icons, outlines, hint and label text |
+| `primary` | `#0060cc` | button and active-nav fill (gradient `#004fb3` to `#0069e0`; Ice White text 4.7:1 or better) |
+| `accent` | `#007fff` (Titan Blue) | links, keyboard focus ring |
+| `text` | `#f0f6fc` (Ice White) | body text, button text |
+| `success` / `warning` / `danger` | `#3fb950` / `#d29922` / `#f85149` | status badges |
+
+Gradients (page glow, panels, primary actions) are CSS variables in `theme.css`.
 
 **First-level UI (001):** a sidebar shell with **Home** (setup checklist: key found and working, resume uploaded, profile confirmed, preferences set) · **Profile** (upload, extraction progress, review/edit/confirm, hidden-text and injection flags) · **Preferences** (form) · **Review** (items waiting for approval) · **Settings** (budget cap, key status, tier → model mapping, usage and spend).
 

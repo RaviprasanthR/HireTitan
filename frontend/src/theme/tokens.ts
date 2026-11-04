@@ -1,16 +1,16 @@
 /** The colour palette (architecture §10). theme.css repeats these as CSS variables. */
 export const tokens = {
-  background: '#261f32',
-  surface: '#41394f',
-  divider: '#625d73',
-  muted: '#86819e',
-  mutedSmall: '#938eab',
-  primary: '#594ba0',
-  accent: '#a99ce6',
-  text: '#fbfafb',
-  success: '#5fc9a0',
-  warning: '#e0b25a',
-  danger: '#e07a8a',
+  background: '#0d1117',
+  surface: '#161b22',
+  divider: '#30363d',
+  muted: '#8b949e',
+  mutedSmall: '#8b949e',
+  primary: '#0060cc',
+  accent: '#007fff',
+  text: '#f0f6fc',
+  success: '#3fb950',
+  warning: '#d29922',
+  danger: '#f85149',
 } as const
 
 function channel(value: number): number {
