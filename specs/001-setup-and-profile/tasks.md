@@ -102,7 +102,7 @@ description: "Task list for 001-setup-and-profile (first slice)"
 
 ### Domain (pure)
 
-- [ ] T029 [P] [US1] Implement the profile value types in `hiretitan/profile/domain/content.py` as frozen dataclasses, using the bounds from data-model.md verbatim:
+- [X] T029 [P] [US1] Implement the profile value types in `hiretitan/profile/domain/content.py` as frozen dataclasses, using the bounds from data-model.md verbatim:
   - `contact`: `name: str (1–120, required to confirm)`, `location ≤120`, `links ≤10`;
   - `headline ≤200`, `summary ≤2000`;
   - `experience ≤ 40` with `employer (1–200)`, `title (1–200)`, `bullets: [str ≤ 500] (≤ 30)`;
