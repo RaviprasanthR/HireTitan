@@ -289,7 +289,7 @@ description: "Task list for 001-setup-and-profile (first slice)"
 
 **Independent Test**: fresh install → any URL shows step 1 with no sidebar; name → upload → close and reopen during review (step 3, edits kept) → confirm → preferences → Finish setup → Home greets by name; a later upload does not bring the cards back (quickstart A0, A0b, A1).
 
-- [ ] T071 [US5] Implement the onboarding state in the setup module:
+- [X] T071 [US5] Implement the onboarding state in the setup module:
   - migration `0009_onboarding`: `app.settings.display_name text null` (1–120) and `setup_completed_at timestamptz null`; the upgrade sets `setup_completed_at = now()` when a confirmed profile **and** saved preferences already exist (FR-040);
   - pure `hiretitan/setup/domain/onboarding.py::setup_step(...)` with the FR-038 order (completed → `done`; no name → 1; open review → 3; active run (queued, running, paused, awaiting `injection_decision`) → 2; no confirmed profile → 2; otherwise 4);
   - `hiretitan/setup/application/onboarding.py`: `get_onboarding()`, `set_display_name()`, `complete_setup()` (refuses unless the profile is confirmed and preferences are saved); `SetupFacts` gains `active_run_id()` and `open_review_id()` (implemented in `setup_wiring.py`).
