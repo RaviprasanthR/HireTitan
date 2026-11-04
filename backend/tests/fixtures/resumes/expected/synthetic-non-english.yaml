@@ -1,0 +1,15 @@
+certifications: []
+education:
+- Universidad de Ejemplo
+email: carlos.ejemplo@example.net
+employers:
+- Acme Corp
+name: Carlos Ejemplo
+phone: +91 90000 00003
+projects: []
+skills:
+- Python
+- SQL
+- Docker
+titles:
+- Ingeniero de Software

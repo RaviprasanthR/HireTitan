@@ -1,0 +1,21 @@
+certifications:
+- AWS Certified Developer
+education:
+- Example Institute of Technology
+email: jane.example@example.com
+employers:
+- Acme Corp
+- Globex Ltd
+name: Jane Example
+phone: +91 90000 00001
+projects:
+- Tracer
+skills:
+- Python
+- Go
+- PostgreSQL
+- Kubernetes
+- Terraform
+titles:
+- Staff Software Engineer
+- Software Engineer
