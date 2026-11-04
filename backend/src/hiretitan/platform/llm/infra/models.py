@@ -49,3 +49,21 @@ class LlmCallRow(Base):
     outcome: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
+
+STATUSES = ("unknown", "working", "missing", "rejected", "unreachable")
+
+
+class ProviderStatusRow(Base):
+    """``app.provider_status``: one row per provider; the message never contains a key."""
+
+    __tablename__ = "provider_status"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN (" + ", ".join(f"'{s}'" for s in STATUSES) + ")", name="status_values"
+        ),
+    )
+
+    provider: Mapped[str] = mapped_column(Text, primary_key=True)
+    status: Mapped[str] = mapped_column(Text)
+    message: Mapped[str | None] = mapped_column(Text)
+    checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

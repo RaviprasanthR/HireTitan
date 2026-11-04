@@ -15,6 +15,7 @@ import procrastinate
 from procrastinate import JobContext
 from procrastinate.retry import BaseRetryStrategy, RetryDecision
 
+from hiretitan.platform.llm.provider_status import ProviderStatusService
 from hiretitan.platform.runtime.checkpointer import psycopg_conninfo
 from hiretitan.platform.runtime.runner import (
     RETRY_DELAYS_SECONDS,
@@ -23,6 +24,7 @@ from hiretitan.platform.runtime.runner import (
 )
 
 RUN_WORKFLOW_TASK = "run_workflow"
+CHECK_PROVIDER_KEY_TASK = "check_provider_key"
 MAX_ATTEMPTS = len(RETRY_DELAYS_SECONDS) + 1
 
 
@@ -64,6 +66,7 @@ class ProcrastinateQueue:
 class Runtime:
     app: procrastinate.App
     holder: RunnerHolder = field(default_factory=RunnerHolder)
+    provider_status: ProviderStatusService | None = None  # set by the composition root
 
     @property
     def queue(self) -> ProcrastinateQueue:
@@ -84,5 +87,11 @@ def create_runtime(database_url: str) -> Runtime:
             attempt=context.job.attempts + 1,
             max_attempts=MAX_ATTEMPTS,
         )
+
+    @app.task(name=CHECK_PROVIDER_KEY_TASK)
+    async def check_provider_key() -> str:
+        if runtime.provider_status is None:
+            raise RuntimeError("Provider status is not set up: the worker has not started")
+        return await runtime.provider_status.check()
 
     return runtime
