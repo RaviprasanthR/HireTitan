@@ -7,7 +7,9 @@ listens on localhost only (FR-036).
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+import asyncio
+import sys
+from collections.abc import Callable, Sequence
 from http import HTTPStatus
 from pathlib import Path
 from typing import Any, Final
@@ -141,9 +143,17 @@ def create_app(
     return app
 
 
+def server_loop_factory() -> Callable[[], asyncio.AbstractEventLoop]:
+    """psycopg's async mode can't run on Windows' default Proactor loop."""
+    return asyncio.SelectorEventLoop if sys.platform == "win32" else asyncio.new_event_loop
+
+
 def main() -> None:
     settings = get_settings()
-    uvicorn.run(create_app(settings), host=settings.host, port=settings.port)
+    config = uvicorn.Config(
+        create_app(settings), host=settings.host, port=settings.port, loop="none"
+    )
+    asyncio.run(uvicorn.Server(config).serve(), loop_factory=server_loop_factory())
 
 
 if __name__ == "__main__":

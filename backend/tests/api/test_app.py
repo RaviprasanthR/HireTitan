@@ -137,3 +137,15 @@ async def test_FR036_no_auth_required(client: httpx.AsyncClient, dist: Path) -> 
         response = await client.get(path)
         assert response.status_code == 200
         assert "www-authenticate" not in response.headers
+
+
+def test_server_runs_on_a_loop_psycopg_can_use() -> None:
+
+    from hiretitan.api_main import server_loop_factory
+
+    loop = server_loop_factory()()
+    try:
+        # psycopg's async mode cannot run on Windows' default Proactor loop.
+        assert not type(loop).__name__.startswith("Proactor")
+    finally:
+        loop.close()
