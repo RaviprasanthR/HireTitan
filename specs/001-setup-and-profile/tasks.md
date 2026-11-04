@@ -115,7 +115,7 @@ description: "Task list for 001-setup-and-profile (first slice)"
 
   Also implement skill dedup ("unique case/space-insensitively, original wording kept": the first wording wins, no synonym mapping). Tests first in `backend/tests/unit/profile/test_content.py`: `test_bounds_enforced` (parametrized per field), `test_edge_case_skills_dedup_case_and_space_only`, `test_clarification_Q4_no_synonym_merge` ("ReactJS" and "React" stay separate).
 - [X] T030 [P] [US1] Implement the confirm rules in `hiretitan/profile/domain/rules.py` (FR-018): `contact.name` is non-empty; at least one of experience / education / skills is non-empty; for every entry with both dates, `end ≥ start`; `current = true` ⇒ `end = null`; experience needs employer and title. Each rule returns `RuleError(path, message)`. Tests first in `backend/tests/unit/profile/test_rules.py`: `test_FR018_name_required`, `test_FR018_needs_experience_education_or_skills`, `test_FR018_end_before_start_blocks`, `test_FR018_current_has_no_end`, `test_edge_case_sparse_profile_allowed_with_name_and_skills`.
-- [ ] T031 [P] [US1] Implement the grounding check in `hiretitan/profile/domain/grounding.py` exactly as in research R5:
+- [X] T031 [P] [US1] Implement the grounding check in `hiretitan/profile/domain/grounding.py` exactly as in research R5:
   - normalization: NFKC, casefold, whitespace collapse, punctuation except `+#.` → space;
   - substring match for skills, employers, titles, institutions, qualifications, certification names and project names;
   - date-token match ("Jan 2021", "01/2021", "2021"; "Present"/"Current" required for `current = true`);
