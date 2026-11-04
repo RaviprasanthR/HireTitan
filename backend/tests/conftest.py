@@ -22,11 +22,12 @@ import pytest
 from alembic import command
 from alembic.config import Config
 from sqlalchemy import create_engine, make_url, text
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from testcontainers.community.postgres import PostgresContainer
 
 from hiretitan.platform.clock import FakeClock
 from hiretitan.platform.db import create_engine as create_engine_for
+from hiretitan.platform.db import session_factory
 
 BACKEND = Path(__file__).resolve().parents[1]
 POSTGRES_IMAGE = "postgres:16"
@@ -117,3 +118,25 @@ def tmp_data_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 @pytest.fixture
 def fake_clock() -> FakeClock:
     return FakeClock(datetime(2026, 11, 4, 9, 0, tzinfo=UTC))
+
+
+# Committed (not rolled back) database, for workers, queues and streams that use their own
+# connections. Each test gets its own migrated database.
+@pytest.fixture
+async def committed_engine(
+    fresh_database_url: str, make_alembic_config: Callable[[str], Config]
+) -> AsyncIterator[AsyncEngine]:
+    command.upgrade(make_alembic_config(fresh_database_url), "head")
+    engine = create_engine_for(fresh_database_url)
+    yield engine
+    await engine.dispose()
+
+
+@pytest.fixture
+def sessions(committed_engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
+    return session_factory(committed_engine)
+
+
+@pytest.fixture
+def database_url(fresh_database_url: str, committed_engine: AsyncEngine) -> str:
+    return fresh_database_url
