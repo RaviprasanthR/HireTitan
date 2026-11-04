@@ -347,16 +347,16 @@ React (current stable; exact version pinned in the 001 plan) + Vite + TypeScript
 
 | Token | Colour | Use |
 |---|---|---|
-| `background` | `#0d1117` (Deep Obsidian) | page |
-| `surface` | `#161b22` (Steel Grey) | sidebar, cards, inputs |
-| `divider` / hover | `#30363d` | dividers, hover, disabled (decorative only) |
-| `muted` / `muted-small` | `#8b949e` (Slate Muted) | icons, outlines, hint and label text |
-| `primary` | `#0060cc` | button and active-nav fill (gradient `#004fb3` to `#0069e0`; Ice White text 4.7:1 or better) |
-| `accent` | `#007fff` (Titan Blue) | links, keyboard focus ring |
-| `text` | `#f0f6fc` (Ice White) | body text, button text |
-| `success` / `warning` / `danger` | `#3fb950` / `#d29922` / `#f85149` | status badges |
+| `background` | `#06141b` | page |
+| `surface` | `#11212d` | sidebar, cards, inputs, dialogs |
+| `divider` / hover | `#253745` | dividers, hover, muted fills (decorative; text on it 7.9:1) |
+| `slate` | `#4a5c6a` | gradient stops, glows and shadows only (2.7:1 on the page, never text or outlines) |
+| `muted` / `muted-small` / `accent` | `#9ba8ab` | hint and label text, icons, outlines, links, focus ring (6.7:1 or better) |
+| `primary` | `#ccd0cf` to `#9ba8ab` gradient | button and active-nav fill, with `#06141b` text (7.6:1 or better) |
+| `text` | `#ccd0cf` | body text (10.5:1 or better) |
+| `success` / `warning` / `danger` | `#3fb950` / `#d29922` / `#f85149` | status badges (kept from the earlier palette) |
 
-Gradients (page glow, panels, primary actions) are CSS variables in `theme.css`.
+Palette changed 2026-11-04 to Ravi's slate scale `#06141B #11212D #253745 #4A5C6A #9BA8AB #CCD0CF`. Gradients (page glow, panels, primary actions) and shadows (panels, primary actions, dialogs) are CSS variables in `theme.css`.
 
 **First-level UI (001):** a sidebar shell with **Home** (setup checklist: key found and working, resume uploaded, profile confirmed, preferences set) · **Profile** (upload, extraction progress, review/edit/confirm, hidden-text and injection flags) · **Preferences** (form) · **Review** (items waiting for approval) · **Settings** (budget cap, key status, tier → model mapping, usage and spend).
 

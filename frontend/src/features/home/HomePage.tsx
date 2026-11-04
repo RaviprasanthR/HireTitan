@@ -38,7 +38,7 @@ export function HomePage() {
           {steps.map((step) => (
             <li
               key={step.label}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-4"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-surface p-4"
             >
               <span className="flex items-center gap-3">
                 <span

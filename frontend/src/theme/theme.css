@@ -3,24 +3,35 @@
 :root {
   color-scheme: dark;
 
-  /* Deep Obsidian, Steel Grey, Titan Blue, Slate Muted, Ice White. Titan Blue is the
-     accent; button fills use a darker blue so Ice White text keeps 4.5:1. */
-  --ht-background: #0d1117;
-  --ht-surface: #161b22;
-  --ht-divider: #30363d;
-  --ht-muted: #8b949e;
-  --ht-muted-small: #8b949e;
-  --ht-primary: #0060cc;
-  --ht-accent: #007fff;
-  --ht-text: #f0f6fc;
+  /* Ravi's slate palette (2026-11-04): #06141B #11212D #253745 #4A5C6A #9BA8AB #CCD0CF.
+     It has no saturated accent, so primary actions are light (#CCD0CF to #9BA8AB) with the
+     darkest tone as text (7.6:1 or better). #4A5C6A is under 3:1 on the page, so it is used
+     only for decoration (gradient stops, hover, shadows), never for text or outlines. */
+  --ht-background: #06141b;
+  --ht-surface: #11212d;
+  --ht-divider: #253745;
+  --ht-slate: #4a5c6a;
+  --ht-muted: #9ba8ab;
+  --ht-muted-small: #9ba8ab;
+  --ht-primary: #ccd0cf;
+  --ht-on-primary: #06141b;
+  --ht-accent: #9ba8ab;
+  --ht-text: #ccd0cf;
   --ht-success: #3fb950;
   --ht-warning: #d29922;
   --ht-danger: #f85149;
-  --ht-on-primary: var(--ht-text);
-  --ht-gradient-page: radial-gradient(900px 500px at 88% -8%, rgb(0 127 255 / 0.16), transparent 60%),
-    linear-gradient(180deg, #0d1117 0%, #090c10 100%);
-  --ht-gradient-surface: linear-gradient(160deg, #1c232d 0%, #161b22 55%, #12161c 100%);
-  --ht-gradient-primary: linear-gradient(135deg, #004fb3 0%, #0069e0 100%);
+
+  --ht-gradient-page: radial-gradient(1000px 560px at 85% -10%, rgb(74 92 106 / 0.35), transparent 60%),
+    radial-gradient(700px 420px at -10% 110%, rgb(37 55 69 / 0.45), transparent 65%),
+    linear-gradient(180deg, #06141b 0%, #040e13 100%);
+  --ht-gradient-surface: linear-gradient(160deg, #182c3a 0%, #11212d 55%, #0c1a23 100%);
+  --ht-gradient-primary: linear-gradient(135deg, #ccd0cf 0%, #9ba8ab 100%);
+
+  /* Shadows: panels lift off the page; primary actions glow faintly. */
+  --ht-shadow-panel: 0 1px 0 rgb(204 208 207 / 0.06) inset, 0 12px 32px -12px rgb(0 0 0 / 0.65),
+    0 2px 6px rgb(0 0 0 / 0.35);
+  --ht-shadow-primary: 0 6px 18px -6px rgb(155 168 171 / 0.45), 0 1px 0 rgb(255 255 255 / 0.35) inset;
+  --ht-shadow-dialog: 0 24px 64px -16px rgb(0 0 0 / 0.8), 0 0 0 1px rgb(74 92 106 / 0.5);
 
   /* shadcn variables */
   --background: var(--ht-background);
@@ -33,7 +44,7 @@
   --primary-foreground: var(--ht-on-primary);
   --secondary: var(--ht-surface);
   --secondary-foreground: var(--ht-text);
-  --muted: var(--ht-surface);
+  --muted: var(--ht-divider);
   --muted-foreground: var(--ht-muted-small);
   --accent: var(--ht-divider);
   --accent-foreground: var(--ht-text);
@@ -54,6 +65,7 @@
 @theme inline {
   --color-surface: var(--ht-surface);
   --color-divider: var(--ht-divider);
+  --color-slate: var(--ht-slate);
   --color-muted-small: var(--ht-muted-small);
   --color-link: var(--ht-accent);
   --color-success: var(--ht-success);
@@ -61,7 +73,7 @@
   --color-danger: var(--ht-danger);
 }
 
-/* Gradients: page glow, panels and primary actions. Text keeps AA contrast on every stop. */
+/* Gradients and shadows: page glow, panels and primary actions. Text keeps AA on every stop. */
 body {
   background: var(--ht-gradient-page) fixed;
   background-color: var(--ht-background);
@@ -72,11 +84,16 @@ body {
 }
 .bg-surface {
   background-image: var(--ht-gradient-surface);
+  box-shadow: var(--ht-shadow-panel);
 }
 .bg-primary {
   background-image: var(--ht-gradient-primary);
   color: var(--ht-on-primary);
+  box-shadow: var(--ht-shadow-primary);
 }
 .bg-primary:hover {
-  filter: brightness(1.12);
+  filter: brightness(1.06);
+}
+[role="dialog"] {
+  box-shadow: var(--ht-shadow-dialog);
 }

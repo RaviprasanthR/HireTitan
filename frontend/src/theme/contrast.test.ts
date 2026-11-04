@@ -10,14 +10,16 @@ type Pair = { fg: keyof typeof tokens; bg: keyof typeof tokens; min: number; use
 const pairs: Pair[] = [
   { fg: 'text', bg: 'background', min: 4.5, use: 'body text on the page' },
   { fg: 'text', bg: 'surface', min: 4.5, use: 'text on cards, sidebar, inputs' },
-  { fg: 'text', bg: 'primary', min: 4.5, use: 'button text, active nav' },
+  { fg: 'onPrimary', bg: 'primary', min: 4.5, use: 'button text, active nav (gradient start)' },
+  { fg: 'onPrimary', bg: 'primaryEnd', min: 4.5, use: 'button text, active nav (gradient end)' },
   { fg: 'mutedSmall', bg: 'background', min: 4.5, use: 'small hint and label text' },
   { fg: 'mutedSmall', bg: 'surface', min: 3, use: 'hint text on surfaces (large only)' },
   { fg: 'muted', bg: 'background', min: 3, use: 'icons, input outlines, muted text >= 14px' },
   { fg: 'accent', bg: 'background', min: 4.5, use: 'links' },
-  // accent on surface is 4.46:1: under the 4.5 bar for small text, so on cards the accent is
-  // for the focus ring and large text only, and small links there use `text` with an underline.
-  { fg: 'accent', bg: 'surface', min: 3, use: 'focus ring and large text on surfaces' },
+  { fg: 'accent', bg: 'surface', min: 4.5, use: 'links and focus ring on surfaces' },
+  { fg: 'text', bg: 'divider', min: 4.5, use: 'text on hover and muted fills' },
+  // `divider` and `slate` are decorative only (slate on the page is 2.7:1), so neither is
+  // used for text, outlines or icons.
   { fg: 'success', bg: 'background', min: 4.5, use: 'success badge text' },
   { fg: 'warning', bg: 'background', min: 4.5, use: 'warning badge text' },
   { fg: 'danger', bg: 'background', min: 4.5, use: 'error and danger text' },
