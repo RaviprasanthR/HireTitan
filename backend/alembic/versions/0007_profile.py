@@ -202,6 +202,37 @@ def upgrade() -> None:
         source_schema="app",
         referent_schema="app",
     )
+    op.create_check_constraint(
+        "extraction_has_provenance",
+        "profile_versions",
+        "created_by <> 'extraction' OR prompt_name IS NOT NULL",
+        schema="app",
+    )
+    # One confirmed version per review, so a retried or doubled confirm cannot add a second.
+    op.create_index(
+        "uq_profile_versions_review_id",
+        "profile_versions",
+        ["review_id"],
+        unique=True,
+        schema="app",
+        postgresql_where=sa.text("review_id IS NOT NULL"),
+    )
+    # Foreign keys are indexed: file deletes and version lookups scan these columns.
+    op.create_index(
+        "ix_profile_versions_source_file_id", "profile_versions", ["source_file_id"], schema="app"
+    )
+    op.create_index(
+        "ix_profile_reviews_resume_file_id", "profile_reviews", ["resume_file_id"], schema="app"
+    )
+    op.create_index(
+        "ix_profile_reviews_compare_to_version_id",
+        "profile_reviews",
+        ["compare_to_version_id"],
+        schema="app",
+    )
+    op.create_index(
+        "ix_profiles_current_version_id", "profiles", ["current_version_id"], schema="app"
+    )
     op.execute(_GUARD_FUNCTION)
     op.execute(
         "CREATE TRIGGER profile_versions_immutable BEFORE UPDATE ON app.profile_versions "

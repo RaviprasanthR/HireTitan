@@ -17,6 +17,7 @@ from hiretitan.platform.web.problems import ProblemError
 from hiretitan.profile.api.resumes import ProfileApiDeps
 from hiretitan.profile.api.schemas import ProfileContentModel
 from hiretitan.profile.application.reviews import (
+    CLOSED,
     ReviewConflictError,
     check_confirm,
     require_open,
@@ -115,6 +116,8 @@ def create_reviews_router(deps: ProfileApiDeps) -> APIRouter:
         async with deps.sessions() as session:
             saved_at = await ReviewsRepo(session).set_draft(review_id, body.to_domain())
             await session.commit()
+        if saved_at is None:  # confirmed or discarded between the check and the write
+            raise _conflict(ReviewConflictError(CLOSED))
         return DraftSavedOut(draft_saved_at=saved_at)
 
     @router.post("/{review_id}/confirm", status_code=202)
@@ -151,7 +154,8 @@ def create_reviews_router(deps: ProfileApiDeps) -> APIRouter:
         except ReviewConflictError as error:
             raise _conflict(error) from None
         async with deps.sessions() as session:
-            await ReviewsRepo(session).set_status(review_id, "discarded")
+            if not await ReviewsRepo(session).set_status(review_id, "discarded"):
+                raise _conflict(ReviewConflictError(CLOSED))
             # If the run is already past the point where it can be cancelled, leave it.
             with contextlib.suppress(IllegalTransitionError):
                 await RunsRepo(session).transition(review.run_id, RunStatus.cancelled)

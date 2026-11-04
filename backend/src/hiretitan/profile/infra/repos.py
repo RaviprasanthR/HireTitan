@@ -8,8 +8,10 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy import delete, func, select, update
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from hiretitan.platform.db import uuid7
 from hiretitan.profile.domain.content import ProfileContent
 from hiretitan.profile.domain.serialization import content_from_json, content_to_json
 from hiretitan.profile.infra.models import (
@@ -215,20 +217,35 @@ class ReviewsRepo:
         )
         return self._to_review(row) if row else None
 
-    async def set_draft(self, review_id: UUID, content: ProfileContent) -> datetime:
-        saved_at = datetime.now(UTC)
-        await self._session.execute(
-            update(ProfileReviewRow)
+    async def get_for_update(self, review_id: UUID) -> Review | None:
+        """Lock the review row until the transaction ends (serialises confirm against discard)."""
+        row = await self._session.scalar(
+            select(ProfileReviewRow)
             .where(ProfileReviewRow.id == review_id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+        return self._to_review(row) if row else None
+
+    async def set_draft(self, review_id: UUID, content: ProfileContent) -> datetime | None:
+        """Save the autosaved draft; ``None`` when the review is no longer open."""
+        saved_at = datetime.now(UTC)
+        result = await self._session.execute(
+            update(ProfileReviewRow)
+            .where(ProfileReviewRow.id == review_id, ProfileReviewRow.status == "open")
             .values(draft=content_to_json(content), draft_saved_at=saved_at)
         )
-        return saved_at
+        return saved_at if result.rowcount else None  # type: ignore[attr-defined]
 
-    async def set_status(self, review_id: UUID, status: str) -> None:
-        await self._session.execute(
-            update(ProfileReviewRow).where(ProfileReviewRow.id == review_id).values(status=status)
+    async def set_status(self, review_id: UUID, status: str) -> bool:
+        """Close an open review. ``False`` when it was not open (someone else closed it)."""
+        result = await self._session.execute(
+            update(ProfileReviewRow)
+            .where(ProfileReviewRow.id == review_id, ProfileReviewRow.status == "open")
+            .values(status=status)
         )
         await self._session.flush()
+        return bool(result.rowcount)  # type: ignore[attr-defined]
 
 
 class VersionsRepo:
@@ -257,11 +274,18 @@ class VersionsRepo:
         )
 
     async def _profile(self) -> ProfileRow:
-        row = await self._session.scalar(select(ProfileRow))
-        if row is None:
-            row = ProfileRow()
-            self._session.add(row)
-            await self._session.flush()
+        """The singleton profile row, created on first use and locked for this transaction.
+
+        The insert tolerates a concurrent creator; the lock makes version numbering and the
+        current-version pointer safe against a second writer.
+        """
+        await self._session.execute(
+            pg_insert(ProfileRow).values(id=uuid7()).on_conflict_do_nothing()
+        )
+        row = await self._session.scalar(
+            select(ProfileRow).with_for_update().execution_options(populate_existing=True)
+        )
+        assert row is not None
         return row
 
     async def create_version(

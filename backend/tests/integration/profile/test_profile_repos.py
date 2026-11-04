@@ -63,7 +63,7 @@ async def test_resume_file_roundtrip_and_parse_result(db_session: AsyncSession) 
     "overrides",
     [
         {"size_bytes": 0},
-        {"size_bytes": 10_485_761},
+        {"size_bytes": 5_242_881},
         {"sha256": "short"},
         {"kind": "upload_exe"},
         {"page_count": 21},

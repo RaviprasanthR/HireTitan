@@ -385,16 +385,24 @@ def after_review(state: State) -> str:
     )
 
 
-async def save_version(deps: IngestDeps, *, review_id: UUID, content_json: dict[str, Any]) -> UUID:
-    """Create the version for a review in one transaction. Idempotent by review id."""
+async def save_version(
+    deps: IngestDeps, *, review_id: UUID, content_json: dict[str, Any]
+) -> UUID | None:
+    """Create the version for a review in one transaction. Idempotent by review id.
+
+    Returns ``None`` when the review was discarded while the confirm was queued: no version is
+    made. The review row is locked, so a concurrent discard waits and then finds it closed.
+    """
     async with deps.sessions() as session:
+        review = await ReviewsRepo(session).get_for_update(review_id)
+        if review is None:
+            raise LookupError(f"Review {review_id} not found")
         versions = VersionsRepo(session)
         existing = await versions.get_by_review(review_id)
         if existing is not None:
             return existing.id
-        review = await ReviewsRepo(session).get(review_id)
-        if review is None:
-            raise LookupError(f"Review {review_id} not found")
+        if review.status != "open":
+            return None
         manual = review.flags.get("extraction_outcome") == "manual"
         version = await versions.create_version(
             content_from_json(content_json),

@@ -65,6 +65,8 @@ class ProfileReviewRow(IdTimestampMixin, Base):
             unique=True,
             postgresql_where=text("status = 'open'"),
         ),
+        Index("ix_profile_reviews_resume_file_id", "resume_file_id"),
+        Index("ix_profile_reviews_compare_to_version_id", "compare_to_version_id"),
     )
 
     run_id: Mapped[UUID] = mapped_column(ForeignKey(f"{APP_SCHEMA}.workflow_runs.id"))
@@ -92,6 +94,7 @@ class ProfileRow(IdTimestampMixin, Base):
     __table_args__ = (
         CheckConstraint("singleton", name="singleton"),
         UniqueConstraint("singleton", name="uq_profiles_singleton"),
+        Index("ix_profiles_current_version_id", "current_version_id"),
     )
 
     singleton: Mapped[bool] = mapped_column(Boolean, server_default=text("true"))
@@ -106,7 +109,19 @@ class ProfileVersionRow(Base):
         CheckConstraint(
             "created_by IN ('extraction', 'manual', 'manual_edit')", name="created_by_values"
         ),
+        CheckConstraint(
+            "created_by <> 'extraction' OR prompt_name IS NOT NULL",
+            name="extraction_has_provenance",
+        ),
         UniqueConstraint("profile_id", "number", name="uq_profile_versions_profile_id_number"),
+        # One confirmed version per review, so a retried or doubled confirm cannot add a second.
+        Index(
+            "uq_profile_versions_review_id",
+            "review_id",
+            unique=True,
+            postgresql_where=text("review_id IS NOT NULL"),
+        ),
+        Index("ix_profile_versions_source_file_id", "source_file_id"),
     )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid7)

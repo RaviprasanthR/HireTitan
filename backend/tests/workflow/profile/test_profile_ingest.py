@@ -319,6 +319,28 @@ async def test_saving_the_version_twice_creates_one_version(make_harness: Any) -
     assert await h.count("SELECT count(*) FROM app.profile_versions") == 1
 
 
+async def test_a_confirm_that_lost_the_race_to_a_discard_creates_no_version(
+    make_harness: Any,
+) -> None:
+    from hiretitan.profile.infra.repos import ReviewsRepo
+    from hiretitan.profile.workflow.nodes import save_version
+
+    h = make_harness([jane_extraction()])
+    run_id = await h.start(PDF)
+    await h.run(run_id)
+    review = await h.review()
+    assert review is not None
+    async with h.sessions() as session:  # the user discarded while the confirm was queued
+        await ReviewsRepo(session).set_status(review.id, "discarded")
+        await session.commit()
+
+    saved = await save_version(h.deps, review_id=review.id, content_json=review.extraction)
+
+    assert saved is None
+    assert await h.count("SELECT count(*) FROM app.profile_versions") == 0
+    assert await h.count("SELECT count(*) FROM app.profile_reviews WHERE status='discarded'") == 1
+
+
 async def test_discard_ends_the_run_without_a_version(make_harness: Any) -> None:
     h = make_harness([jane_extraction()])
     run_id = await h.start(PDF)
