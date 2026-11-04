@@ -10,7 +10,10 @@ from __future__ import annotations
 
 import importlib
 
-MODEL_MODULES: tuple[str, ...] = ("hiretitan.platform.runtime.infra.models",)
+MODEL_MODULES: tuple[str, ...] = (
+    "hiretitan.platform.runtime.infra.models",
+    "hiretitan.platform.llm.infra.models",
+)
 
 
 def import_all_models() -> None:
