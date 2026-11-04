@@ -181,7 +181,7 @@ description: "Task list for 001-setup-and-profile (first slice)"
   - `GET /api/v1/profile/versions/{id}`.
 
   Also the public `get_current_profile()` (FR-022: only the confirmed current version; it never exposes reviews). Tests first in `backend/tests/api/profile/test_profile_api.py`: `test_FR019_manual_profile_without_resume_or_ai`, `test_FR020_edit_creates_new_version_keeps_old`, `test_FR021_versions_listed_with_source`, `test_FR022_open_review_not_visible_as_profile`.
-- [ ] T047 [US1] Add the security attack suite in `backend/tests/security/test_resume_attacks.py`, running every attack fixture through W1 end to end with the prompt-recording FakeLlm (including a FakeLlm script that returns the planted fake skill): `test_SC005_all_planted_hidden_text_and_injections_flagged`, `test_SC004_planted_claims_never_reach_review`, `test_SC009_no_fixture_email_or_phone_in_any_prompt`, `test_constitution_III_hidden_text_never_in_prompt`.
+- [X] T047 [US1] Add the security attack suite in `backend/tests/security/test_resume_attacks.py`, running every attack fixture through W1 end to end with the prompt-recording FakeLlm (including a FakeLlm script that returns the planted fake skill): `test_SC005_all_planted_hidden_text_and_injections_flagged`, `test_SC004_planted_claims_never_reach_review`, `test_SC009_no_fixture_email_or_phone_in_any_prompt`, `test_constitution_III_hidden_text_never_in_prompt`.
 
 ### Frontend
 
