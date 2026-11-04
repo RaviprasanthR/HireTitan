@@ -203,6 +203,12 @@ class ReviewsRepo:
         row = await self._session.get(ProfileReviewRow, review_id, populate_existing=True)
         return self._to_review(row) if row else None
 
+    async def get_by_run(self, run_id: UUID) -> Review | None:
+        row = await self._session.scalar(
+            select(ProfileReviewRow).where(ProfileReviewRow.run_id == run_id)
+        )
+        return self._to_review(row) if row else None
+
     async def get_open(self) -> Review | None:
         row = await self._session.scalar(
             select(ProfileReviewRow).where(ProfileReviewRow.status == "open")
@@ -294,6 +300,17 @@ class VersionsRepo:
 
     async def get(self, version_id: UUID) -> Version | None:
         row = await self._session.get(ProfileVersionRow, version_id, populate_existing=True)
+        return self._to_version(row) if row else None
+
+    async def current_content(self) -> ProfileContent | None:
+        """Implements ``CurrentProfileReader``: only the confirmed current version."""
+        current = await self.current()
+        return current.content if current else None
+
+    async def get_by_review(self, review_id: UUID) -> Version | None:
+        row = await self._session.scalar(
+            select(ProfileVersionRow).where(ProfileVersionRow.review_id == review_id)
+        )
         return self._to_version(row) if row else None
 
     async def current(self) -> Version | None:

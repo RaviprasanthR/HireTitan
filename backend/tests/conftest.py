@@ -140,3 +140,55 @@ def sessions(committed_engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
 @pytest.fixture
 def database_url(fresh_database_url: str, committed_engine: AsyncEngine) -> str:
     return fresh_database_url
+
+
+# ---- profile workflow harness (shared by workflow and API tests) --------------------------
+sys.path.insert(0, str(Path(__file__).parent / "workflow" / "profile"))
+from typing import Any  # noqa: E402
+
+from harness import PROMPTS, Harness  # noqa: E402
+from langgraph.checkpoint.base import BaseCheckpointSaver  # noqa: E402
+
+from hiretitan.platform.llm.fake import FakeLlm  # noqa: E402
+from hiretitan.platform.llm.prompts import PromptRegistry  # noqa: E402
+from hiretitan.platform.runtime.checkpointer import open_checkpointer  # noqa: E402
+from hiretitan.platform.runtime.runner import WorkflowRunner  # noqa: E402
+from hiretitan.platform.storage.local import LocalFileStorage  # noqa: E402
+from hiretitan.profile.workflow.graph import IngestDeps, profile_ingest_workflow  # noqa: E402
+
+
+@pytest.fixture
+async def profile_saver(database_url: str) -> AsyncIterator[BaseCheckpointSaver[Any]]:
+    async with open_checkpointer(database_url) as checkpointer:
+        yield checkpointer
+
+
+@pytest.fixture
+def make_harness(
+    sessions: async_sessionmaker[AsyncSession],
+    profile_saver: BaseCheckpointSaver[Any],
+    tmp_path: Path,
+):  # type: ignore[no-untyped-def]
+    def build(script: list[Any] | None = None) -> Harness:
+        storage = LocalFileStorage(tmp_path / "data")
+        llm = FakeLlm(script or [])
+        published: list[tuple[str, dict[str, Any]]] = []
+
+        async def publish(event: str, data: dict[str, Any]) -> None:
+            published.append((event, data))
+
+        deps = IngestDeps(
+            sessions=sessions,
+            storage=storage,
+            llm=llm,
+            provider="fake",
+            model="fake-model",
+            prompts=PromptRegistry(PROMPTS),
+            publish=publish,
+        )
+        runner = WorkflowRunner(
+            sessions, profile_saver, {"profile_ingest": profile_ingest_workflow(deps)}
+        )
+        return Harness(sessions, storage, llm, runner, deps, published)
+
+    return build
