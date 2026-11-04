@@ -21,6 +21,49 @@
         "title": "AcceptedOut",
         "type": "object"
       },
+      "AiOut": {
+        "properties": {
+          "checked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checked At"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider",
+          "status",
+          "message",
+          "checked_at"
+        ],
+        "title": "AiOut",
+        "type": "object"
+      },
       "Body_upload_resume_api_v1_resumes_post": {
         "properties": {
           "file": {
@@ -33,6 +76,29 @@
           "file"
         ],
         "title": "Body_upload_resume_api_v1_resumes_post",
+        "type": "object"
+      },
+      "BudgetOut": {
+        "properties": {
+          "cap_usd": {
+            "title": "Cap Usd",
+            "type": "string"
+          },
+          "period": {
+            "title": "Period",
+            "type": "string"
+          },
+          "spent_usd": {
+            "title": "Spent Usd",
+            "type": "string"
+          }
+        },
+        "required": [
+          "cap_usd",
+          "spent_usd",
+          "period"
+        ],
+        "title": "BudgetOut",
         "type": "object"
       },
       "CertificationModel": {
@@ -80,6 +146,34 @@
           }
         },
         "title": "CertificationModel",
+        "type": "object"
+      },
+      "ChecklistOut": {
+        "properties": {
+          "key_ok": {
+            "title": "Key Ok",
+            "type": "boolean"
+          },
+          "preferences_saved": {
+            "title": "Preferences Saved",
+            "type": "boolean"
+          },
+          "profile_confirmed": {
+            "title": "Profile Confirmed",
+            "type": "boolean"
+          },
+          "resume_uploaded": {
+            "title": "Resume Uploaded",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "key_ok",
+          "resume_uploaded",
+          "profile_confirmed",
+          "preferences_saved"
+        ],
+        "title": "ChecklistOut",
         "type": "object"
       },
       "ContactModel": {
@@ -1037,6 +1131,41 @@
         "title": "ResumeFileOut",
         "type": "object"
       },
+      "ReviewItemOut": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "target": {
+            "title": "Target",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "title",
+          "target",
+          "updated_at"
+        ],
+        "title": "ReviewItemOut",
+        "type": "object"
+      },
       "ReviewOut": {
         "properties": {
           "changed_paths": {
@@ -1247,6 +1376,80 @@
         "title": "SavedOut",
         "type": "object"
       },
+      "SettingsIn": {
+        "additionalProperties": false,
+        "properties": {
+          "budget_cap_usd": {
+            "anyOf": [
+              {
+                "maximum": 10000.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Budget Cap Usd"
+          }
+        },
+        "required": [
+          "budget_cap_usd"
+        ],
+        "title": "SettingsIn",
+        "type": "object"
+      },
+      "SettingsOut": {
+        "properties": {
+          "budget_cap_usd": {
+            "title": "Budget Cap Usd",
+            "type": "string"
+          },
+          "key_status": {
+            "title": "Key Status",
+            "type": "string"
+          },
+          "spent_this_month_usd": {
+            "title": "Spent This Month Usd",
+            "type": "string"
+          },
+          "tiers": {
+            "items": {
+              "$ref": "#/components/schemas/TierOut"
+            },
+            "title": "Tiers",
+            "type": "array"
+          }
+        },
+        "required": [
+          "budget_cap_usd",
+          "spent_this_month_usd",
+          "tiers",
+          "key_status"
+        ],
+        "title": "SettingsOut",
+        "type": "object"
+      },
+      "StatusOut": {
+        "properties": {
+          "ai": {
+            "$ref": "#/components/schemas/AiOut"
+          },
+          "budget": {
+            "$ref": "#/components/schemas/BudgetOut"
+          },
+          "checklist": {
+            "$ref": "#/components/schemas/ChecklistOut"
+          }
+        },
+        "required": [
+          "ai",
+          "checklist",
+          "budget"
+        ],
+        "title": "StatusOut",
+        "type": "object"
+      },
       "SuggestionsOut": {
         "properties": {
           "key_skills": {
@@ -1280,6 +1483,29 @@
           "text"
         ],
         "title": "TextIn",
+        "type": "object"
+      },
+      "TierOut": {
+        "properties": {
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "tier": {
+            "title": "Tier",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tier",
+          "provider",
+          "model"
+        ],
+        "title": "TierOut",
         "type": "object"
       },
       "ValidationError": {
@@ -2007,6 +2233,31 @@
         ]
       }
     },
+    "/api/v1/review-items": {
+      "get": {
+        "operationId": "list_review_items_api_v1_review_items_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ReviewItemOut"
+                  },
+                  "title": "Response List Review Items Api V1 Review Items Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Review Items",
+        "tags": [
+          "review"
+        ]
+      }
+    },
     "/api/v1/runs/{run_id}": {
       "get": {
         "operationId": "get_run_api_v1_runs__run_id__get",
@@ -2151,6 +2402,116 @@
         "summary": "Retry",
         "tags": [
           "runs"
+        ]
+      }
+    },
+    "/api/v1/settings": {
+      "get": {
+        "operationId": "read_settings_api_v1_settings_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Read Settings",
+        "tags": [
+          "settings"
+        ]
+      },
+      "put": {
+        "operationId": "write_settings_api_v1_settings_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettingsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Write Settings Api V1 Settings Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Write Settings",
+        "tags": [
+          "settings"
+        ]
+      }
+    },
+    "/api/v1/status": {
+      "get": {
+        "operationId": "read_status_api_v1_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Read Status",
+        "tags": [
+          "status"
+        ]
+      }
+    },
+    "/api/v1/status/ai/check": {
+      "post": {
+        "operationId": "check_again_api_v1_status_ai_check_post",
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Check Again Api V1 Status Ai Check Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Check Again",
+        "tags": [
+          "status"
         ]
       }
     }

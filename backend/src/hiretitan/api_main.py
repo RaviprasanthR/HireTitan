@@ -27,7 +27,7 @@ from hiretitan.platform.clock import SystemClock
 from hiretitan.platform.config.settings import Settings, get_settings
 from hiretitan.platform.db import create_engine, session_factory
 from hiretitan.platform.runtime.api import create_events_router, create_runs_router
-from hiretitan.platform.runtime.procrastinate import create_runtime
+from hiretitan.platform.runtime.procrastinate import CHECK_PROVIDER_KEY_TASK, create_runtime
 from hiretitan.platform.storage.local import LocalFileStorage
 from hiretitan.platform.web.limits import BodyLimitMiddleware
 from hiretitan.platform.web.problems import ProblemError, problem
@@ -37,6 +37,10 @@ from hiretitan.profile.api.resumes import ProfileApiDeps, create_resumes_router
 from hiretitan.profile.api.reviews import create_reviews_router
 from hiretitan.profile.infra.parsing.sniff import MAX_BYTES
 from hiretitan.profile.infra.repos import VersionsRepo
+from hiretitan.setup.api.review_items import ReviewItemsApiDeps, create_review_items_router
+from hiretitan.setup.api.settings import SettingsApiDeps, create_settings_router
+from hiretitan.setup.api.status import StatusApiDeps, create_status_router
+from hiretitan.setup_wiring import RepoFacts
 
 API_PREFIX: Final = "/api/v1"
 MULTIPART_OVERHEAD: Final = 64 * 1024  # boundaries and headers around the file
@@ -167,6 +171,12 @@ def build_app(settings: Settings | None = None) -> FastAPI:
         queue=runtime.queue,
     )
 
+    provider = "fake" if settings.llm == "fake" else "openai"
+    clock = SystemClock()
+
+    async def enqueue_key_check() -> None:
+        await runtime.app.configure_task(CHECK_PROVIDER_KEY_TASK).defer_async()
+
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         async with runtime.app.open_async():  # the job queue connection, to defer jobs
@@ -183,6 +193,21 @@ def build_app(settings: Settings | None = None) -> FastAPI:
             )
         ),
         create_runs_router(deps.sessions, deps.queue),
+        create_settings_router(
+            SettingsApiDeps(
+                sessions=deps.sessions, queue=deps.queue, clock=clock, provider=provider
+            )
+        ),
+        create_status_router(
+            StatusApiDeps(
+                sessions=deps.sessions,
+                clock=clock,
+                provider=provider,
+                facts=RepoFacts,
+                enqueue_key_check=enqueue_key_check,
+            )
+        ),
+        create_review_items_router(ReviewItemsApiDeps(sessions=deps.sessions, facts=RepoFacts)),
     ]
     return create_app(settings, routers=routers, lifespan=lifespan)
 
