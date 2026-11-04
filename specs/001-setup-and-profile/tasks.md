@@ -167,7 +167,7 @@ description: "Task list for 001-setup-and-profile (first slice)"
   - registered as workflow `profile_ingest` with Procrastinate queueing lock `profile_ingest`.
 
   Tests first in `backend/tests/workflow/profile/test_profile_ingest.py` with FakeLlm (the matrix in contracts/profile-ingest-workflow.md): `test_US1_AS1_upload_extracts_and_awaits_review`, `test_US1_AS3_ungrounded_items_dropped`, `test_US1_AS4_hidden_text_reported_not_used`, `test_US1_AS5_high_injection_pauses_before_llm`, `test_US1_AS6_no_text_pdf`, `test_US1_AS7_invalid_then_invalid_falls_back`, `test_US1_AS8_reupload_marks_changes`, `test_SC009_no_contact_data_in_prompt`, `test_idempotent_extraction_not_paid_twice`.
-- [ ] T045 [US1] Implement review handling in `hiretitan/profile/application/reviews.py` and the router `hiretitan/profile/api/reviews.py`, as in contracts/rest-api.md:
+- [X] T045 [US1] Implement review handling in `hiretitan/profile/application/reviews.py` and the router `hiretitan/profile/api/reviews.py`, as in contracts/rest-api.md:
   - `GET /api/v1/profile/reviews/{id}` (extraction, draft, dropped_items, flags, compare_to, changed_paths, provenance);
   - `PUT …/draft` (autosave; confirm rules not applied; sets `draft_saved_at`);
   - `POST …/confirm` (validates with FR-018 rules → `422` with `errors[]`; otherwise `resume_run(confirm, content)` → `202`);
