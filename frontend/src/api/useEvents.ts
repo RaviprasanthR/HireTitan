@@ -7,7 +7,7 @@ export const POLL_INTERVAL_MS = 3000
 type RunUpdated = { run_id: string }
 
 /** Everything that can change while a run is going; refetched on every poll. */
-const POLL_KEYS: QueryKey[] = [['runs'], ['review-items'], ['resumes'], ['status'], ['settings'], ['profile']]
+const POLL_KEYS: QueryKey[] = [['runs'], ['review-items'], ['resumes'], ['status'], ['settings'], ['profile'], ['onboarding']]
 
 /**
  * Listens to the server event stream and refetches the matching TanStack Query data.
@@ -51,10 +51,11 @@ export function useEvents(): { connected: boolean } {
         ['resumes'],
         ['review'],
         ['settings'],
+        ['onboarding'],
       )
     })
     source.addEventListener('status.updated', () => invalidate(['status'], ['settings']))
-    source.addEventListener('profile.updated', () => invalidate(['profile']))
+    source.addEventListener('profile.updated', () => invalidate(['profile'], ['onboarding']))
 
     return () => {
       stopPolling()

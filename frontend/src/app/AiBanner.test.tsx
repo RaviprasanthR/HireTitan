@@ -24,7 +24,11 @@ function renderAt(path: string, aiStatus: string) {
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string) =>
-      url.endsWith('/status') ? json(status(aiStatus)) : url.endsWith('/profile') ? json({ current: null }) : json([]),
+      url.endsWith('/status')
+        ? json(status(aiStatus))
+        : url.endsWith('/onboarding')
+          ? json({ step: 'done', display_name: 'Jane', open_review_id: null, active_run_id: null })
+          : json([]),
     ),
   )
   const router = createMemoryRouter(routes, { initialEntries: [path] })

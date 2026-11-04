@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { routes } from './routes'
@@ -11,7 +11,11 @@ function renderAt(path: string, profile = true) {
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string) =>
-      url.endsWith('/profile') ? reply({ current: profile ? { id: 'v1' } : null }) : reply([]),
+      url.endsWith('/onboarding')
+        ? reply({ step: 'done', display_name: 'Jane', open_review_id: null, active_run_id: null })
+        : url.endsWith('/profile')
+          ? reply({ current: profile ? { id: 'v1' } : null })
+          : reply([]),
     ),
   )
   const router = createMemoryRouter(routes, { initialEntries: [path] })
@@ -30,8 +34,7 @@ describe('Shell', () => {
 
   it('FR027_sidebar_has_five_sections', async () => {
     renderAt('/')
-    const nav = screen.getByRole('navigation', { name: 'Main' })
-    await screen.findByRole('link', { name: 'Preferences' })
+    const nav = await screen.findByRole('navigation', { name: 'Main' })
     const links = within(nav).getAllByRole('link')
     expect(links.map((link) => link.textContent)).toEqual([
       'Home',
@@ -42,22 +45,12 @@ describe('Shell', () => {
     ])
   })
 
-  it('preferences_hidden_until_a_profile_is_confirmed', async () => {
-    renderAt('/', false)
-    const nav = screen.getByRole('navigation', { name: 'Main' })
-    await screen.findByRole('link', { name: 'Profile' })
-    await waitFor(() => expect(within(nav).queryByRole('link', { name: 'Preferences' })).toBeNull())
-    expect(within(nav).getAllByRole('link')).toHaveLength(4)
-  })
-
-  it('preferences_route_sends_you_to_profile_without_a_profile', async () => {
-    renderAt('/preferences', false)
-    expect(await screen.findByRole('heading', { level: 1, name: 'Profile' })).toBeInTheDocument()
-  })
-
-  it('marks_the_current_section', () => {
+  it('marks_the_current_section', async () => {
     renderAt('/profile')
-    expect(screen.getByRole('link', { name: 'Profile' })).toHaveAttribute('aria-current', 'page')
+    expect(await screen.findByRole('link', { name: 'Profile' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
     expect(screen.getByRole('link', { name: 'Home' })).not.toHaveAttribute('aria-current')
   })
 
@@ -72,9 +65,9 @@ describe('Shell', () => {
     expect(await screen.findByRole('heading', { level: 1, name: heading })).toBeInTheDocument()
   })
 
-  it('review_route_shows_the_editor_loading', () => {
+  it('review_route_shows_the_editor_loading', async () => {
     renderAt('/profile/review/abc')
-    expect(screen.getByText('Loading your review…')).toBeInTheDocument()
+    expect(await screen.findByText('Loading your review…')).toBeInTheDocument()
   })
 
   it('versions_route_lists_versions', async () => {
@@ -84,19 +77,21 @@ describe('Shell', () => {
     ).toBeInTheDocument()
   })
 
-  it('version_route_shows_the_version_loading', () => {
+  it('version_route_shows_the_version_loading', async () => {
     renderAt('/profile/versions/v1')
-    expect(screen.getByText('Loading this version…')).toBeInTheDocument()
+    expect(await screen.findByText('Loading this version…')).toBeInTheDocument()
   })
 
-  it('has_a_banner_slot_above_the_page', () => {
+  it('has_a_banner_slot_above_the_page', async () => {
     renderAt('/')
-    expect(screen.getByTestId('banner-slot')).toBeInTheDocument()
+    expect(await screen.findByTestId('banner-slot')).toBeInTheDocument()
   })
 
-  it('unknown_path_shows_not_found_inside_the_shell', () => {
+  it('unknown_path_shows_not_found_inside_the_shell', async () => {
     renderAt('/nope')
-    expect(screen.getByRole('heading', { level: 1, name: 'Page not found' })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Page not found' }),
+    ).toBeInTheDocument()
     expect(screen.getByRole('navigation', { name: 'Main' })).toBeInTheDocument()
   })
 })
