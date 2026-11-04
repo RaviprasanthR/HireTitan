@@ -1,7 +1,14 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { useState } from 'react'
+import { createBrowserRouter, RouterProvider } from 'react-router'
+import { routes } from './routes'
+
 export function App() {
+  const [queryClient] = useState(() => new QueryClient())
+  const [router] = useState(() => createBrowserRouter(routes))
   return (
-    <div data-testid="app-root" className="min-h-screen">
-      <h1>HireTitan</h1>
-    </div>
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>
   )
 }

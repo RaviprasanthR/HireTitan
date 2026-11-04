@@ -1,0 +1,55 @@
+/* HireTitan theme: dark only (architecture §10). Every colour is a variable, so a light
+   theme can be added later without touching components. Keep in step with tokens.ts. */
+:root {
+  color-scheme: dark;
+
+  --ht-background: #261f32;
+  --ht-surface: #41394f;
+  --ht-divider: #625d73;
+  --ht-muted: #86819e;
+  --ht-muted-small: #938eab;
+  --ht-primary: #594ba0;
+  --ht-accent: #a99ce6;
+  --ht-text: #fbfafb;
+  --ht-success: #5fc9a0;
+  --ht-warning: #e0b25a;
+  --ht-danger: #e07a8a;
+
+  /* shadcn variables */
+  --background: var(--ht-background);
+  --foreground: var(--ht-text);
+  --card: var(--ht-surface);
+  --card-foreground: var(--ht-text);
+  --popover: var(--ht-surface);
+  --popover-foreground: var(--ht-text);
+  --primary: var(--ht-primary);
+  --primary-foreground: var(--ht-text);
+  --secondary: var(--ht-surface);
+  --secondary-foreground: var(--ht-text);
+  --muted: var(--ht-surface);
+  --muted-foreground: var(--ht-muted-small);
+  --accent: var(--ht-divider);
+  --accent-foreground: var(--ht-text);
+  --destructive: var(--ht-danger);
+  --border: var(--ht-divider);
+  --input: var(--ht-muted);
+  --ring: var(--ht-accent);
+  --sidebar: var(--ht-surface);
+  --sidebar-foreground: var(--ht-text);
+  --sidebar-primary: var(--ht-primary);
+  --sidebar-primary-foreground: var(--ht-text);
+  --sidebar-accent: var(--ht-divider);
+  --sidebar-accent-foreground: var(--ht-text);
+  --sidebar-border: var(--ht-divider);
+  --sidebar-ring: var(--ht-accent);
+}
+
+@theme inline {
+  --color-surface: var(--ht-surface);
+  --color-divider: var(--ht-divider);
+  --color-muted-small: var(--ht-muted-small);
+  --color-link: var(--ht-accent);
+  --color-success: var(--ht-success);
+  --color-warning: var(--ht-warning);
+  --color-danger: var(--ht-danger);
+}
