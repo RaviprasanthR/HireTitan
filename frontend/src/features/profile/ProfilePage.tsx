@@ -3,6 +3,7 @@ import { Dialog, Tabs } from 'radix-ui'
 import { type DragEvent, useState } from 'react'
 import { Link } from 'react-router'
 import { ApiError } from '@/api/client'
+import { ProgressBar, type ProgressTone } from '@/components/ProgressBar'
 import { Button } from '@/components/ui/button'
 import {
   type Accepted,
@@ -21,10 +22,10 @@ import {
 import { ResumeFiles } from './ResumeFiles'
 
 const STEPS = [
-  { key: 'parsing', label: 'Reading your resume' },
-  { key: 'screening', label: 'Checking for hidden or unusual text' },
-  { key: 'extracting', label: 'Extracting your details' },
-  { key: 'ready_for_review', label: 'Ready for review' },
+  { key: 'parsing', label: 'Reading your resume', percent: 15 },
+  { key: 'screening', label: 'Checking for hidden or unusual text', percent: 45 },
+  { key: 'extracting', label: 'Extracting your details', percent: 75 },
+  { key: 'ready_for_review', label: 'Ready for review', percent: 100 },
 ] as const
 
 const PAUSE_MESSAGES: Record<string, string> = {
@@ -40,6 +41,18 @@ const FINAL = new Set(['done', 'failed', 'cancelled'])
 
 type Pending = { action: (discard: boolean) => Promise<Accepted> }
 type Conflict = { openReviewId: string; again: Pending }
+
+/** Where the bar stands: by step, calm colours for paused or failed, stripes only while working. */
+function runProgress(run: Run): { value: number; tone: ProgressTone; animated: boolean } {
+  const ready =
+    run.status === 'done' ||
+    (run.status === 'awaiting_review' && run.waiting_for === 'profile_review')
+  const step = STEPS.find((s) => s.key === run.current_step) ?? STEPS[0]
+  const tone: ProgressTone =
+    run.status === 'failed' ? 'danger' : run.status === 'paused' ? 'warning' : 'accent'
+  const working = run.status === 'queued' || run.status === 'running'
+  return { value: ready ? 100 : step.percent, tone, animated: working }
+}
 
 function ProgressList({ run }: { run: Run }) {
   const current = Math.max(
@@ -189,6 +202,8 @@ export function ProfilePage({
 
   const noText = run?.status === 'done' && file?.parse_status === 'no_text'
   const reviewId = file?.open_review_id
+  const sending = run === undefined && (busy || accepted !== null)
+  const progress = run ? runProgress(run) : null
 
   return (
     <section className={embedded ? 'space-y-6' : 'max-w-2xl space-y-6'}>
@@ -290,8 +305,27 @@ export function ProfilePage({
         </p>
       )}
 
-      {run && (
+      {sending && (
         <div className="space-y-3 rounded-lg bg-surface p-4">
+          <p className="text-sm font-medium">Uploading your resume…</p>
+          <ProgressBar label="Uploading your resume" value={null} />
+        </div>
+      )}
+
+      {run && progress && (
+        <div className="space-y-3 rounded-lg bg-surface p-4">
+          <div className="flex items-center gap-3">
+            <ProgressBar
+              label="Resume progress"
+              value={progress.value}
+              tone={progress.tone}
+              animated={progress.animated}
+              className="flex-1"
+            />
+            <span aria-hidden="true" className="w-10 text-right text-sm tabular-nums text-muted-small">
+              {progress.value}%
+            </span>
+          </div>
           <ProgressList run={run} />
           {run.status === 'failed' && (
             <div className="space-y-2">

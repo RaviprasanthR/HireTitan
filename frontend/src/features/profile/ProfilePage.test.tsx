@@ -120,6 +120,70 @@ describe('ProfilePage', () => {
     expect(link).toHaveAttribute('href', `/profile/review/${REVIEW_ID}`)
   })
 
+  it('FR002_progress_bar_follows_the_steps', async () => {
+    routes['GET /api/v1/resumes'] = () => json([resumeItem()])
+    routes['POST /api/v1/resumes'] = () => json({ resume_file_id: FILE_ID, run_id: RUN_ID }, 202)
+    let step = 'screening'
+    routes[`GET /api/v1/runs/${RUN_ID}`] = () => json(run({ current_step: step }))
+    renderPage()
+    await upload(pdf())
+
+    const bar = await screen.findByRole('progressbar', { name: 'Resume progress' })
+    await waitFor(() => expect(bar).toHaveAttribute('aria-valuenow', '45'))
+    step = 'extracting'
+    await waitFor(() => expect(bar).toHaveAttribute('aria-valuenow', '75'))
+  })
+
+  it('FR002_progress_bar_is_full_and_calm_when_ready_for_review', async () => {
+    routes['GET /api/v1/resumes'] = () => json([resumeItem()])
+    routes['POST /api/v1/resumes'] = () => json({ resume_file_id: FILE_ID, run_id: RUN_ID }, 202)
+    routes[`GET /api/v1/runs/${RUN_ID}`] = () =>
+      json(
+        run({
+          status: 'awaiting_review',
+          waiting_for: 'profile_review',
+          current_step: 'ready_for_review',
+        }),
+      )
+    renderPage()
+    await upload(pdf())
+
+    const bar = await screen.findByRole('progressbar', { name: 'Resume progress' })
+    await waitFor(() => expect(bar).toHaveAttribute('aria-valuenow', '100'))
+    expect(screen.getByTestId('progress-fill')).not.toHaveAttribute('data-animated', 'true')
+  })
+
+  it('FR030_progress_bar_turns_warning_when_paused', async () => {
+    routes['GET /api/v1/resumes'] = () => json([resumeItem()])
+    routes['POST /api/v1/resumes'] = () => json({ resume_file_id: FILE_ID, run_id: RUN_ID }, 202)
+    routes[`GET /api/v1/runs/${RUN_ID}`] = () =>
+      json(run({ status: 'paused', pause_reason: 'key_missing', current_step: 'extracting' }))
+    renderPage()
+    await upload(pdf())
+
+    const bar = await screen.findByRole('progressbar', { name: 'Resume progress' })
+    await waitFor(() => expect(bar).toHaveAttribute('data-tone', 'warning'))
+    expect(bar).toHaveAttribute('aria-valuenow', '75') // keeps its place, no animation
+    expect(screen.getByTestId('progress-fill')).not.toHaveAttribute('data-animated', 'true')
+  })
+
+  it('FR002_upload_in_flight_shows_an_indeterminate_bar', async () => {
+    let finish: (r: Response) => void = () => undefined
+    routes['GET /api/v1/resumes'] = () => json([])
+    routes['POST /api/v1/resumes'] = () =>
+      new Promise<Response>((resolve) => {
+        finish = resolve
+      })
+    renderPage()
+    await upload(pdf())
+
+    const bar = await screen.findByRole('progressbar', { name: 'Uploading your resume' })
+    expect(bar).not.toHaveAttribute('aria-valuenow')
+    finish(json({ resume_file_id: FILE_ID, run_id: RUN_ID }, 202))
+    routes[`GET /api/v1/runs/${RUN_ID}`] = () => json(run({ current_step: 'parsing' }))
+    expect(await screen.findByRole('progressbar', { name: 'Resume progress' })).toBeInTheDocument()
+  })
+
   it('US1_AS5_injection_dialog_offers_two_choices', async () => {
     routes['GET /api/v1/resumes'] = () =>
       json([

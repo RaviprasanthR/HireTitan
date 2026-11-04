@@ -107,3 +107,66 @@ h3 {
 [role="dialog"] {
   box-shadow: var(--ht-shadow-dialog);
 }
+
+/* Progress bar: a slate track with a glowing fill. The warning and danger tones reuse the
+   status colours; moving stripes mean work is happening, and stop under reduced motion. */
+.ht-progress {
+  position: relative;
+  height: 0.625rem;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 9999px;
+  background: var(--ht-divider);
+  box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.55);
+}
+.ht-progress-fill {
+  height: 100%;
+  border-radius: 9999px;
+  background-image: var(--ht-gradient-primary);
+  box-shadow: 0 0 12px rgb(76 201 240 / 0.55);
+  transition: width 600ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.ht-progress[data-tone="warning"] .ht-progress-fill {
+  background-image: linear-gradient(135deg, #d29922 0%, #a67717 100%);
+  box-shadow: 0 0 10px rgb(210 153 34 / 0.45);
+}
+.ht-progress[data-tone="danger"] .ht-progress-fill {
+  background-image: linear-gradient(135deg, #f85149 0%, #c93c35 100%);
+  box-shadow: 0 0 10px rgb(248 81 73 / 0.45);
+}
+.ht-progress-fill[data-animated="true"] {
+  background-image:
+    repeating-linear-gradient(115deg, rgb(255 255 255 / 0.28) 0 10px, transparent 10px 20px),
+    var(--ht-gradient-primary);
+  background-size: 28px 100%, 100% 100%;
+  animation: ht-progress-stripes 900ms linear infinite;
+}
+.ht-progress-fill[data-indeterminate="true"] {
+  width: 38%;
+  animation: ht-progress-sweep 1.3s ease-in-out infinite;
+}
+@keyframes ht-progress-stripes {
+  to {
+    background-position: 28px 0, 0 0;
+  }
+}
+@keyframes ht-progress-sweep {
+  0% {
+    transform: translateX(-110%);
+  }
+  100% {
+    transform: translateX(300%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ht-progress-fill,
+  .ht-progress-fill[data-animated="true"],
+  .ht-progress-fill[data-indeterminate="true"] {
+    animation: none;
+    transition: none;
+  }
+  .ht-progress-fill[data-indeterminate="true"] {
+    width: 100%;
+    opacity: 0.55;
+  }
+}
