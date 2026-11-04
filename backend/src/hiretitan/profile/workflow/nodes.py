@@ -177,11 +177,20 @@ async def sanitize_and_screen(deps: IngestDeps, state: State) -> State:
         if clean.truncated
         else None
     )
-    return {
-        "clean_text": clean.text,
-        "truncated_at": truncated,
-        "flags": [_flag_json(f) for f in flags],
-    }
+    flag_json = [_flag_json(f) for f in flags]
+    async with deps.sessions() as session:
+        await ResumeFilesRepo(session).set_parse_result(
+            UUID(state["resume_file_id"]),
+            "parsed",
+            {
+                "visible_text_chars": len(clean.text),
+                "truncated_at": truncated,
+                "hidden_text": state["hidden_runs"],
+                "injection_flags": flag_json,
+            },
+        )
+        await session.commit()
+    return {"clean_text": clean.text, "truncated_at": truncated, "flags": flag_json}
 
 
 def after_screen(state: State) -> str:

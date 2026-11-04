@@ -336,3 +336,20 @@ async def test_content_roundtrip_helper_is_exposed_for_the_api() -> None:
 
     c = ProfileContent(contact=Contact(name="A"), skills=("Python",))
     assert content_from_json(content_to_json(c)) == c
+
+
+async def test_parse_result_records_flags_for_the_decision_dialog(make_harness: Any) -> None:
+    h = make_harness([jane_extraction()])
+    run_id = await h.start("attack-ignore-instructions.pdf")
+    await h.run(run_id)  # paused on the injection decision
+
+    file = await h.file_for(run_id)
+
+    assert file.parse_status == "parsed"
+    assert file.parse_result is not None
+    assert file.parse_result["visible_text_chars"] > 200
+    assert file.parse_result["truncated_at"] is None
+    assert file.parse_result["hidden_text"] == []
+    flags = file.parse_result["injection_flags"]
+    assert {f["rule_id"] for f in flags} >= {"ai_instruction"}
+    assert all(f["severity"] in {"high", "medium", "low"} for f in flags)

@@ -248,6 +248,8 @@ async def test_get_resumes_lists_files_with_open_review_flag(env: Env) -> None:
     assert item["original_name"] == "old.pdf"
     assert item["kind"] == "upload_pdf"
     assert item["has_open_review"] is True
+    assert item["open_review_id"] == str(review_id)
+    assert item["parse_result"] is None  # the workflow has not parsed it yet
     assert {"id", "size_bytes", "created_at", "parse_status"} <= set(item)
     assert UUID(item["id"])
     assert review_id

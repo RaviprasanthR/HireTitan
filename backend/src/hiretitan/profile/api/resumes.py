@@ -72,8 +72,10 @@ class ResumeFileOut(BaseModel):
     size_bytes: int
     page_count: int | None
     parse_status: str
+    parse_result: dict[str, Any] | None
     created_at: datetime
     has_open_review: bool
+    open_review_id: UUID | None
 
 
 def _inspect(data: bytes) -> Inspected:
@@ -153,6 +155,7 @@ def create_resumes_router(deps: ProfileApiDeps) -> APIRouter:
             files = await ResumeFilesRepo(session).list()
             review: Any = await ReviewsRepo(session).get_open()
         open_file_id = review.resume_file_id if review else None
+        open_review_id = review.id if review else None
         return [
             ResumeFileOut(
                 id=f.id,
@@ -161,8 +164,10 @@ def create_resumes_router(deps: ProfileApiDeps) -> APIRouter:
                 size_bytes=f.size_bytes,
                 page_count=f.page_count,
                 parse_status=f.parse_status,
+                parse_result=f.parse_result,
                 created_at=f.created_at,
                 has_open_review=f.id == open_file_id,
+                open_review_id=open_review_id if f.id == open_file_id else None,
             )
             for f in files
         ]

@@ -9,13 +9,13 @@ import json
 import sys
 from pathlib import Path
 
-from hiretitan.api_main import create_app
+from hiretitan.api_main import build_app
 from hiretitan.platform.config.settings import Settings
 
 
 def main(argv: list[str]) -> int:
-    # Settings are only read to build the app; no database connection is made.
-    schema = create_app(Settings(), frontend_dist=Path("/nonexistent")).openapi()
+    # Building the app opens no database connection; routes and types are all it is read for.
+    schema = build_app(Settings()).openapi()
     text = json.dumps(schema, indent=2, sort_keys=True) + "\n"
     if len(argv) > 1:
         Path(argv[1]).write_text(text, encoding="utf-8")

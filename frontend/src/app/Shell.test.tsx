@@ -1,14 +1,29 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, within } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { routes } from './routes'
 
 function renderAt(path: string) {
+  // Pages that load data get an empty API; the shell itself is what these tests are about.
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => new Response('[]', { headers: { 'Content-Type': 'application/json' } })),
+  )
   const router = createMemoryRouter(routes, { initialEntries: [path] })
-  return render(<RouterProvider router={router} />)
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  return render(
+    <QueryClientProvider client={client}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>,
+  )
 }
 
 describe('Shell', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
   it('FR027_sidebar_has_five_sections', () => {
     renderAt('/')
     const nav = screen.getByRole('navigation', { name: 'Main' })

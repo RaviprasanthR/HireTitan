@@ -185,7 +185,7 @@ description: "Task list for 001-setup-and-profile (first slice)"
 
 ### Frontend
 
-- [ ] T048 [US1] Implement the Profile page in `frontend/src/features/profile/ProfilePage.tsx`:
+- [X] T048 [US1] Implement the Profile page in `frontend/src/features/profile/ProfilePage.tsx`:
   - upload drop zone (PDF/DOCX, 10 MB client check, with server errors shown verbatim from problem+json);
   - a "Paste resume text instead" tab;
   - "Fill in by hand" button;
