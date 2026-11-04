@@ -49,7 +49,7 @@ function runProgress(run: Run): { value: number; tone: ProgressTone; animated: b
     (run.status === 'awaiting_review' && run.waiting_for === 'profile_review')
   const step = STEPS.find((s) => s.key === run.current_step) ?? STEPS[0]
   const tone: ProgressTone =
-    run.status === 'failed' ? 'danger' : run.status === 'paused' ? 'warning' : 'accent'
+    run.status === 'failed' ? 'danger' : run.status === 'paused' ? 'warning' : 'success'
   const working = run.status === 'queued' || run.status === 'running'
   return { value: ready ? 100 : step.percent, tone, animated: working }
 }

@@ -9,7 +9,7 @@ export function AiBanner() {
     return (
       <div role="alert" aria-label="AI status" className="border-b border-danger bg-danger/10 px-8 py-3 text-sm">
         <strong>The AI key is missing.</strong> AI tasks are waiting. Add OPENAI_API_KEY to .env,
-        then restart HireTitan. <Link to="/settings" className="underline">See Settings</Link>
+        then restart HireTitan. <Link to="/settings" className="text-link underline">See Settings</Link>
       </div>
     )
   }
@@ -18,7 +18,7 @@ export function AiBanner() {
       <div role="alert" aria-label="AI status" className="border-b border-danger bg-danger/10 px-8 py-3 text-sm">
         <strong>The provider rejected your AI key.</strong> AI tasks are paused, not lost. Replace
         OPENAI_API_KEY in .env, then restart HireTitan.{' '}
-        <Link to="/settings" className="underline">See Settings</Link>
+        <Link to="/settings" className="text-link underline">See Settings</Link>
       </div>
     )
   }

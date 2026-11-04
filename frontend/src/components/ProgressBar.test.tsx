@@ -27,9 +27,9 @@ describe('ProgressBar', () => {
     expect(screen.getByTestId('progress-fill')).toHaveAttribute('data-indeterminate', 'true')
   })
 
-  it('tone is exposed for the theme to colour (warning when paused, danger when failed)', () => {
+  it('tone is exposed for the theme to colour (green by default, amber when paused, red when failed)', () => {
     const { rerender } = render(<ProgressBar label="p" value={50} />)
-    expect(screen.getByRole('progressbar')).toHaveAttribute('data-tone', 'accent')
+    expect(screen.getByRole('progressbar')).toHaveAttribute('data-tone', 'success')
     rerender(<ProgressBar label="p" value={50} tone="warning" />)
     expect(screen.getByRole('progressbar')).toHaveAttribute('data-tone', 'warning')
     rerender(<ProgressBar label="p" value={50} tone="danger" />)

@@ -73,7 +73,7 @@ export function HomePage() {
                 (step.blocked ? (
                   <span className="text-sm text-muted-small">{step.blocked}</span>
                 ) : (
-                  <Link to={step.to} className="text-sm font-medium underline">
+                  <Link to={step.to} className="text-sm font-medium text-link underline">
                     {step.action}
                   </Link>
                 ))}

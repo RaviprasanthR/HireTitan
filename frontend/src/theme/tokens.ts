@@ -2,6 +2,9 @@
 export const tokens = {
   background: '#06141b',
   surface: '#11212d',
+  surfaceHigh: '#142836',
+  pageTop: '#08171f',
+  pageEnd: '#02090d',
   divider: '#253745',
   slate: '#4a5c6a',
   muted: '#9ba8ab',

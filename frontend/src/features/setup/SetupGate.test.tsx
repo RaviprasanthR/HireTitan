@@ -98,7 +98,11 @@ describe('SetupGate', () => {
   it('FR041_settings_reachable_during_setup', async () => {
     renderAt('/settings', 2)
     expect(await screen.findByRole('heading', { level: 1, name: 'Settings' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Back to setup' })).toHaveAttribute('href', '/')
+    const close = screen.getByRole('link', { name: 'Close settings' })
+    expect(close).toHaveAttribute('href', '/')
+    expect(close.querySelector('svg')).not.toBeNull() // the cross icon
+    expect(close).toHaveClass('text-danger') // red, top right of the card
+    expect(screen.queryByText('Back to setup')).not.toBeInTheDocument()
     expect(screen.queryByRole('navigation', { name: 'Main' })).not.toBeInTheDocument()
   })
 

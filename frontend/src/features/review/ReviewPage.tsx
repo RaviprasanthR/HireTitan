@@ -22,7 +22,7 @@ export function ReviewPage() {
       <ul className="max-w-2xl space-y-3">
         {query.data.map((item) => (
           <li key={item.id} className="rounded-lg bg-surface p-4">
-            <Link to={item.target} className="font-medium underline">
+            <Link to={item.target} className="font-medium text-link underline">
               {item.title}
             </Link>
             <p className="text-sm text-muted-small">

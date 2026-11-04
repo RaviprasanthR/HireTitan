@@ -132,6 +132,7 @@ describe('ProfilePage', () => {
     await waitFor(() => expect(bar).toHaveAttribute('aria-valuenow', '45'))
     step = 'extracting'
     await waitFor(() => expect(bar).toHaveAttribute('aria-valuenow', '75'))
+    expect(bar).toHaveAttribute('data-tone', 'success') // green while it works
   })
 
   it('FR002_progress_bar_is_full_and_calm_when_ready_for_review', async () => {

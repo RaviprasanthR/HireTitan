@@ -48,6 +48,20 @@
     --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* HireTitan colours as utilities (text-success, text-danger, text-link, bg-divider, ...). The
+   values are the variables in theme/theme.css. Declared here because Tailwind only reads
+   @theme from the files it processes. */
+@theme inline {
+    --color-surface: var(--ht-surface);
+    --color-divider: var(--ht-divider);
+    --color-slate: var(--ht-slate);
+    --color-muted-small: var(--ht-muted-small);
+    --color-link: var(--ht-accent);
+    --color-success: var(--ht-success);
+    --color-warning: var(--ht-warning);
+    --color-danger: var(--ht-danger);
+}
+
 :root {
     --background: oklch(1 0 0);
     --foreground: oklch(0.145 0 0);

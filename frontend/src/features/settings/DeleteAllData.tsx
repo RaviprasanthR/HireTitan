@@ -34,7 +34,7 @@ export function DeleteAllData() {
 
   return (
     <section
-      className="space-y-2 rounded-lg border border-danger p-4"
+      className="ht-danger-zone space-y-2 rounded-lg p-4"
       aria-labelledby="danger-heading"
     >
       <h2 id="danger-heading" className="text-lg font-medium">
@@ -44,7 +44,7 @@ export function DeleteAllData() {
         Removes your profile, preferences, resume files and AI usage log, and takes you back to the
         first setup step. Your API key in <code>.env</code> is not touched.
       </p>
-      <Button variant="outline" onClick={() => change(true)}>
+      <Button variant="outline" className="ht-danger-button" onClick={() => change(true)}>
         Delete all my data
       </Button>
 
@@ -77,6 +77,7 @@ export function DeleteAllData() {
             )}
             <div className="flex gap-3">
               <Button
+                className="ht-danger-button ht-danger-solid"
                 disabled={typed !== WORD || wipe.isPending}
                 onClick={(event) => {
                   event.preventDefault() // stay open until the server answers

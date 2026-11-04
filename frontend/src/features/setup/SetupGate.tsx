@@ -1,4 +1,4 @@
-import { Link, Outlet, useLocation } from 'react-router'
+import { Outlet, useLocation } from 'react-router'
 import { SettingsPage } from '@/features/settings/SettingsPage'
 import { SetupLayout } from './SetupLayout'
 import { StepCard } from './StepCard'
@@ -32,10 +32,7 @@ export function SetupGate() {
 
   if (pathname === '/settings') {
     return (
-      <SetupLayout>
-        <Link to="/" className="text-link underline">
-          Back to setup
-        </Link>
+      <SetupLayout closeTo="/">
         <SettingsPage />
       </SetupLayout>
     )

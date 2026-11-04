@@ -1,5 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -43,6 +45,38 @@ async function openDialog() {
 }
 
 describe('DeleteAllData', () => {
+  it('the danger zone glows red when the cursor or keyboard focus enters it', () => {
+    renderZone()
+    const zone = screen.getByRole('region', { name: 'Delete all my data' })
+    expect(zone).toHaveClass('ht-danger-zone')
+
+    const css = readFileSync(resolve(process.cwd(), 'src/theme/theme.css'), 'utf8')
+    const rule = (selector: string) => {
+      const start = css.indexOf(selector)
+      expect(start, selector).toBeGreaterThan(-1)
+      return css.slice(start, css.indexOf('}', start))
+    }
+    expect(rule('.ht-danger-zone:hover')).toMatch(/box-shadow:.*(danger|248 81 73)/s)
+    expect(rule('.ht-danger-zone:focus-within')).toMatch(/box-shadow:.*(danger|248 81 73)/s)
+    expect(css).toMatch(/\.ht-danger-zone\s*\{[^}]*transition:[^}]*box-shadow/s) // eased, not a jump
+  })
+
+  it('the delete buttons are red, and fill solid red on hover', async () => {
+    renderZone()
+    const trigger = screen.getByRole('button', { name: 'Delete all my data' })
+    expect(trigger).toHaveClass('ht-danger-button')
+
+    await userEvent.click(trigger)
+    expect(screen.getByRole('button', { name: 'Delete everything' })).toHaveClass(
+      'ht-danger-button',
+    )
+
+    const css = readFileSync(resolve(process.cwd(), 'src/theme/theme.css'), 'utf8')
+    const start = css.indexOf('.ht-danger-button:hover')
+    expect(start).toBeGreaterThan(-1)
+    expect(css.slice(start, css.indexOf('}', start))).toMatch(/background[^;]*(#f85149|#ff6b63)/)
+  })
+
   it('US4_AS2_requires_typed_word', async () => {
     renderZone()
     await openDialog()
