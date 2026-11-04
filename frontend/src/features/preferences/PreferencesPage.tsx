@@ -84,7 +84,9 @@ function Choices({
                   checked={field.value.includes(value)}
                   onChange={(e) =>
                     field.onChange(
-                      e.target.checked ? [...field.value, value] : field.value.filter((v) => v !== value),
+                      e.target.checked
+                        ? [...field.value, value]
+                        : field.value.filter((v) => v !== value),
                     )
                   }
                 />
@@ -118,7 +120,11 @@ function Suggestions({
   const open = ideas.filter((i) => !taken.has(i.trim().toLocaleLowerCase()))
   if (open.length === 0) return null
   return (
-    <div role="group" className="flex flex-wrap items-center gap-2" aria-label={`${label} from your profile`}>
+    <div
+      role="group"
+      className="flex flex-wrap items-center gap-2"
+      aria-label={`${label} from your profile`}
+    >
       <span className="text-xs text-muted-small">From your profile:</span>
       {open.map((idea) => (
         <Button
@@ -136,7 +142,18 @@ function Suggestions({
   )
 }
 
-function PreferencesForm({ data }: { data: PreferencesOut }) {
+type EmbeddedProps = {
+  /** Inside the setup card: the card has the heading, and the button finishes setup. */
+  embedded?: boolean
+  /** Called after a successful save when embedded; may throw to show a message. */
+  onSaved?: () => Promise<void>
+}
+
+function PreferencesForm({
+  data,
+  embedded = false,
+  onSaved,
+}: { data: PreferencesOut } & EmbeddedProps) {
   const queryClient = useQueryClient()
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -164,6 +181,7 @@ function PreferencesForm({ data }: { data: PreferencesOut }) {
       })
       setSavedAt(saved.saved_at)
       await queryClient.invalidateQueries({ queryKey: ['preferences'], refetchType: 'none' })
+      await onSaved?.()
     } catch (e) {
       if (e instanceof ApiError && e.status === 422 && e.fieldErrors.length > 0) {
         for (const err of e.fieldErrors) {
@@ -184,17 +202,24 @@ function PreferencesForm({ data }: { data: PreferencesOut }) {
 
   return (
     <form onSubmit={form.handleSubmit(save)} className="max-w-3xl space-y-8" noValidate>
-      <div>
-        <h1 className="text-2xl font-semibold">Preferences</h1>
-        <p className="text-sm text-muted-small" aria-live="polite">
-          {savedAt ? `Last saved ${new Date(savedAt).toLocaleString()}` : 'Not saved yet'}
-        </p>
-      </div>
+      {!embedded && (
+        <div>
+          <h1 className="text-2xl font-semibold">Preferences</h1>
+          <p className="text-sm text-muted-small" aria-live="polite">
+            {savedAt ? `Last saved ${new Date(savedAt).toLocaleString()}` : 'Not saved yet'}
+          </p>
+        </div>
+      )}
 
       <section className="space-y-4">
         <h2 className="text-lg font-medium">What you are looking for</h2>
-        <Field name="target_roles" label="Target roles" htmlFor="target_roles" form={form}
-          hint="Type a role and press Enter.">
+        <Field
+          name="target_roles"
+          label="Target roles"
+          htmlFor="target_roles"
+          form={form}
+          hint="Type a role and press Enter."
+        >
           <Controller
             control={form.control}
             name="target_roles"
@@ -210,8 +235,13 @@ function PreferencesForm({ data }: { data: PreferencesOut }) {
           />
         </Field>
         <Choices name="seniority_levels" legend="Seniority" options={SENIORITY} form={form} />
-        <Field name="years_experience" label="Years of experience" htmlFor="years_experience" form={form}
-          hint="Optional. You type this; it is never taken from your resume.">
+        <Field
+          name="years_experience"
+          label="Years of experience"
+          htmlFor="years_experience"
+          form={form}
+          hint="Optional. You type this; it is never taken from your resume."
+        >
           <input
             id="years_experience"
             type="number"
@@ -240,9 +270,18 @@ function PreferencesForm({ data }: { data: PreferencesOut }) {
 
       <section className="space-y-4">
         <h2 className="text-lg font-medium">Where and how</h2>
-        <Field name="default_country" label="Default country" htmlFor="default_country" form={form}
-          hint="Used to read phone numbers written without a country code.">
-          <select id="default_country" className={`${input} max-w-xs`} {...form.register('default_country')}>
+        <Field
+          name="default_country"
+          label="Default country"
+          htmlFor="default_country"
+          form={form}
+          hint="Used to read phone numbers written without a country code."
+        >
+          <select
+            id="default_country"
+            className={`${input} max-w-xs`}
+            {...form.register('default_country')}
+          >
             {COUNTRIES.map((c) => (
               <option key={c.code} value={c.code}>
                 {c.name}
@@ -317,24 +356,46 @@ function PreferencesForm({ data }: { data: PreferencesOut }) {
             </select>
           </Field>
           <Field name="min_pay" label={`Minimum pay (${payUnit})`} htmlFor="min_pay" form={form}>
-            <input id="min_pay" inputMode="decimal" className={input} {...form.register('min_pay')} />
+            <input
+              id="min_pay"
+              inputMode="decimal"
+              className={input}
+              {...form.register('min_pay')}
+            />
           </Field>
-          <Field name="target_pay" label={`Target pay (${payUnit})`} htmlFor="target_pay" form={form}>
-            <input id="target_pay" inputMode="decimal" className={input} {...form.register('target_pay')} />
+          <Field
+            name="target_pay"
+            label={`Target pay (${payUnit})`}
+            htmlFor="target_pay"
+            form={form}
+          >
+            <input
+              id="target_pay"
+              inputMode="decimal"
+              className={input}
+              {...form.register('target_pay')}
+            />
           </Field>
         </div>
         <fieldset className="space-y-2">
           <legend className="text-sm font-medium">Availability</legend>
           <div className="flex flex-wrap gap-4 text-sm">
             <label className="flex items-center gap-2">
-              <input type="radio" value="notice" {...form.register('notice_mode')} />I have a notice period
+              <input type="radio" value="notice" {...form.register('notice_mode')} />I have a notice
+              period
             </label>
             <label className="flex items-center gap-2">
-              <input type="radio" value="date" {...form.register('notice_mode')} />I can start on a date
+              <input type="radio" value="date" {...form.register('notice_mode')} />I can start on a
+              date
             </label>
           </div>
           {mode === 'notice' ? (
-            <Field name="notice_period_days" label="Notice period (days)" htmlFor="notice_period_days" form={form}>
+            <Field
+              name="notice_period_days"
+              label="Notice period (days)"
+              htmlFor="notice_period_days"
+              form={form}
+            >
               <input
                 id="notice_period_days"
                 type="number"
@@ -345,7 +406,12 @@ function PreferencesForm({ data }: { data: PreferencesOut }) {
               />
             </Field>
           ) : (
-            <Field name="earliest_start_date" label="Earliest start date" htmlFor="earliest_start_date" form={form}>
+            <Field
+              name="earliest_start_date"
+              label="Earliest start date"
+              htmlFor="earliest_start_date"
+              form={form}
+            >
               <input
                 id="earliest_start_date"
                 type="date"
@@ -359,7 +425,12 @@ function PreferencesForm({ data }: { data: PreferencesOut }) {
 
       <section className="space-y-4">
         <h2 className="text-lg font-medium">Companies</h2>
-        <Field name="preferred_companies" label="Companies you like" htmlFor="preferred_companies" form={form}>
+        <Field
+          name="preferred_companies"
+          label="Companies you like"
+          htmlFor="preferred_companies"
+          form={form}
+        >
           <Controller
             control={form.control}
             name="preferred_companies"
@@ -368,7 +439,12 @@ function PreferencesForm({ data }: { data: PreferencesOut }) {
             )}
           />
         </Field>
-        <Field name="avoided_companies" label="Companies to avoid" htmlFor="avoided_companies" form={form}>
+        <Field
+          name="avoided_companies"
+          label="Companies to avoid"
+          htmlFor="avoided_companies"
+          form={form}
+        >
           <Controller
             control={form.control}
             name="avoided_companies"
@@ -385,13 +461,13 @@ function PreferencesForm({ data }: { data: PreferencesOut }) {
         </p>
       )}
       <Button type="submit" disabled={busy}>
-        Save preferences
+        {embedded ? 'Finish setup' : 'Save preferences'}
       </Button>
     </form>
   )
 }
 
-export function PreferencesPage() {
+export function PreferencesPage(props: EmbeddedProps) {
   const query = useQuery({
     queryKey: ['preferences'],
     queryFn: () => apiFetch<PreferencesOut>('/preferences'),
@@ -411,5 +487,5 @@ export function PreferencesPage() {
       </div>
     )
   }
-  return <PreferencesForm data={query.data} />
+  return <PreferencesForm data={query.data} {...props} />
 }

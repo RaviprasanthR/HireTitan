@@ -9,13 +9,7 @@ import type { components } from '@/api/schema'
 import { Button } from '@/components/ui/button'
 import { fetchRun } from './api'
 import { ProfileFormFields } from './ProfileFormFields'
-import {
-  type FormValues,
-  formSchema,
-  toApiContent,
-  toFormPath,
-  toFormValues,
-} from './profileForm'
+import { type FormValues, formSchema, toApiContent, toFormPath, toFormValues } from './profileForm'
 
 type Review = components['schemas']['ReviewOut']
 type Dropped = { path: string; value: string; reason: string }
@@ -29,8 +23,14 @@ function restore(item: Dropped, form: ReturnType<typeof useForm<FormValues>>): b
   const path = item.path
   if (/^skills\[\d+\]$/.test(path)) {
     const skills = form.getValues('skills')
-    form.setValue('skills', skills ? `${skills}
-${item.value}` : item.value, dirty)
+    form.setValue(
+      'skills',
+      skills
+        ? `${skills}
+${item.value}`
+        : item.value,
+      dirty,
+    )
   } else if (path === 'summary') {
     form.setValue('summary', item.value, dirty)
   } else if (/^experience\[\d+\]$/.test(path)) {
@@ -38,7 +38,14 @@ ${item.value}` : item.value, dirty)
     const entry = { employer, title, location: '', start: '', end: '', current: false, bullets: '' }
     form.setValue('experience', [...form.getValues('experience'), entry], dirty)
   } else if (/^education\[\d+\]$/.test(path)) {
-    const entry = { institution: item.value, qualification: '', field: '', start: '', end: '', grade: '' }
+    const entry = {
+      institution: item.value,
+      qualification: '',
+      field: '',
+      start: '',
+      end: '',
+      grade: '',
+    }
     form.setValue('education', [...form.getValues('education'), entry], dirty)
   } else if (/^projects\[\d+\]$/.test(path)) {
     const entry = { name: item.value, description: '', technologies: '', link: '' }
@@ -53,7 +60,9 @@ ${item.value}` : item.value, dirty)
 }
 
 const canRestore = (path: string) =>
-  /^(skills\[\d+\]|summary|experience\[\d+\]|education\[\d+\]|projects\[\d+\]|certifications\[\d+\])$/.test(path)
+  /^(skills\[\d+\]|summary|experience\[\d+\]|education\[\d+\]|projects\[\d+\]|certifications\[\d+\])$/.test(
+    path,
+  )
 
 function FlagsPanel({ flags }: { flags: Record<string, unknown> }) {
   const hidden = (flags.hidden_text as HiddenRun[] | undefined) ?? []
@@ -61,7 +70,10 @@ function FlagsPanel({ flags }: { flags: Record<string, unknown> }) {
   const truncated = (flags.truncated_at as Truncation | null | undefined) ?? null
   if (!hidden.length && !injection.length && !truncated) return null
   return (
-    <section aria-label="Things we noticed in your file" className="space-y-3 rounded-lg border border-warning p-4">
+    <section
+      aria-label="Things we noticed in your file"
+      className="space-y-3 rounded-lg border border-warning p-4"
+    >
       <h2 className="font-semibold">Things we noticed in your file</h2>
       {hidden.length > 0 && (
         <div>
@@ -92,7 +104,8 @@ function FlagsPanel({ flags }: { flags: Record<string, unknown> }) {
       )}
       {truncated && (
         <p className="text-sm">
-          Only the first {Number(truncated.offset ?? 0).toLocaleString('en-US')} characters were read
+          Only the first {Number(truncated.offset ?? 0).toLocaleString('en-US')} characters were
+          read
           {truncated.heading ? ` (the cut falls in "${truncated.heading}")` : ''}. Check that
           nothing important is missing below.
         </p>
@@ -101,11 +114,29 @@ function FlagsPanel({ flags }: { flags: Record<string, unknown> }) {
   )
 }
 
-function ReviewForm({ review, debounceMs }: { review: Review; debounceMs: number }) {
+type EmbeddedProps = {
+  /** Inside a setup card: no page heading, and finishing hands control back to the card. */
+  embedded?: boolean
+  /** Pre-fills an empty contact name (the name given in setup step 1). */
+  defaultName?: string
+  /** Called instead of navigating when the review is confirmed or discarded. */
+  onFinished?: () => void
+}
+
+function ReviewForm({
+  review,
+  debounceMs,
+  embedded = false,
+  defaultName,
+  onFinished,
+}: { review: Review; debounceMs: number } & EmbeddedProps) {
   const navigate = useNavigate()
+  const finish = () => (onFinished ? onFinished() : navigate('/profile'))
+  const initial = toFormValues(review.draft ?? review.extraction)
+  if (defaultName && initial.contact.name.trim() === '') initial.contact.name = defaultName
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: toFormValues(review.draft ?? review.extraction),
+    defaultValues: initial,
   })
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>(
     review.draft_saved_at ? 'saved' : 'idle',
@@ -186,7 +217,7 @@ function ReviewForm({ review, debounceMs }: { review: Review; debounceMs: number
       }
       if (!mounted.current) return
       if (outcome === 'done') {
-        navigate('/profile')
+        finish()
         return
       }
       locked.current = false
@@ -221,7 +252,7 @@ function ReviewForm({ review, debounceMs }: { review: Review; debounceMs: number
     setBusy(true)
     try {
       await apiFetch(`${base}/discard`, { method: 'POST' })
-      navigate('/profile')
+      finish()
     } catch (e) {
       setFormError(e instanceof ApiError ? e.detail : 'Could not discard this review.')
       setConfirmingDiscard(false)
@@ -232,13 +263,17 @@ function ReviewForm({ review, debounceMs }: { review: Review; debounceMs: number
   return (
     <form onSubmit={form.handleSubmit(confirm)} className="max-w-3xl space-y-6" noValidate>
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">Review your profile</h1>
-          <p className="text-sm text-muted-small">
-            Check what was found in your resume and correct anything. Nothing is saved as your
-            profile until you confirm.
-          </p>
-        </div>
+        {embedded ? (
+          <div />
+        ) : (
+          <div>
+            <h1 className="text-2xl font-semibold">Review your profile</h1>
+            <p className="text-sm text-muted-small">
+              Check what was found in your resume and correct anything. Nothing is saved as your
+              profile until you confirm.
+            </p>
+          </div>
+        )}
         <p aria-live="polite" className="text-sm text-muted-small">
           {saveState === 'saving' && 'Saving draft…'}
           {saveState === 'saved' && 'Draft saved'}
@@ -249,7 +284,10 @@ function ReviewForm({ review, debounceMs }: { review: Review; debounceMs: number
       <FlagsPanel flags={review.flags} />
 
       {dropped.length > 0 && (
-        <section aria-label="Not found in your resume" className="space-y-2 rounded-lg border border-muted-foreground p-4">
+        <section
+          aria-label="Not found in your resume"
+          className="space-y-2 rounded-lg border border-muted-foreground p-4"
+        >
           <h2 className="font-semibold">Not found in your resume</h2>
           <p className="text-sm text-muted-small">
             The AI suggested these, but they are not in your resume, so they were left out. Add one
@@ -296,19 +334,30 @@ function ReviewForm({ review, debounceMs }: { review: Review; debounceMs: number
         <Button type="submit" disabled={busy}>
           Confirm profile
         </Button>
-        <Button type="button" variant="outline" disabled={busy} onClick={() => setConfirmingDiscard(true)}>
-          Discard
+        <Button
+          type="button"
+          variant="outline"
+          disabled={busy}
+          onClick={() => setConfirmingDiscard(true)}
+        >
+          {embedded ? 'Back to upload' : 'Discard'}
         </Button>
       </div>
-      <p className="text-xs text-muted-small">
-        Extracted with {review.provenance.provider} · {review.provenance.model}
-      </p>
+      {review.provenance.provider !== 'none' && (
+        <p className="text-xs text-muted-small">
+          Extracted with {review.provenance.provider} · {review.provenance.model}
+        </p>
+      )}
 
       <Dialog.Root open={confirmingDiscard} onOpenChange={setConfirmingDiscard}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 bg-black/60" />
           <Dialog.Content className="fixed top-1/2 left-1/2 w-full max-w-md -translate-x-1/2 -translate-y-1/2 space-y-4 rounded-lg bg-surface p-6">
-            <Dialog.Title className="text-lg font-semibold">Discard this review?</Dialog.Title>
+            <Dialog.Title className="text-lg font-semibold">
+              {embedded
+                ? 'Discard this profile and upload a different resume?'
+                : 'Discard this review?'}
+            </Dialog.Title>
             <Dialog.Description className="text-sm text-muted-small">
               Your edits are lost. Your current profile, if you have one, stays as it is.
             </Dialog.Description>
@@ -327,7 +376,11 @@ function ReviewForm({ review, debounceMs }: { review: Review; debounceMs: number
   )
 }
 
-export function ReviewEditor({ reviewId, debounceMs = 1000 }: { reviewId: string; debounceMs?: number }) {
+export function ReviewEditor({
+  reviewId,
+  debounceMs = 1000,
+  ...embedded
+}: { reviewId: string; debounceMs?: number } & EmbeddedProps) {
   const query = useQuery({
     queryKey: ['review', reviewId],
     queryFn: () => apiFetch<Review>(`/profile/reviews/${reviewId}`),
@@ -342,5 +395,5 @@ export function ReviewEditor({ reviewId, debounceMs = 1000 }: { reviewId: string
       </p>
     )
   }
-  return <ReviewForm review={query.data} debounceMs={debounceMs} />
+  return <ReviewForm review={query.data} debounceMs={debounceMs} {...embedded} />
 }
