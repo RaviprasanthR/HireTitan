@@ -271,3 +271,80 @@ describe('ReviewEditor', () => {
     expect(document.querySelector('img')).toBeNull()
   })
 })
+
+describe('ReviewEditor review fixes', () => {
+  it('pending_edit_is_saved_when_leaving_the_page', async () => {
+    const view = load(review(), 60_000) // the debounce would never fire in this test
+    const user = userEvent.setup()
+    const headline = await screen.findByLabelText('Headline')
+    await user.clear(headline)
+    await user.type(headline, 'Left in a hurry')
+
+    view.unmount()
+
+    await waitFor(() => expect(lastBody('/draft')?.headline).toBe('Left in a hurry'))
+  })
+
+  it('fields_lock_and_autosave_stops_once_confirm_starts', async () => {
+    load(review(), 20)
+    routes[`POST ${reviewUrl}/confirm`] = () => new Promise<Response>(() => {}) // never answers
+    const user = userEvent.setup()
+    const headline = await screen.findByLabelText('Headline')
+    await user.click(screen.getByRole('button', { name: /confirm profile/i }))
+
+    await waitFor(() => expect(headline).toBeDisabled())
+    const before = calls.filter((c) => c.url.endsWith('/draft')).length
+    await new Promise((resolve) => setTimeout(resolve, 80))
+    expect(calls.filter((c) => c.url.endsWith('/draft')).length).toBe(before)
+  })
+
+  it('save_indicator_follows_the_latest_edit_not_a_late_failure', async () => {
+    load(review(), 10)
+    let release: (r: Response) => void = () => {}
+    let puts = 0
+    routes[`PUT ${reviewUrl}/draft`] = () => {
+      puts += 1
+      if (puts === 1) return new Promise<Response>((resolve) => (release = resolve))
+      return json({ draft_saved_at: '2026-11-04T10:00:00Z' })
+    }
+    const user = userEvent.setup()
+    const headline = await screen.findByLabelText('Headline')
+    await user.type(headline, 'a')
+    await waitFor(() => expect(puts).toBe(1))
+    await user.type(headline, 'b')
+
+    release(json({ title: 'x', status: 500, detail: 'boom' }, 500, 'application/problem+json'))
+
+    expect(await screen.findByText('Draft saved')).toBeInTheDocument()
+    expect(screen.queryByText(/could not save/i)).not.toBeInTheDocument()
+  })
+
+  it('add_anyway_puts_a_dropped_job_back_into_the_form', async () => {
+    load(
+      review({
+        dropped_items: [{ path: 'experience[1]', value: 'Initech | CTO', reason: 'not found in your resume' }],
+      }),
+    )
+    const user = userEvent.setup()
+    await user.click(await screen.findByRole('button', { name: /add anyway/i }))
+
+    expect(await screen.findByDisplayValue('Initech')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('CTO')).toBeInTheDocument()
+  })
+
+  it('a_failed_confirm_run_is_reported_not_silently_left', async () => {
+    load()
+    routes[`GET /api/v1/runs/${RUN_ID}`] = () => json({ id: RUN_ID, status: 'failed', error: 'boom' })
+    const user = userEvent.setup()
+    await user.click(await screen.findByRole('button', { name: /confirm profile/i }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/could not be saved/i)
+    expect(screen.queryByText('Profile home')).not.toBeInTheDocument()
+  })
+
+  it('a_partial_server_payload_does_not_crash_the_page', async () => {
+    load(review({ dropped_items: undefined, flags: { truncated_at: { heading: null } } }))
+
+    expect(await screen.findByLabelText('Headline')).toBeInTheDocument()
+  })
+})

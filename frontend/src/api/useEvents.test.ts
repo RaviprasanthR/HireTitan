@@ -109,3 +109,22 @@ describe('useEvents', () => {
     expect(invalidate).not.toHaveBeenCalled()
   })
 })
+
+describe('useEvents review fixes', () => {
+  it('a_malformed_run_event_is_ignored_instead_of_throwing', () => {
+    const { invalidate, source } = setup()
+    const before = invalidate.mock.calls.length
+    const listener = source.listeners.get('run.updated')?.[0]
+
+    expect(() => listener?.(new MessageEvent('run.updated', { data: 'not json{' }))).not.toThrow()
+    expect(keys(invalidate).slice(before)).toContainEqual(['review-items']) // falls back to the lists
+  })
+
+  it('a_run_event_also_refreshes_the_open_review', () => {
+    const { invalidate, source } = setup()
+
+    act(() => source.emit('run.updated', { run_id: 'r1' }))
+
+    expect(keys(invalidate)).toContainEqual(['review'])
+  })
+})

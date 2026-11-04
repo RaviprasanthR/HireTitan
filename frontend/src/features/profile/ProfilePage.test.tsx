@@ -299,4 +299,52 @@ describe('ProfilePage', () => {
 
     expect(await screen.findByText(/no ai key/i)).toBeInTheDocument()
   })
+
+  it('a_failed_decision_shows_a_message_and_keeps_the_dialog', async () => {
+    routes['GET /api/v1/resumes'] = () =>
+      json([resumeItem({ parse_result: { injection_flags: [{ rule_id: 'x', severity: 'high', excerpt: 'bad', location: 'visible' }] } })])
+    routes['POST /api/v1/resumes'] = () => json({ resume_file_id: FILE_ID, run_id: RUN_ID }, 202)
+    routes[`GET /api/v1/runs/${RUN_ID}`] = () =>
+      json(run({ status: 'awaiting_review', waiting_for: 'injection_decision' }))
+    routes[`POST /api/v1/runs/${RUN_ID}/decision`] = () => problem(409, 'This run has moved on.')
+    renderPage()
+    const user = await upload(pdf())
+
+    await user.click(await screen.findByRole('button', { name: /continue extraction/i }))
+
+    expect(await screen.findByText('This run has moved on.')).toBeInTheDocument()
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+  })
+
+  it('the_open_review_dialog_closes_with_escape', async () => {
+    routes['GET /api/v1/resumes'] = () => json([])
+    routes['POST /api/v1/resumes'] = () => problem(409, 'open', { open_review_id: REVIEW_ID })
+    renderPage()
+    const user = await upload(pdf())
+    await screen.findByRole('dialog')
+
+    await user.keyboard('{Escape}')
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  })
+
+  it('a_second_file_dropped_during_an_upload_is_ignored', async () => {
+    let posts = 0
+    routes['GET /api/v1/resumes'] = () => json([])
+    routes['POST /api/v1/resumes'] = () => {
+      posts += 1
+      return new Promise<Response>(() => {})
+    }
+    renderPage()
+    const user = await upload(pdf())
+    await waitFor(() => expect(posts).toBe(1))
+
+    const zone = screen.getByLabelText(/resume file/i).closest('label') as HTMLElement
+    const file = pdf('second.pdf')
+    const { fireEvent } = await import('@testing-library/react')
+    fireEvent.drop(zone, { dataTransfer: { files: [file] } })
+    await user.click(document.body)
+
+    expect(posts).toBe(1)
+  })
 })

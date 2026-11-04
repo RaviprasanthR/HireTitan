@@ -75,6 +75,7 @@ export function ProfilePage({ pollMs = 3000 }: { pollMs?: number }) {
   const [tab, setTab] = useState<'file' | 'paste'>('file')
   const [text, setText] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
   const [fieldError, setFieldError] = useState<string | null>(null)
   const [accepted, setAccepted] = useState<Accepted | null>(null)
   const [conflict, setConflict] = useState<Conflict | null>(null)
@@ -137,20 +138,23 @@ export function ProfilePage({ pollMs = 3000 }: { pollMs?: number }) {
 
   function onDrop(event: DragEvent<HTMLLabelElement>) {
     event.preventDefault()
+    if (busy) return
     chooseFile(event.dataTransfer.files[0])
   }
 
-  async function answer(decision: Decision) {
+  async function runAction(action: (runId: string) => Promise<unknown>) {
     if (!accepted) return
-    await decide(accepted.run_id, decision)
-    await queryClient.invalidateQueries({ queryKey: ['runs', accepted.run_id] })
+    setActionError(null)
+    try {
+      await action(accepted.run_id)
+      await queryClient.invalidateQueries({ queryKey: ['runs', accepted.run_id] })
+    } catch (e) {
+      setActionError(e instanceof ApiError ? e.detail : 'Something went wrong. Please try again.')
+    }
   }
 
-  async function tryAgain() {
-    if (!accepted) return
-    await retryRun(accepted.run_id)
-    await queryClient.invalidateQueries({ queryKey: ['runs', accepted.run_id] })
-  }
+  const answer = (decision: Decision) => runAction((id) => decide(id, decision))
+  const tryAgain = () => runAction((id) => retryRun(id))
 
   const noText = run?.status === 'done' && file?.parse_status === 'no_text'
   const reviewId = file?.open_review_id
@@ -292,6 +296,14 @@ export function ProfilePage({ pollMs = 3000 }: { pollMs?: number }) {
               Text like this can be used to manipulate AI tools. Check what was found, then choose
               how to continue. It will not be followed either way.
             </Dialog.Description>
+            {highFlags.length === 0 && (
+              <p className="text-sm">The flagged text is still loading. You can wait a moment.</p>
+            )}
+            {actionError && (
+              <p role="alert" className="text-sm text-danger">
+                {actionError}
+              </p>
+            )}
             <ul className="space-y-2">
               {highFlags.map((flag, i) => (
                 <li key={i} className="rounded-md bg-background p-2 text-sm">
@@ -309,7 +321,7 @@ export function ProfilePage({ pollMs = 3000 }: { pollMs?: number }) {
         </Dialog.Portal>
       </Dialog.Root>
 
-      <Dialog.Root open={conflict !== null}>
+      <Dialog.Root open={conflict !== null} onOpenChange={(open) => !open && setConflict(null)}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 bg-black/60" />
           <Dialog.Content className="fixed top-1/2 left-1/2 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 space-y-4 rounded-lg bg-surface p-6">

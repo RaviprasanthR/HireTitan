@@ -39,8 +39,18 @@ export function useEvents(): { connected: boolean } {
       if (poll === undefined) poll = setInterval(() => invalidate(...POLL_KEYS), POLL_INTERVAL_MS)
     }
     source.addEventListener('run.updated', (event) => {
-      const data = JSON.parse((event as MessageEvent<string>).data) as RunUpdated
-      invalidate(['runs', data.run_id], ['review-items'], ['resumes'])
+      let data: RunUpdated | null = null
+      try {
+        data = JSON.parse((event as MessageEvent<string>).data) as RunUpdated
+      } catch {
+        // a malformed event must not break the listener: refetch the lists instead
+      }
+      invalidate(
+        data?.run_id ? ['runs', data.run_id] : ['runs'],
+        ['review-items'],
+        ['resumes'],
+        ['review'],
+      )
     })
     source.addEventListener('status.updated', () => invalidate(['status']))
     source.addEventListener('profile.updated', () => invalidate(['profile']))

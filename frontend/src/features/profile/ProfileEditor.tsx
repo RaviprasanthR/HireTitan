@@ -78,6 +78,7 @@ export function ProfileEditor() {
     queryKey: ['profile'],
     queryFn: () => apiFetch<ProfileOut>('/profile'),
     staleTime: Infinity,
+    refetchOnMount: 'always', // never start editing a copy that a confirm has replaced
     refetchOnWindowFocus: false,
   })
   if (query.isPending) return <p>Loading your profile…</p>

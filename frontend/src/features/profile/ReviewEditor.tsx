@@ -92,7 +92,7 @@ function FlagsPanel({ flags }: { flags: Record<string, unknown> }) {
       )}
       {truncated && (
         <p className="text-sm">
-          Only the first {truncated.offset.toLocaleString('en-US')} characters were read
+          Only the first {Number(truncated.offset ?? 0).toLocaleString('en-US')} characters were read
           {truncated.heading ? ` (the cut falls in "${truncated.heading}")` : ''}. Check that
           nothing important is missing below.
         </p>
@@ -116,49 +116,103 @@ function ReviewForm({ review, debounceMs }: { review: Review; debounceMs: number
   const [restored, setRestored] = useState<Set<number>>(new Set())
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const base = `/profile/reviews/${review.id}`
-  const dropped = review.dropped_items as unknown as Dropped[]
+  const dropped = (review.dropped_items as unknown as Dropped[] | undefined) ?? []
+  const latest = useRef(0) // numbers each save; only the newest one may change the indicator
+  const queued = useRef<Promise<void>>(Promise.resolve()) // saves go out one at a time, in order
+  const unsaved = useRef(false) // an edit is waiting for its debounce timer
+  const locked = useRef(false) // set once Confirm starts: no more autosaves
+  const mounted = useRef(true)
 
   useEffect(() => {
+    mounted.current = true
+    const saveDraft = () => {
+      const seq = ++latest.current
+      const json = toApiContent(form.getValues())
+      queued.current = queued.current.then(() =>
+        apiFetch(`${base}/draft`, { method: 'PUT', json }).then(
+          () => {
+            if (seq === latest.current && mounted.current) setSaveState('saved')
+          },
+          () => {
+            if (seq === latest.current && mounted.current) setSaveState('error')
+          },
+        ),
+      )
+    }
     const subscription = form.watch(() => {
+      if (locked.current) return
       clearTimeout(timer.current)
+      unsaved.current = true
       setSaveState('saving')
       timer.current = setTimeout(() => {
-        apiFetch(`${base}/draft`, { method: 'PUT', json: toApiContent(form.getValues()) })
-          .then(() => setSaveState('saved'))
-          .catch(() => setSaveState('error'))
+        unsaved.current = false
+        saveDraft()
       }, debounceMs)
     })
     return () => {
+      mounted.current = false
       subscription.unsubscribe()
       clearTimeout(timer.current)
+      if (unsaved.current && !locked.current) {
+        unsaved.current = false
+        saveDraft() // leaving the page must not lose the last edit
+      }
     }
   }, [form, base, debounceMs])
 
   async function confirm(values: FormValues) {
     setFormError(null)
     setBusy(true)
+    locked.current = true
+    unsaved.current = false
     clearTimeout(timer.current)
     try {
       const { run_id } = await apiFetch<{ run_id: string }>(`${base}/confirm`, {
         method: 'POST',
         json: toApiContent(values),
       })
-      for (let i = 0; i < 60; i++) {
-        const run = await fetchRun(run_id)
-        if (run.status === 'done' || run.status === 'failed' || run.status === 'cancelled') break
+      let outcome: string | null = null
+      for (let i = 0; i < 60 && mounted.current; i++) {
+        try {
+          const run = await fetchRun(run_id)
+          if (['done', 'failed', 'cancelled'].includes(run.status)) {
+            outcome = run.status
+            break
+          }
+        } catch {
+          break // the confirm was accepted; we just cannot see how it ended
+        }
         await new Promise((resolve) => setTimeout(resolve, 500))
       }
-      navigate('/profile')
+      if (!mounted.current) return
+      if (outcome === 'done') {
+        navigate('/profile')
+        return
+      }
+      locked.current = false
+      setFormError(
+        outcome
+          ? 'Your profile could not be saved. Your edits are kept here, so you can try Confirm again.'
+          : 'We could not confirm that your profile was saved. Check the Profile page before trying again.',
+      )
+      setBusy(false)
     } catch (e) {
       if (e instanceof ApiError && e.status === 422) {
         for (const err of e.fieldErrors) {
           if (err.field === 'profile') setFormError(err.message)
-          else form.setError(toFormPath(err.field) as never, { type: 'server', message: err.message })
+          else {
+            form.setError(
+              toFormPath(err.field) as never,
+              { type: 'server', message: err.message },
+              { shouldFocus: true },
+            )
+          }
         }
         if (!e.fieldErrors.length) setFormError(e.detail)
       } else {
         setFormError(e instanceof ApiError ? e.detail : 'Something went wrong. Please try again.')
       }
+      locked.current = false
       setBusy(false)
     }
   }
@@ -224,11 +278,13 @@ function ReviewForm({ review, debounceMs }: { review: Review; debounceMs: number
         </section>
       )}
 
-      <ProfileFormFields
-        form={form}
-        compare={review.compare_to}
-        changedPaths={review.changed_paths}
-      />
+      <fieldset disabled={busy} className="m-0 min-w-0 border-0 p-0">
+        <ProfileFormFields
+          form={form}
+          compare={review.compare_to}
+          changedPaths={review.changed_paths}
+        />
+      </fieldset>
 
       {formError && (
         <p role="alert" className="rounded-md border border-danger p-3 text-danger">
