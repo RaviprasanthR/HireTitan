@@ -25,6 +25,7 @@ from hiretitan.platform.runtime.procrastinate import Runtime, create_runtime
 from hiretitan.platform.runtime.resume_paused import resume_on_startup
 from hiretitan.platform.runtime.runner import WorkflowDef, WorkflowRunner
 from hiretitan.platform.storage.local import LocalFileStorage
+from hiretitan.preferences.infra.repo import default_country_provider
 from hiretitan.profile.workflow.graph import WORKFLOW_NAME, IngestDeps, profile_ingest_workflow
 from hiretitan.setup.infra.settings_repo import budget_cap_provider
 
@@ -52,6 +53,7 @@ async def run_worker(settings: Settings, *, wait: bool = True) -> None:
         model=ModelCatalog.load().model_for(provider, "fast"),
         prompts=PromptRegistry(Path(hiretitan_prompts.__file__).parent),
         publish=publisher.publish,
+        default_country=default_country_provider(sessions),
     )
     try:
         async with open_checkpointer(settings.database_url) as checkpointer:

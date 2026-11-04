@@ -238,7 +238,7 @@ description: "Task list for 001-setup-and-profile (first slice)"
   - `preferred_companies` and `avoided_companies` `[str 1–200] (≤ 100)`.
 
   Defaults in `defaults.py`, plus `lpa_to_annual` / `annual_to_lpa` (÷ 100 000). Tests first in `backend/tests/unit/preferences/test_preferences_domain.py`: `test_FR024_defaults_documented_and_neutral`, `test_US2_AS4_min_above_target_rejected`, `test_US2_AS4_empty_roles_rejected`, `test_FR025_negative_years_rejected`, `test_notice_xor_start_date`, `test_US2_AS5_lpa_conversion`.
-- [ ] T053 [US2] Implement preferences persistence and application in migration `0008_preferences` (singleton row, `content jsonb`, `saved_at timestamptz null`) and `hiretitan/preferences/infra/` + `hiretitan/preferences/application/service.py`:
+- [X] T053 [US2] Implement preferences persistence and application in migration `0008_preferences` (singleton row, `content jsonb`, `saved_at timestamptz null`) and `hiretitan/preferences/infra/` + `hiretitan/preferences/application/service.py`:
   - `get()` returns the defaults when never saved;
   - `save()` validates;
   - `suggestions()` uses `profile.application.get_current_profile()`: the most recent title and skills not already chosen; empty when there's no profile;
