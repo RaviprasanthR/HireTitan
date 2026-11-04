@@ -267,7 +267,7 @@ description: "Task list for 001-setup-and-profile (first slice)"
 
 **Independent Test**: start with no key → banner and checklist show "missing"; add a valid key and restart → status "found, working", and the waiting extraction completes (quickstart A1, A4–A5, A10).
 
-- [ ] T056 [US3] Implement settings management in `hiretitan/setup/application/settings.py` (the table and `get_budget_cap()` already exist from T021):
+- [X] T056 [US3] Implement settings management in `hiretitan/setup/application/settings.py` (the table and `get_budget_cap()` already exist from T021):
   - `update_budget_cap(value 0–10000)`; raising the cap defers `resume_paused_runs("budget_reached")`;
   - `get_settings()`: cap, this month's spend, tiers from `models.yaml` (read-only), key status.
 
