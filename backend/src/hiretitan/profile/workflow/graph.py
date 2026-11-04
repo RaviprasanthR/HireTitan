@@ -46,7 +46,11 @@ def build_graph(deps: IngestDeps) -> StateGraph[Any]:
     graph.add_node("discard_review", cast(Any, _bound(nodes.discard_review, deps)))
     graph.add_node("end_no_text", cast(Any, lambda state: {}))
 
-    graph.add_edge(START, "parse_document")
+    graph.add_conditional_edges(
+        START,
+        nodes.after_start,
+        {"parse_document": "parse_document", "manual_extraction": "manual_extraction"},
+    )
     graph.add_conditional_edges(
         "parse_document",
         nodes.after_parse,
@@ -84,6 +88,10 @@ def profile_ingest_workflow(deps: IngestDeps) -> WorkflowDef:
         return build_graph(deps).compile(checkpointer=saver)
 
     def initial_input(run: Run) -> dict[str, Any]:
-        return {"run_id": str(run.id), "resume_file_id": str(run.subject_id)}
+        # No subject means no resume file: the user is typing the profile in (FR-019).
+        return {
+            "run_id": str(run.id),
+            "resume_file_id": str(run.subject_id) if run.subject_id else None,
+        }
 
     return WorkflowDef(build=build, initial_input=initial_input)

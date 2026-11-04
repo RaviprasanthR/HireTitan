@@ -16,6 +16,12 @@ from hiretitan.platform.runtime.runner import resume_run
 from hiretitan.platform.web.problems import ProblemError
 from hiretitan.profile.api.resumes import ProfileApiDeps
 from hiretitan.profile.api.schemas import ProfileContentModel
+from hiretitan.profile.application.ingest import OpenReviewError
+from hiretitan.profile.application.manual import (
+    ActiveRunError,
+    ReadingInProgressError,
+    start_manual_review,
+)
 from hiretitan.profile.application.reviews import (
     CLOSED,
     ReviewConflictError,
@@ -23,6 +29,7 @@ from hiretitan.profile.application.reviews import (
     require_open,
 )
 from hiretitan.profile.domain.serialization import content_to_json
+from hiretitan.profile.infra.ingest_store import SqlIngestStore
 from hiretitan.profile.infra.repos import Review, ReviewsRepo, VersionsRepo
 
 
@@ -76,6 +83,25 @@ def create_reviews_router(deps: ProfileApiDeps) -> APIRouter:
         if review is None:
             raise _not_found(review_id)
         return review
+
+    @router.post("/manual", status_code=202)
+    async def start_manual(cancel_active_run: bool = False) -> dict[str, str]:
+        try:
+            async with deps.sessions() as session:
+                run_id = await start_manual_review(
+                    SqlIngestStore(session), deps.queue, cancel_active_run=cancel_active_run
+                )
+        except OpenReviewError as error:
+            raise ProblemError(
+                409, "A profile review is already open.", open_review_id=str(error.open_review_id)
+            ) from None
+        except ReadingInProgressError as error:
+            raise ProblemError(409, str(error), active_run_id=str(error.active_run_id)) from None
+        except ActiveRunError as error:
+            raise ProblemError(
+                409, "A resume is still being read.", active_run_id=str(error.active_run_id)
+            ) from None
+        return {"run_id": str(run_id)}
 
     @router.get("/{review_id}")
     async def get_review(review_id: UUID) -> ReviewOut:

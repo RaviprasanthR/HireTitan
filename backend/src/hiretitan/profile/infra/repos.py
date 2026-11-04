@@ -174,7 +174,7 @@ class ReviewsRepo:
         self,
         *,
         run_id: UUID,
-        resume_file_id: UUID,
+        resume_file_id: UUID | None,
         extraction: JsonDict,
         dropped_items: list[JsonDict],
         flags: JsonDict,

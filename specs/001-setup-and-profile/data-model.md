@@ -67,11 +67,10 @@ failed → queued ("Try again")
 | changed_paths | jsonb | list of field paths that differ from `compare_to_version_id` |
 | draft | jsonb null | user's unsaved edits (FR-016); `ProfileContent` shape |
 | draft_saved_at | timestamptz null | |
-| origin | text | `extraction` · `manual` (US5: "Type it in myself", no file, no AI) |
-| prompt_name / prompt_version / provider / model | text null | provenance (FR-012); required when `origin = extraction`, null when `manual` (CHECK) |
+| prompt_name / prompt_version / provider / model | text | provenance (FR-012); `"none"` for a manual review |
 | created_at / updated_at | timestamptz | |
 
-Constraint: partial unique index `ON (status) WHERE status = 'open'`, so at most one open review exists. A `manual` review has `resume_file_id IS NULL` (CHECK). Confirming a `manual` review creates a version with `created_by = manual` (or `manual_edit` when a current version exists).
+Constraint: partial unique index `ON (status) WHERE status = 'open'`, so at most one open review exists. A manual review (US5 "Type it in myself", or manual entry after an injection warning) is marked by `flags.extraction_outcome = "manual"`, and has `resume_file_id` null when no file was involved. Confirming it creates a version with `created_by = manual` (or `manual_edit` when a current version exists) and no provenance.
 
 ### `app.profiles` (profile)
 

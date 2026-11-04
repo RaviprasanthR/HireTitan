@@ -30,6 +30,7 @@ from hiretitan.platform.untrusted.delimit import delimit
 from hiretitan.platform.untrusted.mask_contacts import Contacts, mask_contacts
 from hiretitan.platform.untrusted.sanitize import sanitize
 from hiretitan.platform.untrusted.screen import Flag, screen
+from hiretitan.profile.application.versions import manual_creator
 from hiretitan.profile.domain.content import Contact, ProfileContent
 from hiretitan.profile.domain.diff import changed_paths
 from hiretitan.profile.domain.grounding import ground
@@ -61,7 +62,7 @@ class IngestState(TypedDict, total=False):
     """Every key the nodes read or write; LangGraph keeps only the keys declared here."""
 
     run_id: str
-    resume_file_id: str
+    resume_file_id: str | None
     visible_text: str
     hidden_runs: list[dict[str, Any]]
     parse_status: str
@@ -159,6 +160,11 @@ async def parse_document(deps: IngestDeps, state: State) -> State:
         "hidden_runs": [{"page": r.page, "text": r.text} for r in doc.hidden_runs],
         "parse_status": doc.status,
     }
+
+
+def after_start(state: State) -> str:
+    """A run with no resume file is the user typing the profile in by hand (FR-019)."""
+    return "parse_document" if state.get("resume_file_id") else "manual_extraction"
 
 
 def after_parse(state: State) -> str:
@@ -347,9 +353,9 @@ async def open_review(deps: IngestDeps, state: State) -> State:
         "none" if manual else deps.model,
     )
     flags = {
-        "hidden_text": state["hidden_runs"],
-        "injection_flags": state["flags"],
-        "truncated_at": state["truncated_at"],
+        "hidden_text": state.get("hidden_runs", []),
+        "injection_flags": state.get("flags", []),
+        "truncated_at": state.get("truncated_at"),
         "extraction_outcome": state.get("outcome", "ok"),
     }
     compare_to = (
@@ -361,7 +367,9 @@ async def open_review(deps: IngestDeps, state: State) -> State:
         if review is None:
             review = await reviews.create(
                 run_id=run_id,
-                resume_file_id=UUID(state["resume_file_id"]),
+                resume_file_id=(
+                    UUID(state["resume_file_id"]) if state.get("resume_file_id") else None
+                ),
                 extraction=state["content"],
                 dropped_items=state.get("dropped", []),
                 flags=flags,
@@ -404,9 +412,10 @@ async def save_version(
         if review.status != "open":
             return None
         manual = review.flags.get("extraction_outcome") == "manual"
+        has_current = await versions.current() is not None
         version = await versions.create_version(
             content_from_json(content_json),
-            created_by="manual" if manual else "extraction",
+            created_by=manual_creator(has_current) if manual else "extraction",
             source_file_id=review.resume_file_id,
             review_id=review_id,
             provenance=None if manual else review.provenance,

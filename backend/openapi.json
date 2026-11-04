@@ -1992,6 +1992,53 @@
         ]
       }
     },
+    "/api/v1/profile/reviews/manual": {
+      "post": {
+        "operationId": "start_manual_api_v1_profile_reviews_manual_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "cancel_active_run",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Cancel Active Run",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Start Manual Api V1 Profile Reviews Manual Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start Manual",
+        "tags": [
+          "profile reviews"
+        ]
+      }
+    },
     "/api/v1/profile/reviews/{review_id}": {
       "get": {
         "operationId": "get_review_api_v1_profile_reviews__review_id__get",

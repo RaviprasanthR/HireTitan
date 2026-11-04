@@ -29,7 +29,7 @@ Base `http://127.0.0.1:8000/api/v1` · JSON · no auth (local only) · errors fo
 | `POST /profile/reviews/{id}/confirm` | `ProfileContent` → `202 {run_id}`, or `422` with confirm-rule errors | FR-017/018; resumes the run, which saves the version |
 | `POST /profile/reviews/{id}/discard` | → `204` | cancels the run; the current profile is unchanged |
 
-| `POST /profile/reviews/manual` | `?cancel_active_run=true` optional → `201 {review_id, run_id}` | FR-019, US5-AS6. Opens an empty, autosaved review with no file (W1 manual mode). `409 {open_review_id}` when a review is open; `409 {active_run_id}` when a resume is still being read, unless `cancel_active_run=true`. |
+| `POST /profile/reviews/manual` | `?cancel_active_run=true` optional → `202 {run_id}` | FR-019, US5-AS6. Queues a resume-less run (W1 manual mode) that opens an empty, autosaved review (poll `GET /onboarding` or `run.updated`). `409 {open_review_id}` when a review is open; `409 {active_run_id}` when a resume is queued, paused or waiting for the injection decision, unless `cancel_active_run=true`; `409` even then when the import is running right now. |
 
 ## First-run setup (setup)
 
