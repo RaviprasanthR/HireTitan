@@ -249,6 +249,27 @@ def _read_cache(deps: IngestDeps, key: str) -> dict[str, Any] | None:
     return cached
 
 
+def extraction_task_spec(schema: type[BaseModel], source: str) -> TaskSpec[BaseModel]:
+    """The checks every extraction answer goes through: date rules, then grounding in ``source``.
+
+    Shared with the extraction eval so it measures exactly what the app would keep.
+    """
+
+    def empty() -> BaseModel:
+        return schema.model_validate(content_to_extracted(_empty_content()))
+
+    def rules(value: BaseModel) -> list[str]:
+        content = extracted_to_content(value.model_dump())
+        return [e.message for e in confirm_errors(content) if e.path.endswith(".end")]
+
+    def check(value: BaseModel) -> tuple[BaseModel, list[Dropped]]:
+        grounded = ground(extracted_to_content(value.model_dump()), source)
+        kept = schema.model_validate(content_to_extracted(grounded.profile))
+        return kept, [Dropped(d.path, d.reason, d.value) for d in grounded.dropped]
+
+    return TaskSpec(fallback=empty, rules=rules, check=check)
+
+
 async def extract_profile(deps: IngestDeps, state: State) -> State:
     await _step(deps, state, "extracting")
     prompt = deps.prompts.load(PROMPT_NAME)
@@ -269,19 +290,7 @@ async def extract_profile(deps: IngestDeps, state: State) -> State:
         # The block is already inside the rendered prompt; passing it again would send it twice.
         untrusted_blocks=[],
     )
-    source = state["clean_text"]
-
-    def empty() -> BaseModel:
-        return schema.model_validate(content_to_extracted(_empty_content()))
-
-    def rules(value: BaseModel) -> list[str]:
-        content = extracted_to_content(value.model_dump())
-        return [e.message for e in confirm_errors(content) if e.path.endswith(".end")]
-
-    def check(value: BaseModel) -> tuple[BaseModel, list[Dropped]]:
-        grounded = ground(extracted_to_content(value.model_dump()), source)
-        kept = schema.model_validate(content_to_extracted(grounded.profile))
-        return kept, [Dropped(d.path, d.reason, d.value) for d in grounded.dropped]
+    spec = extraction_task_spec(schema, state["clean_text"])
 
     async def record(call: LlmCallRecord) -> None:
         await _record_call(deps, call)
@@ -289,7 +298,7 @@ async def extract_profile(deps: IngestDeps, state: State) -> State:
     chain = ValidatedLlm(deps.llm, record, provider=deps.provider)
     result = await chain.run(
         request,
-        TaskSpec(fallback=empty, rules=rules, check=check),
+        spec,
         run_id=UUID(state["run_id"]),
     )
     payload = {

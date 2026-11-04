@@ -1,0 +1,12 @@
+dates:
+- 2021-01
+education: []
+employers:
+- Acme Corp
+name: Jane Example
+skills:
+- Python
+- Go
+- PostgreSQL
+titles:
+- Senior Software Engineer
