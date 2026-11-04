@@ -174,7 +174,7 @@ description: "Task list for 001-setup-and-profile (first slice)"
   - `POST …/discard` (cancels the run, review `discarded`, current profile unchanged).
 
   Also the run endpoints in `hiretitan/platform/runtime/api.py`: `GET /api/v1/runs/{id}`, `POST /api/v1/runs/{id}/decision`, `POST /api/v1/runs/{id}/retry`. Tests first in `backend/tests/api/profile/test_reviews_api.py`: `test_US1_AS2_confirm_saves_exact_values_linked_to_file`, `test_US1_AS9_draft_kept_until_confirm_or_discard`, `test_FR018_confirm_blocked_with_reasons`, `test_FR014_discard_leaves_current_unchanged`, `test_FR007_decision_manual_entry_opens_empty_review`, `test_retry_failed_run`.
-- [ ] T046 [US1] Implement profile versions in `hiretitan/profile/application/versions.py` and the router `hiretitan/profile/api/profile.py`:
+- [X] T046 [US1] Implement profile versions in `hiretitan/profile/application/versions.py` and the router `hiretitan/profile/api/profile.py`:
   - `GET /api/v1/profile`;
   - `POST /api/v1/profile/versions` (FR-019 manual create → `created_by = manual`; FR-020 edit when a current version exists → `manual_edit`; FR-018 rules; no grounding);
   - `GET /api/v1/profile/versions` (number, created_at, created_by, source_file name or null, source_deleted, is_current);

@@ -25,11 +25,13 @@ from starlette.types import ASGIApp, Lifespan, Message, Receive, Scope, Send
 
 from hiretitan.platform.config.settings import Settings, get_settings
 from hiretitan.platform.db import create_engine, session_factory
-from hiretitan.platform.runtime.api import create_events_router
+from hiretitan.platform.runtime.api import create_events_router, create_runs_router
 from hiretitan.platform.runtime.procrastinate import create_runtime
 from hiretitan.platform.storage.local import LocalFileStorage
 from hiretitan.platform.web.problems import ProblemError, problem
+from hiretitan.profile.api.profile import create_profile_router
 from hiretitan.profile.api.resumes import ProfileApiDeps, create_resumes_router
+from hiretitan.profile.api.reviews import create_reviews_router
 
 API_PREFIX: Final = "/api/v1"
 DEFAULT_DIST: Final = Path(__file__).resolve().parents[3] / "frontend" / "dist"
@@ -162,7 +164,13 @@ def build_app(settings: Settings | None = None) -> FastAPI:
             yield
         await engine.dispose()
 
-    return create_app(settings, routers=[create_resumes_router(deps)], lifespan=lifespan)
+    routers = [
+        create_resumes_router(deps),
+        create_reviews_router(deps),
+        create_profile_router(deps),
+        create_runs_router(deps.sessions, deps.queue),
+    ]
+    return create_app(settings, routers=routers, lifespan=lifespan)
 
 
 def main() -> None:
