@@ -46,7 +46,6 @@ describe('Shell', () => {
   it.each([
     ['/', 'Home'],
     ['/profile', 'Profile'],
-    ['/profile/versions/v1', 'Profile version'],
     ['/preferences', 'Preferences'],
     ['/review', 'Review'],
     ['/settings', 'Settings'],
@@ -58,6 +57,18 @@ describe('Shell', () => {
   it('review_route_shows_the_editor_loading', () => {
     renderAt('/profile/review/abc')
     expect(screen.getByText('Loading your review…')).toBeInTheDocument()
+  })
+
+  it('versions_route_lists_versions', async () => {
+    renderAt('/profile/versions')
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Profile versions' }),
+    ).toBeInTheDocument()
+  })
+
+  it('version_route_shows_the_version_loading', () => {
+    renderAt('/profile/versions/v1')
+    expect(screen.getByText('Loading this version…')).toBeInTheDocument()
   })
 
   it('has_a_banner_slot_above_the_page', () => {

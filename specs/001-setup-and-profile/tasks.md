@@ -204,7 +204,7 @@ description: "Task list for 001-setup-and-profile (first slice)"
   - Discard with a confirmation.
 
   All AI text is rendered as plain text. Tests first in `frontend/src/features/profile/ReviewEditor.test.tsx`: `US1_AS2_edits_sent_on_confirm`, `US1_AS3_dropped_items_listed`, `US1_AS3b_add_dropped_item_back`, `US1_AS4_hidden_text_warning_shown`, `US1_AS8_changed_fields_show_current_value`, `US1_AS9_autosaves_draft`, `FR018_confirm_errors_on_fields`.
-- [ ] T050 [P] [US1] Implement versions and manual editing in `frontend/src/features/profile/VersionsList.tsx`, `VersionView.tsx` (read-only) and `ProfileEditor.tsx` (reuses the ReviewEditor form for manual create and edit → `POST /profile/versions`). Tests first in `frontend/src/features/profile/Versions.test.tsx`: `FR021_lists_versions_with_source_and_current`, `FR019_manual_create_posts_version`, `FR020_edit_creates_new_version`.
+- [X] T050 [P] [US1] Implement versions and manual editing in `frontend/src/features/profile/VersionsList.tsx`, `VersionView.tsx` (read-only) and `ProfileEditor.tsx` (reuses the ReviewEditor form for manual create and edit → `POST /profile/versions`). Tests first in `frontend/src/features/profile/Versions.test.tsx`: `FR021_lists_versions_with_source_and_current`, `FR019_manual_create_posts_version`, `FR020_edit_creates_new_version`.
 
 ### Evaluation
 

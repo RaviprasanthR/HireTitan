@@ -3,9 +3,11 @@ import {
   HomePage,
   NotFoundPage,
   PreferencesPage,
+  ProfileEditor,
   ProfilePage,
   ProfileReviewPage,
   ProfileVersionPage,
+  ProfileVersionsPage,
   ReviewPage,
   SettingsPage,
 } from './pages'
@@ -17,7 +19,9 @@ export const routes: RouteObject[] = [
     children: [
       { path: '/', element: <HomePage /> },
       { path: '/profile', element: <ProfilePage /> },
+      { path: '/profile/edit', element: <ProfileEditor /> },
       { path: '/profile/review/:reviewId', element: <ProfileReviewPage /> },
+      { path: '/profile/versions', element: <ProfileVersionsPage /> },
       { path: '/profile/versions/:versionId', element: <ProfileVersionPage /> },
       { path: '/preferences', element: <PreferencesPage /> },
       { path: '/review', element: <ReviewPage /> },

@@ -224,11 +224,13 @@ export function ProfilePage({ pollMs = 3000 }: { pollMs?: number }) {
         </Tabs.Content>
       </Tabs.Root>
 
-      <p>
+      <p className="space-x-4">
         <Link to="/profile/edit" className="text-link underline">
           Fill in by hand
-        </Link>{' '}
-        <span className="text-sm text-muted-small">if you would rather not use a resume.</span>
+        </Link>
+        <Link to="/profile/versions" className="text-link underline">
+          Version history
+        </Link>
       </p>
 
       {error && (
