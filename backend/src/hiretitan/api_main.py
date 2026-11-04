@@ -28,12 +28,15 @@ from hiretitan.platform.db import create_engine, session_factory
 from hiretitan.platform.runtime.api import create_events_router, create_runs_router
 from hiretitan.platform.runtime.procrastinate import create_runtime
 from hiretitan.platform.storage.local import LocalFileStorage
+from hiretitan.platform.web.limits import BodyLimitMiddleware
 from hiretitan.platform.web.problems import ProblemError, problem
 from hiretitan.profile.api.profile import create_profile_router
 from hiretitan.profile.api.resumes import ProfileApiDeps, create_resumes_router
 from hiretitan.profile.api.reviews import create_reviews_router
+from hiretitan.profile.infra.parsing.sniff import MAX_BYTES
 
 API_PREFIX: Final = "/api/v1"
+MULTIPART_OVERHEAD: Final = 64 * 1024  # boundaries and headers around the file
 DEFAULT_DIST: Final = Path(__file__).resolve().parents[3] / "frontend" / "dist"
 
 CSP: Final = "; ".join(
@@ -120,6 +123,9 @@ def create_app(
 ) -> FastAPI:
     settings = settings or get_settings()
     app = FastAPI(title="HireTitan", docs_url=None, redoc_url=None, lifespan=lifespan)
+    app.add_middleware(
+        BodyLimitMiddleware, path=f"{API_PREFIX}/resumes", limit=MAX_BYTES + MULTIPART_OVERHEAD
+    )
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_exception_handler(RequestValidationError, _validation_handler)
     app.add_exception_handler(StarletteHTTPException, _http_handler)

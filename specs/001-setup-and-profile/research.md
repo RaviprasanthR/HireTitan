@@ -105,7 +105,7 @@ Versions and licences were checked on PyPI and npm on 2026-11-03. They are **flo
 - **Decision**:
   - **Type sniffing** by magic bytes: `%PDF-` means PDF; a ZIP with `word/document.xml` means DOCX. The extension alone is never trusted.
   - **Encrypted PDF**: `pypdf.PdfReader.is_encrypted`, rejected.
-  - **Size**: ≤ 10 MB, checked while streaming the upload. Page limit: 20.
+  - **Size**: ≤ 5 MB, checked while streaming the upload. Page limit: 20.
   - **PDF text**: pdfplumber text from visible characters only, with bullet glyphs (•, ▪, –, *) kept as line starts.
   - **DOCX**: body paragraphs in order, tables (row by row), headers/footers, and text boxes (`w:txbxContent`, read via the XML tree).
   - **No readable text**: fewer than 200 visible characters means "no readable text" (scanned PDF), and the user is offered the paste or manual options.

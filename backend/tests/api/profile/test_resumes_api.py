@@ -22,7 +22,7 @@ from hiretitan.profile.api.resumes import ProfileApiDeps, create_resumes_router
 from hiretitan.profile.infra.repos import Provenance, ResumeFilesRepo, ReviewsRepo
 
 FIXTURES = Path(__file__).resolve().parents[2] / "fixtures" / "resumes"
-MAX_BYTES = 10_485_760
+MAX_BYTES = 5_242_880
 
 
 @dataclass
@@ -131,7 +131,7 @@ async def test_FR001_too_large_413(env: Env) -> None:
     files = {"file": ("big.pdf", b"%PDF-1.7\n" + b"x" * MAX_BYTES, "application/pdf")}
     response = await env.client.post("/api/v1/resumes", files=files)
     assert response.status_code == 413
-    assert response.json()["detail"] == "The file is larger than 10 MB"
+    assert response.json()["detail"] == "The file is larger than 5 MB"
     assert env.queue.enqueued == []
 
 
@@ -255,7 +255,7 @@ async def test_get_resumes_lists_files_with_open_review_flag(env: Env) -> None:
     assert review_id
 
 
-async def test_plan_10mb_upload_accepted_under_2s(env: Env) -> None:
+async def test_plan_5mb_upload_accepted_under_2s(env: Env) -> None:
     base = (FIXTURES / "synthetic-mid-2page.pdf").read_bytes()
     padded = base + b"\n%" + b"p" * (MAX_BYTES - len(base) - 2)
     assert len(padded) == MAX_BYTES

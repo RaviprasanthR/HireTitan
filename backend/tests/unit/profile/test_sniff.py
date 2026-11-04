@@ -18,6 +18,7 @@ from hiretitan.profile.infra.parsing.sniff import (
     FileTooLargeError,
     PasswordProtectedOrLegacyDocError,
     TooManyPagesError,
+    UnpackedTooLargeError,
     UnsupportedTypeError,
     read_limited,
     sniff,
@@ -112,7 +113,7 @@ def chunks(total: int, size: int, consumed: list[int]) -> Iterator[bytes]:
         yield b"x" * piece
 
 
-def test_FR001_rejects_over_10mb() -> None:
+def test_FR001_rejects_over_5mb() -> None:
     consumed: list[int] = []
     with pytest.raises(FileTooLargeError):
         read_limited(chunks(MAX_BYTES * 3, 1_000_000, consumed))
@@ -120,11 +121,36 @@ def test_FR001_rejects_over_10mb() -> None:
     assert sum(consumed) <= MAX_BYTES + 1_000_000
 
 
-def test_exactly_10mb_is_accepted() -> None:
+def test_exactly_5mb_is_accepted() -> None:
     data = read_limited(chunks(MAX_BYTES, 1_048_576, []))
-    assert len(data) == MAX_BYTES == 10_485_760
+    assert len(data) == MAX_BYTES == 5_242_880
 
 
 def test_empty_upload_is_unsupported() -> None:
     with pytest.raises(UnsupportedTypeError):
         sniff(read_limited(iter(())))
+
+
+def docx_with_entry(size: int, *, entries: int = 1) -> bytes:
+    import io
+    import zipfile
+
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("word/document.xml", "<w:document/>")
+        for i in range(entries):
+            archive.writestr(f"word/part{i}.xml", bytes(size // entries))
+    return buffer.getvalue()
+
+
+def test_zip_bomb_is_rejected_before_parsing() -> None:
+    data = docx_with_entry(200 * 1024 * 1024)
+    assert len(data) < 1024 * 1024  # a small file that unpacks to 200 MB
+
+    with pytest.raises(UnpackedTooLargeError):
+        sniff(data)
+
+
+def test_zip_with_too_many_entries_is_rejected() -> None:
+    with pytest.raises(UnpackedTooLargeError):
+        sniff(docx_with_entry(2000, entries=1500))

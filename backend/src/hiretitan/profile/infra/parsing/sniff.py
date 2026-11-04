@@ -15,8 +15,10 @@ from typing import Final, Literal
 from pypdf import PdfReader
 from pypdf.errors import PyPdfError
 
-MAX_BYTES: Final = 10_485_760
+MAX_BYTES: Final = 5_242_880
 MAX_PAGES: Final = 20
+MAX_UNPACKED_BYTES: Final = 50 * 1024 * 1024  # a 5 MB DOCX never legitimately unpacks past this
+MAX_ZIP_ENTRIES: Final = 1000
 _OLE_MAGIC: Final = bytes.fromhex("D0CF11E0")
 _ZIP_MAGIC: Final = b"PK\x03\x04"
 _PDF_MAGIC: Final = b"%PDF-"
@@ -41,7 +43,12 @@ class PasswordProtectedOrLegacyDocError(IntakeError):  # -> 415
 
 class FileTooLargeError(IntakeError):  # -> 413
     def __init__(self) -> None:
-        super().__init__("The file is larger than 10 MB")
+        super().__init__("The file is larger than 5 MB")
+
+
+class UnpackedTooLargeError(IntakeError):  # -> 422
+    def __init__(self) -> None:
+        super().__init__("This file is far larger once unpacked than a resume should be")
 
 
 class EncryptedFileError(IntakeError):  # -> 422
@@ -95,7 +102,10 @@ def _sniff_pdf(data: bytes) -> Sniffed:
 def _sniff_docx(data: bytes) -> Sniffed:
     try:
         with zipfile.ZipFile(io.BytesIO(data)) as archive:
-            names = set(archive.namelist())
+            infos = archive.infolist()
+            if len(infos) > MAX_ZIP_ENTRIES or sum(i.file_size for i in infos) > MAX_UNPACKED_BYTES:
+                raise UnpackedTooLargeError
+            names = {i.filename for i in infos}
             if "word/document.xml" not in names:
                 raise UnsupportedTypeError
             if archive.testzip() is not None:

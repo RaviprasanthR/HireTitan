@@ -84,7 +84,7 @@ def _inspect(data: bytes) -> Inspected:
 
 
 async def _read_upload(file: UploadFile) -> bytes:
-    """Read the upload in chunks, stopping as soon as it passes the 10 MB limit."""
+    """Read the upload in chunks, stopping as soon as it passes the 5 MB limit."""
     parts: list[bytes] = []
     total = 0
     while chunk := await file.read(CHUNK):

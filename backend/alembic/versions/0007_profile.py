@@ -68,7 +68,7 @@ def upgrade() -> None:
             "char_length(original_name) <= 255", name="ck_resume_files_original_name_length"
         ),
         sa.CheckConstraint(
-            "size_bytes BETWEEN 1 AND 10485760", name="ck_resume_files_size_bytes_range"
+            "size_bytes BETWEEN 1 AND 5242880", name="ck_resume_files_size_bytes_range"
         ),
         sa.CheckConstraint("char_length(sha256) = 64", name="ck_resume_files_sha256_length"),
         sa.CheckConstraint(

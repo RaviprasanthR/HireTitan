@@ -98,7 +98,7 @@ The person can delete an uploaded resume file, or wipe all their HireTitan data 
 
 ### Edge Cases
 
-- File is not PDF/DOCX, is password-protected, corrupted, or larger than 10 MB → rejected before processing, with a specific message.
+- File is not PDF/DOCX, is password-protected, corrupted, or larger than 5 MB → rejected before processing, with a specific message.
 - DOCX with text in tables, text boxes, headers or footers → that text is included in parsing.
 - Resume in a language other than English → extraction is attempted; there is no translation; whatever is found goes to review as usual.
 - Very long resume (beyond the length cap for AI input) → text is truncated at the cap, and the user is told which part was not read.
@@ -117,7 +117,7 @@ The person can delete an uploaded resume file, or wipe all their HireTitan data 
 
 **Resume intake and parsing**
 
-- **FR-001**: Users MUST be able to upload a resume as PDF or DOCX up to 10 MB; other types, encrypted, corrupt or oversized files MUST be rejected with a message saying why.
+- **FR-001**: Users MUST be able to upload a resume as PDF or DOCX up to 5 MB; other types, encrypted, corrupt or oversized files MUST be rejected with a message saying why.
 - **FR-002**: Users MUST be able to paste resume text as an alternative to uploading a file.
 - **FR-003**: The system MUST keep every uploaded file unchanged on the user's machine as a resume file record (name, type, size, upload time, content fingerprint).
 - **FR-004**: The system MUST extract plain text from the resume, including text in tables, headers and footers, keeping section and bullet structure where present.

@@ -129,7 +129,7 @@ export function ProfilePage({ pollMs = 3000 }: { pollMs?: number }) {
   function chooseFile(chosen: File | undefined) {
     if (!chosen) return
     if (chosen.size > MAX_UPLOAD_BYTES) {
-      setError('That file is larger than 10 MB. Choose a smaller PDF or DOCX.')
+      setError('That file is larger than 5 MB. Choose a smaller PDF or DOCX.')
       return
     }
     void submit({ action: (discard) => uploadResume(chosen, discard) })
@@ -186,7 +186,7 @@ export function ProfilePage({ pollMs = 3000 }: { pollMs?: number }) {
             className="flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground p-8 text-center focus-within:ring-2 focus-within:ring-ring"
           >
             <span className="font-medium">Resume file</span>
-            <span className="text-sm text-muted-small">PDF or DOCX, up to 10 MB. Drop it here or click to choose.</span>
+            <span className="text-sm text-muted-small">PDF or DOCX, up to 5 MB. Drop it here or click to choose.</span>
             <input
               type="file"
               aria-label="Resume file"

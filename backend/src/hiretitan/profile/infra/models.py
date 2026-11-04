@@ -32,7 +32,7 @@ class ResumeFileRow(Base):
     __table_args__ = (
         CheckConstraint("kind IN ('upload_pdf', 'upload_docx', 'pasted_text')", name="kind_values"),
         CheckConstraint("char_length(original_name) <= 255", name="original_name_length"),
-        CheckConstraint("size_bytes BETWEEN 1 AND 10485760", name="size_bytes_range"),
+        CheckConstraint("size_bytes BETWEEN 1 AND 5242880", name="size_bytes_range"),
         CheckConstraint("char_length(sha256) = 64", name="sha256_length"),
         CheckConstraint(
             "page_count IS NULL OR page_count BETWEEN 1 AND 20", name="page_count_range"

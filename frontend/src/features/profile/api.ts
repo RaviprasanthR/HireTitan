@@ -13,7 +13,7 @@ export type InjectionFlag = {
   location: 'visible' | 'hidden'
 }
 
-export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024
 
 const query = (discard: boolean) => (discard ? '?discard_open_review=true' : '')
 

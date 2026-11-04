@@ -33,14 +33,14 @@ Versions and licences: research R1.
 
 **Project Type**: web application (backend api + worker, frontend SPA served by the api).
 
-**Performance Goals**: extraction of a two-page resume ≤ 60 s p95 (SC-002, measured by the eval in T051/T067); a 10 MB upload accepted (202) in < 2 s (asserted in T042).
+**Performance Goals**: extraction of a two-page resume ≤ 60 s p95 (SC-002, measured by the eval in T051/T067); a 5 MB upload accepted (202) in < 2 s (asserted in T042).
 
 **Constraints**:
 - local only (127.0.0.1), no login;
 - API keys only in `.env`, never stored, logged or sent to the browser;
 - ≤ $0.05 per extraction (SC-007);
 - AI input ≤ 30,000 characters;
-- uploads ≤ 10 MB / 20 pages;
+- uploads ≤ 5 MB / 20 pages;
 - no outbound actions (constitution I);
 - no personal data in the repo.
 

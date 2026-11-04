@@ -204,13 +204,13 @@ describe('ProfilePage', () => {
     )
   })
 
-  it('files_over_10mb_are_refused_before_upload', async () => {
+  it('files_over_5mb_are_refused_before_upload', async () => {
     routes['GET /api/v1/resumes'] = () => json([])
     renderPage()
     const user = userEvent.setup({ applyAccept: false })
-    await user.upload(screen.getByLabelText(/resume file/i), pdf('big.pdf', 10 * 1024 * 1024 + 1))
+    await user.upload(screen.getByLabelText(/resume file/i), pdf('big.pdf', 5 * 1024 * 1024 + 1))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(/larger than 10 MB/i)
+    expect(await screen.findByRole('alert')).toHaveTextContent(/larger than 5 MB/i)
     expect(calls.some((c) => c.method === 'POST')).toBe(false)
   })
 
