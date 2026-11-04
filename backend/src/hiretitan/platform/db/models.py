@@ -13,6 +13,7 @@ import importlib
 MODEL_MODULES: tuple[str, ...] = (
     "hiretitan.platform.runtime.infra.models",
     "hiretitan.platform.llm.infra.models",
+    "hiretitan.setup.infra.models",
 )
 
 
