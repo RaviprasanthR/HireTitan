@@ -13,13 +13,15 @@
   --ht-slate: #4a5c6a;
   --ht-muted: #9ba8ab;
   --ht-muted-small: #9ba8ab;
-  --ht-primary: #ccd0cf;
+  --ht-primary: #4cc9f0;
+  --ht-primary-end: #1fa3d1;
   --ht-on-primary: #06141b;
-  --ht-accent: #9ba8ab;
+  --ht-accent: #4cc9f0;
+  --ht-heading: #f4f6f5;
   /* The bolt: near-white fading to steel, the brightest thing on the page. */
-  --ht-logo: #f4f6f5;
-  --ht-logo-end: #9ba8ab;
-  --ht-logo-glow: rgb(155 168 171 / 0.55);
+  --ht-logo: #e8fbff;
+  --ht-logo-end: #4cc9f0;
+  --ht-logo-glow: rgb(76 201 240 / 0.6);
   --ht-text: #ccd0cf;
   --ht-success: #3fb950;
   --ht-warning: #d29922;
@@ -28,12 +30,12 @@
   /* Top to bottom: the lightest slate at the top fading into the darkest at the bottom. */
   --ht-gradient-page: linear-gradient(180deg, #253745 0%, #11212d 40%, #06141b 100%);
   --ht-gradient-surface: linear-gradient(160deg, #182c3a 0%, #11212d 55%, #0c1a23 100%);
-  --ht-gradient-primary: linear-gradient(135deg, #ccd0cf 0%, #9ba8ab 100%);
+  --ht-gradient-primary: linear-gradient(135deg, #4cc9f0 0%, #1fa3d1 100%);
 
   /* Shadows: panels lift off the page; primary actions glow faintly. */
   --ht-shadow-panel: 0 1px 0 rgb(204 208 207 / 0.06) inset, 0 12px 32px -12px rgb(0 0 0 / 0.65),
     0 2px 6px rgb(0 0 0 / 0.35);
-  --ht-shadow-primary: 0 6px 18px -6px rgb(155 168 171 / 0.45), 0 1px 0 rgb(255 255 255 / 0.35) inset;
+  --ht-shadow-primary: 0 6px 18px -6px rgb(76 201 240 / 0.55), 0 1px 0 rgb(255 255 255 / 0.35) inset;
   --ht-shadow-dialog: 0 24px 64px -16px rgb(0 0 0 / 0.8), 0 0 0 1px rgb(74 92 106 / 0.5);
 
   /* shadcn variables */
@@ -84,6 +86,11 @@ body {
 }
 .bg-background {
   background: transparent;
+}
+h1,
+h2,
+h3 {
+  color: var(--ht-heading);
 }
 .bg-surface {
   background-image: var(--ht-gradient-surface);

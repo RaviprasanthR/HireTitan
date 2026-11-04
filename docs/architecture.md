@@ -351,13 +351,15 @@ React (current stable; exact version pinned in the 001 plan) + Vite + TypeScript
 | `surface` | `#11212d` | sidebar, cards, inputs, dialogs |
 | `divider` / hover | `#253745` | dividers, hover, muted fills (decorative; text on it 7.9:1) |
 | `slate` | `#4a5c6a` | gradient stops, glows and shadows only (2.7:1 on the page, never text or outlines) |
-| `muted` / `muted-small` / `accent` | `#9ba8ab` | hint and label text, icons, outlines, links, focus ring (6.7:1 or better) |
-| `primary` | `#ccd0cf` to `#9ba8ab` gradient | button and active-nav fill, with `#06141b` text (7.6:1 or better) |
+| `muted` / `muted-small` | `#9ba8ab` | hint and label text, icons, outlines (6.7:1 or better) |
+| `accent` | `#4cc9f0` (ice cyan) | links, focus ring, highlights (8:1 or better on the page and cards) |
+| `heading` | `#f4f6f5` | headings, brighter than body text for hierarchy (7:1 or better) |
+| `primary` | `#4cc9f0` to `#1fa3d1` gradient | button, active-nav and progress fill, with `#06141b` text (6:1 or better) |
 | `text` | `#ccd0cf` | body text (10.5:1 or better) |
-| `logo` / `logoEnd` | `#f4f6f5` to `#9ba8ab` gradient | the bolt logo (sidebar, setup header, tab icon): the brightest element on the page, 7:1 or better on the page and cards |
+| `logo` / `logoEnd` | `#e8fbff` to `#4cc9f0` gradient | the bolt logo (sidebar, setup header, tab icon) with a cyan glow: the brightest element on the page |
 | `success` / `warning` / `danger` | `#3fb950` / `#d29922` / `#f85149` | status badges (kept from the earlier palette) |
 
-Palette changed 2026-11-04 to Ravi's slate scale `#06141B #11212D #253745 #4A5C6A #9BA8AB #CCD0CF`. The page background is a top-to-bottom gradient (`#253745` to `#11212d` to `#06141b`, 2026-11-05). Gradients (panels, primary actions, the bolt) and shadows (panels, primary actions, dialogs) are CSS variables in `theme.css`.
+Palette changed 2026-11-04 to Ravi's slate scale `#06141B #11212D #253745 #4A5C6A #9BA8AB #CCD0CF`. The slate scale has no saturated colour, so on 2026-11-05 one accent was added: ice cyan `#4cc9f0`. The page background is a top-to-bottom gradient (`#253745` to `#11212d` to `#06141b`, 2026-11-05). Gradients (panels, primary actions, the bolt) and shadows (panels, primary actions, dialogs) are CSS variables in `theme.css`.
 
 **First-run setup (001, US5):** until setup is finished, every page shows one centred card instead of the app: (1) name, (2) resume (upload, paste or "Type it in myself"), (3) check the profile, (4) preferences, ending in "Finish setup". The card comes from saved data (`GET /onboarding`), so closing the tab returns the user to the same card; a stored `setup_completed_at` keeps the cards from coming back, and "Delete all my data" clears it. Design: `docs/superpowers/specs/2026-11-04-first-run-onboarding-design.md`.
 

@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
   <defs>
     <linearGradient id="bolt" x1="32" y1="14" x2="32" y2="52" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#f4f6f5"/>
-      <stop offset="1" stop-color="#9ba8ab"/>
+      <stop offset="0" stop-color="#e8fbff"/>
+      <stop offset="1" stop-color="#4cc9f0"/>
     </linearGradient>
     <linearGradient id="tile" x1="32" y1="0" x2="32" y2="64" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#253745"/>

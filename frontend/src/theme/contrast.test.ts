@@ -18,6 +18,11 @@ const pairs: Pair[] = [
   { fg: 'accent', bg: 'background', min: 4.5, use: 'links' },
   { fg: 'accent', bg: 'surface', min: 4.5, use: 'links and focus ring on surfaces' },
   { fg: 'text', bg: 'divider', min: 4.5, use: 'text on hover and muted fills' },
+  { fg: 'heading', bg: 'background', min: 7, use: 'headings on the page' },
+  { fg: 'heading', bg: 'surface', min: 7, use: 'headings on cards' },
+  { fg: 'heading', bg: 'divider', min: 7, use: 'headings at the top of the page gradient' },
+  { fg: 'primary', bg: 'background', min: 3, use: 'button and progress fill against the page' },
+  { fg: 'primary', bg: 'surface', min: 3, use: 'button and progress fill against cards' },
   // `divider` and `slate` are decorative only (slate on the page is 2.7:1), so neither is
   // used for text, outlines or icons.
   { fg: 'success', bg: 'background', min: 4.5, use: 'success badge text' },
@@ -31,6 +36,14 @@ const pairs: Pair[] = [
 describe('theme', () => {
   it.each(pairs)('FR027_text_pairs_meet_WCAG_AA: $fg on $bg ($use)', ({ fg, bg, min }) => {
     expect(contrastRatio(tokens[fg], tokens[bg])).toBeGreaterThanOrEqual(min)
+  })
+
+  it('accent_is_a_real_colour_not_another_grey', () => {
+    for (const colour of [tokens.primary, tokens.primaryEnd, tokens.accent, tokens.logoEnd]) {
+      const n = Number.parseInt(colour.replace('#', ''), 16)
+      const channels = [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+      expect(Math.max(...channels) - Math.min(...channels)).toBeGreaterThanOrEqual(100)
+    }
   })
 
   it('contrast_ratio_matches_known_values', () => {
