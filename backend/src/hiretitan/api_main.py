@@ -23,6 +23,7 @@ from fastapi.responses import FileResponse, Response
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.types import ASGIApp, Lifespan, Message, Receive, Scope, Send
 
+from hiretitan.platform.clock import SystemClock
 from hiretitan.platform.config.settings import Settings, get_settings
 from hiretitan.platform.db import create_engine, session_factory
 from hiretitan.platform.runtime.api import create_events_router, create_runs_router
@@ -30,10 +31,12 @@ from hiretitan.platform.runtime.procrastinate import create_runtime
 from hiretitan.platform.storage.local import LocalFileStorage
 from hiretitan.platform.web.limits import BodyLimitMiddleware
 from hiretitan.platform.web.problems import ProblemError, problem
+from hiretitan.preferences.api.router import PreferencesApiDeps, create_preferences_router
 from hiretitan.profile.api.profile import create_profile_router
 from hiretitan.profile.api.resumes import ProfileApiDeps, create_resumes_router
 from hiretitan.profile.api.reviews import create_reviews_router
 from hiretitan.profile.infra.parsing.sniff import MAX_BYTES
+from hiretitan.profile.infra.repos import VersionsRepo
 
 API_PREFIX: Final = "/api/v1"
 MULTIPART_OVERHEAD: Final = 64 * 1024  # boundaries and headers around the file
@@ -174,6 +177,11 @@ def build_app(settings: Settings | None = None) -> FastAPI:
         create_resumes_router(deps),
         create_reviews_router(deps),
         create_profile_router(deps),
+        create_preferences_router(
+            PreferencesApiDeps(
+                sessions=deps.sessions, clock=SystemClock(), profile_reader=VersionsRepo
+            )
+        ),
         create_runs_router(deps.sessions, deps.queue),
     ]
     return create_app(settings, routers=routers, lifespan=lifespan)

@@ -368,6 +368,409 @@
         "title": "LinkModel",
         "type": "object"
       },
+      "PayModel-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "basis": {
+            "title": "Basis",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "min_annual": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Annual"
+          },
+          "target_annual": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Annual"
+          }
+        },
+        "required": [
+          "currency",
+          "basis"
+        ],
+        "title": "PayModel",
+        "type": "object"
+      },
+      "PayModel-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "basis": {
+            "title": "Basis",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "min_annual": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Annual"
+          },
+          "target_annual": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Annual"
+          }
+        },
+        "required": [
+          "currency",
+          "basis"
+        ],
+        "title": "PayModel",
+        "type": "object"
+      },
+      "PlaceModel": {
+        "additionalProperties": false,
+        "properties": {
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "country": {
+            "title": "Country",
+            "type": "string"
+          }
+        },
+        "required": [
+          "country"
+        ],
+        "title": "PlaceModel",
+        "type": "object"
+      },
+      "PreferencesModel-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "avoided_companies": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Avoided Companies",
+            "type": "array"
+          },
+          "blocked_locations": {
+            "items": {
+              "$ref": "#/components/schemas/PlaceModel"
+            },
+            "title": "Blocked Locations",
+            "type": "array"
+          },
+          "default_country": {
+            "title": "Default Country",
+            "type": "string"
+          },
+          "earliest_start_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Earliest Start Date"
+          },
+          "job_types": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Job Types",
+            "type": "array"
+          },
+          "key_skills": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Key Skills",
+            "type": "array"
+          },
+          "notice_period_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notice Period Days"
+          },
+          "pay": {
+            "$ref": "#/components/schemas/PayModel-Input"
+          },
+          "preferred_companies": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Preferred Companies",
+            "type": "array"
+          },
+          "preferred_locations": {
+            "items": {
+              "$ref": "#/components/schemas/PlaceModel"
+            },
+            "title": "Preferred Locations",
+            "type": "array"
+          },
+          "seniority_levels": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Seniority Levels",
+            "type": "array"
+          },
+          "target_roles": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Target Roles",
+            "type": "array"
+          },
+          "willing_to_relocate": {
+            "title": "Willing To Relocate",
+            "type": "boolean"
+          },
+          "work_modes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Work Modes",
+            "type": "array"
+          },
+          "years_experience": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Years Experience"
+          }
+        },
+        "required": [
+          "target_roles",
+          "seniority_levels",
+          "key_skills",
+          "preferred_locations",
+          "default_country",
+          "work_modes",
+          "willing_to_relocate",
+          "blocked_locations",
+          "job_types",
+          "pay",
+          "preferred_companies",
+          "avoided_companies"
+        ],
+        "title": "PreferencesModel",
+        "type": "object"
+      },
+      "PreferencesModel-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "avoided_companies": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Avoided Companies",
+            "type": "array"
+          },
+          "blocked_locations": {
+            "items": {
+              "$ref": "#/components/schemas/PlaceModel"
+            },
+            "title": "Blocked Locations",
+            "type": "array"
+          },
+          "default_country": {
+            "title": "Default Country",
+            "type": "string"
+          },
+          "earliest_start_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Earliest Start Date"
+          },
+          "job_types": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Job Types",
+            "type": "array"
+          },
+          "key_skills": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Key Skills",
+            "type": "array"
+          },
+          "notice_period_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notice Period Days"
+          },
+          "pay": {
+            "$ref": "#/components/schemas/PayModel-Output"
+          },
+          "preferred_companies": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Preferred Companies",
+            "type": "array"
+          },
+          "preferred_locations": {
+            "items": {
+              "$ref": "#/components/schemas/PlaceModel"
+            },
+            "title": "Preferred Locations",
+            "type": "array"
+          },
+          "seniority_levels": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Seniority Levels",
+            "type": "array"
+          },
+          "target_roles": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Target Roles",
+            "type": "array"
+          },
+          "willing_to_relocate": {
+            "title": "Willing To Relocate",
+            "type": "boolean"
+          },
+          "work_modes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Work Modes",
+            "type": "array"
+          },
+          "years_experience": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Years Experience"
+          }
+        },
+        "required": [
+          "target_roles",
+          "seniority_levels",
+          "key_skills",
+          "preferred_locations",
+          "default_country",
+          "work_modes",
+          "willing_to_relocate",
+          "blocked_locations",
+          "job_types",
+          "pay",
+          "preferred_companies",
+          "avoided_companies"
+        ],
+        "title": "PreferencesModel",
+        "type": "object"
+      },
+      "PreferencesOut": {
+        "properties": {
+          "content": {
+            "$ref": "#/components/schemas/PreferencesModel-Output"
+          },
+          "saved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Saved At"
+          },
+          "suggestions": {
+            "$ref": "#/components/schemas/SuggestionsOut"
+          }
+        },
+        "required": [
+          "content",
+          "saved_at",
+          "suggestions"
+        ],
+        "title": "PreferencesOut",
+        "type": "object"
+      },
       "ProfileContentModel": {
         "additionalProperties": false,
         "properties": {
@@ -830,6 +1233,40 @@
         "title": "RunRef",
         "type": "object"
       },
+      "SavedOut": {
+        "properties": {
+          "saved_at": {
+            "format": "date-time",
+            "title": "Saved At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "saved_at"
+        ],
+        "title": "SavedOut",
+        "type": "object"
+      },
+      "SuggestionsOut": {
+        "properties": {
+          "key_skills": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Key Skills",
+            "type": "array"
+          },
+          "target_roles": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Target Roles",
+            "type": "array"
+          }
+        },
+        "title": "SuggestionsOut",
+        "type": "object"
+      },
       "TextIn": {
         "properties": {
           "text": {
@@ -1066,6 +1503,66 @@
           }
         },
         "summary": "Health"
+      }
+    },
+    "/api/v1/preferences": {
+      "get": {
+        "operationId": "read_preferences_api_v1_preferences_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreferencesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Read Preferences",
+        "tags": [
+          "preferences"
+        ]
+      },
+      "put": {
+        "operationId": "write_preferences_api_v1_preferences_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreferencesModel-Input"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Write Preferences",
+        "tags": [
+          "preferences"
+        ]
       }
     },
     "/api/v1/profile": {
