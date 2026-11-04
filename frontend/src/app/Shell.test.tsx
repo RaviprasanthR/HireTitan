@@ -46,7 +46,6 @@ describe('Shell', () => {
   it.each([
     ['/', 'Home'],
     ['/profile', 'Profile'],
-    ['/profile/review/abc', 'Review your profile'],
     ['/profile/versions/v1', 'Profile version'],
     ['/preferences', 'Preferences'],
     ['/review', 'Review'],
@@ -54,6 +53,11 @@ describe('Shell', () => {
   ])('route_%s_renders_%s', (path, heading) => {
     renderAt(path)
     expect(screen.getByRole('heading', { level: 1, name: heading })).toBeInTheDocument()
+  })
+
+  it('review_route_shows_the_editor_loading', () => {
+    renderAt('/profile/review/abc')
+    expect(screen.getByText('Loading your review…')).toBeInTheDocument()
   })
 
   it('has_a_banner_slot_above_the_page', () => {

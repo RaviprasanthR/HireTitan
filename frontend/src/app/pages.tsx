@@ -1,4 +1,6 @@
+import { useParams } from 'react-router'
 import { ProfilePage } from '@/features/profile/ProfilePage'
+import { ReviewEditor } from '@/features/profile/ReviewEditor'
 import type { ReactNode } from 'react'
 
 function Page({ title, children }: { title: string; children?: ReactNode }) {
@@ -12,7 +14,10 @@ function Page({ title, children }: { title: string; children?: ReactNode }) {
 
 // Placeholders: each feature replaces its page (Home, Profile, Preferences, Review, Settings).
 export const HomePage = () => <Page title="Home" />
-export const ProfileReviewPage = () => <Page title="Review your profile" />
+export function ProfileReviewPage() {
+  const { reviewId } = useParams()
+  return reviewId ? <ReviewEditor reviewId={reviewId} /> : <Page title="Review your profile" />
+}
 export const ProfileVersionPage = () => <Page title="Profile version" />
 export const PreferencesPage = () => <Page title="Preferences" />
 export const ReviewPage = () => <Page title="Review" />

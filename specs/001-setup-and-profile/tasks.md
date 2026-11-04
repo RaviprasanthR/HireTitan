@@ -195,7 +195,7 @@ description: "Task list for 001-setup-and-profile (first slice)"
   - the `no_text` notice offering paste or manual entry.
 
   Tests first in `frontend/src/features/profile/ProfilePage.test.tsx`: `US1_AS1_shows_progress_then_links_review`, `US1_AS5_injection_dialog_offers_two_choices`, `US1_AS6_no_text_offers_paste_or_manual`, `edge_case_rejected_file_message_shown`.
-- [ ] T049 [US1] Implement the review editor in `frontend/src/features/profile/ReviewEditor.tsx` (react-hook-form + zod mirroring the data-model bounds):
+- [X] T049 [US1] Implement the review editor in `frontend/src/features/profile/ReviewEditor.tsx` (react-hook-form + zod mirroring the data-model bounds):
   - every section editable, with add/remove/reorder for list items and bullets;
   - a flags panel (hidden text with page numbers, injection flags, truncation notice) and a dropped-items panel ("not found in your resume") with an "Add anyway" action per item that puts it back into the draft as the user's own entry (US1-AS3b, FR-011 undo);
   - on re-upload, changed fields marked with the current value beside them;
