@@ -1,0 +1,8 @@
+{
+  "error": {
+    "message": "The model does not support json_schema structured outputs (text.format).",
+    "type": "invalid_request_error",
+    "param": "text.format",
+    "code": "unsupported_parameter"
+  }
+}
