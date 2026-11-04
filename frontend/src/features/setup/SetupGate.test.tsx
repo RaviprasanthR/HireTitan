@@ -5,12 +5,19 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { routes } from '@/app/routes'
 
 const json = (body: unknown) =>
-  new Response(JSON.stringify(body), { headers: { 'Content-Type': 'application/json' } })
+  new Response(JSON.stringify(body), {
+    headers: { 'Content-Type': 'application/json' },
+  })
 
 type Step = 1 | 2 | 3 | 4 | 'done'
 
 function onboarding(step: Step, name: string | null = 'Jane') {
-  return { step, display_name: name, open_review_id: null, active_run_id: null }
+  return {
+    step,
+    display_name: name,
+    open_review_id: null,
+    active_run_id: null,
+  }
 }
 
 function aiStatus(status = 'working') {
@@ -45,7 +52,9 @@ function renderAt(path: string, step: Step, status = 'working') {
     }),
   )
   const router = createMemoryRouter(routes, { initialEntries: [path] })
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
   return render(
     <QueryClientProvider client={client}>
       <RouterProvider router={router} />
@@ -108,10 +117,15 @@ describe('SetupGate', () => {
   })
 
   it('shows_a_load_error_instead_of_the_app', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 500 })))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('{}', { status: 500 })),
+    )
     const router = createMemoryRouter(routes, { initialEntries: ['/'] })
     render(
-      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <QueryClientProvider
+        client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      >
         <RouterProvider router={router} />
       </QueryClientProvider>,
     )
