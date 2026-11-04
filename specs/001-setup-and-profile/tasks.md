@@ -220,7 +220,7 @@ description: "Task list for 001-setup-and-profile (first slice)"
 
 **Independent Test**: on a fresh install, Preferences shows the defaults; change roles, locations and pay, save, reload, and the values persist (quickstart A2–A3).
 
-- [ ] T052 [P] [US2] Implement the preferences domain in `hiretitan/preferences/domain/`, with every field, default and validation exactly as in the data-model.md `Preferences` table:
+- [X] T052 [P] [US2] Implement the preferences domain in `hiretitan/preferences/domain/`, with every field, default and validation exactly as in the data-model.md `Preferences` table:
   - `target_roles` `[str 1–100] (≤ 20)`, ≥ 1 to save;
   - `seniority_levels` enum `intern, entry, junior, mid, senior, lead, staff, principal, manager, director`;
   - `years_experience` `decimal 0–60, step 0.5, null`, typed by the user only;
