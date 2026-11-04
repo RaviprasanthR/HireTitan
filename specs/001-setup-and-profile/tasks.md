@@ -123,7 +123,7 @@ description: "Task list for 001-setup-and-profile (first slice)"
   - summary: `partial_ratio ≥ 90`.
 
   Returns the kept profile + `DroppedItem(path, value, reason)` with reason "not found in your resume". Tests first in `backend/tests/unit/profile/test_grounding.py`: `test_FR011_planted_skill_dropped`, `test_FR011_planted_employer_dropped`, `test_FR011_changed_number_in_bullet_dropped`, `test_FR011_wrapped_bullet_kept`, `test_FR011_unstated_current_dropped`, `test_SC004_no_ungrounded_item_survives` (property-style over fixtures).
-- [ ] T032 [P] [US1] Implement the profile diff in `hiretitan/profile/domain/diff.py`: `changed_paths(current, new) -> list[str]` with dotted paths (`contact.name`, `experience[<id or index>].title`, `skills`), matching list items by (employer, title) for experience, (institution, qualification) for education, and by name for projects and certifications. Tests first in `backend/tests/unit/profile/test_diff.py`: `test_FR014_changed_fields_marked`, `test_FR014_identical_profile_no_changes`, `test_FR014_added_and_removed_entries`.
+- [X] T032 [P] [US1] Implement the profile diff in `hiretitan/profile/domain/diff.py`: `changed_paths(current, new) -> list[str]` with dotted paths (`contact.name`, `experience[<id or index>].title`, `skills`), matching list items by (employer, title) for experience, (institution, qualification) for education, and by name for projects and certifications. Tests first in `backend/tests/unit/profile/test_diff.py`: `test_FR014_changed_fields_marked`, `test_FR014_identical_profile_no_changes`, `test_FR014_added_and_removed_entries`.
 
 ### Untrusted-input pipeline (platform/untrusted)
 
