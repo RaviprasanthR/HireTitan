@@ -3,6 +3,7 @@ import { type FormEvent, useState } from 'react'
 import { ApiError, apiFetch } from '@/api/client'
 import type { components } from '@/api/schema'
 import { Button } from '@/components/ui/button'
+import { DeleteAllData } from './DeleteAllData'
 
 type SettingsOut = components['schemas']['SettingsOut']
 
@@ -160,6 +161,8 @@ function SettingsForm({ data }: { data: SettingsOut }) {
           </tbody>
         </table>
       </section>
+
+      <DeleteAllData />
     </div>
   )
 }

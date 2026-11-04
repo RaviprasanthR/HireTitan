@@ -18,6 +18,7 @@ import {
   retryRun,
   uploadResume,
 } from './api'
+import { ResumeFiles } from './ResumeFiles'
 
 const STEPS = [
   { key: 'parsing', label: 'Reading your resume' },
@@ -280,6 +281,8 @@ export function ProfilePage({
           </Link>
         </p>
       )}
+
+      {!embedded && <ResumeFiles />}
 
       {error && (
         <p role="alert" className="rounded-md border border-danger p-3 text-danger">

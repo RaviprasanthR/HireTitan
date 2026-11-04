@@ -4,6 +4,23 @@
  */
 
 export interface paths {
+    "/api/v1/data/delete-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Delete Everything */
+        post: operations["delete_everything_api_v1_data_delete_all_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/events": {
         parameters: {
             query?: never;
@@ -279,6 +296,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/resumes/{resume_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Resume */
+        delete: operations["delete_resume_api_v1_resumes__resume_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/review-items": {
         parameters: {
             query?: never;
@@ -496,6 +530,14 @@ export interface components {
              * @enum {string}
              */
             decision: "continue_extraction" | "manual_entry";
+        };
+        /** DeleteAllIn */
+        DeleteAllIn: {
+            /**
+             * Confirm
+             * @constant
+             */
+            confirm: "DELETE";
         };
         /** DraftSavedOut */
         DraftSavedOut: {
@@ -977,6 +1019,37 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    delete_everything_api_v1_data_delete_all_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeleteAllIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     events_api_v1_events_get: {
         parameters: {
             query?: never;
@@ -1490,6 +1563,35 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["AcceptedOut"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_resume_api_v1_resumes__resume_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                resume_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

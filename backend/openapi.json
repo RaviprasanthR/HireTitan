@@ -264,6 +264,20 @@
         "title": "DecisionIn",
         "type": "object"
       },
+      "DeleteAllIn": {
+        "properties": {
+          "confirm": {
+            "const": "DELETE",
+            "title": "Confirm",
+            "type": "string"
+          }
+        },
+        "required": [
+          "confirm"
+        ],
+        "title": "DeleteAllIn",
+        "type": "object"
+      },
       "DraftSavedOut": {
         "properties": {
           "draft_saved_at": {
@@ -1790,6 +1804,40 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/data/delete-all": {
+      "post": {
+        "operationId": "delete_everything_api_v1_data_delete_all_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteAllIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Everything",
+        "tags": [
+          "data"
+        ]
+      }
+    },
     "/api/v1/events": {
       "get": {
         "operationId": "events_api_v1_events_get",
@@ -2455,6 +2503,42 @@
           }
         },
         "summary": "Paste Resume",
+        "tags": [
+          "resumes"
+        ]
+      }
+    },
+    "/api/v1/resumes/{resume_id}": {
+      "delete": {
+        "operationId": "delete_resume_api_v1_resumes__resume_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "resume_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Resume Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Resume",
         "tags": [
           "resumes"
         ]
