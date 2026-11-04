@@ -124,3 +124,21 @@ async def test_refused_answer_goes_straight_to_fallback() -> None:
     result = await ValidatedLlm(Refuser(), Recorder(), provider="fake").run(request(), SPEC)  # type: ignore[arg-type]
     assert result.outcome == "fallback"
     assert Refuser.calls == 1
+
+
+async def test_safety_strips_other_schemes_but_keeps_ordinary_text() -> None:
+    text = (
+        "Skills: Python, ASP.NET, Node.js. javascript:alert(1) and data:text/html,hi "
+        "and ftp://files.example/x"
+    )
+    result = await ValidatedLlm(FakeLlm([Answer(text=text)]), Recorder(), provider="fake").run(
+        request(), SPEC
+    )
+
+    assert result.value is not None
+    assert result.value.text == "Skills: Python, ASP.NET, Node.js. and and"
+    assert {d.item for d in result.dropped} == {
+        "javascript:alert(1)",
+        "data:text/html,hi",
+        "ftp://files.example/x",
+    }

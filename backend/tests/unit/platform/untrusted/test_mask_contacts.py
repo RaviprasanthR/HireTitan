@@ -110,3 +110,16 @@ def test_strip_placeholders() -> None:
     )
     assert strip_placeholders("no placeholders here") == "no placeholders here"
     assert strip_placeholders("[[EMAIL_1]]") == ""
+
+
+@pytest.mark.parametrize("filler", ["a", "a.", "a-b"])
+def test_long_text_without_an_at_sign_is_masked_quickly(filler: str) -> None:
+    import time
+
+    text = (filler * 30_000)[:30_000]
+    started = time.perf_counter()
+    result = mask_contacts(text, default_region="IN")
+    elapsed = time.perf_counter() - started
+
+    assert result.text == text
+    assert elapsed < 0.2, f"took {elapsed:.2f}s"

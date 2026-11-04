@@ -13,7 +13,8 @@ from dataclasses import dataclass
 
 from phonenumbers import Leniency, PhoneNumberMatcher
 
-_EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}")
+# The local part is bounded (RFC 5321: 64), so a long run of letters is not rescanned quadratically.
+_EMAIL = re.compile(r"[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}")
 _LINK = re.compile(
     r"https?://[^\s<>\"')\]]+"
     r"|\b(?:www\.)?(?:linkedin\.com/in|github\.com|gitlab\.com)/[^\s<>\"')\]]+",
