@@ -38,6 +38,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/onboarding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read Onboarding */
+        get: operations["read_onboarding_api_v1_onboarding_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/onboarding/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Complete */
+        post: operations["complete_api_v1_onboarding_complete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/onboarding/name": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Write Name */
+        put: operations["write_name_api_v1_onboarding_name_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/preferences": {
         parameters: {
             query?: never;
@@ -397,6 +448,14 @@ export interface components {
             /** Resume Uploaded */
             resume_uploaded: boolean;
         };
+        /** CompletedOut */
+        CompletedOut: {
+            /**
+             * Setup Completed At
+             * Format: date-time
+             */
+            setup_completed_at: string;
+        };
         /** ContactModel */
         ContactModel: {
             /** Email */
@@ -484,6 +543,30 @@ export interface components {
             label?: string | null;
             /** Url */
             url: string;
+        };
+        /** NameIn */
+        NameIn: {
+            /** Display Name */
+            display_name: string;
+        };
+        /** NameOut */
+        NameOut: {
+            /** Display Name */
+            display_name: string;
+        };
+        /** OnboardingOut */
+        OnboardingOut: {
+            /** Active Run Id */
+            active_run_id: string | null;
+            /** Display Name */
+            display_name: string | null;
+            /** Open Review Id */
+            open_review_id: string | null;
+            /**
+             * Step
+             * @enum {unknown}
+             */
+            step: 1 | 2 | 3 | 4 | "done";
         };
         /** PayModel */
         "PayModel-Input": {
@@ -915,6 +998,79 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
+                };
+            };
+        };
+    };
+    read_onboarding_api_v1_onboarding_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnboardingOut"];
+                };
+            };
+        };
+    };
+    complete_api_v1_onboarding_complete_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompletedOut"];
+                };
+            };
+        };
+    };
+    write_name_api_v1_onboarding_name_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NameIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NameOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

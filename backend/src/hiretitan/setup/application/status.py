@@ -28,6 +28,10 @@ class SetupFacts(Protocol):
 
     async def open_review_id(self, run_id: UUID) -> UUID | None: ...
 
+    async def current_open_review_id(self) -> UUID | None: ...
+
+    async def active_run_id(self) -> UUID | None: ...
+
 
 @dataclass(frozen=True, slots=True)
 class AiStatus:

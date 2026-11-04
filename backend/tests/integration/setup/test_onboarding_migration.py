@@ -56,7 +56,8 @@ def test_FR040_existing_install_counts_as_set_up(
             if profile:
                 conn.execute(
                     text(
-                        "INSERT INTO app.profile_versions (id, profile_id, number, content, created_by)"
+                        "INSERT INTO app.profile_versions"
+                        " (id, profile_id, number, content, created_by)"
                         " SELECT gen_random_uuid(), id, 1, '{}', 'manual' FROM app.profiles"
                     )
                 )

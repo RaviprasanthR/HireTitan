@@ -5,6 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Protocol
+from uuid import UUID
+
+from hiretitan.setup.domain.onboarding import SetupStep, setup_step
 
 MAX_NAME = 120
 
@@ -51,3 +54,38 @@ async def complete_setup(
         return record.setup_completed_at
     await store.write_setup_completed(now)
     return now
+
+
+class OnboardingFacts(Protocol):
+    """What the other modules know (implemented in ``setup_wiring``)."""
+
+    async def profile_confirmed(self) -> bool: ...
+
+    async def preferences_saved(self) -> bool: ...
+
+    async def current_open_review_id(self) -> UUID | None: ...
+
+    async def active_run_id(self) -> UUID | None: ...
+
+
+@dataclass(frozen=True, slots=True)
+class OnboardingView:
+    step: SetupStep
+    display_name: str | None
+    open_review_id: UUID | None
+    active_run_id: UUID | None
+
+
+async def get_onboarding(store: OnboardingStore, facts: OnboardingFacts) -> OnboardingView:
+    """The card to show, worked out from saved data (FR-038)."""
+    record = await store.read_onboarding()
+    open_review = await facts.current_open_review_id()
+    active_run = await facts.active_run_id()
+    step = setup_step(
+        completed=record.setup_completed_at is not None,
+        has_name=record.display_name is not None,
+        open_review=open_review is not None,
+        active_run=active_run is not None,
+        profile_confirmed=await facts.profile_confirmed(),
+    )
+    return OnboardingView(step, record.display_name, open_review, active_run)

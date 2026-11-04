@@ -176,6 +176,20 @@
         "title": "ChecklistOut",
         "type": "object"
       },
+      "CompletedOut": {
+        "properties": {
+          "setup_completed_at": {
+            "format": "date-time",
+            "title": "Setup Completed At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "setup_completed_at"
+        ],
+        "title": "CompletedOut",
+        "type": "object"
+      },
       "ContactModel": {
         "additionalProperties": false,
         "properties": {
@@ -460,6 +474,89 @@
           "url"
         ],
         "title": "LinkModel",
+        "type": "object"
+      },
+      "NameIn": {
+        "properties": {
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "display_name"
+        ],
+        "title": "NameIn",
+        "type": "object"
+      },
+      "NameOut": {
+        "properties": {
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "display_name"
+        ],
+        "title": "NameOut",
+        "type": "object"
+      },
+      "OnboardingOut": {
+        "properties": {
+          "active_run_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Run Id"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "open_review_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Open Review Id"
+          },
+          "step": {
+            "enum": [
+              1,
+              2,
+              3,
+              4,
+              "done"
+            ],
+            "title": "Step"
+          }
+        },
+        "required": [
+          "step",
+          "display_name",
+          "open_review_id",
+          "active_run_id"
+        ],
+        "title": "OnboardingOut",
         "type": "object"
       },
       "PayModel-Input": {
@@ -1729,6 +1826,89 @@
           }
         },
         "summary": "Health"
+      }
+    },
+    "/api/v1/onboarding": {
+      "get": {
+        "operationId": "read_onboarding_api_v1_onboarding_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Read Onboarding",
+        "tags": [
+          "onboarding"
+        ]
+      }
+    },
+    "/api/v1/onboarding/complete": {
+      "post": {
+        "operationId": "complete_api_v1_onboarding_complete_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompletedOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Complete",
+        "tags": [
+          "onboarding"
+        ]
+      }
+    },
+    "/api/v1/onboarding/name": {
+      "put": {
+        "operationId": "write_name_api_v1_onboarding_name_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NameIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NameOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Write Name",
+        "tags": [
+          "onboarding"
+        ]
       }
     },
     "/api/v1/preferences": {

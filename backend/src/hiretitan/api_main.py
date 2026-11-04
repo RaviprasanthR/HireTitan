@@ -37,6 +37,7 @@ from hiretitan.profile.api.resumes import ProfileApiDeps, create_resumes_router
 from hiretitan.profile.api.reviews import create_reviews_router
 from hiretitan.profile.infra.parsing.sniff import MAX_BYTES
 from hiretitan.profile.infra.repos import VersionsRepo
+from hiretitan.setup.api.onboarding import OnboardingApiDeps, create_onboarding_router
 from hiretitan.setup.api.review_items import ReviewItemsApiDeps, create_review_items_router
 from hiretitan.setup.api.settings import SettingsApiDeps, create_settings_router
 from hiretitan.setup.api.status import StatusApiDeps, create_status_router
@@ -206,6 +207,9 @@ def build_app(settings: Settings | None = None) -> FastAPI:
                 facts=RepoFacts,
                 enqueue_key_check=enqueue_key_check,
             )
+        ),
+        create_onboarding_router(
+            OnboardingApiDeps(sessions=deps.sessions, clock=clock, facts=RepoFacts)
         ),
         create_review_items_router(ReviewItemsApiDeps(sessions=deps.sessions, facts=RepoFacts)),
     ]
