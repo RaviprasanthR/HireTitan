@@ -9,6 +9,9 @@ x-app: &app
     POSTGRES_PORT: "5432"
     HIRETITAN_DATA_DIR: /data
     DATABASE_URL: ""  # build the URL from POSTGRES_* inside the stack
+    # Set here, not only in the image: .env.example leaves it empty, and env_file would
+    # otherwise blank the image setting and stop the web app being served.
+    HIRETITAN_FRONTEND_DIST: /app/frontend/dist
 
 services:
   db:
