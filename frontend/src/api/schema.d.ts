@@ -38,6 +38,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read Preferences */
+        get: operations["read_preferences_api_v1_preferences_get"];
+        /** Write Preferences */
+        put: operations["write_preferences_api_v1_preferences_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/profile": {
         parameters: {
             query?: never;
@@ -367,6 +385,106 @@ export interface components {
             /** Url */
             url: string;
         };
+        /** PayModel */
+        "PayModel-Input": {
+            /** Basis */
+            basis: string;
+            /** Currency */
+            currency: string;
+            /** Min Annual */
+            min_annual?: number | string | null;
+            /** Target Annual */
+            target_annual?: number | string | null;
+        };
+        /** PayModel */
+        "PayModel-Output": {
+            /** Basis */
+            basis: string;
+            /** Currency */
+            currency: string;
+            /** Min Annual */
+            min_annual?: string | null;
+            /** Target Annual */
+            target_annual?: string | null;
+        };
+        /** PlaceModel */
+        PlaceModel: {
+            /** City */
+            city?: string | null;
+            /** Country */
+            country: string;
+        };
+        /** PreferencesModel */
+        "PreferencesModel-Input": {
+            /** Avoided Companies */
+            avoided_companies: string[];
+            /** Blocked Locations */
+            blocked_locations: components["schemas"]["PlaceModel"][];
+            /** Default Country */
+            default_country: string;
+            /** Earliest Start Date */
+            earliest_start_date?: string | null;
+            /** Job Types */
+            job_types: string[];
+            /** Key Skills */
+            key_skills: string[];
+            /** Notice Period Days */
+            notice_period_days?: number | null;
+            pay: components["schemas"]["PayModel-Input"];
+            /** Preferred Companies */
+            preferred_companies: string[];
+            /** Preferred Locations */
+            preferred_locations: components["schemas"]["PlaceModel"][];
+            /** Seniority Levels */
+            seniority_levels: string[];
+            /** Target Roles */
+            target_roles: string[];
+            /** Willing To Relocate */
+            willing_to_relocate: boolean;
+            /** Work Modes */
+            work_modes: string[];
+            /** Years Experience */
+            years_experience?: number | string | null;
+        };
+        /** PreferencesModel */
+        "PreferencesModel-Output": {
+            /** Avoided Companies */
+            avoided_companies: string[];
+            /** Blocked Locations */
+            blocked_locations: components["schemas"]["PlaceModel"][];
+            /** Default Country */
+            default_country: string;
+            /** Earliest Start Date */
+            earliest_start_date?: string | null;
+            /** Job Types */
+            job_types: string[];
+            /** Key Skills */
+            key_skills: string[];
+            /** Notice Period Days */
+            notice_period_days?: number | null;
+            pay: components["schemas"]["PayModel-Output"];
+            /** Preferred Companies */
+            preferred_companies: string[];
+            /** Preferred Locations */
+            preferred_locations: components["schemas"]["PlaceModel"][];
+            /** Seniority Levels */
+            seniority_levels: string[];
+            /** Target Roles */
+            target_roles: string[];
+            /** Willing To Relocate */
+            willing_to_relocate: boolean;
+            /** Work Modes */
+            work_modes: string[];
+            /** Years Experience */
+            years_experience?: string | null;
+        };
+        /** PreferencesOut */
+        PreferencesOut: {
+            content: components["schemas"]["PreferencesModel-Output"];
+            /** Saved At */
+            saved_at: string | null;
+            suggestions: components["schemas"]["SuggestionsOut"];
+        };
         /** ProfileContentModel */
         ProfileContentModel: {
             /** Certifications */
@@ -513,6 +631,21 @@ export interface components {
              */
             run_id: string;
         };
+        /** SavedOut */
+        SavedOut: {
+            /**
+             * Saved At
+             * Format: date-time
+             */
+            saved_at: string;
+        };
+        /** SuggestionsOut */
+        SuggestionsOut: {
+            /** Key Skills */
+            key_skills?: string[];
+            /** Target Roles */
+            target_roles?: string[];
+        };
         /** TextIn */
         TextIn: {
             /** Text */
@@ -632,6 +765,59 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
+                };
+            };
+        };
+    };
+    read_preferences_api_v1_preferences_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreferencesOut"];
+                };
+            };
+        };
+    };
+    write_preferences_api_v1_preferences_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreferencesModel-Input"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

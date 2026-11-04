@@ -246,7 +246,7 @@ description: "Task list for 001-setup-and-profile (first slice)"
 
   Tests first in `backend/tests/integration/preferences/test_preferences_service.py`: `test_US2_AS1_defaults_when_never_saved`, `test_US2_AS2_persists_across_sessions`, `test_US2_AS3_suggestions_from_profile_not_auto_added`, `test_FR026_save_without_profile`, `test_default_country_feeds_contact_masking`.
 - [X] T054 [US2] Implement the preferences router in `hiretitan/preferences/api/router.py`: `GET /api/v1/preferences` (`{content, saved_at, suggestions}`) and `PUT /api/v1/preferences` (`200 {saved_at}`, or `422` with per-field `errors[]`). Tests first in `backend/tests/api/preferences/test_preferences_api.py`: `test_US2_AS2_put_then_get_roundtrip`, `test_US2_AS4_field_errors_problem_json`, `test_FR026_works_with_ai_key_missing`.
-- [ ] T055 [US2] Implement the Preferences page in `frontend/src/features/preferences/PreferencesPage.tsx`:
+- [X] T055 [US2] Implement the Preferences page in `frontend/src/features/preferences/PreferencesPage.tsx`:
   - react-hook-form + zod mirroring T052;
   - chips for list fields;
   - country and currency selects (ISO lists);
