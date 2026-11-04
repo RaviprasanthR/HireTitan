@@ -7,15 +7,22 @@ import { HomePage } from './HomePage'
 const json = (body: unknown) =>
   new Response(JSON.stringify(body), { headers: { 'Content-Type': 'application/json' } })
 
-function renderHome(checklist: Record<string, boolean>) {
+function renderHome(checklist: Record<string, boolean>, displayName: string | null = 'Jane') {
   vi.stubGlobal(
     'fetch',
-    vi.fn(async () =>
-      json({
-        ai: { provider: 'openai', status: 'working', message: null, checked_at: null },
-        checklist,
-        budget: { cap_usd: '25.00', spent_usd: '0', period: '2026-11' },
-      }),
+    vi.fn(async (url: string) =>
+      String(url).endsWith('/onboarding')
+        ? json({
+            step: 'done',
+            display_name: displayName,
+            open_review_id: null,
+            active_run_id: null,
+          })
+        : json({
+            ai: { provider: 'openai', status: 'working', message: null, checked_at: null },
+            checklist,
+            budget: { cap_usd: '25.00', spent_usd: '0', period: '2026-11' },
+          }),
     ),
   )
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -49,15 +56,13 @@ describe('HomePage', () => {
     expect(key).toHaveTextContent('Done')
     expect(within(key).queryByRole('link')).not.toBeInTheDocument() // nothing left to do
 
-    expect(within(steps[1] as HTMLElement).getByRole('link', { name: 'Upload your resume' })).toHaveAttribute(
-      'href',
-      '/profile',
-    )
+    expect(
+      within(steps[1] as HTMLElement).getByRole('link', { name: 'Upload your resume' }),
+    ).toHaveAttribute('href', '/profile')
     expect(steps[1]).toHaveTextContent('To do')
-    expect(within(steps[2] as HTMLElement).getByRole('link', { name: 'Confirm your profile' })).toHaveAttribute(
-      'href',
-      '/profile',
-    )
+    expect(
+      within(steps[2] as HTMLElement).getByRole('link', { name: 'Confirm your profile' }),
+    ).toHaveAttribute('href', '/profile')
   })
 
   it('missing_key_links_to_settings', async () => {
@@ -71,7 +76,7 @@ describe('HomePage', () => {
   it('preferences_wait_for_a_confirmed_profile', async () => {
     renderHome({ ...none, resume_uploaded: true })
     const list = await screen.findByRole('list', { name: 'Setup checklist' })
-    const prefs = within(list).getAllByRole("listitem")[3] as HTMLElement
+    const prefs = within(list).getAllByRole('listitem')[3] as HTMLElement
     expect(within(prefs).queryByRole('link')).not.toBeInTheDocument()
     expect(prefs).toHaveTextContent('after you confirm your profile')
   })
@@ -93,5 +98,16 @@ describe('HomePage', () => {
     })
     expect(await screen.findByText('You are all set up.')).toBeInTheDocument()
     expect(screen.queryByRole('link')).not.toBeInTheDocument()
+  })
+
+  it('US5_AS7_greets_by_name', async () => {
+    renderHome(none, 'Jane')
+    expect(await screen.findByText('Welcome back, Jane')).toBeInTheDocument()
+  })
+
+  it('greets_without_a_name', async () => {
+    renderHome(none, null)
+    await screen.findByRole('list', { name: 'Setup checklist' })
+    expect(screen.queryByText(/Welcome back/)).not.toBeInTheDocument()
   })
 })
