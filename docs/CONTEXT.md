@@ -71,7 +71,8 @@ This file captures project decisions so work can resume in a new session without
    - (Resolved 2026-11-04: the palette changed to Obsidian / Titan Blue; the old accent-contrast question no longer applies.)
    - `tiktoken` downloads `o200k_base` from `openaipublic.blob.core.windows.net` on first use. That host is not in the outbound allowlist, and it is a one-off fetch of a public file with no user data. Decide whether to allowlist it, vendor the file, or accept it.
    - Docker image builds and runs (API health, SPA fallback, CSP, worker start-up checked in containers). The full `docker compose up` on Windows and Linux is T069.
-3. Later in 001 or after: setup wizard polish, re-upload diff, career-ops import; other LLM adapters before the public release.
+3. **Claude plan instead of an API key (decided 2026-11-05: keep the API key for now).** Anthropic does not allow third-party products to offer claude.ai login or plan rate limits, including Agent SDK apps, unless approved (Agent SDK overview), so HireTitan must never sign in with a user's Claude account. If revisited, the allowed design is a Claude Code plugin (MCP server + skills): the user's own Claude Code does the AI work and submits results through MCP tools, which HireTitan validates and puts into the existing review screens. Avoid having the worker spawn `claude -p` on the user's login.
+4. Later in 001 or after: setup wizard polish, re-upload diff, career-ops import; other LLM adapters before the public release.
 4. Open items from `docs/clarified-requirements.md` §13: missing careers URLs, fuzzy dedup rules, aggregator terms check, Gmail OAuth guide, default models per provider, offer comparison, pay handling when unstated.
 
 ## 6. How to resume in a new session
