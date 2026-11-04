@@ -9,6 +9,8 @@ export const tokens = {
   primary: '#ccd0cf',
   primaryEnd: '#9ba8ab',
   onPrimary: '#06141b',
+  logo: '#f4f6f5',
+  logoEnd: '#9ba8ab',
   accent: '#9ba8ab',
   text: '#ccd0cf',
   success: '#3fb950',

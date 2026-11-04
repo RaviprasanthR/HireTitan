@@ -16,14 +16,17 @@
   --ht-primary: #ccd0cf;
   --ht-on-primary: #06141b;
   --ht-accent: #9ba8ab;
+  /* The bolt: near-white fading to steel, the brightest thing on the page. */
+  --ht-logo: #f4f6f5;
+  --ht-logo-end: #9ba8ab;
+  --ht-logo-glow: rgb(155 168 171 / 0.55);
   --ht-text: #ccd0cf;
   --ht-success: #3fb950;
   --ht-warning: #d29922;
   --ht-danger: #f85149;
 
-  --ht-gradient-page: radial-gradient(1000px 560px at 85% -10%, rgb(74 92 106 / 0.35), transparent 60%),
-    radial-gradient(700px 420px at -10% 110%, rgb(37 55 69 / 0.45), transparent 65%),
-    linear-gradient(180deg, #06141b 0%, #040e13 100%);
+  /* Top to bottom: the lightest slate at the top fading into the darkest at the bottom. */
+  --ht-gradient-page: linear-gradient(180deg, #253745 0%, #11212d 40%, #06141b 100%);
   --ht-gradient-surface: linear-gradient(160deg, #182c3a 0%, #11212d 55%, #0c1a23 100%);
   --ht-gradient-primary: linear-gradient(135deg, #ccd0cf 0%, #9ba8ab 100%);
 

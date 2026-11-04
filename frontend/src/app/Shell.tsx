@@ -1,5 +1,6 @@
 import { Outlet, NavLink } from 'react-router'
 import { AiBanner } from './AiBanner'
+import { Wordmark } from '@/components/Logo'
 import { cn } from '@/lib/utils'
 
 const sections = [
@@ -14,7 +15,7 @@ export function Shell() {
   return (
     <div data-testid="app-root" className="flex min-h-screen bg-background text-foreground">
       <aside className="flex w-56 shrink-0 flex-col gap-6 bg-surface p-4">
-        <span className="px-3 text-lg font-semibold">HireTitan</span>
+        <Wordmark className="px-3" />
         <nav aria-label="Main" className="flex flex-col gap-1">
           {sections.map(({ to, label, end }) => (
             <NavLink

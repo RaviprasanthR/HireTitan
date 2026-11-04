@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 import { AiBanner } from '@/app/AiBanner'
+import { Wordmark } from '@/components/Logo'
 
 const STEPS = 4
 
@@ -12,7 +13,7 @@ export function SetupLayout({ step, children }: { step?: number; children: React
       <main className="flex flex-1 items-center justify-center px-4 py-8">
         <div className="bg-surface w-full max-w-2xl space-y-6 rounded-2xl p-6 sm:p-8">
           <header className="space-y-3">
-            <p className="text-lg font-semibold">HireTitan</p>
+            <Wordmark size={48} />
             {step !== undefined && (
               <div className="space-y-1">
                 <p className="text-sm text-muted-small">
