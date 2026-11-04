@@ -1,0 +1,18 @@
+# End-to-end runs (frontend/e2e): the same stack with scripted AI replies and no key.
+#   node frontend/e2e/prepare.mjs
+#   docker compose -f docker-compose.yml -f docker-compose.e2e.yml up --build -d
+#   cd frontend && npx playwright test
+# The folder .e2e/fake_llm holds the scripts and the `key_status` file the test flips.
+x-fake-env: &fake-env
+  HIRETITAN_LLM: fake
+  HIRETITAN_FAKE_LLM_DIR: /fake-llm
+
+services:
+  api:
+    environment: *fake-env
+    volumes:
+      - ./.e2e/fake_llm:/fake-llm
+  worker:
+    environment: *fake-env
+    volumes:
+      - ./.e2e/fake_llm:/fake-llm

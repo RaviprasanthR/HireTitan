@@ -88,3 +88,31 @@ async def test_scripts_loaded_from_a_fixture_directory(tmp_path: Path) -> None:
 def test_ai_unavailable_rejects_unknown_reason() -> None:
     with pytest.raises(ValueError):
         AiUnavailable("because")
+
+
+async def test_control_file_makes_the_fake_key_missing_then_working(tmp_path: Path) -> None:
+    """E2E runs flip the key state by writing ``key_status`` next to the scripts."""
+    (tmp_path / "demo.json").write_text(json.dumps([{"text": "a"}]))
+    llm = FakeLlm.from_directory(tmp_path)
+    assert llm.key_status() == "working"
+
+    (tmp_path / "key_status").write_text("missing\n")
+    assert llm.key_status() == "missing"
+    with pytest.raises(AiUnavailable) as missing:
+        await llm.generate(request("demo"))
+    assert missing.value.reason == "key_missing"
+
+    (tmp_path / "key_status").write_text("rejected")
+    with pytest.raises(AiUnavailable) as rejected:
+        await llm.generate(request("demo"))
+    assert rejected.value.reason == "key_rejected"
+
+    (tmp_path / "key_status").write_text("working")
+    # The blocked calls did not use up the script.
+    assert (await llm.generate(request("demo"))).value == Answer(text="a")
+
+
+def test_unknown_control_value_counts_as_working(tmp_path: Path) -> None:
+    llm = FakeLlm.from_directory(tmp_path)
+    (tmp_path / "key_status").write_text("banana")
+    assert llm.key_status() == "working"

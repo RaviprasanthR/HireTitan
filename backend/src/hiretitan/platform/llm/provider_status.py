@@ -35,13 +35,13 @@ class ProviderStatusService:
         sessions: async_sessionmaker[AsyncSession],
         checker: KeyChecker,
         *,
-        has_key: bool,
+        has_key: bool | Callable[[], bool],
         publish: Publish,
         provider: str = PROVIDER,
     ) -> None:
         self._sessions = sessions
         self._checker = checker
-        self._has_key = has_key
+        self._has_key = has_key if callable(has_key) else (lambda: has_key)
         self._publish = publish
         self._provider = provider
 
@@ -55,7 +55,7 @@ class ProviderStatusService:
 
     async def check(self) -> str:
         """Check the key (no network when it is missing) and record the result."""
-        status: str = await self._checker.check_key() if self._has_key else "missing"
+        status: str = await self._checker.check_key() if self._has_key() else "missing"
         await self._write(status)
         return status
 

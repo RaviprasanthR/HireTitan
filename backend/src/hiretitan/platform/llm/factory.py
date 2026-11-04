@@ -26,8 +26,14 @@ async def _ignore(event: str, data: dict[str, Any]) -> None:
 
 
 class _FakeKeyChecker:
+    """The fake's key state: always working, unless its control file says otherwise."""
+
+    def __init__(self, fake: FakeLlm) -> None:
+        self._fake = fake
+
     async def check_key(self) -> KeyCheck:
-        return "working"
+        status = self._fake.key_status()
+        return "rejected" if status == "rejected" else "working"
 
 
 @dataclass(frozen=True, slots=True)
@@ -47,7 +53,11 @@ def build_llm(
     if settings.llm == "fake":
         fake = FakeLlm.from_directory(settings.fake_llm_dir) if settings.fake_llm_dir else FakeLlm()
         status = ProviderStatusService(
-            sessions, _FakeKeyChecker(), has_key=True, publish=publish, provider="fake"
+            sessions,
+            _FakeKeyChecker(fake),
+            has_key=lambda: fake.key_status() != "missing",
+            publish=publish,
+            provider="fake",
         )
         inner: LlmPort = fake
         provider = fake.provider

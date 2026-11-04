@@ -15,9 +15,12 @@ from typing import Any, cast
 
 from pydantic import BaseModel, ValidationError
 
-from hiretitan.platform.llm.port import LlmRequest, LlmResult, Usage
+from hiretitan.platform.llm.port import AiUnavailable, LlmRequest, LlmResult, Usage
 
 Step = BaseModel | Mapping[str, Any] | BaseException
+
+
+KEY_STATUS_FILE = "key_status"
 
 
 class FakeLlmScriptExhaustedError(AssertionError):
@@ -33,7 +36,9 @@ class FakeLlm:
         script: Iterable[Step] = (),
         *,
         by_task: Mapping[str, Iterable[Step]] | None = None,
+        control_dir: Path | None = None,
     ) -> None:
+        self._control_dir = control_dir
         self._queue: deque[Step] = deque(script)
         self._by_task: dict[str, deque[Step]] = defaultdict(deque)
         for task, steps in (by_task or {}).items():
@@ -47,7 +52,18 @@ class FakeLlm:
             path.stem: cast(list[Mapping[str, Any]], json.loads(path.read_text("utf-8")))
             for path in sorted(directory.glob("*.json"))
         }
-        return cls(by_task=by_task)
+        return cls(by_task=by_task, control_dir=directory)
+
+    def key_status(self) -> str:
+        """``working`` unless the control file ``key_status`` in the script folder says
+        ``missing`` or ``rejected``. End-to-end runs write it to play out a key problem."""
+        if self._control_dir is None:
+            return "working"
+        try:
+            value = (self._control_dir / KEY_STATUS_FILE).read_text("utf-8").strip()
+        except FileNotFoundError:
+            return "working"
+        return value if value in ("missing", "rejected") else "working"
 
     def _next(self, task: str) -> Step:
         if self._by_task.get(task):
@@ -58,6 +74,9 @@ class FakeLlm:
 
     async def generate[T: BaseModel](self, req: LlmRequest[T]) -> LlmResult[T]:
         self.calls.append(req)
+        blocked = self.key_status()
+        if blocked != "working":
+            raise AiUnavailable(f"key_{blocked}")  # before the script is touched
         step = self._next(req.task)
         if isinstance(step, BaseException):
             raise step

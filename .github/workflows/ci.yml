@@ -98,3 +98,95 @@ jobs:
         run: >
           npx --yes license-checker@25.0.1 --production --excludePrivatePackages
           --onlyAllow "MIT;MIT-0;BSD;BSD-2-Clause;BSD-3-Clause;0BSD;Apache-2.0;ISC;PSF;Python-2.0;MPL-2.0;LGPL-2.1;LGPL-3.0;OFL-1.1"
+
+  compose-smoke:
+    name: Compose smoke (Linux, .env.example defaults)
+    runs-on: ubuntu-latest
+    env:
+      COMPOSE_PROJECT_NAME: hiretitan-smoke
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Configure like a new user (copy .env.example, set a password)
+        run: |
+          cp .env.example .env
+          sed -i 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=ci-only-password/' .env
+
+      - name: Build and start the stack
+        run: docker compose up --build -d
+
+      - name: API health and the web app are served
+        run: |
+          for i in $(seq 1 60); do
+            curl -fsS http://127.0.0.1:8000/api/v1/health && break
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:8000/api/v1/health
+          curl -fsS http://127.0.0.1:8000/ | grep -q '<div id="root">'
+          curl -fsS http://127.0.0.1:8000/profile | grep -q '<div id="root">'  # SPA fallback
+
+      - name: Logs on failure
+        if: failure()
+        run: docker compose logs --no-color --tail 200
+
+      - name: Stop
+        if: always()
+        run: docker compose down -v
+
+  e2e:
+    name: End-to-end journey (compose, scripted AI, Chromium)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Prepare the stack (no AI key, scripted replies)
+        working-directory: .
+        run: |
+          cp .env.example .env
+          sed -i 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=ci-only-password/' .env
+          node frontend/e2e/prepare.mjs
+          docker compose -p hiretitan-e2e -f docker-compose.yml -f docker-compose.e2e.yml up --build -d
+
+      - name: Wait for the API
+        run: |
+          for i in $(seq 1 60); do
+            curl -fsS http://127.0.0.1:8000/api/v1/health && exit 0
+            sleep 2
+          done
+          exit 1
+
+      - name: Journey (quickstart A)
+        run: npx playwright test
+
+      - name: Logs and trace on failure
+        if: failure()
+        working-directory: .
+        run: docker compose -p hiretitan-e2e -f docker-compose.yml -f docker-compose.e2e.yml logs --no-color --tail 200
+
+      - uses: actions/upload-artifact@v5
+        if: failure()
+        with:
+          name: playwright-trace
+          path: frontend/test-results
+          if-no-files-found: ignore
+
+      - name: Stop
+        if: always()
+        working-directory: .
+        run: docker compose -p hiretitan-e2e -f docker-compose.yml -f docker-compose.e2e.yml down -v
+
