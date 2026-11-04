@@ -1,4 +1,5 @@
 import { Outlet, NavLink } from 'react-router'
+import { AiBanner } from './AiBanner'
 import { useProfileConfirmed } from '@/features/profile/useProfileConfirmed'
 import { cn } from '@/lib/utils'
 
@@ -38,8 +39,9 @@ export function Shell() {
         </nav>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        {/* Setup, key and budget banners render here. */}
-        <div data-testid="banner-slot" />
+        <div data-testid="banner-slot">
+          <AiBanner />
+        </div>
         <main className="flex-1 p-8">
           <Outlet />
         </main>
