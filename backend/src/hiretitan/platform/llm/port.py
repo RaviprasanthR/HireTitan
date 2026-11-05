@@ -10,20 +10,33 @@ from typing import Final, Literal, Protocol
 
 from pydantic import BaseModel
 
-PAUSE_REASONS: Final = ("key_missing", "key_rejected", "budget_reached")
+PAUSE_REASONS: Final = ("key_missing", "key_rejected", "budget_reached", "out_of_credit")
+
+PROVIDER_MESSAGE_MAX: Final = 300
 
 Tier = Literal["fast", "strong"]
 Outcome = Literal["ok", "repaired", "fallback", "refused", "budget_blocked", "error"]
 
 
+def _clean_message(message: str | None) -> str | None:
+    """Make a provider message safe to store and show: control characters become spaces,
+    runs of whitespace collapse, and the result is capped at ``PROVIDER_MESSAGE_MAX``."""
+    if message is None:
+        return None
+    printable = "".join(ch if ch.isprintable() else " " for ch in message)
+    return " ".join(printable.split())[:PROVIDER_MESSAGE_MAX]
+
+
 class AiUnavailable(Exception):
     """The AI cannot be used right now; ``reason`` is the run's ``pause_reason``."""
 
-    def __init__(self, reason: str) -> None:
+    def __init__(self, reason: str, provider_message: str | None = None) -> None:
         if reason not in PAUSE_REASONS:
             raise ValueError(f"Unknown AI-unavailable reason: {reason!r}")
         super().__init__(f"AI unavailable: {reason}")
         self.reason = reason
+        # The provider's own words (e.g. "You exceeded your current quota"), shown to the person.
+        self.provider_message = _clean_message(provider_message)
 
 
 class RetryableLlmError(Exception):
