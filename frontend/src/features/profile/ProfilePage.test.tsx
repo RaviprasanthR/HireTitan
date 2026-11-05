@@ -108,11 +108,7 @@ describe('ProfilePage', () => {
     renderPage()
     await upload(pdf())
 
-    const progress = await screen.findByRole('list', { name: /progress/i })
-    expect(within(progress).getByText(/extracting your details/i)).toHaveAttribute(
-      'aria-current',
-      'step',
-    )
+    expect(await screen.findByText('Reading your resume…')).toBeInTheDocument()
     routes['GET /api/v1/resumes'] = () =>
       json([resumeItem({ has_open_review: true, open_review_id: REVIEW_ID })])
 
@@ -120,19 +116,20 @@ describe('ProfilePage', () => {
     expect(link).toHaveAttribute('href', `/profile/review/${REVIEW_ID}`)
   })
 
-  it('FR002_progress_bar_follows_the_steps', async () => {
+  it('FR002_while_reading_shows_one_simple_message_not_the_inner_steps', async () => {
     routes['GET /api/v1/resumes'] = () => json([resumeItem()])
     routes['POST /api/v1/resumes'] = () => json({ resume_file_id: FILE_ID, run_id: RUN_ID }, 202)
-    let step = 'screening'
-    routes[`GET /api/v1/runs/${RUN_ID}`] = () => json(run({ current_step: step }))
+    routes[`GET /api/v1/runs/${RUN_ID}`] = () => json(run({ current_step: 'screening' }))
     renderPage()
     await upload(pdf())
 
     const bar = await screen.findByRole('progressbar', { name: 'Resume progress' })
-    await waitFor(() => expect(bar).toHaveAttribute('aria-valuenow', '45'))
-    step = 'extracting'
-    await waitFor(() => expect(bar).toHaveAttribute('aria-valuenow', '75'))
+    expect(bar).not.toHaveAttribute('aria-valuenow') // busy, no percentage
     expect(bar).toHaveAttribute('data-tone', 'success') // green while it works
+    expect(screen.getByText('Reading your resume…')).toBeInTheDocument()
+    expect(screen.queryByText(/hidden or unusual text/i)).not.toBeInTheDocument()
+    expect(screen.queryByRole('list', { name: /progress/i })).not.toBeInTheDocument()
+    expect(screen.queryByText(/%/)).not.toBeInTheDocument()
   })
 
   it('FR002_progress_bar_is_full_and_calm_when_ready_for_review', async () => {
@@ -164,8 +161,20 @@ describe('ProfilePage', () => {
 
     const bar = await screen.findByRole('progressbar', { name: 'Resume progress' })
     await waitFor(() => expect(bar).toHaveAttribute('data-tone', 'warning'))
-    expect(bar).toHaveAttribute('aria-valuenow', '75') // keeps its place, no animation
     expect(screen.getByTestId('progress-fill')).not.toHaveAttribute('data-animated', 'true')
+  })
+
+  it('US1_AS8_a_document_that_is_not_a_resume_is_rejected_with_a_clear_message', async () => {
+    routes['GET /api/v1/resumes'] = () => json([resumeItem({ parse_status: 'not_resume' })])
+    routes['POST /api/v1/resumes'] = () => json({ resume_file_id: FILE_ID, run_id: RUN_ID }, 202)
+    routes[`GET /api/v1/runs/${RUN_ID}`] = () => json(run({ status: 'done' }))
+    renderPage()
+    await upload(pdf())
+
+    const notice = await screen.findByRole('status')
+    expect(notice).toHaveTextContent(/doesn.t look like a resume/i)
+    expect(screen.queryByRole('link', { name: /review your profile/i })).not.toBeInTheDocument()
+    expect(within(notice).getByRole('link', { name: /fill in by hand/i })).toBeVisible()
   })
 
   it('FR002_upload_in_flight_shows_an_indeterminate_bar', async () => {
@@ -307,7 +316,7 @@ describe('ProfilePage', () => {
     )
     await user.click(within(dialog).getByRole('button', { name: /replace it/i }))
 
-    expect(await screen.findByRole('list', { name: /progress/i })).toBeInTheDocument()
+    expect(await screen.findByRole('progressbar', { name: 'Resume progress' })).toBeInTheDocument()
     expect(calls.filter((c) => c.method === 'POST').at(-1)?.url).toContain('discard_open_review=true')
   })
 
@@ -320,7 +329,7 @@ describe('ProfilePage', () => {
     renderPage()
     const user = await upload(pdf())
 
-    expect(await screen.findByText(/something went wrong/i)).toBeInTheDocument()
+    expect(await screen.findByText(/something went wrong while running this/i)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /try again/i }))
     await waitFor(() => expect(calls.some((c) => c.url.endsWith('/retry'))).toBe(true))
   })

@@ -119,8 +119,7 @@ describe('ResumeStep', () => {
     const input = await screen.findByLabelText('Resume file')
     await user.upload(input, new File(['%PDF-1.4'], 'resume.pdf', { type: 'application/pdf' }))
 
-    const progress = await screen.findByRole('list', { name: 'Progress' })
-    expect(within(progress).getByText('Reading your resume')).toBeInTheDocument()
+    expect(await screen.findByText('Reading your resume…')).toBeInTheDocument()
     // the step is re-read so the card can move on when the review is ready
     const reads = () => calls.filter((c) => c.url.endsWith('/onboarding') && c.method === 'GET')
     await waitFor(() => expect(reads().length).toBeGreaterThan(1)) // read again after the upload
@@ -128,7 +127,7 @@ describe('ResumeStep', () => {
 
   it('restores the progress of a resume that is already being read', async () => {
     renderCard(onboarding({ active_run_id: 'r1' }))
-    expect(await screen.findByRole('list', { name: 'Progress' })).toBeInTheDocument()
+    expect(await screen.findByText('Reading your resume…')).toBeInTheDocument()
   })
 
   it('US5_AS5_missing_key_offers_type_it_in', async () => {

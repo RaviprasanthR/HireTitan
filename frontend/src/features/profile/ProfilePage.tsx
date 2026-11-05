@@ -20,13 +20,6 @@ import {
 } from './api'
 import { ResumeFiles } from './ResumeFiles'
 
-const STEPS = [
-  { key: 'parsing', label: 'Reading your resume', percent: 15 },
-  { key: 'screening', label: 'Checking for hidden or unusual text', percent: 45 },
-  { key: 'extracting', label: 'Extracting your details', percent: 75 },
-  { key: 'ready_for_review', label: 'Ready for review', percent: 100 },
-] as const
-
 const PAUSE_MESSAGES: Record<string, string> = {
   key_missing:
     'No AI key is set. Add OPENAI_API_KEY to your .env file and restart; this will continue by itself.',
@@ -41,43 +34,34 @@ const FINAL = new Set(['done', 'failed', 'cancelled'])
 type Pending = { action: (discard: boolean) => Promise<Accepted> }
 type Conflict = { openReviewId: string; again: Pending }
 
-/** Where the bar stands: by step, calm colours for paused or failed, stripes only while working. */
-function runProgress(run: Run): { value: number; tone: ProgressTone; animated: boolean } {
+/**
+ * What the bar shows. The inner steps (reading, screening, extracting) are not shown: a person
+ * only needs to know it is working, ready, paused or failed. Busy is an unknown-length sweep.
+ */
+function runProgress(run: Run): {
+  value: number | null
+  tone: ProgressTone
+  animated: boolean
+  message: string
+} {
   const ready =
     run.status === 'done' ||
     (run.status === 'awaiting_review' && run.waiting_for === 'profile_review')
-  const step = STEPS.find((s) => s.key === run.current_step) ?? STEPS[0]
-  const tone: ProgressTone =
-    run.status === 'failed' ? 'danger' : run.status === 'paused' ? 'warning' : 'success'
-  const working = run.status === 'queued' || run.status === 'running'
-  return { value: ready ? 100 : step.percent, tone, animated: working }
-}
-
-function ProgressList({ run }: { run: Run }) {
-  const current = Math.max(
-    STEPS.findIndex((s) => s.key === run.current_step),
-    0,
-  )
-  const ready = run.status === 'awaiting_review' && run.waiting_for === 'profile_review'
-  return (
-    <ol aria-label="Progress" className="space-y-2">
-      {STEPS.map((step, i) => {
-        const done = ready || run.status === 'done' || i < current
-        const active = !done && i === current
-        return (
-          <li
-            key={step.key}
-            aria-current={active ? 'step' : undefined}
-            className={
-              done ? 'text-success' : active ? 'font-medium text-foreground' : 'text-muted-small'
-            }
-          >
-            {step.label}
-          </li>
-        )
-      })}
-    </ol>
-  )
+  if (run.status === 'failed') {
+    return { value: 100, tone: 'danger', animated: false, message: 'Could not read your resume.' }
+  }
+  if (run.status === 'paused') {
+    return { value: 100, tone: 'warning', animated: false, message: 'Waiting.' }
+  }
+  if (ready) {
+    return {
+      value: 100,
+      tone: 'success',
+      animated: false,
+      message: 'Your profile is ready to review.',
+    }
+  }
+  return { value: null, tone: 'success', animated: false, message: 'Reading your resume…' }
 }
 
 function newestOf(files: ResumeFile[]): ResumeFile | undefined {
@@ -194,6 +178,7 @@ export function ProfilePage({
   const tryAgain = () => runAction((id) => retryRun(id))
 
   const noText = run?.status === 'done' && file?.parse_status === 'no_text'
+  const notResume = run?.status === 'done' && file?.parse_status === 'not_resume'
   const reviewId = file?.open_review_id
   const sending = run === undefined && (busy || accepted !== null)
   const progress = run ? runProgress(run) : null
@@ -260,19 +245,13 @@ export function ProfilePage({
 
       {run && progress && (
         <div className="space-y-3 rounded-lg bg-surface p-4">
-          <div className="flex items-center gap-3">
-            <ProgressBar
-              label="Resume progress"
-              value={progress.value}
-              tone={progress.tone}
-              animated={progress.animated}
-              className="flex-1"
-            />
-            <span aria-hidden="true" className="w-10 text-right text-sm tabular-nums text-muted-small">
-              {progress.value}%
-            </span>
-          </div>
-          <ProgressList run={run} />
+          <p className="text-sm font-medium">{progress.message}</p>
+          <ProgressBar
+            label="Resume progress"
+            value={progress.value}
+            tone={progress.tone}
+            animated={progress.animated}
+          />
           {run.status === 'failed' && (
             <div className="space-y-2">
               <p className="text-danger">{run.error ?? 'Something went wrong.'}</p>
@@ -292,6 +271,26 @@ export function ProfilePage({
               Review your profile
             </Link>
           )}
+        </div>
+      )}
+
+      {notResume && (
+        <div role="status" className="space-y-3 rounded-lg border border-warning p-4">
+          <p>
+            This doesn&apos;t look like a resume, so it was not used. Upload your resume as a PDF
+            or DOCX, or fill in your profile by hand.
+          </p>
+          <div className="flex gap-3">
+            {onTypeItIn ? (
+              <Button variant="secondary" onClick={onTypeItIn}>
+                Type it in myself
+              </Button>
+            ) : (
+              <Link to="/profile/edit" className="self-center text-link underline">
+                Fill in by hand
+              </Link>
+            )}
+          </div>
         </div>
       )}
 
