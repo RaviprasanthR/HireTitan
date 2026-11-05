@@ -19,7 +19,7 @@ class WorkflowRunRow(IdTimestampMixin, Base):
             name="status_values",
         ),
         CheckConstraint(
-            "pause_reason IN ('key_missing', 'key_rejected', 'budget_reached')",
+            "pause_reason IN ('key_missing', 'key_rejected', 'budget_reached', 'out_of_credit')",
             name="pause_reason_values",
         ),
         CheckConstraint(
