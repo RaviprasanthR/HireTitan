@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { ProfilePage } from '@/features/profile/ProfilePage'
 import type { Onboarding } from './useOnboarding'
 
-/** Step 2: add the resume (upload, paste) or choose to type the profile in. */
+/** Step 2: add the resume (upload) or choose to type the profile in. */
 export function ResumeStep({ onboarding, onBack }: { onboarding: Onboarding; onBack: () => void }) {
   const queryClient = useQueryClient()
   const aiStatus = useStatus().data?.ai?.status

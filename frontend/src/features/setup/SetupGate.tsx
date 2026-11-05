@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Outlet, useLocation } from 'react-router'
 import { SettingsPage } from '@/features/settings/SettingsPage'
 import { SetupLayout } from './SetupLayout'
@@ -12,6 +13,7 @@ import { useOnboarding } from './useOnboarding'
 export function SetupGate() {
   const query = useOnboarding()
   const { pathname } = useLocation()
+  const [renaming, setRenaming] = useState(false)
 
   if (query.isPending) {
     return (
@@ -38,8 +40,8 @@ export function SetupGate() {
     )
   }
   return (
-    <SetupLayout step={step}>
-      <StepCard onboarding={query.data} />
+    <SetupLayout step={renaming ? 1 : step}>
+      <StepCard onboarding={query.data} renaming={renaming} setRenaming={setRenaming} />
     </SetupLayout>
   )
 }

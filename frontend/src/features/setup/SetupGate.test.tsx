@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { routes } from '@/app/routes'
@@ -86,6 +87,20 @@ describe('SetupGate', () => {
     expect(screen.getByRole('progressbar', { name: 'Setup progress' })).toHaveAttribute(
       'aria-valuenow',
       String(step),
+    )
+  })
+
+  it('going_back_to_the_name_lowers_the_step_bar', async () => {
+    const user = userEvent.setup()
+    renderAt('/', 2)
+    expect(await screen.findByText('Step 2 of 4')).toBeInTheDocument()
+
+    await user.click(await screen.findByRole('button', { name: 'Back' }))
+
+    expect(await screen.findByText('Step 1 of 4')).toBeInTheDocument()
+    expect(screen.getByRole('progressbar', { name: 'Setup progress' })).toHaveAttribute(
+      'aria-valuenow',
+      '1',
     )
   })
 

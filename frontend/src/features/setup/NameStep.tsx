@@ -72,7 +72,7 @@ export function NameStep({
           </p>
         )}
       </div>
-      <Button type="submit" disabled={busy}>
+      <Button type="submit" variant="success" disabled={busy}>
         Continue
       </Button>
     </form>

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -81,6 +82,12 @@ function GateProbe() {
   return null
 }
 
+/** Holds the "going back to the name" state the setup gate owns in the real app. */
+function CardWithState({ data }: { data: Onboarding }) {
+  const [renaming, setRenaming] = useState(false)
+  return <StepCard onboarding={data} renaming={renaming} setRenaming={setRenaming} />
+}
+
 function renderCard(data: Onboarding) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -89,7 +96,7 @@ function renderCard(data: Onboarding) {
     <QueryClientProvider client={client}>
       <MemoryRouter>
         <GateProbe />
-        <StepCard onboarding={data} />
+        <CardWithState data={data} />
       </MemoryRouter>
     </QueryClientProvider>,
   )

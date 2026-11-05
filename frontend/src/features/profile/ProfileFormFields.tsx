@@ -110,7 +110,7 @@ function ListControls({
       </Button>
       <Button
         type="button"
-        variant="outline"
+        variant="danger"
         size="sm"
         onClick={onRemove}
         aria-label={`Remove ${noun} ${index + 1}`}
@@ -204,7 +204,7 @@ export function ProfileFormFields({ form, compare, changedPaths = [] }: Props) {
             </Field>
           </div>
         ))}
-        <Button type="button" variant="outline" onClick={() => experience.append({ employer: '', title: '', location: '', start: '', end: '', current: false, bullets: '' })}>
+        <Button type="button" variant="outline" className="w-full border-dashed" onClick={() => experience.append({ employer: '', title: '', location: '', start: '', end: '', current: false, bullets: '' })}>
           Add a job
         </Button>
       </fieldset>
@@ -238,7 +238,7 @@ export function ProfileFormFields({ form, compare, changedPaths = [] }: Props) {
             </div>
           </div>
         ))}
-        <Button type="button" variant="outline" onClick={() => education.append({ institution: '', qualification: '', field: '', start: '', end: '', grade: '' })}>
+        <Button type="button" variant="outline" className="w-full border-dashed" onClick={() => education.append({ institution: '', qualification: '', field: '', start: '', end: '', grade: '' })}>
           Add education
         </Button>
       </fieldset>
@@ -266,7 +266,7 @@ export function ProfileFormFields({ form, compare, changedPaths = [] }: Props) {
             </Field>
           </div>
         ))}
-        <Button type="button" variant="outline" onClick={() => projects.append({ name: '', description: '', technologies: '', link: '' })}>
+        <Button type="button" variant="outline" className="w-full border-dashed" onClick={() => projects.append({ name: '', description: '', technologies: '', link: '' })}>
           Add a project
         </Button>
       </fieldset>
@@ -284,7 +284,7 @@ export function ProfileFormFields({ form, compare, changedPaths = [] }: Props) {
             </Field>
           </div>
         ))}
-        <Button type="button" variant="outline" onClick={() => certifications.append({ name: '', issuer: '', date: '' })}>
+        <Button type="button" variant="outline" className="w-full border-dashed" onClick={() => certifications.append({ name: '', issuer: '', date: '' })}>
           Add a certification
         </Button>
       </fieldset>

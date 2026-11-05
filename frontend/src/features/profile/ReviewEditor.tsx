@@ -330,13 +330,14 @@ function ReviewForm({
         </p>
       )}
 
-      <div className="flex gap-3">
-        <Button type="submit" disabled={busy}>
+      <div className="flex flex-wrap items-center gap-3 border-t border-divider pt-4">
+        <Button type="submit" variant="success" size="lg" disabled={busy}>
           Confirm profile
         </Button>
         <Button
           type="button"
-          variant="outline"
+          variant="danger"
+          size="lg"
           disabled={busy}
           onClick={() => setConfirmingDiscard(true)}
         >
@@ -362,7 +363,7 @@ function ReviewForm({
               Your edits are lost. Your current profile, if you have one, stays as it is.
             </Dialog.Description>
             <div className="flex gap-3">
-              <Button type="button" onClick={() => void discard()} disabled={busy}>
+              <Button type="button" variant="danger" onClick={() => void discard()} disabled={busy}>
                 Yes, discard
               </Button>
               <Button type="button" variant="outline" onClick={() => setConfirmingDiscard(false)}>

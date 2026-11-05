@@ -1,5 +1,5 @@
 import { type UseQueryResult, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Dialog, Tabs } from 'radix-ui'
+import { Dialog } from 'radix-ui'
 import { type DragEvent, useState } from 'react'
 import { Link } from 'react-router'
 import { ApiError } from '@/api/client'
@@ -15,7 +15,6 @@ import {
   fetchResumes,
   fetchRun,
   injectionFlags,
-  pasteResume,
   retryRun,
   uploadResume,
 } from './api'
@@ -102,11 +101,8 @@ export function ProfilePage({
   onTypeItIn,
 }: ProfilePageProps) {
   const queryClient = useQueryClient()
-  const [tab, setTab] = useState<'file' | 'paste'>('file')
-  const [text, setText] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
-  const [fieldError, setFieldError] = useState<string | null>(null)
   const [accepted, setAccepted] = useState<Accepted | null>(null)
   const [conflict, setConflict] = useState<Conflict | null>(null)
   const [busy, setBusy] = useState(false)
@@ -142,7 +138,6 @@ export function ProfilePage({
 
   async function submit(pending: Pending, discard = false) {
     setError(null)
-    setFieldError(null)
     setConflict(null)
     setBusy(true)
     try {
@@ -158,9 +153,7 @@ export function ProfilePage({
       ) {
         setConflict({ openReviewId: e.problem.open_review_id, again: pending })
       } else if (e instanceof ApiError) {
-        const field = e.fieldError('text')
-        if (field) setFieldError(field)
-        else setError(e.detail)
+        setError(e.detail)
       } else {
         setError('Something went wrong. Please try again.')
       }
@@ -217,74 +210,27 @@ export function ProfilePage({
         </>
       )}
 
-      <Tabs.Root value={tab} onValueChange={(v) => setTab(v as 'file' | 'paste')}>
-        <Tabs.List
-          aria-label="How to add your resume"
-          className="flex gap-2 border-b border-divider"
-        >
-          <Tabs.Trigger
-            value="file"
-            className="px-3 py-2 text-sm data-[state=active]:border-b-2 data-[state=active]:border-ring"
-          >
-            Upload a file
-          </Tabs.Trigger>
-          <Tabs.Trigger
-            value="paste"
-            className="px-3 py-2 text-sm data-[state=active]:border-b-2 data-[state=active]:border-ring"
-          >
-            Paste resume text instead
-          </Tabs.Trigger>
-        </Tabs.List>
-
-        <Tabs.Content value="file" className="pt-4">
-          <label
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={onDrop}
-            className="flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground p-8 text-center focus-within:ring-2 focus-within:ring-ring"
-          >
-            <span className="font-medium">Resume file</span>
-            <span className="text-sm text-muted-small">
-              PDF or DOCX, up to 5 MB. Drop it here or click to choose.
-            </span>
-            <input
-              type="file"
-              aria-label="Resume file"
-              accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-              className="sr-only"
-              disabled={busy}
-              onChange={(e) => {
-                chooseFile(e.target.files?.[0])
-                e.target.value = ''
-              }}
-            />
-          </label>
-        </Tabs.Content>
-
-        <Tabs.Content value="paste" className="space-y-3 pt-4">
-          <label htmlFor="resume-text" className="block text-sm font-medium">
-            Resume text
-          </label>
-          <textarea
-            id="resume-text"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            rows={12}
-            className="w-full rounded-md border border-muted-foreground bg-surface p-3 text-sm"
-            aria-invalid={fieldError ? true : undefined}
-          />
-          {fieldError && (
-            <p role="alert" className="text-sm text-danger">
-              {fieldError}
-            </p>
-          )}
-          <Button
-            disabled={busy}
-            onClick={() => void submit({ action: (d) => pasteResume(text, d) })}
-          >
-            Extract profile
-          </Button>
-        </Tabs.Content>
-      </Tabs.Root>
+      <label
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={onDrop}
+        className="flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground p-8 text-center focus-within:ring-2 focus-within:ring-ring"
+      >
+        <span className="font-medium">Resume file</span>
+        <span className="text-sm text-muted-small">
+          PDF or DOCX, up to 5 MB. Drop it here or click to choose.
+        </span>
+        <input
+          type="file"
+          aria-label="Resume file"
+          accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          className="sr-only"
+          disabled={busy}
+          onChange={(e) => {
+            chooseFile(e.target.files?.[0])
+            e.target.value = ''
+          }}
+        />
+      </label>
 
       {!embedded && (
         <p className="space-x-4">
@@ -353,10 +299,9 @@ export function ProfilePage({
         <div role="status" className="space-y-3 rounded-lg border border-warning p-4">
           <p>
             We couldn&apos;t find readable text in that file. It may be a scanned image. You can
-            paste the text of your resume, or fill in your profile by hand.
+            upload a text-based PDF or DOCX, or fill in your profile by hand.
           </p>
           <div className="flex gap-3">
-            <Button onClick={() => setTab('paste')}>Paste resume text instead</Button>
             {onTypeItIn ? (
               <Button variant="secondary" onClick={onTypeItIn}>
                 Type it in myself

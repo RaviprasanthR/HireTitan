@@ -460,7 +460,7 @@ function PreferencesForm({
           {formError}
         </p>
       )}
-      <Button type="submit" disabled={busy}>
+      <Button type="submit" variant="success" disabled={busy}>
         {embedded ? 'Finish setup' : 'Save preferences'}
       </Button>
     </form>

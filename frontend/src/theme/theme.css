@@ -211,3 +211,46 @@ h3 {
     transition: none;
   }
 }
+
+/* Button hover states. The unlayered `.bg-background` rule above beats Tailwind's hover
+   utilities, so outline and secondary hovers are set here. Neutral buttons (Back, Up, Add)
+   light up with a cyan edge; `ht-success-button` (Confirm, Continue, Save) turns green and
+   `ht-danger-button` (Discard, Remove) turns red. */
+button[data-variant="outline"],
+button[data-variant="secondary"] {
+  background-color: transparent;
+  border: 1px solid var(--ht-slate);
+  color: var(--ht-text);
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+button[data-variant="outline"]:hover:not(:disabled),
+button[data-variant="secondary"]:hover:not(:disabled) {
+  background-color: var(--ht-divider);
+  border-color: var(--ht-accent);
+  color: var(--ht-heading);
+}
+.ht-success-button {
+  background-image: var(--ht-gradient-primary);
+  color: var(--ht-on-primary);
+  box-shadow: var(--ht-shadow-primary);
+  transition:
+    background-color 160ms ease,
+    box-shadow 160ms ease;
+}
+.ht-success-button:hover:not(:disabled) {
+  background-image: linear-gradient(135deg, #56d364 0%, #2ea043 100%);
+  border-color: #56d364;
+  box-shadow:
+    0 6px 18px -6px rgb(63 185 80 / 0.65),
+    0 1px 0 rgb(255 255 255 / 0.3) inset;
+}
+@media (prefers-reduced-motion: reduce) {
+  button[data-variant="outline"],
+  button[data-variant="secondary"],
+  .ht-success-button {
+    transition: none;
+  }
+}

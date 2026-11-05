@@ -238,7 +238,7 @@ describe('ProfilePage', () => {
     })
   })
 
-  it('US1_AS6_no_text_offers_paste_or_manual', async () => {
+  it('US1_AS6_no_text_offers_manual_entry', async () => {
     routes['GET /api/v1/resumes'] = () => json([resumeItem({ parse_status: 'no_text' })])
     routes['POST /api/v1/resumes'] = () => json({ resume_file_id: FILE_ID, run_id: RUN_ID }, 202)
     routes[`GET /api/v1/runs/${RUN_ID}`] = () => json(run({ status: 'done' }))
@@ -247,7 +247,7 @@ describe('ProfilePage', () => {
 
     const notice = await screen.findByRole('status')
     expect(notice).toHaveTextContent(/couldn.t find readable text/i)
-    expect(within(notice).getByRole('button', { name: /paste resume text instead/i })).toBeVisible()
+    expect(within(notice).queryByRole('button', { name: /paste/i })).not.toBeInTheDocument()
     expect(within(notice).getByRole('link', { name: /fill in by hand/i })).toHaveAttribute(
       'href',
       '/profile/edit',
@@ -279,42 +279,12 @@ describe('ProfilePage', () => {
     expect(calls.some((c) => c.method === 'POST')).toBe(false)
   })
 
-  it('pasting_text_posts_to_the_text_endpoint', async () => {
+  it('there_is_no_paste_option_only_upload', () => {
     routes['GET /api/v1/resumes'] = () => json([])
-    routes['POST /api/v1/resumes/text'] = () => json({ resume_file_id: FILE_ID, run_id: RUN_ID }, 202)
-    routes[`GET /api/v1/runs/${RUN_ID}`] = () => json(run())
     renderPage()
-    const user = userEvent.setup()
 
-    await user.click(screen.getByRole('tab', { name: /paste resume text/i }))
-    const text = 'Jane Example '.repeat(30)
-    await user.click(screen.getByLabelText(/^resume text$/i))
-    await user.paste(text)
-    await user.click(screen.getByRole('button', { name: /^extract profile$/i }))
-
-    await waitFor(() => {
-      const post = calls.find((c) => c.method === 'POST' && c.url.endsWith('/resumes/text'))
-      expect(post?.body).toBe(JSON.stringify({ text }))
-    })
-    expect(await screen.findByRole('list', { name: /progress/i })).toBeInTheDocument()
-  })
-
-  it('too_short_pasted_text_shows_the_server_field_error', async () => {
-    routes['GET /api/v1/resumes'] = () => json([])
-    routes['POST /api/v1/resumes/text'] = () =>
-      json(
-        { title: 'Unprocessable', status: 422, detail: 'Some fields are not valid.', errors: [{ field: 'text', message: 'String should have at least 200 characters' }] },
-        422,
-        'application/problem+json',
-      )
-    renderPage()
-    const user = userEvent.setup()
-    await user.click(screen.getByRole('tab', { name: /paste resume text/i }))
-    await user.click(screen.getByLabelText(/^resume text$/i))
-    await user.paste('too short')
-    await user.click(screen.getByRole('button', { name: /^extract profile$/i }))
-
-    expect(await screen.findByText(/at least 200 characters/i)).toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: /paste/i })).not.toBeInTheDocument()
+    expect(screen.getByLabelText(/resume file/i)).toBeInTheDocument()
   })
 
   it('409_offers_to_replace_the_open_review', async () => {

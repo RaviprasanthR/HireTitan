@@ -26,9 +26,6 @@ export function uploadResume(file: File, discard = false) {
   return apiFetch<Accepted>(`/resumes${query(discard)}`, { method: 'POST', body })
 }
 
-export const pasteResume = (text: string, discard = false) =>
-  apiFetch<Accepted>(`/resumes/text${query(discard)}`, { method: 'POST', json: { text } })
-
 export const deleteResume = (id: string) => apiFetch(`/resumes/${id}`, { method: 'DELETE' })
 
 export const decide =(runId: string, decision: Decision) =>
