@@ -344,6 +344,18 @@ describe('ProfilePage', () => {
     expect(await screen.findByText(/no ai key/i)).toBeInTheDocument()
   })
 
+  it('R7_paused_run_explains_out_of_credit', async () => {
+    routes['GET /api/v1/resumes'] = () => json([resumeItem()])
+    routes['POST /api/v1/resumes'] = () => json({ resume_file_id: FILE_ID, run_id: RUN_ID }, 202)
+    routes[`GET /api/v1/runs/${RUN_ID}`] = () =>
+      json(run({ status: 'paused', pause_reason: 'out_of_credit' }))
+    renderPage()
+    await upload(pdf())
+
+    expect(await screen.findByText(/out of credit/i)).toBeInTheDocument()
+    expect(screen.getByText(/check again/i)).toBeInTheDocument()
+  })
+
   it('a_failed_decision_shows_a_message_and_keeps_the_dialog', async () => {
     routes['GET /api/v1/resumes'] = () =>
       json([resumeItem({ parse_result: { injection_flags: [{ rule_id: 'x', severity: 'high', excerpt: 'bad', location: 'visible' }] } })])

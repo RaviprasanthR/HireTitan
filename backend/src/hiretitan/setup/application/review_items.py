@@ -14,6 +14,7 @@ PAUSE_TITLES = {
     PauseReason.budget_reached: "Paused: monthly AI budget reached",
     PauseReason.key_missing: "Paused: AI key is missing",
     PauseReason.key_rejected: "Paused: AI key was rejected",
+    PauseReason.out_of_credit: "Paused: your AI account is out of credit",
 }
 
 

@@ -7,6 +7,7 @@ importing this module needs no database.
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any
 from uuid import UUID
@@ -67,6 +68,10 @@ class Runtime:
     app: procrastinate.App
     holder: RunnerHolder = field(default_factory=RunnerHolder)
     provider_status: ProviderStatusService | None = None  # set by the composition root
+    # Called after "Check again" finds the key working: puts runs paused for out_of_credit back
+    # on the queue. The key check cannot see the credit balance, so a run that is still out of
+    # credit simply pauses again with the provider's message.
+    after_key_works: Callable[[], Awaitable[object]] | None = None
 
     @property
     def queue(self) -> ProcrastinateQueue:
@@ -92,6 +97,9 @@ def create_runtime(database_url: str) -> Runtime:
     async def check_provider_key() -> str:
         if runtime.provider_status is None:
             raise RuntimeError("Provider status is not set up: the worker has not started")
-        return await runtime.provider_status.check()
+        status = await runtime.provider_status.check()
+        if status == "working" and runtime.after_key_works is not None:
+            await runtime.after_key_works()
+        return status
 
     return runtime

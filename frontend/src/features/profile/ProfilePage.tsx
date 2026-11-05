@@ -25,6 +25,8 @@ const PAUSE_MESSAGES: Record<string, string> = {
     'No AI key is set. Add OPENAI_API_KEY to your .env file and restart; this will continue by itself.',
   key_rejected:
     'The AI provider rejected your key. Fix OPENAI_API_KEY in your .env file and restart; this will continue by itself.',
+  out_of_credit:
+    'Your AI account is out of credit. Add credit with your provider, then press Check again in the banner at the top; this will continue.',
   budget_reached:
     'The monthly AI budget is used up. Raise the cap in Settings and this will continue.',
 }

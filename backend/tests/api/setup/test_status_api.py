@@ -70,6 +70,20 @@ async def test_US3_AS1_missing_key_reported(env: Env) -> None:
     assert data["checklist"]["key_ok"] is False
 
 
+async def test_R7_status_reports_out_of_credit(env: Env) -> None:
+    async with env.sessions() as session:
+        await ProviderStatusRepo(session).set(
+            "openai", "out_of_credit", "You exceeded your current quota."
+        )
+        await session.commit()
+
+    data = (await env.client.get("/api/v1/status")).json()
+
+    assert data["ai"]["status"] == "out_of_credit"
+    assert data["ai"]["message"] == "You exceeded your current quota."
+    assert data["checklist"]["key_ok"] is False
+
+
 async def test_status_is_unknown_before_the_first_check(env: Env) -> None:
     data = (await env.client.get("/api/v1/status")).json()
     assert data["ai"]["status"] == "unknown"

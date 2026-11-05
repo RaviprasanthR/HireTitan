@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { routes } from './routes'
@@ -20,24 +21,23 @@ function status(aiStatus: string, message: string | null = null) {
   }
 }
 
-function renderAt(path: string, aiStatus: string) {
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(async (url: string) =>
+function renderAt(path: string, aiStatus: string, message: string | null = null) {
+  const fetchMock = vi.fn(async (url: string) =>
       url.endsWith('/status')
-        ? json(status(aiStatus))
+        ? json(status(aiStatus, message))
         : url.endsWith('/onboarding')
           ? json({ step: 'done', display_name: 'Jane', open_review_id: null, active_run_id: null })
           : json([]),
-    ),
   )
+  vi.stubGlobal('fetch', fetchMock)
   const router = createMemoryRouter(routes, { initialEntries: [path] })
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return render(
+  render(
     <QueryClientProvider client={client}>
       <RouterProvider router={router} />
     </QueryClientProvider>,
   )
+  return fetchMock
 }
 
 describe('AiBanner', () => {
@@ -65,6 +65,30 @@ describe('AiBanner', () => {
     const banner = await screen.findByRole('status', { name: 'AI status' })
     expect(banner).toHaveTextContent('could not be reached')
     expect(screen.queryByRole('alert', { name: 'AI status' })).not.toBeInTheDocument()
+  })
+
+  it('R7_shows_out_of_credit_message', async () => {
+    renderAt('/', 'out_of_credit', 'You exceeded your current quota, please check your billing.')
+    const banner = await screen.findByRole('alert', { name: 'AI status' })
+    expect(banner).toHaveTextContent('Your AI account is out of credit')
+    expect(banner).toHaveTextContent('You exceeded your current quota, please check your billing.')
+    expect(banner).toHaveTextContent('paused, not lost')
+  })
+
+  it('R7_check_again_asks_the_server_to_recheck', async () => {
+    const user = userEvent.setup()
+    const fetchMock = renderAt('/', 'out_of_credit', 'No credit.')
+    await screen.findByRole('heading', { level: 1, name: 'Home' })
+    await user.click(await screen.findByRole('button', { name: 'Check again' }))
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some(
+          ([url, init]) =>
+            String(url).endsWith('/status/ai/check') &&
+            (init as RequestInit | undefined)?.method === 'POST',
+        ),
+      ).toBe(true),
+    )
   })
 
   it.each(['working', 'unknown'])('no_banner_when_%s', async (aiStatus) => {

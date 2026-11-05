@@ -60,6 +60,21 @@ class RejectingLlm:
         raise AiUnavailable("key_rejected")
 
 
+class OutOfCreditLlm:
+    """The provider answers 429 insufficient_quota: the adapter tells the status service."""
+
+    provider = "openai"
+    model = "gpt-5.4-mini"
+    MESSAGE = "You exceeded your current quota, please check your plan and billing details."
+
+    def __init__(self, status: ProviderStatusService) -> None:
+        self._status = status
+
+    async def generate(self, req: LlmRequest[Any]) -> LlmResult[Any]:
+        await self._status.mark_out_of_credit(self.MESSAGE)
+        raise AiUnavailable("out_of_credit", provider_message=self.MESSAGE)
+
+
 def use_llm(h: Harness, llm: Any) -> None:
     h.deps.llm = llm
 
@@ -189,3 +204,26 @@ async def test_SC006_no_upload_or_edit_lost(make_harness: Any) -> None:
     assert current is not None
     assert current.content.contact.name == "Jane Example"  # the confirmed profile is untouched
     assert len(versions) == 1
+
+
+async def test_R7_ingest_pauses_on_out_of_credit_and_resumes(make_harness: Any) -> None:
+    h = make_harness([])
+    use_llm(h, OutOfCreditLlm(status_service(h)))
+    run_id = await h.start(PDF)
+
+    state = await h.run(run_id)
+
+    assert state.status is RunStatus.paused
+    assert state.pause_reason is PauseReason.out_of_credit
+    async with h.sessions() as session:
+        row = await ProviderStatusRepo(session).get("openai")
+    assert row is not None
+    assert row.status == "out_of_credit"
+    assert row.message == OutOfCreditLlm.MESSAGE  # shown to the person as the provider wrote it
+
+    use_llm(h, FakeLlm([jane_extraction()]))  # credit was added; "Check again"
+    assert await resume_paused_runs(h.sessions, _Queue(), PauseReason.out_of_credit) == 1
+    resumed = await h.run(run_id)
+
+    assert resumed.status is RunStatus.awaiting_review
+    assert resumed.waiting_for is WaitingFor.profile_review

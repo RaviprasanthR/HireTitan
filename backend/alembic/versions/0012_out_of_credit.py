@@ -1,4 +1,4 @@
-"""A run can pause because the AI provider account is out of credit (R7).
+"""A run can pause, and the provider status can say, that the AI account is out of credit (R7).
 
 Revision ID: 0012
 Revises: 0011
@@ -15,9 +15,17 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 _NAME = "ck_workflow_runs_pause_reason_values"
+_STATUS_NAME = "ck_provider_status_status_values"
 
 
 def upgrade() -> None:
+    op.drop_constraint(_STATUS_NAME, "provider_status", schema="app", type_="check")
+    op.create_check_constraint(
+        _STATUS_NAME,
+        "provider_status",
+        "status IN ('unknown', 'working', 'missing', 'rejected', 'unreachable', 'out_of_credit')",
+        schema="app",
+    )
     op.drop_constraint(_NAME, "workflow_runs", schema="app", type_="check")
     op.create_check_constraint(
         _NAME,
@@ -28,6 +36,17 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    op.execute(
+        "UPDATE app.provider_status SET status = 'unknown', message = NULL "
+        "WHERE status = 'out_of_credit'"
+    )
+    op.drop_constraint(_STATUS_NAME, "provider_status", schema="app", type_="check")
+    op.create_check_constraint(
+        _STATUS_NAME,
+        "provider_status",
+        "status IN ('unknown', 'working', 'missing', 'rejected', 'unreachable')",
+        schema="app",
+    )
     op.execute(
         "UPDATE app.workflow_runs SET pause_reason = 'budget_reached' "
         "WHERE pause_reason = 'out_of_credit'"

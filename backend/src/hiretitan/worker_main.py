@@ -20,9 +20,10 @@ from hiretitan.platform.llm.factory import build_llm
 from hiretitan.platform.llm.models import ModelCatalog
 from hiretitan.platform.llm.prompts import PromptRegistry
 from hiretitan.platform.runtime.checkpointer import open_checkpointer
+from hiretitan.platform.runtime.domain.run_state import PauseReason
 from hiretitan.platform.runtime.events import EventPublisher, run_notifier
 from hiretitan.platform.runtime.procrastinate import Runtime, create_runtime
-from hiretitan.platform.runtime.resume_paused import resume_on_startup
+from hiretitan.platform.runtime.resume_paused import resume_on_startup, resume_paused_runs
 from hiretitan.platform.runtime.runner import WorkflowDef, WorkflowRunner
 from hiretitan.platform.storage.local import LocalFileStorage
 from hiretitan.preferences.infra.repo import default_country_provider
@@ -44,6 +45,11 @@ async def run_worker(settings: Settings, *, wait: bool = True) -> None:
         settings, sessions, budget_cap_provider(sessions), SystemClock(), publisher.publish
     )
     runtime.provider_status = built.provider_status
+
+    async def requeue_out_of_credit() -> int:
+        return await resume_paused_runs(sessions, runtime.queue, PauseReason.out_of_credit)
+
+    runtime.after_key_works = requeue_out_of_credit
     provider = "fake" if settings.llm == "fake" else "openai"
     ingest_deps = IngestDeps(
         sessions=sessions,

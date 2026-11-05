@@ -20,6 +20,7 @@ MESSAGES: Final = {
     "missing": "No API key is set. Add OPENAI_API_KEY to your .env file.",
     "rejected": "The provider rejected the API key. Check OPENAI_API_KEY in your .env file.",
     "unreachable": "The provider could not be reached. Check your internet connection.",
+    "out_of_credit": "Your AI account is out of credit.",
 }
 
 Publish = Callable[[str, dict[str, Any]], Awaitable[None]]
@@ -45,10 +46,10 @@ class ProviderStatusService:
         self._publish = publish
         self._provider = provider
 
-    async def _write(self, status: str) -> None:
+    async def _write(self, status: str, message: str | None = None) -> None:
         async with self._sessions() as session:
             await ProviderStatusRepo(session).set(
-                self._provider, status, MESSAGES[status], checked_at=datetime.now(UTC)
+                self._provider, status, message or MESSAGES[status], checked_at=datetime.now(UTC)
             )
             await session.commit()
         await self._publish("status.updated", {"ai_status": status})
@@ -62,3 +63,8 @@ class ProviderStatusService:
     async def mark_rejected(self) -> None:
         """A real call got 401/403: record it without another network call."""
         await self._write("rejected")
+
+    async def mark_out_of_credit(self, provider_message: str) -> None:
+        """A real call got 429 ``insufficient_quota``: show the provider's own words (R7).
+        The message is already cleaned and capped by ``AiUnavailable``'s caller."""
+        await self._write("out_of_credit", provider_message)

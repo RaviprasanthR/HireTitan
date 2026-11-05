@@ -7,6 +7,7 @@ has no credit left" (``insufficient_quota``). Only the second must never be retr
 from __future__ import annotations
 
 import json
+from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any
 
@@ -44,7 +45,9 @@ def _request() -> LlmRequest[Answer]:
     )
 
 
-def _adapter(fixture_name: str) -> tuple[OpenAiAdapter, list[httpx2.Request]]:
+def _adapter(
+    fixture_name: str, on_out_of_credit: Callable[[str], Awaitable[None]] | None = None
+) -> tuple[OpenAiAdapter, list[httpx2.Request]]:
     seen: list[httpx2.Request] = []
 
     def handler(request: httpx2.Request) -> httpx2.Response:
@@ -52,7 +55,12 @@ def _adapter(fixture_name: str) -> tuple[OpenAiAdapter, list[httpx2.Request]]:
         return httpx2.Response(429, json=_body(fixture_name))
 
     client = httpx2.AsyncClient(transport=httpx2.MockTransport(handler))
-    adapter = OpenAiAdapter(SecretStr("sk-test-secret"), ModelCatalog.load(), http_client=client)
+    adapter = OpenAiAdapter(
+        SecretStr("sk-test-secret"),
+        ModelCatalog.load(),
+        http_client=client,
+        on_out_of_credit=on_out_of_credit,
+    )
     return adapter, seen
 
 
@@ -82,3 +90,17 @@ async def test_R7_message_is_passed_through_for_display() -> None:
     assert caught.value.provider_message == (
         "You exceeded your current quota, please check your plan and billing details."
     )
+
+
+async def test_R7_status_service_is_told_about_out_of_credit() -> None:
+    told: list[str] = []
+
+    async def remember(message: str) -> None:
+        told.append(message)
+
+    adapter, _ = _adapter("rate_limit_insufficient_quota.json", on_out_of_credit=remember)
+
+    with pytest.raises(AiUnavailable):
+        await adapter.generate(_request())
+
+    assert told == ["You exceeded your current quota, please check your plan and billing details."]
