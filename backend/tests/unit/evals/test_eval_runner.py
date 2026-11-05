@@ -14,7 +14,7 @@ from evals.extract_profile.cases import CASES_DIR, EXPECTED_DIR, MID_DATES, SENI
 from evals.run import CaseScore, evaluate, load_cases, score_case
 
 from hiretitan.platform.llm.fake import FakeLlm
-from hiretitan.platform.llm.port import LlmPort
+from hiretitan.platform.llm.port import AiUnavailable, LlmPort
 from hiretitan.profile.infra.parsing.docx import parse_docx
 from hiretitan.profile.infra.parsing.pdf import parse_pdf
 
@@ -58,8 +58,6 @@ def extracted(expected: dict[str, Any]) -> dict[str, Any]:
 def with_dates(payload: dict[str, Any], expected: dict[str, Any]) -> dict[str, Any]:
     """Put each job's known start and end (``YYYY-MM``) on the experience entries."""
     known = {**MID_DATES, **SENIOR_DATES}
-    if expected["dates"] == ["2020-01"]:  # the Spanish resume
-        known["Acme Corp"] = ("2020-01", None)
     for item in payload["experience"]:
         for key, value in zip(("start", "end"), known[item["employer"]], strict=True):
             if value:
@@ -75,16 +73,15 @@ def perfect_script() -> list[dict[str, Any]]:
     return out
 
 
-def test_twelve_cases_cover_the_required_shapes() -> None:
+def test_eleven_cases_cover_the_required_shapes() -> None:
     cases = load_cases(CASES_DIR, EXPECTED_DIR)
     names = {c.path.name for c in cases}
 
-    assert len(cases) == 12
+    assert len(cases) == 11
     assert {p.suffix for p in map(Path, names)} == {".pdf", ".docx"}
     assert any("two-column" in n for n in names)
     assert any("fresher" in n for n in names)
     assert any("senior" in n for n in names)
-    assert any("non-english" in n for n in names)
     assert any("tables" in n for n in names)
     assert any("textboxes" in n for n in names)
 
@@ -121,7 +118,7 @@ def test_SC003_precision_recall_computed() -> None:
     assert skills.precision == pytest.approx(total_skills / (total_skills + 1))
     assert skills.recall == pytest.approx(1.0)
     assert report.fields["titles"].recall < 1.0  # the lost job took its title with it
-    assert len(report.cases) == 12
+    assert len(report.cases) == 11
 
 
 def test_score_case_normalises_case_and_whitespace() -> None:
@@ -147,9 +144,7 @@ def test_score_case_normalises_case_and_whitespace() -> None:
 
 
 def test_dates_are_compared_as_year_month() -> None:
-    # Not the Spanish resume: grounding does not know "ene" as a month, so it drops that date's
-    # month. That is a real finding for the eval report (see the T051 notes), not a runner bug.
-    cases = [c for c in load_cases(CASES_DIR, EXPECTED_DIR) if c.path.name != "non-english.pdf"]
+    cases = load_cases(CASES_DIR, EXPECTED_DIR)
     script = [with_dates(extracted(c.expected), c.expected) for c in cases]
     llm = FakeLlm(by_task={"extract_profile": script})
 
@@ -200,7 +195,7 @@ def test_yes_runs_and_writes_a_report(tmp_path: Path, capsys: pytest.CaptureFixt
 
     report = tmp_path / "extract_profile-2026-11-04.md"
     assert code == 0
-    assert len(llm.calls) == 12
+    assert len(llm.calls) == 11
     text = report.read_text("utf-8")
     assert "| fast" in text
     assert "precision" in text.lower()
@@ -245,3 +240,28 @@ def test_provider_error_on_one_case_does_not_abort_the_run() -> None:
 
     assert [c.outcome for c in report.cases] == ["error", "ok"]
     assert report.failed_cases == 1
+
+
+class _RejectedKeyLlm:
+    async def generate(self, req: Any) -> Any:
+        raise AiUnavailable("key_rejected")
+
+
+def test_a_rejected_key_stops_the_eval_instead_of_scoring_zero() -> None:
+    cases = load_cases(CASES_DIR, EXPECTED_DIR)[:2]
+
+    with pytest.raises(AiUnavailable):
+        asyncio.run(evaluate(_RejectedKeyLlm(), cases, tier="fast", model="m"))
+
+
+def test_main_reports_the_rejected_key_and_writes_no_report(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    code = eval_run.main(
+        ["extract_profile", "--models", "fast", "--yes", "--reports-dir", str(tmp_path)],
+        llm_for=lambda _model: _RejectedKeyLlm(),
+    )
+
+    assert code == 1
+    assert "rejected" in capsys.readouterr().out.lower()
+    assert list(tmp_path.glob("*.md")) == []

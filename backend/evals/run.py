@@ -1,5 +1,7 @@
 """Eval runner: ``python -m evals.run extract_profile --models fast,strong[,<model>] [--yes]``.
 
+Run it from the repository root with ``PYTHONPATH=backend`` so it finds ``.env`` and the key.
+
 Runs the real pipeline pieces (parse, sanitize, mask, render prompt, validate and ground) on
 the synthetic cases and scores the answer against ``expected/*.yaml`` (SC-003). Real models cost
 money, so the runner prints an estimate first and does nothing without ``--yes``.
@@ -24,7 +26,7 @@ import hiretitan.prompts as hiretitan_prompts
 from evals.extract_profile.cases import CASES_DIR, EXPECTED_DIR
 from hiretitan.platform.llm.infra.calls_repo import LlmCallRecord
 from hiretitan.platform.llm.models import ModelCatalog, UnknownModelError
-from hiretitan.platform.llm.port import LlmPort, LlmRequest
+from hiretitan.platform.llm.port import AiUnavailable, LlmPort, LlmRequest
 from hiretitan.platform.llm.prompts import PromptRegistry
 from hiretitan.platform.llm.validation import ValidatedLlm
 from hiretitan.platform.untrusted.delimit import delimit
@@ -201,6 +203,8 @@ async def evaluate(llm: LlmPort, cases: Sequence[Case], *, tier: str, model: str
             outcome = await chain.run(
                 prepared.request, extraction_task_spec(prepared.schema, prepared.clean_text)
             )
+        except AiUnavailable:  # no key, a rejected key or no budget: every case would fail
+            raise
         except Exception:  # a provider error must not lose the other cases' results
             results.append(CaseResult(case.path.name, score_case(case.expected, {}), "error"))
             continue
@@ -299,7 +303,9 @@ def _real_llm_for(catalog: ModelCatalog) -> Callable[[str], LlmPort]:
     def build(model: str) -> LlmPort:
         key = Settings().openai_api_key
         if key is None:
-            raise SystemExit("OPENAI_API_KEY is not set (put it in .env).")
+            raise SystemExit(
+                "OPENAI_API_KEY is not set (put it in .env at the repo root, run from there)."
+            )
         tiers = {PROVIDER: {**catalog.tiers[PROVIDER], "fast": model, "strong": model}}
         return OpenAiAdapter(key, replace(catalog, tiers=tiers))
 
@@ -337,10 +343,15 @@ def main(
         return 2
 
     build = llm_for or _real_llm_for(catalog)
-    reports = [
-        asyncio.run(evaluate(build(model), cases, tier=label, model=model))
-        for label, model in specs
-    ]
+    try:
+        reports = [
+            asyncio.run(evaluate(build(model), cases, tier=label, model=model))
+            for label, model in specs
+        ]
+    except AiUnavailable as exc:
+        print(f"Stopped: the AI is unavailable ({exc}). A rejected or missing key is the usual")
+        print("cause: check OPENAI_API_KEY in .env. No report was written.")
+        return 1
     args.reports_dir.mkdir(parents=True, exist_ok=True)
     out = args.reports_dir / f"extract_profile-{today()}.md"
     out.write_text(render_report(reports, day=today(), case_count=len(cases)), encoding="utf-8")

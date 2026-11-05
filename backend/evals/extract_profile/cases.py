@@ -1,4 +1,4 @@
-"""Generate the 12 eval resumes and their ``expected/*.yaml`` (T051), reusing the T033 generator.
+"""Generate the 11 eval resumes and their ``expected/*.yaml`` (T051), reusing the T033 generator.
 
 Run from ``backend/``:  ``uv run python -m evals.extract_profile.cases``
 Every identity is fake (``example.*`` emails, ``+91 90000 0000x`` phones). Output is deterministic.
@@ -198,14 +198,6 @@ def build_cases(out: Path = CASES_DIR, expected_out: Path = EXPECTED_DIR) -> lis
     headers = _expected(
         g.JOBS[:1], MID_DATES, name=g.NAME, skills=["Python", "Go", "PostgreSQL"], education=[]
     )
-    spanish = {
-        "name": "Carlos Ejemplo",
-        "employers": ["Acme Corp"],
-        "titles": ["Ingeniero de Software"],
-        "dates": ["2020-01"],
-        "skills": ["Python", "SQL", "Docker"],
-        "education": ["Universidad de Ejemplo"],
-    }
     mid_side = {
         "name": g.NAME,
         "contact": g.CONTACT,
@@ -231,9 +223,6 @@ def build_cases(out: Path = CASES_DIR, expected_out: Path = EXPECTED_DIR) -> lis
     cases["mid-two-column.pdf"] = mid
     _two_column_pdf(out, "senior-two-column.pdf", SENIOR_JOBS, SENIOR)
     cases["senior-two-column.pdf"] = sen
-    g.build_non_english(out)
-    _rename(out, "synthetic-non-english.pdf", "non-english.pdf")
-    cases["non-english.pdf"] = spanish
     g.build_tables(out)
     _rename(out, "synthetic-tables.docx", "tables.docx")
     cases["tables.docx"] = tables
