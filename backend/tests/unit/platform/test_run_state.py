@@ -53,6 +53,10 @@ def test_running_to_cancelled() -> None:
     assert transition(RUNNING, S.cancelled).status is S.cancelled
 
 
+def test_queued_to_failed_when_the_job_cannot_be_queued() -> None:
+    assert transition(QUEUED, S.failed).status is S.failed
+
+
 def test_awaiting_review_to_queued_clears_waiting_for() -> None:
     assert transition(AWAITING, S.queued) == QUEUED
 
@@ -75,7 +79,7 @@ def test_failed_to_queued() -> None:
 
 def test_exactly_the_documented_transitions_are_allowed() -> None:
     assert {
-        S.queued: frozenset({S.running}),
+        S.queued: frozenset({S.running, S.failed}),
         S.running: frozenset({S.awaiting_review, S.paused, S.done, S.failed, S.cancelled}),
         S.awaiting_review: frozenset({S.queued, S.cancelled}),
         S.paused: frozenset({S.queued, S.cancelled}),

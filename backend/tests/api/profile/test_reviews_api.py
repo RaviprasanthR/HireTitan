@@ -292,6 +292,28 @@ async def test_retry_failed_run(env: Env) -> None:
     assert (await env.h.state(run_id)).status is RunStatus.queued
 
 
+async def test_retry_that_cannot_be_queued_leaves_the_run_failed(env: Env) -> None:
+    run_id = await env.h.start(PDF)
+    async with env.h.sessions() as session:
+        runs = RunsRepo(session)
+        await runs.transition(run_id, RunStatus.running)
+        await runs.transition(run_id, RunStatus.failed, error="Something went wrong")
+        await session.commit()
+
+    async def broken(run_id: UUID, resume: Any = None) -> None:
+        raise ConnectionError("queue is down")
+
+    env.queue.enqueue = broken  # type: ignore[method-assign]
+    with pytest.raises(ConnectionError):
+        await env.client.post(f"/api/v1/runs/{run_id}/retry")
+
+    state = await env.h.state(run_id)
+    assert state.status is RunStatus.failed  # not stuck as queued with no job
+
+    env.queue.enqueue = FakeQueue().enqueue  # type: ignore[method-assign]
+    assert (await env.client.post(f"/api/v1/runs/{run_id}/retry")).status_code == 202
+
+
 async def test_retry_only_for_failed_runs(env: Env) -> None:
     _, run_id = await reviewed(env)
     assert (await env.client.post(f"/api/v1/runs/{run_id}/retry")).status_code == 409
