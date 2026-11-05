@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Protocol
+from typing import Any, Protocol
 from uuid import UUID
 
 
@@ -63,3 +63,23 @@ class CareerOpsPort(Protocol):
     async def discover(self, careers_url: str) -> DiscoveryResult | None:
         """Work out which provider board sits behind a careers page, if it is one we can read."""
         ...
+
+
+class StoredCompany(Protocol):
+    """A company row as the seed loader needs to see it."""
+
+    id: UUID
+    origin: str
+    user_modified: bool
+    hidden: bool
+    deleted_at: datetime | None
+
+
+class CompanyStore(Protocol):
+    """Where the seed loader reads and writes companies (implemented by the infra layer)."""
+
+    async def get_by_key(self, key: str) -> StoredCompany | None: ...
+
+    async def add(self, **fields: Any) -> StoredCompany: ...
+
+    async def set_fields(self, company_id: UUID, **fields: Any) -> None: ...

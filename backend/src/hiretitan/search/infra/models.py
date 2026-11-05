@@ -32,6 +32,7 @@ from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from hiretitan.platform.db import APP_SCHEMA, Base, IdTimestampMixin
+from hiretitan.search.domain.companies import CHECK_RESULTS, COMPANY_ORIGINS, RESOLUTIONS
 
 JsonDict = dict[str, Any]
 
@@ -40,9 +41,6 @@ def _in(column: str, values: tuple[str, ...]) -> str:
     return f"{column} IN (" + ", ".join(f"'{v}'" for v in values) + ")"
 
 
-COMPANY_ORIGINS = ("built_in", "user")
-RESOLUTIONS = ("verified", "user_confirmed", "unresolved", "careers_page", "check_manually")
-CHECK_RESULTS = ("ok", "failed", "no_jobs", "blocked", "unreadable")
 RULE_SET_STATUSES = ("proposed", "approved", "superseded")
 RUN_MODES = ("rules_and_ai", "rules_only")
 RUN_OUTCOMES = ("finished", "stopped_by_user", "budget_reached", "out_of_credit", "failed")
