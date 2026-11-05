@@ -38,7 +38,8 @@ class ResumeFileRow(Base):
             "page_count IS NULL OR page_count BETWEEN 1 AND 20", name="page_count_range"
         ),
         CheckConstraint(
-            "parse_status IN ('pending', 'parsed', 'no_text', 'failed')", name="parse_status_values"
+            "parse_status IN ('pending', 'parsed', 'no_text', 'not_resume', 'failed')",
+            name="parse_status_values",
         ),
     )
 

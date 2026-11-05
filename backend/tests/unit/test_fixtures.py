@@ -45,7 +45,7 @@ def all_text(path: Path) -> str:
 
 
 def test_every_listed_fixture_is_committed_with_expected_facts() -> None:
-    assert len(FILES) == 16
+    assert len(FILES) == 17
     for name in FILES:
         assert (FIXTURES / name).is_file(), name
     expected = sorted((FIXTURES / "expected").glob("*.yaml"))

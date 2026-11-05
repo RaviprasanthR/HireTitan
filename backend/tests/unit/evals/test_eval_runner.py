@@ -34,6 +34,7 @@ def extracted(expected: dict[str, Any]) -> dict[str, Any]:
         for employer, title in zip(expected["employers"], expected["titles"], strict=True)
     ]
     return {
+        "looks_like_resume": True,
         "contact": {"name": expected["name"], "location": None},
         "headline": None,
         "summary": None,

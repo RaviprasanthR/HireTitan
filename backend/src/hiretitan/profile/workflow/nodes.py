@@ -261,8 +261,11 @@ def extraction_task_spec(schema: type[BaseModel], source: str) -> TaskSpec[BaseM
     Shared with the extraction eval so it measures exactly what the app would keep.
     """
 
+    flagged = "looks_like_resume" in schema.model_fields  # v2 and later
+
     def empty() -> BaseModel:
-        return schema.model_validate(content_to_extracted(_empty_content()))
+        extra = {"looks_like_resume": True} if flagged else {}  # a failed call is not a rejection
+        return schema.model_validate({**content_to_extracted(_empty_content()), **extra})
 
     def rules(value: BaseModel) -> list[str]:
         content = extracted_to_content(value.model_dump())
@@ -270,7 +273,8 @@ def extraction_task_spec(schema: type[BaseModel], source: str) -> TaskSpec[BaseM
 
     def check(value: BaseModel) -> tuple[BaseModel, list[Dropped]]:
         grounded = ground(extracted_to_content(value.model_dump()), source)
-        kept = schema.model_validate(content_to_extracted(grounded.profile))
+        extra = {"looks_like_resume": getattr(value, "looks_like_resume", True)} if flagged else {}
+        kept = schema.model_validate({**content_to_extracted(grounded.profile), **extra})
         return kept, [Dropped(d.path, d.reason, d.value) for d in grounded.dropped]
 
     return TaskSpec(fallback=empty, rules=rules, check=check)
@@ -315,6 +319,27 @@ async def extract_profile(deps: IngestDeps, state: State) -> State:
     if result.outcome != "fallback":  # a fallback is not worth caching
         deps.storage.put_text(key, CACHE_SUFFIX, json.dumps(payload))
     return {**payload, "prompt_version": str(version)}
+
+
+def after_extract(state: State) -> str:
+    """A document the model says is not a resume ends the run; nothing is reviewed or saved."""
+    looks_like_resume = state["extraction"].get("looks_like_resume", True)
+    return "assemble_profile" if looks_like_resume else "end_not_resume"
+
+
+async def end_not_resume(deps: IngestDeps, state: State) -> State:
+    """Remember on the file that it was not a resume, so the page can say so."""
+    async with deps.sessions() as session:
+        await ResumeFilesRepo(session).set_parse_result(
+            UUID(state["resume_file_id"]),
+            "not_resume",
+            {
+                "visible_text_chars": len(state["visible_text"]),
+                "hidden_runs": len(state.get("hidden_runs", [])),
+            },
+        )
+        await session.commit()
+    return {}
 
 
 async def assemble_profile(deps: IngestDeps, state: State) -> State:

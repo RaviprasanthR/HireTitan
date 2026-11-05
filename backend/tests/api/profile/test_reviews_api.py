@@ -15,7 +15,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "workflow" / "profile"))
 from harness import Harness, jane_extraction
-from hiretitan.profile.api.reviews import create_reviews_router
 
 from hiretitan.api_main import create_app
 from hiretitan.platform.config.settings import Settings
@@ -23,6 +22,7 @@ from hiretitan.platform.runtime.api import create_runs_router
 from hiretitan.platform.runtime.domain.run_state import RunStatus, WaitingFor
 from hiretitan.platform.runtime.infra.runs_repo import RunsRepo
 from hiretitan.profile.api.resumes import ProfileApiDeps
+from hiretitan.profile.api.reviews import create_reviews_router
 from hiretitan.profile.infra.repos import ReviewsRepo, VersionsRepo
 
 PDF = "synthetic-mid-2page.pdf"
@@ -92,7 +92,7 @@ async def test_review_detail_has_everything_the_editor_needs(env: Env) -> None:
     assert body["changed_paths"] == []
     assert body["provenance"] == {
         "prompt_name": "extract_profile",
-        "prompt_version": "1",
+        "prompt_version": "2",
         "provider": "fake",
         "model": "fake-model",
     }

@@ -29,6 +29,7 @@ PROMPTS = Path(__file__).resolve().parents[3] / "src" / "hiretitan" / "prompts"
 def jane_extraction(**overrides: Any) -> dict[str, Any]:
     """What a good model returns for synthetic-mid-2page.pdf."""
     base: dict[str, Any] = {
+        "looks_like_resume": True,
         "contact": {"name": "Jane Example", "location": "Pune, India"},
         "headline": None,
         "summary": (

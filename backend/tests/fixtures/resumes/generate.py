@@ -33,6 +33,7 @@ FILES: tuple[str, ...] = (
     "synthetic-encrypted.pdf",
     "synthetic-long.pdf",
     "synthetic-non-english.pdf",
+    "synthetic-relieving-letter.pdf",
     "attack-white-text.pdf",
     "attack-tiny-text.pdf",
     "attack-offpage-text.pdf",
@@ -349,6 +350,30 @@ def build_non_english(out: Path) -> None:
     pdf(out / "synthetic-non-english.pdf", body)
 
 
+def build_relieving_letter(out: Path) -> None:
+    """A document that is not a resume: an employer's relieving letter (it names an employer,
+    a title and dates, so only a model that understands the document can tell it apart)."""
+
+    def body(page: Page) -> None:
+        page.line("Acme Corp", size=16, bold=True)
+        page.line("12 Example Street, Pune, India")
+        page.line("Date: 15 January 2021")
+        page.heading("Relieving Letter")
+        page.line("To whom it may concern,")
+        page.line("This is to certify that Mr. Rahul Sample was employed with Acme Corp as a")
+        page.line("Software Engineer from 3 July 2017 to 31 December 2020. His resignation was")
+        page.line("accepted and he is relieved from his duties with effect from the close of")
+        page.line("business on 31 December 2020. He has handed over all company property and")
+        page.line("there are no dues pending from either side. During his tenure his conduct")
+        page.line("and performance were found to be satisfactory.")
+        page.line("We wish him all the best in his future endeavours.")
+        page.line("Yours sincerely,")
+        page.line("Priya Demo", bold=True)
+        page.line("Human Resources Manager, Acme Corp")
+
+    pdf(out / "synthetic-relieving-letter.pdf", body)
+
+
 def attack(out: Path, name: str, hidden: Callable[[Page], None]) -> None:
     def body(page: Page) -> None:
         header(page)
@@ -431,6 +456,17 @@ def write_expected(out: Path) -> None:
             certifications=[],
             projects=[],
         ),
+        "synthetic-relieving-letter": facts(
+            name="Rahul Sample",
+            email=None,
+            phone=None,
+            employers=[],
+            titles=[],
+            skills=[],
+            education=[],
+            certifications=[],
+            projects=[],
+        ),
         "attack-hidden-fake-skill": facts(not_skills=["Kubernetes", "Terraform", "Haskell"]),
     }
     for name, content in cases.items():
@@ -451,6 +487,7 @@ def build_all(out: Path) -> None:
     build_encrypted(out)
     build_long(out)
     build_non_english(out)
+    build_relieving_letter(out)
     build_attacks(out)
     write_expected(out)
 

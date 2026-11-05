@@ -45,6 +45,7 @@ def build_graph(deps: IngestDeps) -> StateGraph[Any]:
     graph.add_node("save_profile_version", cast(Any, _bound(nodes.save_profile_version, deps)))
     graph.add_node("discard_review", cast(Any, _bound(nodes.discard_review, deps)))
     graph.add_node("end_no_text", cast(Any, lambda state: {}))
+    graph.add_node("end_not_resume", cast(Any, _bound(nodes.end_not_resume, deps)))
 
     graph.add_conditional_edges(
         START,
@@ -68,7 +69,12 @@ def build_graph(deps: IngestDeps) -> StateGraph[Any]:
         {"manual_extraction": "manual_extraction", "mask_contacts": "mask_contacts"},
     )
     graph.add_edge("mask_contacts", "extract_profile")
-    graph.add_edge("extract_profile", "assemble_profile")
+    graph.add_conditional_edges(
+        "extract_profile",
+        nodes.after_extract,
+        {"assemble_profile": "assemble_profile", "end_not_resume": "end_not_resume"},
+    )
+    graph.add_edge("end_not_resume", END)
     graph.add_edge("assemble_profile", "compare_with_current")
     graph.add_edge("manual_extraction", "compare_with_current")
     graph.add_edge("compare_with_current", "open_review")

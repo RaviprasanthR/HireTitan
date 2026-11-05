@@ -1,5 +1,6 @@
 [
   {
+    "looks_like_resume": true,
     "contact": {
       "name": "Jane Example",
       "location": "Pune, India"
@@ -64,6 +65,7 @@
     "certifications": []
   },
   {
+    "looks_like_resume": true,
     "contact": {
       "name": "Jane Example",
       "location": "Pune, India"
@@ -131,6 +133,7 @@
     "certifications": []
   },
   {
+    "looks_like_resume": true,
     "contact": {
       "name": "Jane Example",
       "location": "Pune, India"

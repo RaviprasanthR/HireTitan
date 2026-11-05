@@ -1,0 +1,6 @@
+version: 2
+tier: fast
+max_output_tokens: 4000
+changelog:
+  - "v1: first version. Verbatim extraction from a delimited, masked resume; no contact fields."
+  - "v2: adds looks_like_resume so documents that are not resumes (letters, certificates) can be rejected."

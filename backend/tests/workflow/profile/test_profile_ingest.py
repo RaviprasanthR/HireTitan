@@ -32,7 +32,7 @@ async def test_US1_AS1_upload_extracts_and_awaits_review(make_harness: Any) -> N
     assert review.extraction["contact"]["name"] == "Jane Example"
     assert [e["employer"] for e in review.extraction["experience"]] == ["Acme Corp", "Globex Ltd"]
     assert review.dropped_items == []
-    assert review.provenance == Provenance("extract_profile", "1", "fake", "fake-model")
+    assert review.provenance == Provenance("extract_profile", "2", "fake", "fake-model")
     assert (await h.file_for(run_id)).parse_status == "parsed"
     assert len(h.llm.calls) == 1
     assert h.llm.calls[0].tier == "fast"
@@ -135,6 +135,28 @@ async def test_US1_AS6_no_text_pdf(make_harness: Any) -> None:
     assert h.llm.calls == []
     assert (await h.file_for(run_id)).parse_status == "no_text"
     assert await h.review() is None
+
+
+async def test_US1_AS8_a_document_that_is_not_a_resume_is_rejected(make_harness: Any) -> None:
+    letter = jane_extraction(
+        looks_like_resume=False,
+        contact={"name": "", "location": None},
+        summary=None,
+        experience=[],
+        education=[],
+        skills=[],
+        projects=[],
+        certifications=[],
+    )
+    h = make_harness([letter])
+    run_id = await h.start("synthetic-relieving-letter.pdf")
+
+    state = await h.run(run_id)
+
+    assert state.status is RunStatus.done
+    assert (await h.file_for(run_id)).parse_status == "not_resume"
+    assert await h.review() is None  # nothing to review, nothing saved
+    assert len(h.llm.calls) == 1
 
 
 async def test_US1_AS7_invalid_then_invalid_falls_back(make_harness: Any) -> None:
