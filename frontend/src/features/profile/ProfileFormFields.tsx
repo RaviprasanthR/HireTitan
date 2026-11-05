@@ -133,6 +133,8 @@ export function ProfileFormFields({ form, compare, changedPaths = [] }: Props) {
     changedPaths.includes(path)
       ? `Changed. Current profile: ${currentValue(compare, path) || '(empty)'}`
       : undefined
+  // `field` keeps the values the entry had when it was loaded, which is the label that changed
+  // paths use; reading the live form values here made the badge vanish as the person typed.
   const entryChanged = (prefix: string, a: string, b: string): boolean => {
     const label = [a, b].map((s) => s.trim()).filter(Boolean).join(' | ')
     return changedPaths.some((p) => p.startsWith(`${prefix}[${label}]`))
@@ -175,7 +177,7 @@ export function ProfileFormFields({ form, compare, changedPaths = [] }: Props) {
             <div className="flex items-center justify-between">
               <h3 className="font-medium">
                 Job {i + 1}
-                {entryChanged('experience', form.getValues(`experience.${i}.employer`), form.getValues(`experience.${i}.title`)) && (
+                {entryChanged('experience', field.employer, field.title) && (
                   <span className="ml-2 rounded bg-warning px-2 py-0.5 text-xs text-background">Changed</span>
                 )}
               </h3>
@@ -216,7 +218,7 @@ export function ProfileFormFields({ form, compare, changedPaths = [] }: Props) {
             <div className="flex items-center justify-between">
               <h3 className="font-medium">
                 Education {i + 1}
-                {entryChanged('education', form.getValues(`education.${i}.institution`), form.getValues(`education.${i}.qualification`)) && (
+                {entryChanged('education', field.institution, field.qualification) && (
                   <span className="ml-2 rounded bg-warning px-2 py-0.5 text-xs text-background">Changed</span>
                 )}
               </h3>
