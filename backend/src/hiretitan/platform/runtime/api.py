@@ -100,7 +100,17 @@ def create_runs_router(sessions: async_sessionmaker[AsyncSession], queue: RunQue
         async with sessions() as session:
             await RunsRepo(session).transition(run_id, RunStatus.queued)
             await session.commit()
-        await queue.enqueue(run_id)
+        try:
+            await queue.enqueue(run_id)
+        except Exception:
+            # The job was not created, so nothing will ever run this: put the run back to
+            # failed so the person can try again, instead of leaving it queued forever.
+            async with sessions() as session:
+                await RunsRepo(session).transition(
+                    run_id, RunStatus.failed, error="Could not start the run. Try again."
+                )
+                await session.commit()
+            raise
         return {"run_id": str(run_id)}
 
     return router

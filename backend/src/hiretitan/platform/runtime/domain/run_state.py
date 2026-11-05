@@ -33,7 +33,7 @@ class WaitingFor(StrEnum):
 
 
 ALLOWED_TRANSITIONS: Final[dict[RunStatus, frozenset[RunStatus]]] = {
-    RunStatus.queued: frozenset({RunStatus.running}),
+    RunStatus.queued: frozenset({RunStatus.running, RunStatus.failed}),
     RunStatus.running: frozenset(
         {
             RunStatus.awaiting_review,
