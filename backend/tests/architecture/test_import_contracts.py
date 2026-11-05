@@ -55,6 +55,16 @@ PLANTED_VIOLATIONS: dict[str, dict[str, str]] = {
         "profile/application/bad.py": "import hiretitan.preferences.infra\n",
     },
     "platform_imports_feature": {"platform/bad.py": "import hiretitan.profile\n"},
+    # feature 002: the search module is held to the same contracts
+    "search_domain_imports_sqlalchemy": {"search/domain/bad.py": "import sqlalchemy\n"},
+    "search_lower_layer_imports_higher": {"search/domain/bad.py": "import hiretitan.search.api\n"},
+    "search_bypasses_application": {
+        "search/application/bad.py": "import hiretitan.profile.infra\n",
+    },
+    "other_module_bypasses_search_application": {
+        "profile/application/bad.py": "import hiretitan.search.infra\n",
+    },
+    "platform_imports_search": {"platform/bad.py": "import hiretitan.search\n"},
 }
 
 
