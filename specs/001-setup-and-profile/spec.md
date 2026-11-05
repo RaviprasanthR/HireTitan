@@ -131,6 +131,7 @@ The person can delete an uploaded resume file, or wipe all their HireTitan data 
 
 - File is not PDF/DOCX, is password-protected, corrupted, or larger than 5 MB → rejected before processing, with a specific message.
 - DOCX with text in tables, text boxes, headers or footers → that text is included in parsing.
+- A file that is not a resume (a relieving letter, certificate, invoice) → rejected (Ravi, 2026-11-05): extraction asks the model whether the document is a resume (`looks_like_resume`, prompt v2); if not, the run ends, the file is marked `not_resume`, no review is opened, and the page says "This doesn't look like a resume" and offers upload or typing by hand. While a resume is read the page shows only "Reading your resume…", not the inner steps.
 - Resume in a language other than English → not supported. HireTitan is English-only (Ravi, 2026-11-05): extraction is still attempted and there is no translation, but nothing is promised and no quality target applies; whatever is found goes to review as usual.
 - Very long resume (beyond the length cap for AI input) → text is truncated at the cap, and the user is told which part was not read.
 - Dates such as "Present", "Current", year-only or month-year → normalised; an end date before its start date is flagged in review and blocks Confirm until fixed.

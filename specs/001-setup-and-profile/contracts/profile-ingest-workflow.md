@@ -9,6 +9,7 @@ flowchart TD
     A[store_file D] --> B[parse_document D]
     B -->|no_text| M1[[end: offer paste / manual]]
     B --> C[sanitize_and_screen D]
+    X[extract_profile] -->|looks_like_resume = false| M3[[end: file parse_status = not_resume, no review]]
     C -->|high-severity flag in visible text| I{{interrupt: injection_decision}}
     I -->|manual_entry| M2[[end: open empty review]]
     I -->|continue_extraction| D
@@ -67,6 +68,7 @@ The budget guard runs before the adapter call and returns `budget_blocked` witho
 | `test_US1_AS4_hidden_text_reported_not_used` | asserts prompt lacks the hidden string | hidden text in flags |
 | `test_US1_AS5_high_injection_pauses_before_llm` | must not be called | `waiting_for = injection_decision` |
 | `test_US1_AS6_no_text_pdf` | must not be called | run `done`, file `parse_status = no_text` |
+| `test_US1_AS8_a_document_that_is_not_a_resume_is_rejected` | one call, `looks_like_resume = false` | run `done`, file `parse_status = not_resume`, no review |
 | `test_US1_AS7_invalid_then_invalid_falls_back` | invalid ×2 | partial profile, outcome `fallback`, 2 `llm_calls` |
 | `test_US1_AS8_reupload_marks_changes` | valid output differing from current | `changed_paths` correct, current unchanged |
 | `test_US3_AS2_key_rejected_pauses_run` | raises key rejected | run `paused`, reason `key_rejected` |
