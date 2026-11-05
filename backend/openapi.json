@@ -1581,21 +1581,6 @@
         "title": "SuggestionsOut",
         "type": "object"
       },
-      "TextIn": {
-        "properties": {
-          "text": {
-            "maxLength": 60000,
-            "minLength": 200,
-            "title": "Text",
-            "type": "string"
-          }
-        },
-        "required": [
-          "text"
-        ],
-        "title": "TextIn",
-        "type": "object"
-      },
       "TierOut": {
         "properties": {
           "model": {
@@ -2450,59 +2435,6 @@
           }
         },
         "summary": "Upload Resume",
-        "tags": [
-          "resumes"
-        ]
-      }
-    },
-    "/api/v1/resumes/text": {
-      "post": {
-        "operationId": "paste_resume_api_v1_resumes_text_post",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "discard_open_review",
-            "required": false,
-            "schema": {
-              "default": false,
-              "title": "Discard Open Review",
-              "type": "boolean"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TextIn"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "202": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AcceptedOut"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Paste Resume",
         "tags": [
           "resumes"
         ]

@@ -148,35 +148,6 @@ async def test_missing_file_field_is_422(env: Env) -> None:
     assert response.json()["errors"][0]["field"] == "file"
 
 
-PASTED = "Jane Example. " + "Backend engineer with six years of experience in Python and Go. " * 5
-
-
-async def test_FR002_paste_text_accepted(env: Env) -> None:
-    response = await env.client.post("/api/v1/resumes/text", json={"text": PASTED})
-    assert response.status_code == 202
-    file_id = UUID(response.json()["resume_file_id"])
-    async with env.sessions() as session:
-        stored = await ResumeFilesRepo(session).get(file_id)
-    assert stored is not None
-    assert (stored.kind, stored.original_name) == ("pasted_text", "pasted text")
-    assert stored.size_bytes == len(PASTED.encode())
-    assert env.storage.get(stored.sha256) == PASTED.encode()
-    assert env.queue.enqueued == [UUID(response.json()["run_id"])]
-
-
-@pytest.mark.parametrize("length", [199, 60_001])
-async def test_pasted_text_length_is_bounded(env: Env, length: int) -> None:
-    response = await env.client.post("/api/v1/resumes/text", json={"text": "x" * length})
-    assert response.status_code == 422
-    assert response.json()["errors"][0]["field"] == "text"
-
-
-async def test_pasted_text_bounds_are_inclusive(env: Env) -> None:
-    for length in (200, 60_000):
-        response = await env.client.post("/api/v1/resumes/text", json={"text": "x" * length})
-        assert response.status_code == 202
-
-
 async def open_review(env: Env) -> tuple[UUID, UUID]:
     """An existing open review and its (awaiting_review) run."""
     async with env.sessions() as session:
@@ -231,12 +202,6 @@ async def test_discard_open_review_flag_replaces_the_review(env: Env) -> None:
     assert old_review.status == "discarded"
     assert old_run is not None
     assert old_run.state.status is RunStatus.cancelled
-
-
-async def test_pasted_text_also_conflicts_while_review_open(env: Env) -> None:
-    await open_review(env)
-    response = await env.client.post("/api/v1/resumes/text", json={"text": PASTED})
-    assert response.status_code == 409
 
 
 async def test_get_resumes_lists_files_with_open_review_flag(env: Env) -> None:
