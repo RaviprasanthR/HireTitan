@@ -18,7 +18,7 @@ concurrency:
 jobs:
   backend:
     name: Backend gates
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: backend
@@ -65,7 +65,7 @@ jobs:
 
   frontend:
     name: Frontend gates
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: frontend
@@ -101,7 +101,7 @@ jobs:
 
   compose-smoke:
     name: Compose smoke (Linux, .env.example defaults)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       COMPOSE_PROJECT_NAME: hiretitan-smoke
     steps:
@@ -135,7 +135,7 @@ jobs:
 
   e2e:
     name: End-to-end journey (compose, scripted AI, Chromium)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: frontend

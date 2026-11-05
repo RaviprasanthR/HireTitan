@@ -8,21 +8,18 @@ from typing import Annotated, Any, Final
 from uuid import UUID
 
 from fastapi import APIRouter, Query, Response, UploadFile
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from hiretitan.platform.storage.port import FileStoragePort
 from hiretitan.platform.web.problems import ProblemError
 from hiretitan.profile.application.files import ResumeFileNotFoundError, delete_resume_file
 from hiretitan.profile.application.ingest import (
-    MAX_PASTED_CHARS,
-    MIN_PASTED_CHARS,
     Accepted,
     Inspected,
     JobQueue,
     OpenReviewError,
     ingest_file,
-    ingest_text,
 )
 from hiretitan.profile.application.manual import ReadingInProgressError
 from hiretitan.profile.infra.file_delete_store import SqlFileDeleteStore
@@ -62,10 +59,6 @@ class ProfileApiDeps:
 class AcceptedOut(BaseModel):
     resume_file_id: UUID
     run_id: UUID
-
-
-class TextIn(BaseModel):
-    text: str = Field(min_length=MIN_PASTED_CHARS, max_length=MAX_PASTED_CHARS)
 
 
 class ResumeFileOut(BaseModel):
@@ -131,24 +124,6 @@ def create_resumes_router(deps: ProfileApiDeps) -> APIRouter:
                     discard_open_review=discard_open_review,
                 )
         except (IntakeError, OpenReviewError) as error:
-            raise _problem_for(error) from None
-        return AcceptedOut(resume_file_id=accepted.resume_file_id, run_id=accepted.run_id)
-
-    @router.post("/resumes/text", status_code=202)
-    async def paste_resume(
-        body: TextIn,
-        discard_open_review: Annotated[bool, Query()] = False,
-    ) -> AcceptedOut:
-        try:
-            async with deps.sessions() as session:
-                accepted = await ingest_text(
-                    text=body.text,
-                    storage=deps.storage,
-                    store=SqlIngestStore(session),
-                    queue=deps.queue,
-                    discard_open_review=discard_open_review,
-                )
-        except OpenReviewError as error:
             raise _problem_for(error) from None
         return AcceptedOut(resume_file_id=accepted.resume_file_id, run_id=accepted.run_id)
 

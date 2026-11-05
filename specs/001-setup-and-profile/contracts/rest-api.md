@@ -7,7 +7,6 @@ Base `http://127.0.0.1:8000/api/v1` · JSON · no auth (local only) · errors fo
 | Method & path | Body → Response | Notes / requirement |
 |---|---|---|
 | `POST /resumes` | multipart `file` → `202 {resume_file_id, run_id}` | FR-001, FR-003. `415` for wrong type, `413` over 5 MB, `422` encrypted or corrupt. `409 {open_review_id}` when a review is open, unless `?discard_open_review=true` (edge case). |
-| `POST /resumes/text` | `{text: str 200–60000}` → `202 {resume_file_id, run_id}` | FR-002. Same `409` rule. |
 | `GET /resumes` | → `[ResumeFile]` | name, kind, size, created_at, parse_status, has_open_review. |
 | `DELETE /resumes/{id}` | → `204` | FR-034. Cancels its open review or run. |
 
