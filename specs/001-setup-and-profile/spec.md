@@ -131,7 +131,7 @@ The person can delete an uploaded resume file, or wipe all their HireTitan data 
 
 - File is not PDF/DOCX, is password-protected, corrupted, or larger than 5 MB → rejected before processing, with a specific message.
 - DOCX with text in tables, text boxes, headers or footers → that text is included in parsing.
-- Resume in a language other than English → extraction is attempted; there is no translation; whatever is found goes to review as usual.
+- Resume in a language other than English → not supported. HireTitan is English-only (Ravi, 2026-11-05): extraction is still attempted and there is no translation, but nothing is promised and no quality target applies; whatever is found goes to review as usual.
 - Very long resume (beyond the length cap for AI input) → text is truncated at the cap, and the user is told which part was not read.
 - Dates such as "Present", "Current", year-only or month-year → normalised; an end date before its start date is flagged in review and blocks Confirm until fixed.
 - Duplicate skills differing only in case or spacing → merged into one in review. Otherwise skills keep the resume's wording exactly; there is no synonym mapping in this feature ("ReactJS" and "React" stay separate).
@@ -241,7 +241,7 @@ The person can delete an uploaded resume file, or wipe all their HireTitan data 
 - The AI provider for this slice is OpenAI only; other providers come before the public release (architecture ADR-02). Model tier defaults are decided by the extraction cost/quality test in this feature (ADR-11).
 - The AI key lives only in the local environment file; changing it needs a restart (ADR-09).
 - The UI is dark only in this release, from the project palette; colours are theme variables so a light theme can be added later.
-- Resume content may be in any language, but the evaluation set and quality targets are English.
+- HireTitan supports English only (Ravi, 2026-11-05): the app, the evaluation set and the quality targets are English. Accented characters in English text (names, places) must still survive parsing.
 - Preferences are stored now but only used by feature 002 (job search); weighting of roles, stack and location is defined there.
 - All test and demo resumes are synthetic.
 

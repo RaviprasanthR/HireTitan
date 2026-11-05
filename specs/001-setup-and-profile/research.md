@@ -123,7 +123,7 @@ Versions and licences were checked on PyPI and npm on 2026-11-03. They are **flo
 
 ## R10. Extraction evals (SC-003, SC-007, ADR-11)
 
-- **Decision**: `backend/evals/extract_profile/` holds 12 synthetic resumes (PDF and DOCX; single- and two-column; fresher, mid and senior; one non-English, one with tables, one with text boxes), each with an expected-facts YAML file. A runner computes field-level precision and recall (employers, titles, dates, skills, education), cost and latency per model. It's run on demand with Ravi's key, counted against the budget, and its report goes in the PR. v1 doesn't gate (the eval gate applies from v2), but the report decides the `fast` default (ADR-11).
+- **Decision**: `backend/evals/extract_profile/` holds 11 synthetic English resumes (PDF and DOCX; single- and two-column; fresher, mid and senior; one with tables, one with text boxes), each with an expected-facts YAML file. A runner computes field-level precision and recall (employers, titles, dates, skills, education), cost and latency per model. It's run on demand with Ravi's key, counted against the budget, and its report goes in the PR. v1 doesn't gate (the eval gate applies from v2), but the report decides the `fast` default (ADR-11).
 - **Rationale**: SC-003 needs measurement, and the same set seeds future v2 gating.
 - **Alternatives**: real resumes (forbidden: no personal data in the repo).
 

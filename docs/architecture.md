@@ -407,7 +407,7 @@ Each ADR: decision · why · alternatives. **Approved by Ravi 2026-11-03.**
 
 **ADR-10 Frontend stack.** Current stable React + Vite + TS, TanStack Query, React Router, Tailwind + shadcn/ui, generated OpenAPI client; dark theme from Ravi's palette (§10). *Why:* common, well documented, fast to build, typed end to end.
 
-**ADR-11 Default models per provider (deferred).** Profile extraction uses the `fast` tier for now (cost). Final defaults are decided after a small eval on synthetic resumes in feature 001 that measures extraction quality and cost for the `fast` and `strong` tiers.
+**ADR-11 Default models per provider (OpenAI decided 2026-11-05).** Profile extraction uses the `fast` tier (`gpt-5.4-mini`). Eval on 11 synthetic English resumes (`backend/evals/reports/extract_profile-2026-11-05.md`, prompt v1): `fast` precision 100%, recall 97.9%, $0.0020 per resume, p95 2.9 s; `strong` (`gpt-6-astra`) recall 100%, $0.0321 per resume, p95 6.4 s. Both pass SC-003 and SC-007; `strong` costs 16 times more to fix a few skills missed in one table layout that the review step catches anyway. Other providers get their defaults from the same eval when their adapters are added. Rule: change the default only with a newer report that supports it (`test_defaults_match_latest_eval_report`). HireTitan is English-only, so the eval set is English. How to run and read an eval: `docs/how-we-choose-a-model.md`.
 
 ## 13. Open questions for Ravi
 

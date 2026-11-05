@@ -117,7 +117,7 @@ backend/
 │   │   ├── storage/             # FileStoragePort + local volume adapter
 │   │   ├── clock/ · config/ · db/ · security/ (log redaction)
 │   └── prompts/extract_profile/v1/{system.md, user.md.j2, schema.py, meta.yaml}
-├── evals/extract_profile/       # 12 synthetic resumes + expected facts + runner (R10)
+├── evals/extract_profile/       # 11 synthetic English resumes + expected facts + runner (R10)
 └── tests/
     ├── unit/ · integration/ · contract/ · workflow/ · api/
     ├── architecture/            # import-linter, no-send test
