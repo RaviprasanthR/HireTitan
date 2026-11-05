@@ -116,6 +116,8 @@ class CaseResult:
     name: str
     score: CaseScore
     outcome: str
+    is_resume: bool = True  # what the case really is (``is_resume`` in the expected file)
+    judged_resume: bool | None = None  # what the model said; ``None`` when no usable answer
 
 
 @dataclass(frozen=True, slots=True)
@@ -206,10 +208,25 @@ async def evaluate(llm: LlmPort, cases: Sequence[Case], *, tier: str, model: str
         except AiUnavailable:  # no key, a rejected key or no budget: every case would fail
             raise
         except Exception:  # a provider error must not lose the other cases' results
-            results.append(CaseResult(case.path.name, score_case(case.expected, {}), "error"))
+            results.append(
+                CaseResult(
+                    case.path.name,
+                    score_case(case.expected, {}),
+                    "error",
+                    case.expected.get("is_resume", True),
+                )
+            )
             continue
-        got = facts_of(outcome.value.model_dump())
-        results.append(CaseResult(case.path.name, score_case(case.expected, got), outcome.outcome))
+        dump = outcome.value.model_dump()
+        results.append(
+            CaseResult(
+                case.path.name,
+                score_case(case.expected, facts_of(dump)),
+                outcome.outcome,
+                case.expected.get("is_resume", True),
+                None if outcome.outcome == "fallback" else dump.get("looks_like_resume"),
+            )
+        )
     fields, overall = aggregate([r.score for r in results])
     return ModelReport(
         model=model,
@@ -239,26 +256,38 @@ def estimate_cost(
 
 
 # ---- report -------------------------------------------------------------------------------
+def rejection_counts(report: ModelReport) -> tuple[tuple[int, int], tuple[int, int]]:
+    """((non-resumes rejected, non-resumes), (resumes rejected by mistake, resumes))."""
+    others = [c for c in report.cases if not c.is_resume]
+    resumes = [c for c in report.cases if c.is_resume]
+    return (
+        (sum(1 for c in others if c.judged_resume is False), len(others)),
+        (sum(1 for c in resumes if c.judged_resume is False), len(resumes)),
+    )
+
+
 def render_report(reports: Sequence[ModelReport], *, day: str, case_count: int) -> str:
     lines = [
         f"# extract_profile eval - {day}",
         "",
-        f"{case_count} synthetic resumes; prompt v{reports[0].prompt_version}. Scores are "
+        f"{case_count} synthetic documents (resumes and files that are not); "
+        f"prompt v{reports[0].prompt_version}. Scores are "
         "micro-averaged over all cases; an answer the app could not use counts as empty.",
         "",
         "## Summary",
         "",
         "| model | tier | precision | recall | SC-003 (>= 90%) | cost / resume | SC-007 (< $0.05) "
-        "| p95 latency (ms) | unusable |",
-        "|---|---|---|---|---|---|---|---|---|",
+        "| p95 latency (ms) | unusable | non-resumes rejected | resumes rejected by mistake |",
+        "|---|---|---|---|---|---|---|---|---|---|---|",
     ]
     for r in reports:
         per_resume = r.cost_usd / case_count if case_count else Decimal(0)
+        (rejected, others), (wrong, resumes) = rejection_counts(r)
         lines.append(
             f"| {r.model} | {r.tier} | {r.overall.precision:.1%} | {r.overall.recall:.1%} "
             f"| {'pass' if r.overall.recall >= SC003_TARGET else 'FAIL'} "
             f"| ${per_resume:.4f} | {'pass' if per_resume < SC007_MAX_USD else 'FAIL'} "
-            f"| {r.p95_ms} | {r.failed_cases} |"
+            f"| {r.p95_ms} | {r.failed_cases} | {rejected} / {others} | {wrong} / {resumes} |"
         )
     lines += ["", "## Precision / recall by field", ""]
     lines += ["| model | " + " | ".join(FIELDS) + " |", "|---|" + "---|" * len(FIELDS)]

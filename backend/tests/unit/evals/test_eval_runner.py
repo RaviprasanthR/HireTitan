@@ -34,7 +34,7 @@ def extracted(expected: dict[str, Any]) -> dict[str, Any]:
         for employer, title in zip(expected["employers"], expected["titles"], strict=True)
     ]
     return {
-        "looks_like_resume": True,
+        "looks_like_resume": expected.get("is_resume", True),
         "contact": {"name": expected["name"], "location": None},
         "headline": None,
         "summary": None,
@@ -74,11 +74,12 @@ def perfect_script() -> list[dict[str, Any]]:
     return out
 
 
-def test_eleven_cases_cover_the_required_shapes() -> None:
+def test_fifteen_cases_cover_the_required_shapes() -> None:
     cases = load_cases(CASES_DIR, EXPECTED_DIR)
     names = {c.path.name for c in cases}
 
-    assert len(cases) == 11
+    assert len(cases) == 15
+    assert sum(1 for c in cases if not c.expected.get("is_resume", True)) == 4
     assert {p.suffix for p in map(Path, names)} == {".pdf", ".docx"}
     assert any("two-column" in n for n in names)
     assert any("fresher" in n for n in names)
@@ -119,7 +120,7 @@ def test_SC003_precision_recall_computed() -> None:
     assert skills.precision == pytest.approx(total_skills / (total_skills + 1))
     assert skills.recall == pytest.approx(1.0)
     assert report.fields["titles"].recall < 1.0  # the lost job took its title with it
-    assert len(report.cases) == 11
+    assert len(report.cases) == 15
 
 
 def test_score_case_normalises_case_and_whitespace() -> None:
@@ -196,7 +197,7 @@ def test_yes_runs_and_writes_a_report(tmp_path: Path, capsys: pytest.CaptureFixt
 
     report = tmp_path / "extract_profile-2026-11-04.md"
     assert code == 0
-    assert len(llm.calls) == 11
+    assert len(llm.calls) == 15
     text = report.read_text("utf-8")
     assert "| fast" in text
     assert "precision" in text.lower()
@@ -266,3 +267,27 @@ def test_main_reports_the_rejected_key_and_writes_no_report(
     assert code == 1
     assert "rejected" in capsys.readouterr().out.lower()
     assert list(tmp_path.glob("*.md")) == []
+
+
+def test_non_resumes_are_counted_as_rejected_or_wrongly_accepted() -> None:
+    cases = load_cases(CASES_DIR, EXPECTED_DIR)
+    script = perfect_script()
+    report = asyncio.run(
+        evaluate(
+            FakeLlm(by_task={"extract_profile": script}), cases, tier="fast", model="fake-model"
+        )
+    )
+
+    assert eval_run.rejection_counts(report) == ((4, 4), (0, 11))
+
+    # A model that takes the job description for a resume, and rejects a real resume.
+    wrong = perfect_script()
+    jd = next(i for i, c in enumerate(cases) if c.path.name == "job-description.pdf")
+    resume = next(i for i, c in enumerate(cases) if c.expected.get("is_resume", True))
+    wrong[jd]["looks_like_resume"] = True
+    wrong[resume]["looks_like_resume"] = False
+    report = asyncio.run(
+        evaluate(FakeLlm(by_task={"extract_profile": wrong}), cases, tier="fast", model="m")
+    )
+
+    assert eval_run.rejection_counts(report) == ((3, 4), (1, 11))

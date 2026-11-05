@@ -1,4 +1,6 @@
-"""Generate the 11 eval resumes and their ``expected/*.yaml`` (T051), reusing the T033 generator.
+"""Generate the 15 eval documents (11 resumes, 4 that are not) and their ``expected/*.yaml``.
+
+T051, reusing the T033 generator.
 
 Run from ``backend/``:  ``uv run python -m evals.extract_profile.cases``
 Every identity is fake (``example.*`` emails, ``+91 90000 0000x`` phones). Output is deterministic.
@@ -91,6 +93,67 @@ def _expected(
         "skills": list(skills),
         "education": list(education),
     }
+
+
+NOT_A_RESUME: dict[str, Any] = {
+    "is_resume": False,
+    "name": "",
+    "employers": [],
+    "titles": [],
+    "dates": [],
+    "skills": [],
+    "education": [],
+}
+
+
+def _offer_letter_docx(out: Path, filename: str) -> None:
+    document = g.new_docx()
+    document.add_heading("Globex Ltd", level=0)
+    document.add_paragraph("Date: 20 January 2021")
+    document.add_heading("Offer of Employment", level=1)
+    document.add_paragraph("Dear Rahul Sample,")
+    document.add_paragraph(
+        "We are pleased to offer you the position of Senior Software Engineer at Globex Ltd. "
+        "Your annual cost to company will be INR 24,00,000 and your date of joining will be "
+        "1 February 2021. Please sign and return a copy of this letter by 25 January 2021 to "
+        "confirm that you accept this offer. This offer is subject to satisfactory background "
+        "verification and the terms in the attached employment agreement."
+    )
+    document.add_paragraph("We look forward to welcoming you to the team.")
+    document.add_paragraph("Priya Demo, Human Resources Manager, Globex Ltd")
+    document.save(str(out / filename))
+
+
+def _certificate_pdf(out: Path, filename: str) -> None:
+    def body(page: g.Page) -> None:
+        page.line("Example Academy", size=16, bold=True)
+        page.heading("Certificate of Completion")
+        page.line("This is to certify that")
+        page.line("Rahul Sample", size=18, bold=True)
+        page.line("has successfully completed the 40 hour course")
+        page.line("Cloud Fundamentals with Python and SQL", size=12, bold=True)
+        page.line("and passed the final assessment with a score of 86 percent.")
+        page.line("Issued on 14 March 2022. Certificate number EA-2022-00417.")
+        page.line("Director of Learning, Example Academy")
+
+    g.pdf(out / filename, body)
+
+
+def _job_description_pdf(out: Path, filename: str) -> None:
+    def body(page: g.Page) -> None:
+        page.line("Senior Backend Engineer - Initech Labs", size=16, bold=True)
+        page.line("Location: Bengaluru, India (hybrid)")
+        page.heading("About the role")
+        page.line("You will design and run the services behind our payments platform.")
+        page.heading("Requirements")
+        page.bullet("5+ years of experience building backend services in Python or Go")
+        page.bullet("Strong knowledge of PostgreSQL, Kafka and Docker")
+        page.bullet("Experience with Kubernetes and AWS is a plus")
+        page.bullet("Bachelor's degree in Computer Science or a related field")
+        page.heading("How to apply")
+        page.line("Send your resume to careers at the Initech Labs website by 30 November 2026.")
+
+    g.pdf(out / filename, body)
 
 
 def _senior_docx(out: Path, filename: str) -> None:
@@ -232,6 +295,16 @@ def build_cases(out: Path = CASES_DIR, expected_out: Path = EXPECTED_DIR) -> lis
     g.build_headers_footers(out)
     _rename(out, "synthetic-headers-footers.docx", "headers-footers.docx")
     cases["headers-footers.docx"] = headers
+
+    g.build_relieving_letter(out)
+    _rename(out, "synthetic-relieving-letter.pdf", "relieving-letter.pdf")
+    cases["relieving-letter.pdf"] = NOT_A_RESUME
+    _offer_letter_docx(out, "offer-letter.docx")
+    cases["offer-letter.docx"] = NOT_A_RESUME
+    _certificate_pdf(out, "certificate.pdf")
+    cases["certificate.pdf"] = NOT_A_RESUME
+    _job_description_pdf(out, "job-description.pdf")
+    cases["job-description.pdf"] = NOT_A_RESUME
 
     for filename, expected in cases.items():
         (expected_out / f"{filename}.yaml").write_text(

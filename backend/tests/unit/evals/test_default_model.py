@@ -49,3 +49,8 @@ def test_defaults_match_latest_eval_report() -> None:
     assert Decimal(row["recall"].rstrip("%")) / 100 >= Decimal(str(SC003_TARGET))
     assert Decimal(row["cost / resume"].lstrip("$")) < SC007_MAX_USD
     assert row["unusable"] == "0"
+    # Documents that are not resumes must be rejected, and real resumes must not be.
+    rejected, others = (int(n) for n in row["non-resumes rejected"].split(" / "))
+    wrong, _resumes = (int(n) for n in row["resumes rejected by mistake"].split(" / "))
+    assert rejected == others > 0
+    assert wrong == 0
