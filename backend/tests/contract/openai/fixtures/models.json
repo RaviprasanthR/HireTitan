@@ -1,0 +1,11 @@
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "gpt-5.4-mini",
+      "object": "model",
+      "created": 1,
+      "owned_by": "openai"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+certifications: []
+education:
+- Example Institute of Technology
+email: sam.sample@example.org
+employers: []
+name: Sam Sample
+phone: +91 90000 00002
+projects:
+- Library Tracker
+skills:
+- Python
+- Java
+- SQL
+- Git
+titles: []

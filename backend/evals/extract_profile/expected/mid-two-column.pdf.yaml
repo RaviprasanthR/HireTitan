@@ -1,0 +1,20 @@
+dates:
+- 2017-06
+- 2020-12
+- 2021-01
+education:
+- Example Institute of Technology
+employers:
+- Acme Corp
+- Globex Ltd
+name: Jane Example
+skills:
+- Python
+- Go
+- PostgreSQL
+- C++
+- Node.js
+- CI/CD
+titles:
+- Senior Software Engineer
+- Software Engineer

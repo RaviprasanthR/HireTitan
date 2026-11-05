@@ -1,0 +1,97 @@
+# Constitution VI: layer and module boundaries (plan.md, "Import-linter contracts").
+# Checked in CI with `lint-imports` and by tests/architecture/test_import_contracts.py.
+
+[importlinter]
+root_package = hiretitan
+include_external_packages = True
+
+# 1. Layers per feature module: api -> workflow -> infra -> application -> domain.
+#    A layer may import only the layers below it, so infra imports application and
+#    domain only, and domain imports nothing above it. Not every module has a workflow.
+[importlinter:contract:feature-layers]
+name = Feature modules are layered api > workflow > infra > application > domain
+type = layers
+containers =
+    hiretitan.profile
+    hiretitan.preferences
+    hiretitan.setup
+layers =
+    api
+    (workflow)
+    infra
+    application
+    domain
+
+# 2. Feature domains stay pure: no frameworks, persistence, AI SDKs, settings or runtime.
+[importlinter:contract:pure-domain]
+name = Feature domains import no frameworks, persistence, AI SDKs, settings or runtime
+type = forbidden
+source_modules =
+    hiretitan.profile.domain
+    hiretitan.preferences.domain
+    hiretitan.setup.domain
+forbidden_modules =
+    fastapi
+    starlette
+    sqlalchemy
+    langgraph
+    procrastinate
+    openai
+    pydantic_settings
+    hiretitan.platform.runtime
+
+# 3. Feature modules talk to each other only through <module>.application.
+[importlinter:contract:profile-boundary]
+name = profile uses other modules only through their application layer
+type = forbidden
+allow_indirect_imports = True
+source_modules =
+    hiretitan.profile
+forbidden_modules =
+    hiretitan.preferences.domain
+    hiretitan.preferences.infra
+    hiretitan.preferences.api
+    hiretitan.setup.domain
+    hiretitan.setup.infra
+    hiretitan.setup.api
+
+[importlinter:contract:preferences-boundary]
+name = preferences uses other modules only through their application layer
+type = forbidden
+allow_indirect_imports = True
+source_modules =
+    hiretitan.preferences
+forbidden_modules =
+    hiretitan.profile.domain
+    hiretitan.profile.infra
+    hiretitan.profile.workflow
+    hiretitan.profile.api
+    hiretitan.setup.domain
+    hiretitan.setup.infra
+    hiretitan.setup.api
+
+[importlinter:contract:setup-boundary]
+name = setup uses other modules only through their application layer
+type = forbidden
+allow_indirect_imports = True
+source_modules =
+    hiretitan.setup
+forbidden_modules =
+    hiretitan.profile.domain
+    hiretitan.profile.infra
+    hiretitan.profile.workflow
+    hiretitan.profile.api
+    hiretitan.preferences.domain
+    hiretitan.preferences.infra
+    hiretitan.preferences.api
+
+# 4. The shared platform never depends on a feature module.
+[importlinter:contract:platform-independent]
+name = platform never imports feature modules
+type = forbidden
+source_modules =
+    hiretitan.platform
+forbidden_modules =
+    hiretitan.profile
+    hiretitan.preferences
+    hiretitan.setup

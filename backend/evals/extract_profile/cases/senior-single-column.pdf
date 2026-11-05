@@ -1,0 +1,110 @@
+%PDF-1.3
+%“Œ‹ž ReportLab Generated PDF document (opensource)
+1 0 obj
+<<
+/F1 2 0 R /F2 3 0 R
+>>
+endobj
+2 0 obj
+<<
+/BaseFont /Helvetica /Encoding /WinAnsiEncoding /Name /F1 /Subtype /Type1 /Type /Font
+>>
+endobj
+3 0 obj
+<<
+/BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding /Name /F2 /Subtype /Type1 /Type /Font
+>>
+endobj
+4 0 obj
+<<
+/Contents 8 0 R /MediaBox [ 0 0 595.2756 841.8898 ] /Parent 7 0 R /Resources <<
+/Font 1 0 R /ProcSet [ /PDF /Text /ImageB /ImageC /ImageI ]
+>> /Rotate 0 /Trans <<
+
+>> 
+  /Type /Page
+>>
+endobj
+5 0 obj
+<<
+/PageMode /UseNone /Pages 7 0 R /Type /Catalog
+>>
+endobj
+6 0 obj
+<<
+/Author (HireTitan fixtures) /CreationDate (D:20000101000000+00'00') /Creator (anonymous) /Keywords () /ModDate (D:20000101000000+00'00') /Producer (ReportLab PDF Library - \(opensource\)) 
+  /Subject (unspecified) /Title (Synthetic resume) /Trapped /False
+>>
+endobj
+7 0 obj
+<<
+/Count 1 /Kids [ 4 0 R ] /Type /Pages
+>>
+endobj
+8 0 obj
+<<
+/Length 1775
+>>
+stream
+1 0 0 1 0 0 cm  BT /F1 12 Tf 14.4 TL ET
+BT /F2 18 Tf 21.6 TL ET
+BT 1 0 0 1 50 781.8898 Tm (Priya Sample) Tj T* ET
+BT /F1 10 Tf 12 TL ET
+BT 1 0 0 1 50 758.8898 Tm (priya.sample@example.com | +91 90000 00004) Tj T* ET
+BT /F1 10 Tf 12 TL ET
+BT 1 0 0 1 50 743.8898 Tm (Bengaluru, India) Tj T* ET
+BT /F2 11 Tf 13.2 TL ET
+BT 1 0 0 1 50 722.8898 Tm (EXPERIENCE) Tj T* ET
+BT /F2 10 Tf 12 TL ET
+BT 1 0 0 1 50 706.8898 Tm (Hooli Systems - Principal Engineer    Mar 2019 - Present) Tj T* ET
+BT /F1 10 Tf 12 TL ET
+BT 1 0 0 1 60 691.8898 Tm (\177 Set the technical direction for a payments platform used by 40 teams) Tj T* ET
+BT /F1 10 Tf 12 TL ET
+BT 1 0 0 1 60 676.8898 Tm (\177 Cut cloud spend by 25% through capacity planning and right-sizing) Tj T* ET
+BT /F2 10 Tf 12 TL ET
+BT 1 0 0 1 50 661.8898 Tm (Initech Labs - Senior Engineer    Aug 2014 - Feb 2019) Tj T* ET
+BT /F1 10 Tf 12 TL ET
+BT 1 0 0 1 60 646.8898 Tm (\177 Built an event pipeline processing 50M messages a day on Kafka) Tj T* ET
+BT /F1 10 Tf 12 TL ET
+BT 1 0 0 1 60 631.8898 Tm (\177 Mentored 6 engineers, two of whom were promoted to senior) Tj T* ET
+BT /F2 10 Tf 12 TL ET
+BT 1 0 0 1 50 616.8898 Tm (Umbrella Soft - Engineer    Jul 2009 - Jul 2014) Tj T* ET
+BT /F1 10 Tf 12 TL ET
+BT 1 0 0 1 60 601.8898 Tm (\177 Developed order management features in Java) Tj T* ET
+BT /F1 10 Tf 12 TL ET
+BT 1 0 0 1 60 586.8898 Tm (\177 Owned the release process) Tj T* ET
+BT /F2 11 Tf 13.2 TL ET
+BT 1 0 0 1 50 565.8898 Tm (EDUCATION) Tj T* ET
+BT /F1 10 Tf 12 TL ET
+BT 1 0 0 1 50 549.8898 Tm (Sample University of Technology - B.E. Computer Science, 2005 - 2009) Tj T* ET
+BT /F2 11 Tf 13.2 TL ET
+BT 1 0 0 1 50 528.8898 Tm (SKILLS) Tj T* ET
+BT /F1 10 Tf 12 TL ET
+BT 1 0 0 1 50 512.8898 Tm (Java, Kotlin, Kubernetes, AWS, Kafka) Tj T* ET
+ 
+endstream
+endobj
+xref
+0 9
+0000000000 65535 f 
+0000000061 00000 n 
+0000000102 00000 n 
+0000000209 00000 n 
+0000000321 00000 n 
+0000000524 00000 n 
+0000000592 00000 n 
+0000000870 00000 n 
+0000000929 00000 n 
+trailer
+<<
+/ID 
+[<3653ae65c55c1c2e8844eda560f217aa><3653ae65c55c1c2e8844eda560f217aa>]
+% ReportLab generated PDF document -- digest (opensource)
+
+/Info 6 0 R
+/Root 5 0 R
+/Size 9
+>>
+startxref
+2755
+%%EOF

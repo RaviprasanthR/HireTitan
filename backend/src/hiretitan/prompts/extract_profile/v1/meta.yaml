@@ -1,0 +1,5 @@
+version: 1
+tier: fast
+max_output_tokens: 4000
+changelog:
+  - "v1: first version. Verbatim extraction from a delimited, masked resume; no contact fields."

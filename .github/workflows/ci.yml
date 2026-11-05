@@ -1,0 +1,192 @@
+# Quality gates (constitution V, research R15). Runs on every PR to master.
+name: CI
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend gates
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      HIRETITAN_LLM: fake  # no keys and no cost in CI
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+
+      - name: Install
+        run: uv sync --locked
+
+      - name: Lint (ruff)
+        run: uv run ruff check .
+
+      - name: Format (ruff)
+        run: uv run ruff format --check .
+
+      - name: Types (mypy --strict)
+        run: uv run mypy --strict src
+
+      - name: Import contracts (import-linter)
+        run: uv run lint-imports --no-logo
+
+      - name: Tests with coverage (real PostgreSQL 16 via Testcontainers)
+        run: uv run pytest --cov --cov-report=term --cov-report=json:coverage.json
+
+      - name: Coverage gate (domain + application >= 90%, overall >= 80%)
+        run: uv run python scripts/check_coverage.py coverage.json
+
+      - name: Vulnerability audit (pip-audit)
+        run: uv run pip-audit --skip-editable
+
+      - name: Licence gate (runtime dependencies)
+        run: |
+          packages=$(uv export --locked --no-dev --no-hashes --no-emit-project --no-header --no-annotate \
+            | grep -v '^#' | sed -E 's/[=<>;[ ].*//' | grep -v '^$' | tr '\n' ' ')
+          uv run pip-licenses --packages $packages --from=mixed --format=json > licenses.json
+          uv run python scripts/check_licenses.py licenses.json
+
+  frontend:
+    name: Frontend gates
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Types (tsc)
+        run: npm run typecheck
+
+      - name: Lint (eslint)
+        run: npm run lint
+
+      - name: Tests with coverage (vitest)
+        run: npm test -- --coverage
+
+      - name: Vulnerability audit (production dependencies)
+        run: npm audit --omit=dev
+
+      - name: Licence gate (production dependencies)
+        # Same allowlist as the backend; OFL-1.1 covers the bundled Geist font only.
+        run: >
+          npx --yes license-checker@25.0.1 --production --excludePrivatePackages
+          --onlyAllow "MIT;MIT-0;BSD;BSD-2-Clause;BSD-3-Clause;0BSD;Apache-2.0;ISC;PSF;Python-2.0;MPL-2.0;LGPL-2.1;LGPL-3.0;OFL-1.1"
+
+  compose-smoke:
+    name: Compose smoke (Linux, .env.example defaults)
+    runs-on: ubuntu-latest
+    env:
+      COMPOSE_PROJECT_NAME: hiretitan-smoke
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Configure like a new user (copy .env.example, set a password)
+        run: |
+          cp .env.example .env
+          sed -i 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=ci-only-password/' .env
+
+      - name: Build and start the stack
+        run: docker compose up --build -d
+
+      - name: API health and the web app are served
+        run: |
+          for i in $(seq 1 60); do
+            curl -fsS http://127.0.0.1:8000/api/v1/health && break
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:8000/api/v1/health
+          curl -fsS http://127.0.0.1:8000/ | grep -q '<div id="root">'
+          curl -fsS http://127.0.0.1:8000/profile | grep -q '<div id="root">'  # SPA fallback
+
+      - name: Logs on failure
+        if: failure()
+        run: docker compose logs --no-color --tail 200
+
+      - name: Stop
+        if: always()
+        run: docker compose down -v
+
+  e2e:
+    name: End-to-end journey (compose, scripted AI, Chromium)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Prepare the stack (no AI key, scripted replies)
+        working-directory: .
+        run: |
+          cp .env.example .env
+          sed -i 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=ci-only-password/' .env
+          node frontend/e2e/prepare.mjs
+          docker compose -p hiretitan-e2e -f docker-compose.yml -f docker-compose.e2e.yml up --build -d
+
+      - name: Wait for the API
+        run: |
+          for i in $(seq 1 60); do
+            curl -fsS http://127.0.0.1:8000/api/v1/health && exit 0
+            sleep 2
+          done
+          exit 1
+
+      - name: Journey (quickstart A)
+        run: npx playwright test
+
+      - name: Logs and trace on failure
+        if: failure()
+        working-directory: .
+        run: docker compose -p hiretitan-e2e -f docker-compose.yml -f docker-compose.e2e.yml logs --no-color --tail 200
+
+      - uses: actions/upload-artifact@v5
+        if: failure()
+        with:
+          name: playwright-trace
+          path: frontend/test-results
+          if-no-files-found: ignore
+
+      - name: Stop
+        if: always()
+        working-directory: .
+        run: docker compose -p hiretitan-e2e -f docker-compose.yml -f docker-compose.e2e.yml down -v
+
