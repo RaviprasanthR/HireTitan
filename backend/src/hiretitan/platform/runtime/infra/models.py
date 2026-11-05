@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import CheckConstraint, Index, Text
+from sqlalchemy import CheckConstraint, Index, Text, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from hiretitan.platform.db import Base, IdTimestampMixin
@@ -34,6 +34,16 @@ class WorkflowRunRow(IdTimestampMixin, Base):
             name="waiting_for_iff_awaiting_review",
         ),
         Index("ix_workflow_runs_status", "status"),
+        # one job search at a time (feature 002, FR-009); the name is a plain string on purpose,
+        # so the platform never imports the search module
+        Index(
+            "uq_workflow_runs_one_active_job_search",
+            "workflow",
+            unique=True,
+            postgresql_where=text(
+                "workflow = 'job_search' AND status IN ('queued', 'running', 'paused')"
+            ),
+        ),
     )
 
     # id doubles as the LangGraph thread_id
