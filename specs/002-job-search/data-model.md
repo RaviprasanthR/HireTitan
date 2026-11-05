@@ -1,6 +1,6 @@
 # Data Model: Job Search and Home Page List (002)
 
-All tables live in the `app` schema of the existing PostgreSQL 16 database. They follow 001's conventions: UUIDv7 primary keys, `created_at` and `updated_at` timestamps, named constraints (`ck_…`, `uq_…`, `fk_…`, `ix_…`), and SQLAlchemy models in `search/infra/models.py`. All tables are owned by the new **`search`** module. Migrations: `0012_search` (tables) and `0013_search_seed_version` if needed. Pure domain types are in `search/domain/`.
+All tables live in the `app` schema of the existing PostgreSQL 16 database. They follow 001's conventions: UUIDv7 primary keys, `created_at` and `updated_at` timestamps, named constraints (`ck_…`, `uq_…`, `fk_…`, `ix_…`), and SQLAlchemy models in `search/infra/models.py`. All tables are owned by the new **`search`** module. Migrations: `0012_out_of_credit` (the pause-reason constraint on feature 001 tables) and `0013_search` (the tables below). Pure domain types are in `search/domain/`.
 
 ## Entities
 

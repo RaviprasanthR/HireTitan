@@ -108,7 +108,7 @@ backend/
 ├── seed/
 │   ├── companies.yaml           # shipped list, company columns only (R10)
 │   └── title_synonyms.yaml      # role synonyms for rule proposal and matching (R9)
-├── alembic/versions/0012_search.py
+├── alembic/versions/0012_out_of_credit.py, 0013_search.py
 ├── src/hiretitan/
 │   ├── search/
 │   │   ├── domain/              # SearchRules, rule proposer, apply_rules, dedup keys + fuzzy,
@@ -152,7 +152,7 @@ frontend/e2e/job-search.spec.ts
 
 1. **Foundation**:
    - **Out of credit** in `platform/llm` (R7) with adapter contract tests. Also fixes 001's ingest.
-   - Migration `0012_search` and the `search` module skeleton plus import-linter.
+   - Migrations `0012_out_of_credit`, `0013_search` and the `search` module skeleton plus import-linter.
    - Seed loader with the synthetic seed.
    - Runtime image with Node 22 + career-ops (pinned, version checked, no browser), `CareerOpsPort` + `FakeCareerOps`, and the recorded-output contract tests.
    - **Provider allowlist test** (R2), with Keka disabled.
