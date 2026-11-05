@@ -22,7 +22,7 @@ function status(aiStatus: string, message: string | null = null) {
 }
 
 function renderAt(path: string, aiStatus: string, message: string | null = null) {
-  const fetchMock = vi.fn(async (url: string) =>
+  const fetchMock = vi.fn<(url: string, init?: RequestInit) => Promise<Response>>(async (url) =>
       url.endsWith('/status')
         ? json(status(aiStatus, message))
         : url.endsWith('/onboarding')
