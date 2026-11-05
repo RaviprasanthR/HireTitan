@@ -22,10 +22,12 @@ Quality, cost and speed are the three things almost every model choice comes dow
 
 A test needs inputs and the right answers, so you can score the model without guessing.
 
-- **Inputs:** 11 made-up resumes in `backend/evals/extract_profile/cases/` (PDF and DOCX, one column and two columns, fresher / mid / senior, one with tables, one with text boxes). They are fake, so no real person's data is in the repo.
-- **Right answers:** one file per resume in `backend/evals/extract_profile/expected/`, listing the employers, titles, dates, skills and education that are really in it. For example, `tables.docx.yaml` lists 9 skills.
+- **Inputs:** 15 made-up documents in `backend/evals/extract_profile/cases/`. Eleven are resumes (PDF and DOCX, one column and two columns, fresher / mid / senior, one with tables, one with text boxes). Four are **not** resumes on purpose: a relieving letter, an offer letter, a course certificate and a job description. They are fake, so no real person's data is in the repo.
+- **Right answers:** one file per resume in `backend/evals/extract_profile/expected/`, listing the employers, titles, dates, skills and education that are really in it. For example, `tables.docx.yaml` lists 9 skills. For the four non-resumes the file says `is_resume: false` and lists nothing, because the right answer is "reject this".
 
 Why such a mix of layouts? Different layouts break different things. A model that is perfect on a plain resume may fail on a table. Our test caught exactly that (see section 5).
+
+Why include documents that are not resumes? Because the app must also say "no". A real user once uploaded a relieving letter and it was accepted as a profile, so we added a check and then needed a test for it. The job description is the hardest of the four: it lists skills like a resume does.
 
 Why English only? HireTitan supports English only, so the test is English only. A test should match what you promise users. We first had a Spanish resume in the set and removed it when we decided not to support other languages.
 
@@ -56,18 +58,20 @@ These two words sound technical but the idea is simple.
 - **Precision** = of what the model *said*, how much was right? Low precision means it made things up. For a profile this is the dangerous one, because HireTitan must never invent experience.
 - **Recall** = of what was *really there*, how much did the model find? Low recall means it missed things.
 
-Example from our run, resume `tables.docx`, which really lists 9 skills:
+Example from our first run (prompt v1, 11 resumes), resume `tables.docx`, which really lists 9 skills:
 
 - `fast` returned 6 skills, and all 6 were correct. Precision 6/6 = 100%.
 - It missed docker, git and kafka. Recall 6/9 = 67% for that resume.
 - `strong` found all 9.
 
-Across all 11 resumes the totals were:
+Across all 11 resumes in that first run the totals were:
 
 | | precision | recall |
 |---|---|---|
 | fast | 100% | 97.9% |
 | strong | 100% | 100% |
+
+In the second run (prompt v2, 15 documents) both models scored 100% precision and 100% recall. `fast` got the table skills right this time, which leads to a lesson about consistency in section 7.
 
 We also split the score by field (employers, titles, dates, skills, education) so we can see *where* a model is weak. Here the only weak spot was skills.
 
@@ -80,7 +84,7 @@ Models charge per *token* (roughly a word piece), with one price for what you se
 | fast | $0.75 | $4.50 |
 | strong | $10.00 | $50.00 |
 
-So `strong` is roughly 11 to 13 times pricier per token. The run measured the real cost per resume: **$0.0020 for fast and $0.0321 for strong**, which is about 16 times more. Both are far below our $0.05 limit, so both pass SC-007. The question is whether `strong` is worth 16 times the price.
+So `strong` is roughly 11 to 13 times pricier per token. The first run measured the real cost per resume: **$0.0020 for fast and $0.0321 for strong**, which is about 16 times more. (The second run reports $0.0019 and $0.0193 per document, averaged over 15 documents; four of them are short letters that cost less, so the first figures are the better guide for a resume.) Both are far below our $0.05 limit, so both pass SC-007. The question is whether `strong` is worth 16 times the price.
 
 ### Speed
 
@@ -88,7 +92,7 @@ We record the 95th-percentile latency (p95: 19 of 20 calls were faster than this
 
 ### Reliability
 
-The "unusable" column counts answers the app could not use (broken JSON, wrong shape). Both models had 0 of 11. A model that is accurate but breaks the format half the time is not a good choice.
+The "unusable" column counts answers the app could not use (broken JSON, wrong shape). Both models had 0 unusable answers in both runs. A model that is accurate but breaks the format half the time is not a good choice.
 
 ## 5. Read the details, not only the totals
 
@@ -111,9 +115,9 @@ We recorded it in `docs/architecture.md` (ADR-11) and added a test, `backend/tes
 
 | What | Why it matters | Where we stand |
 |---|---|---|
-| Consistency | The same input can give different answers on different runs | We ran each model once. A better test runs each case 3 to 5 times |
+| Consistency | The same input can give different answers on different runs | We saw it: `fast` missed 3 skills on `tables.docx` in run 1 and nothing in run 2, on the same file. A better test runs each case 3 to 5 times |
 | Prompt-injection resistance | A resume might say "ignore your instructions" | We have attack resumes for the parser and screening, but haven't scored each model against them |
-| Sample size | 11 resumes is small, and they are synthetic | Enough to compare two models, not enough to claim a precise accuracy for real resumes |
+| Sample size | 11 resumes and 4 non-resumes is small, and they are synthetic | Enough to compare two models, not enough to claim a precise accuracy for real resumes |
 | Context window | Whether a long input fits | Resumes are small, so not a concern here |
 | Rate limits | How many calls per minute you may make | Not a concern for one user |
 | Privacy and licence | Where the data goes, and the provider's terms | One provider (OpenAI) with your own key |
@@ -123,6 +127,7 @@ We recorded it in `docs/architecture.md` (ADR-11) and added a test, `backend/tes
 
 - **A bad key produced a report full of zeros.** The first run used a rejected API key. Every call failed instantly, and the runner still wrote a report: 0% recall, $0.0000 cost, 0 ms latency. A report with no cost and no latency means nothing ran. The runner now stops and says the key was rejected instead of writing a report.
 - **Running from the wrong folder.** The runner looks for `.env` in the folder you start it from, so start it from the repository root.
+- **Changing the prompt without re-testing.** Prompt v2 added the "is this a resume?" check. Any change to the prompt can change quality, so we re-ran the whole eval before trusting it.
 - **Testing what you don't support.** The Spanish resume made `fast` look worse for something we never promised to handle.
 
 ## 9. How to repeat this

@@ -235,6 +235,7 @@ The person can delete an uploaded resume file, or wipe all their HireTitan data 
 - **SC-007**: A single resume extraction costs under 0.05 USD on the default fast model.
 - **SC-008**: Deleting all data leaves no profile, file, preference or AI log record behind (verified by inspection after deletion).
 - **SC-009**: Across the synthetic test set, no email address or phone number from a resume appears in any text sent to the AI provider, and 100% of them still appear correctly in the review's contact section.
+- **SC-010**: On the evaluation set, every document that is not a resume (relieving letter, offer letter, certificate, job description) is rejected and no genuine resume is rejected.
 
 ## Assumptions
 
