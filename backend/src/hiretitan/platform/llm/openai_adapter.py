@@ -4,7 +4,9 @@
   model rejects that, one retry in JSON mode with the schema in the instructions and a
   strict parse of the reply (constitution IV, degrade gracefully).
 * Errors: no key -> ``AiUnavailable("key_missing")`` before any network call; 401/403 ->
-  ``AiUnavailable("key_rejected")``; 429, 5xx and timeouts -> ``RetryableLlmError``.
+  ``AiUnavailable("key_rejected")``; 429 with ``insufficient_quota`` ->
+  ``AiUnavailable("out_of_credit", provider_message)``; other 429s, 5xx and timeouts ->
+  ``RetryableLlmError``.
   Retrying is the job queue's business, so the SDK's own retries are off.
 """
 
@@ -37,6 +39,14 @@ _TIMEOUT_SECONDS = 120.0
 def _is_structured_output_unsupported(error: openai.BadRequestError) -> bool:
     text = str(error).lower()
     return "json_schema" in text or "structured" in text or "text.format" in text
+
+
+def _error_message(error: openai.APIStatusError) -> str:
+    """The provider's own wording from the response body (the SDK adds a prefix to its own)."""
+    body = error.body
+    if isinstance(body, dict) and isinstance(body.get("message"), str):
+        return str(body["message"])
+    return error.message
 
 
 class OpenAiAdapter:
@@ -77,8 +87,15 @@ class OpenAiAdapter:
             if self._on_key_rejected is not None:
                 await self._on_key_rejected()
             raise AiUnavailable("key_rejected") from None
+        except openai.RateLimitError as error:
+            # OpenAI answers 429 both for "slow down" and for "no credit left". Waiting does not
+            # fix the second, so it ends the run with the provider's own message (R7).
+            if error.code == "insufficient_quota":
+                raise AiUnavailable(
+                    "out_of_credit", provider_message=_error_message(error)
+                ) from None
+            raise RetryableLlmError(type(error).__name__) from None
         except (
-            openai.RateLimitError,
             openai.InternalServerError,
             openai.APITimeoutError,
             openai.APIConnectionError,
