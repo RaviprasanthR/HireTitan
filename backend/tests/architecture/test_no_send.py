@@ -55,6 +55,14 @@ FORBIDDEN_HTTPX_FUNCTIONS = frozenset(
 )
 CLIENT_CONSTRUCTORS = frozenset({"Client", "AsyncClient", "OpenAI", "AsyncOpenAI"})
 
+# Feature 002 (constitution VII): companies' careers pages live on hosts nobody can list in
+# advance, so exactly one module may build an HTTP client for them. It is held to GET/HEAD,
+# robots.txt and rate limits by its own contract tests (T051). Nothing else under
+# ``search/`` may build a client, and nothing there may use a mutating HTTP verb.
+CAREERS_FETCHER = Path("search/infra/careers_page/fetcher.py")
+SEARCH_PACKAGE = Path("search")
+MUTATING_VERBS = frozenset({"post", "put", "patch", "delete"})
+
 
 def _matches(module: str, banned: tuple[str, ...]) -> bool:
     return any(module == b or module.startswith(b + ".") for b in banned)
@@ -127,6 +135,22 @@ def outbound_violations(source: str) -> list[str]:
     return problems
 
 
+def search_http_violations(source: str, *, is_fetcher: bool) -> list[str]:
+    """Rules for code under ``search/``: only the careers-page fetcher builds HTTP clients,
+    and no module there calls a mutating HTTP verb (the app never submits anything)."""
+    tree = ast.parse(source)
+    problems: list[str] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        name = _call_name(node.func)
+        if name in CLIENT_CONSTRUCTORS and not is_fetcher:
+            problems.append(f"line {node.lineno}: {name}() outside the careers-page fetcher")
+        if isinstance(node.func, ast.Attribute) and node.func.attr in MUTATING_VERBS:
+            problems.append(f"line {node.lineno}: mutating HTTP verb .{node.func.attr}()")
+    return problems
+
+
 def _package_sources() -> list[tuple[Path, str]]:
     return [(p, p.read_text(encoding="utf-8")) for p in sorted(PACKAGE.rglob("*.py"))]
 
@@ -144,9 +168,43 @@ def test_constitution_I_outbound_hosts_allowlisted() -> None:
     violations = {
         str(path.relative_to(PACKAGE)): found
         for path, source in _package_sources()
-        if (found := outbound_violations(source))
+        if path.relative_to(PACKAGE) != CAREERS_FETCHER and (found := outbound_violations(source))
     }
     assert violations == {}
+
+
+def test_constitution_I_search_module_has_no_sending_code() -> None:
+    violations = {
+        str(path.relative_to(PACKAGE)): found
+        for path, source in _package_sources()
+        if path.relative_to(PACKAGE).is_relative_to(SEARCH_PACKAGE)
+        and (found := sending_violations(source))
+    }
+    assert violations == {}
+
+
+def test_constitution_VII_careers_pages_fetched_only_through_the_fetcher() -> None:
+    violations = {
+        str(path.relative_to(PACKAGE)): found
+        for path, source in _package_sources()
+        if path.relative_to(PACKAGE).is_relative_to(SEARCH_PACKAGE)
+        and (
+            found := search_http_violations(
+                source, is_fetcher=path.relative_to(PACKAGE) == CAREERS_FETCHER
+            )
+        )
+    }
+    assert violations == {}
+
+
+def test_the_fetcher_is_the_only_outbound_exemption() -> None:
+    # A look-alike module elsewhere under search/ must not be mistaken for the exempt one.
+    lookalikes = [
+        str(path.relative_to(PACKAGE))
+        for path in PACKAGE.joinpath(SEARCH_PACKAGE).rglob("fetcher*.py")
+        if path.relative_to(PACKAGE) != CAREERS_FETCHER
+    ]
+    assert lookalikes == []
 
 
 def test_constitution_I_allowlist_holds_only_openai() -> None:
@@ -201,3 +259,30 @@ def test_planted_outbound_call_is_caught(source: str) -> None:
 )
 def test_allowlisted_client_passes(source: str) -> None:
     assert outbound_violations(source) == []
+
+
+@pytest.mark.parametrize(
+    ("source", "is_fetcher"),
+    [
+        ("import httpx\nhttpx.AsyncClient()\n", False),
+        ("import httpx\nc = httpx.Client()\n", False),
+        ("async def f(c):\n    await c.post('https://x.example', json={})\n", True),
+        ("async def f(c):\n    await c.put('https://x.example')\n", False),
+        ("async def f(c):\n    await c.delete('https://x.example')\n", True),
+    ],
+)
+def test_planted_search_http_violation_is_caught(source: str, is_fetcher: bool) -> None:
+    assert search_http_violations(source, is_fetcher=is_fetcher)
+
+
+@pytest.mark.parametrize(
+    ("source", "is_fetcher"),
+    [
+        ("import httpx\nhttpx.AsyncClient(timeout=15)\n", True),
+        ("async def f(c):\n    return await c.get('https://x.example')\n", True),
+        ("async def f(c):\n    return await c.head('https://x.example')\n", False),
+        ("def f(d):\n    return d.get('k')\n", False),
+    ],
+)
+def test_allowed_search_http_usage_passes(source: str, is_fetcher: bool) -> None:
+    assert search_http_violations(source, is_fetcher=is_fetcher) == []
