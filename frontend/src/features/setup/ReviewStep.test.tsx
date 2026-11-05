@@ -137,7 +137,8 @@ describe('ReviewStep', () => {
     await user.type(skills, 'Python')
 
     await waitFor(() => expect(calls.some((c) => c.url.endsWith('/draft'))).toBe(true))
-    expect(screen.getByText('Draft saved')).toBeInTheDocument()
+    // the request is logged before the response arrives, so wait for the status text
+    expect(await screen.findByText('Draft saved')).toBeInTheDocument()
     expect(screen.queryByText(/Extracted with/)).not.toBeInTheDocument() // typed in, not extracted
     expect(
       screen.queryByRole('heading', { level: 1, name: 'Review your profile' }),
