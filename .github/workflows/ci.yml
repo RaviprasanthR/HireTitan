@@ -63,6 +63,33 @@ jobs:
           uv run pip-licenses --packages $packages --from=mixed --format=json > licenses.json
           uv run python scripts/check_licenses.py licenses.json
 
+  scanner:
+    # The Node packages the pinned career-ops providers need (backend/scanner, research R1).
+    name: Scanner package gates
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: backend/scanner
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/scanner/package-lock.json
+
+      - name: Install (no install scripts, so no browser download)
+        run: npm ci --omit=dev --ignore-scripts
+
+      - name: Vulnerability audit (production dependencies)
+        run: npm audit --omit=dev
+
+      - name: Licence gate (production dependencies)
+        run: >
+          npx --yes license-checker@25.0.1 --production --excludePrivatePackages
+          --onlyAllow "MIT;MIT-0;BSD;BSD-2-Clause;BSD-3-Clause;0BSD;Apache-2.0;ISC;PSF;Python-2.0;MPL-2.0;LGPL-2.1;LGPL-3.0;OFL-1.1"
+
   frontend:
     name: Frontend gates
     runs-on: ubuntu-24.04
