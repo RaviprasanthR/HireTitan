@@ -1,0 +1,54 @@
+{
+  "recorded": "2026-11-05",
+  "note": "Every distinct request the pinned providers made while reading one public board each; names replaced with examplecorp.",
+  "requests": [
+    {
+      "provider": "amazon",
+      "method": "GET",
+      "host": "www.amazon.jobs",
+      "path": "/en/search.json"
+    },
+    {
+      "provider": "ashby",
+      "method": "GET",
+      "host": "api.ashbyhq.com",
+      "path": "/posting-api/job-board/examplecorp"
+    },
+    {
+      "provider": "greenhouse",
+      "method": "GET",
+      "host": "boards-api.greenhouse.io",
+      "path": "/v1/boards/examplecorp/jobs"
+    },
+    {
+      "provider": "lever",
+      "method": "GET",
+      "host": "api.lever.co",
+      "path": "/v0/postings/examplecorp"
+    },
+    {
+      "provider": "recruitee",
+      "method": "GET",
+      "host": "examplecorp.recruitee.com",
+      "path": "/api/offers/"
+    },
+    {
+      "provider": "workday",
+      "method": "GET",
+      "host": "examplecorp.wd5.myworkdayjobs.com",
+      "path": "/wday/cxs/examplecorp/ExampleSite/job/IN-Pune/Example-Role_JR1000"
+    },
+    {
+      "provider": "workday",
+      "method": "POST",
+      "host": "examplecorp.wd5.myworkdayjobs.com",
+      "path": "/wday/cxs/examplecorp/ExampleSite/jobs"
+    },
+    {
+      "provider": "zoho-recruit",
+      "method": "GET",
+      "host": "examplecorp.zohorecruit.com",
+      "path": "/jobs/Careers"
+    }
+  ]
+}

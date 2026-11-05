@@ -14,13 +14,13 @@
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-// Only these providers are ever run (research R2). Keka is left out until its robots.txt is checked.
+// Only these providers are ever run (research R2). Keka and SmartRecruiters are left out: their
+// robots.txt does not allow it (SmartRecruiters) or has not been checked (Keka).
 const ENABLED = new Set([
   'greenhouse',
   'lever',
   'ashby',
   'workday',
-  'smartrecruiters',
   'recruitee',
   'zoho-recruit',
   'amazon',

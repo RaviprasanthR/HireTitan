@@ -13,3 +13,8 @@ the types of the values. No real company's postings are stored here.
 
 To re-record: run `runner.mjs` with `CAREER_OPS_DIR` pointing at a checkout of the pinned commit,
 then scrub the output the same way before committing it.
+
+`request_trace.json` is every distinct request the providers made during that recording (method,
+host, path, with names replaced by `examplecorp`). The allowlist test (T015) checks it. The
+recording also included SmartRecruiters, which is dropped from the fixtures because it is not an
+enabled provider (its robots.txt disallows generic clients; see `allowlist.py`).

@@ -71,8 +71,6 @@ def board_request(ref: BoardRef) -> BoardRequest:
             return simple("https://jobs.lever.co/{}")
         case "ashby":
             return simple("https://jobs.ashbyhq.com/{}")
-        case "smartrecruiters":
-            return simple("https://jobs.smartrecruiters.com/{}")
         case "recruitee":
             return simple("https://{}.recruitee.com")
         case "zoho_recruit":
@@ -127,8 +125,6 @@ def discover_board(careers_url: str) -> DiscoveryResult | None:
         return hit("lever", first)
     if host == "jobs.ashbyhq.com":
         return hit("ashby", first)
-    if host == "jobs.smartrecruiters.com":
-        return hit("smartrecruiters", first)
     if host.endswith(".recruitee.com") and host.count(".") == 2:
         return hit("recruitee", host.split(".")[0])
     if host.endswith(".zohorecruit.com") and host.count(".") == 2:

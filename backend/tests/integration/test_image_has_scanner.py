@@ -3,7 +3,8 @@
 Needs Docker and a built image, so it only runs when ``HIRETITAN_IMAGE_TESTS=1``:
 
     docker build -t hiretitan:test .
-    HIRETITAN_IMAGE_TESTS=1 HIRETITAN_IMAGE=hiretitan:test pytest tests/integration/test_image_has_scanner.py
+    HIRETITAN_IMAGE_TESTS=1 HIRETITAN_IMAGE=hiretitan:test \
+        pytest tests/integration/test_image_has_scanner.py
 """
 
 from __future__ import annotations
@@ -36,7 +37,8 @@ def in_image(script: str, stdin: str | None = None) -> subprocess.CompletedProce
 
 def test_R1_pinned_career_ops_present_and_runs_help() -> None:
     result = in_image(
-        'node --version && cat /opt/career-ops/PINNED_COMMIT && ls /opt/career-ops/providers/greenhouse.mjs'
+        "node --version && cat /opt/career-ops/PINNED_COMMIT"
+        " && ls /opt/career-ops/providers/greenhouse.mjs"
     )
     assert result.returncode == 0, result.stderr
     assert result.stdout.splitlines()[0].startswith("v22.")
@@ -46,7 +48,7 @@ def test_R1_pinned_career_ops_present_and_runs_help() -> None:
 def test_R1_runner_answers_with_no_boards() -> None:
     runner = (
         "$(python -c 'import hiretitan.search.infra.careerops as m, pathlib;"
-        " print(pathlib.Path(m.__file__).with_name(\"runner.mjs\"))')"
+        ' print(pathlib.Path(m.__file__).with_name("runner.mjs"))\')'
     )
     result = in_image(f"CAREER_OPS_DIR=/opt/career-ops node {runner}", stdin='{"boards": []}')
     assert result.returncode == 0, result.stderr
@@ -58,14 +60,13 @@ def test_R1_every_enabled_provider_loads_in_the_image() -> None:
     accepts gives a normal error, never 'not installed'."""
     runner = (
         "$(python -c 'import hiretitan.search.infra.careerops as m, pathlib;"
-        " print(pathlib.Path(m.__file__).with_name(\"runner.mjs\"))')"
+        ' print(pathlib.Path(m.__file__).with_name("runner.mjs"))\')'
     )
     providers = [
         "greenhouse",
         "lever",
         "ashby",
         "workday",
-        "smartrecruiters",
         "recruitee",
         "zoho-recruit",
         "amazon",
@@ -94,7 +95,7 @@ def test_R1_licence_and_notice_are_kept() -> None:
 
 def test_R1_no_browser_is_installed() -> None:
     result = in_image(
-        'test ! -d /opt/career-ops/node_modules/playwright-core && '
+        "test ! -d /opt/career-ops/node_modules/playwright-core && "
         'test ! -d "$HOME/.cache/ms-playwright" && echo clean'
     )
     assert result.returncode == 0, result.stderr

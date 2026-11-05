@@ -109,7 +109,6 @@ def test_enabled_vendors_match_research_r2() -> None:
         "lever",
         "ashby",
         "workday",
-        "smartrecruiters",
         "recruitee",
         "zoho_recruit",
         "amazon",

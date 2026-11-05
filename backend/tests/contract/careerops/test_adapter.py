@@ -30,7 +30,6 @@ PROVIDERS = {
     "lever": ("lever.json", "examplecorp"),
     "ashby": ("ashby.json", "examplecorp"),
     "workday": ("workday.json", "examplecorp.wd5/ExampleSite"),
-    "smartrecruiters": ("smartrecruiters.json", "ExampleCorp"),
     "recruitee": ("recruitee.json", "examplecorp"),
     "zoho_recruit": ("zoho-recruit.json", "examplecorp"),
     "amazon": ("amazon.json", "software engineer"),
@@ -97,7 +96,7 @@ async def test_R1_recorded_output_parses_per_provider(tmp_path: Path, vendor: st
 
     scan = result[board.company_id]
     assert isinstance(scan, ScanOk)
-    assert 2 <= len(scan.postings) <= 3  # SmartRecruiters' recorded board only had two
+    assert len(scan.postings) == 3
     first = scan.postings[0]
     assert first.title == "Backend Engineer"
     assert first.url.startswith("https://")
@@ -135,8 +134,9 @@ async def test_R1_error_for_one_company_does_not_fail_the_rest(tmp_path: Path) -
     assert result[bad.company_id] == ScanError("HTTP 404 Not Found")
 
 
-async def test_R2_disabled_provider_never_sent_to_the_runner(tmp_path: Path) -> None:
-    keka, ok = ref("keka", n=1), ref("lever", n=2)
+@pytest.mark.parametrize("vendor", ["keka", "smartrecruiters"])
+async def test_R2_disabled_provider_never_sent_to_the_runner(tmp_path: Path, vendor: str) -> None:
+    keka, ok = ref(vendor, n=1), ref("lever", n=2)
     calls = Calls(json.dumps(recorded("lever.json", ok.company_id)))
 
     result = await adapter(tmp_path, calls).scan([keka, ok])
@@ -203,7 +203,6 @@ async def test_R1_runner_environment_carries_no_secrets(
         ("greenhouse", "acme", "https://job-boards.greenhouse.io/acme"),
         ("lever", "acme", "https://jobs.lever.co/acme"),
         ("ashby", "acme", "https://jobs.ashbyhq.com/acme"),
-        ("smartrecruiters", "Acme", "https://jobs.smartrecruiters.com/Acme"),
         ("recruitee", "acme", "https://acme.recruitee.com"),
         ("zoho_recruit", "acme", "https://acme.zohorecruit.com/jobs/Careers"),
         ("workday", "acme.wd5/Careers", "https://acme.wd5.myworkdayjobs.com/Careers"),
@@ -308,7 +307,7 @@ async def test_postings_without_a_title_or_url_are_dropped(tmp_path: Path) -> No
         ("https://boards.greenhouse.io/acme/jobs/123", ("greenhouse", "acme")),
         ("https://jobs.lever.co/acme/abc", ("lever", "acme")),
         ("https://jobs.ashbyhq.com/acme", ("ashby", "acme")),
-        ("https://jobs.smartrecruiters.com/Acme", ("smartrecruiters", "Acme")),
+        ("https://jobs.smartrecruiters.com/Acme", None),  # not an enabled provider
         ("https://acme.recruitee.com/o/role", ("recruitee", "acme")),
         ("https://acme.zohorecruit.com/jobs/Careers", ("zoho_recruit", "acme")),
         ("https://acme.wd5.myworkdayjobs.com/en-US/Careers/job/x", ("workday", "acme.wd5/Careers")),
