@@ -11,6 +11,8 @@ from datetime import datetime
 from typing import Any, Protocol
 from uuid import UUID
 
+from hiretitan.search.domain.proposer import ProposalInput
+
 
 @dataclass(frozen=True, slots=True)
 class BoardRef:
@@ -83,3 +85,46 @@ class CompanyStore(Protocol):
     async def add(self, **fields: Any) -> StoredCompany: ...
 
     async def set_fields(self, company_id: UUID, **fields: Any) -> None: ...
+
+
+class StoredRuleSet(Protocol):
+    """A rule set row: ``rules`` and ``based_on`` are the JSON the domain serializes."""
+
+    id: UUID
+    version: int
+    status: str  # proposed | approved | superseded
+    rules: dict[str, Any]
+    based_on: dict[str, Any]
+    approved_at: datetime | None
+
+
+class RuleSetStore(Protocol):
+    async def approved(self) -> StoredRuleSet | None: ...
+
+    async def proposed(self) -> StoredRuleSet | None: ...
+
+    async def propose(self, rules: dict[str, Any], based_on: dict[str, Any]) -> StoredRuleSet: ...
+
+    async def update_proposed(self, rules: dict[str, Any]) -> StoredRuleSet | None: ...
+
+    async def approve(self, rule_set_id: UUID) -> StoredRuleSet: ...
+
+    async def discard_proposed(self) -> None: ...
+
+
+@dataclass(frozen=True, slots=True)
+class ProposalFacts:
+    """What a proposal is built from, and the versions it was built on (FR-006)."""
+
+    source: ProposalInput
+    profile_version_id: UUID
+    preferences_saved_at: datetime
+
+
+class ProposalSource(Protocol):
+    """Reads the confirmed profile and the saved preferences (composition adapter).
+
+    Raises ``RulesUnavailableError`` when either is missing.
+    """
+
+    async def read(self) -> ProposalFacts: ...
