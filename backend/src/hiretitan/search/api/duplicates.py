@@ -109,10 +109,9 @@ def create_duplicates_router(deps: SearchDuplicatesApiDeps) -> APIRouter:
                 select(JobSourceRow).where(JobSourceRow.job_id == loser)
             )
             for source in list(sources):
-                if source.url in have:
-                    await session.delete(source)
-                else:
+                if source.url not in have:
                     source.job_id = keep
+                # a source the kept job already has goes away with the other job's row
             loser_row = await session.get(JobRow, loser)
             assert loser_row is not None
             loser_row.state = JobState.deleted.value
