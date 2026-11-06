@@ -22,7 +22,8 @@ class JobState(StrEnum):
 
 ALLOWED: Final[dict[JobState, frozenset[JobState]]] = {
     JobState.skipped: frozenset({JobState.explore, JobState.deleted}),
-    JobState.explore: frozenset({JobState.applied, JobState.deleted}),
+    # explore -> skipped: a later check by the AI finds the job not relevant after all
+    JobState.explore: frozenset({JobState.applied, JobState.skipped, JobState.deleted}),
     JobState.applied: frozenset({JobState.explore, JobState.deleted}),
     JobState.deleted: frozenset(),
 }

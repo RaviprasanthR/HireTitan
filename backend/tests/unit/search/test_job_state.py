@@ -31,6 +31,10 @@ def test_skipped_to_explore_is_a_restore() -> None:
     assert new.restored is True
 
 
+def test_explore_to_skipped_when_a_later_ai_check_says_not_relevant() -> None:
+    assert transition(S.explore, S.skipped).state is S.skipped
+
+
 def test_explore_to_applied_needs_a_date() -> None:
     new = transition(S.explore, S.applied, applied_on=date(2026, 11, 5))
     assert new.state is S.applied
@@ -68,7 +72,6 @@ def test_US1_AS6_seen_again_keeps_state() -> None:
         (S.deleted, S.deleted),
         (S.skipped, S.applied),
         (S.skipped, S.skipped),
-        (S.explore, S.skipped),
         (S.explore, S.explore),
         (S.applied, S.skipped),
         (S.applied, S.applied),

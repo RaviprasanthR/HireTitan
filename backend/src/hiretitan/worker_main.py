@@ -32,6 +32,7 @@ from hiretitan.search.application.synonyms_seed import load_title_synonyms
 from hiretitan.search.workflow.graph import WORKFLOW_NAME as SEARCH_WORKFLOW_NAME
 from hiretitan.search.workflow.graph import SearchDeps, job_search_workflow
 from hiretitan.search.workflow.judge import JudgeDeps
+from hiretitan.search.workflow.recheck import RECHECK_WORKFLOW, recheck_workflow
 from hiretitan.search_wiring import build_career_ops, profile_card_source
 from hiretitan.setup.infra.settings_repo import budget_cap_provider
 
@@ -43,6 +44,7 @@ def workflow_registry(deps: IngestDeps, search: SearchDeps) -> Mapping[str, Work
     return {
         WORKFLOW_NAME: profile_ingest_workflow(deps),
         SEARCH_WORKFLOW_NAME: job_search_workflow(search),
+        RECHECK_WORKFLOW: recheck_workflow(search),
     }
 
 

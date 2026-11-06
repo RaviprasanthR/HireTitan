@@ -49,6 +49,7 @@ class Judged:
     jobs: list[NewJob]
     cost: Decimal = Decimal(0)
     stop: Stop | None = None  # budget reached or out of credit: the search ends after this batch
+    unavailable: AiUnavailable | None = None  # why the AI could not answer, for any reason
 
 
 def with_decision(job: NewJob, decision: DecisionInput) -> NewJob:
@@ -113,6 +114,7 @@ async def judge_jobs(
                 run_id=run_id,
             )
         except AiUnavailable as exc:
+            result.unavailable = exc
             result.stop = stop_for(exc)  # None for a key problem: rules carry on (FR-028)
             break  # this call's jobs and the rest stay "not checked by AI"
         except RetryableLlmError:
