@@ -37,6 +37,7 @@ from hiretitan.profile.api.resumes import ProfileApiDeps, create_resumes_router
 from hiretitan.profile.api.reviews import create_reviews_router
 from hiretitan.profile.infra.parsing.sniff import MAX_BYTES
 from hiretitan.profile.infra.repos import VersionsRepo
+from hiretitan.search.api.duplicates import SearchDuplicatesApiDeps, create_duplicates_router
 from hiretitan.search.api.jobs import SearchJobsApiDeps, create_search_jobs_router
 from hiretitan.search.api.rules import SearchRulesApiDeps, create_search_rules_router
 from hiretitan.search.api.runs import SearchRunsApiDeps, create_search_runs_router
@@ -223,6 +224,7 @@ def build_app(settings: Settings | None = None) -> FastAPI:
                 setup_gate=SetupFinishedGate,
             )
         ),
+        create_duplicates_router(SearchDuplicatesApiDeps(sessions=deps.sessions, clock=clock)),
         create_search_jobs_router(
             SearchJobsApiDeps(sessions=deps.sessions, queue=deps.queue, clock=clock)
         ),
