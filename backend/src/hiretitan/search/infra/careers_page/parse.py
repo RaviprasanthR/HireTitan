@@ -264,7 +264,7 @@ def _same_site(link_host: str, page_host: str) -> bool:
     return bool(link_host) and (
         link_host == page_host
         or link_host.endswith("." + page_host)
-        or page_host.endswith("." + link_host)
+        or ("." in link_host and page_host.endswith("." + link_host))
     )
 
 
