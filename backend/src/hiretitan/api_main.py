@@ -37,6 +37,9 @@ from hiretitan.profile.api.resumes import ProfileApiDeps, create_resumes_router
 from hiretitan.profile.api.reviews import create_reviews_router
 from hiretitan.profile.infra.parsing.sniff import MAX_BYTES
 from hiretitan.profile.infra.repos import VersionsRepo
+from hiretitan.search.api.rules import SearchRulesApiDeps, create_search_rules_router
+from hiretitan.search.application.synonyms_seed import load_title_synonyms
+from hiretitan.search_wiring import ProfileAndPreferencesSource
 from hiretitan.setup.api.data import DataApiDeps, create_data_router
 from hiretitan.setup.api.onboarding import OnboardingApiDeps, create_onboarding_router
 from hiretitan.setup.api.review_items import ReviewItemsApiDeps, create_review_items_router
@@ -47,6 +50,7 @@ from hiretitan.setup_wiring import RepoFacts, SqlDeleteAllStore
 API_PREFIX: Final = "/api/v1"
 MULTIPART_OVERHEAD: Final = 64 * 1024  # boundaries and headers around the file
 DEFAULT_DIST: Final = Path(__file__).resolve().parents[3] / "frontend" / "dist"
+SEED_DIR: Final = Path(__file__).resolve().parents[2] / "seed"
 
 CSP: Final = "; ".join(
     [
@@ -192,6 +196,13 @@ def build_app(settings: Settings | None = None) -> FastAPI:
         create_preferences_router(
             PreferencesApiDeps(
                 sessions=deps.sessions, clock=SystemClock(), profile_reader=VersionsRepo
+            )
+        ),
+        create_search_rules_router(
+            SearchRulesApiDeps(
+                sessions=deps.sessions,
+                source=ProfileAndPreferencesSource,
+                synonyms=load_title_synonyms(SEED_DIR / "title_synonyms.yaml"),
             )
         ),
         create_runs_router(deps.sessions, deps.queue),

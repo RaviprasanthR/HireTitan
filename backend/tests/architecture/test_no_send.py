@@ -140,8 +140,15 @@ def search_http_violations(source: str, *, is_fetcher: bool) -> list[str]:
     and no module there calls a mutating HTTP verb (the app never submits anything)."""
     tree = ast.parse(source)
     problems: list[str] = []
+    # ``@router.post(...)`` registers an endpoint the app answers; it sends nothing
+    route_decorators = {
+        id(decorator)
+        for node in ast.walk(tree)
+        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef)
+        for decorator in node.decorator_list
+    }
     for node in ast.walk(tree):
-        if not isinstance(node, ast.Call):
+        if not isinstance(node, ast.Call) or id(node) in route_decorators:
             continue
         name = _call_name(node.func)
         if name in CLIENT_CONSTRUCTORS and not is_fetcher:

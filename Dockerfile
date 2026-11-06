@@ -41,6 +41,7 @@ COPY backend/pyproject.toml backend/uv.lock backend/README.md ./
 RUN uv sync --frozen --no-dev --no-install-project
 COPY backend/src ./src
 COPY backend/alembic ./alembic
+COPY backend/seed ./seed
 COPY backend/alembic.ini ./
 RUN uv sync --frozen --no-dev --no-editable
 COPY --from=frontend /build/dist /app/frontend/dist

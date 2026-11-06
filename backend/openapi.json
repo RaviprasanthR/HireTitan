@@ -686,6 +686,51 @@
         "title": "PlaceModel",
         "type": "object"
       },
+      "PlaceRuleModel": {
+        "additionalProperties": false,
+        "properties": {
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country"
+          },
+          "effect": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effect"
+          },
+          "origin": {
+            "default": "user",
+            "title": "Origin",
+            "type": "string"
+          }
+        },
+        "title": "PlaceRuleModel",
+        "type": "object"
+      },
       "PreferencesModel-Input": {
         "additionalProperties": false,
         "properties": {
@@ -1381,6 +1426,118 @@
         "title": "ReviewOut",
         "type": "object"
       },
+      "RuleItemModel": {
+        "additionalProperties": false,
+        "properties": {
+          "effect": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effect"
+          },
+          "origin": {
+            "default": "user",
+            "title": "Origin",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "RuleItemModel",
+        "type": "object"
+      },
+      "RuleSetOut": {
+        "properties": {
+          "approved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "based_on": {
+            "additionalProperties": true,
+            "title": "Based On",
+            "type": "object"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "rules": {
+            "$ref": "#/components/schemas/SearchRulesModel-Output"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "status",
+          "rules",
+          "based_on",
+          "approved_at"
+        ],
+        "title": "RuleSetOut",
+        "type": "object"
+      },
+      "RulesStateOut": {
+        "properties": {
+          "approved": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RuleSetOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "proposal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RuleSetOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "stale": {
+            "title": "Stale",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "approved",
+          "proposal",
+          "stale"
+        ],
+        "title": "RulesStateOut",
+        "type": "object"
+      },
       "RunOut": {
         "properties": {
           "current_step": {
@@ -1485,6 +1642,159 @@
           "saved_at"
         ],
         "title": "SavedOut",
+        "type": "object"
+      },
+      "SearchRulesModel-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "blocked_locations": {
+            "items": {
+              "$ref": "#/components/schemas/PlaceRuleModel"
+            },
+            "title": "Blocked Locations",
+            "type": "array"
+          },
+          "max_age_days": {
+            "title": "Max Age Days",
+            "type": "integer"
+          },
+          "preferred_locations": {
+            "items": {
+              "$ref": "#/components/schemas/PlaceRuleModel"
+            },
+            "title": "Preferred Locations",
+            "type": "array"
+          },
+          "seniority": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Seniority",
+            "type": "array"
+          },
+          "stack_keywords": {
+            "items": {
+              "$ref": "#/components/schemas/RuleItemModel"
+            },
+            "title": "Stack Keywords",
+            "type": "array"
+          },
+          "title_avoid": {
+            "items": {
+              "$ref": "#/components/schemas/RuleItemModel"
+            },
+            "title": "Title Avoid",
+            "type": "array"
+          },
+          "title_words": {
+            "items": {
+              "$ref": "#/components/schemas/RuleItemModel"
+            },
+            "title": "Title Words",
+            "type": "array"
+          },
+          "work_modes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Work Modes",
+            "type": "array"
+          },
+          "years_experience": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Years Experience"
+          }
+        },
+        "required": [
+          "title_words",
+          "max_age_days"
+        ],
+        "title": "SearchRulesModel",
+        "type": "object"
+      },
+      "SearchRulesModel-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "blocked_locations": {
+            "items": {
+              "$ref": "#/components/schemas/PlaceRuleModel"
+            },
+            "title": "Blocked Locations",
+            "type": "array"
+          },
+          "max_age_days": {
+            "title": "Max Age Days",
+            "type": "integer"
+          },
+          "preferred_locations": {
+            "items": {
+              "$ref": "#/components/schemas/PlaceRuleModel"
+            },
+            "title": "Preferred Locations",
+            "type": "array"
+          },
+          "seniority": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Seniority",
+            "type": "array"
+          },
+          "stack_keywords": {
+            "items": {
+              "$ref": "#/components/schemas/RuleItemModel"
+            },
+            "title": "Stack Keywords",
+            "type": "array"
+          },
+          "title_avoid": {
+            "items": {
+              "$ref": "#/components/schemas/RuleItemModel"
+            },
+            "title": "Title Avoid",
+            "type": "array"
+          },
+          "title_words": {
+            "items": {
+              "$ref": "#/components/schemas/RuleItemModel"
+            },
+            "title": "Title Words",
+            "type": "array"
+          },
+          "work_modes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Work Modes",
+            "type": "array"
+          },
+          "years_experience": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Years Experience"
+          }
+        },
+        "required": [
+          "title_words",
+          "max_age_days"
+        ],
+        "title": "SearchRulesModel",
         "type": "object"
       },
       "SettingsIn": {
@@ -2645,6 +2955,120 @@
         "summary": "Retry",
         "tags": [
           "runs"
+        ]
+      }
+    },
+    "/api/v1/search/rules": {
+      "get": {
+        "operationId": "read_rules_api_v1_search_rules_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RulesStateOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Read Rules",
+        "tags": [
+          "search"
+        ]
+      }
+    },
+    "/api/v1/search/rules/proposal": {
+      "delete": {
+        "operationId": "discard_api_v1_search_rules_proposal_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Discard",
+        "tags": [
+          "search"
+        ]
+      },
+      "post": {
+        "operationId": "make_proposal_api_v1_search_rules_proposal_post",
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleSetOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Make Proposal",
+        "tags": [
+          "search"
+        ]
+      },
+      "put": {
+        "operationId": "edit_proposal_api_v1_search_rules_proposal_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchRulesModel-Input"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleSetOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Edit Proposal",
+        "tags": [
+          "search"
+        ]
+      }
+    },
+    "/api/v1/search/rules/proposal/approve": {
+      "post": {
+        "operationId": "approve_api_v1_search_rules_proposal_approve_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleSetOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Approve",
+        "tags": [
+          "search"
         ]
       }
     },

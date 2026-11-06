@@ -7,6 +7,7 @@ module never reaches into those features.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Literal
@@ -61,7 +62,7 @@ class RulesService:
         self,
         store: RuleSetStore,
         source: ProposalSource,
-        synonyms: dict[str, tuple[str, ...]],
+        synonyms: Mapping[str, tuple[str, ...]],
     ) -> None:
         self._store = store
         self._source = source

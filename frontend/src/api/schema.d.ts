@@ -364,6 +364,59 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/search/rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read Rules */
+        get: operations["read_rules_api_v1_search_rules_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/search/rules/proposal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Edit Proposal */
+        put: operations["edit_proposal_api_v1_search_rules_proposal_put"];
+        /** Make Proposal */
+        post: operations["make_proposal_api_v1_search_rules_proposal_post"];
+        /** Discard */
+        delete: operations["discard_api_v1_search_rules_proposal_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/search/rules/proposal/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve */
+        post: operations["approve_api_v1_search_rules_proposal_approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/settings": {
         parameters: {
             query?: never;
@@ -639,6 +692,20 @@ export interface components {
             /** Country */
             country: string;
         };
+        /** PlaceRuleModel */
+        PlaceRuleModel: {
+            /** City */
+            city?: string | null;
+            /** Country */
+            country?: string | null;
+            /** Effect */
+            effect?: string | null;
+            /**
+             * Origin
+             * @default user
+             */
+            origin: string;
+        };
         /** PreferencesModel */
         "PreferencesModel-Input": {
             /** Avoided Companies */
@@ -842,6 +909,44 @@ export interface components {
             /** Status */
             status: string;
         };
+        /** RuleItemModel */
+        RuleItemModel: {
+            /** Effect */
+            effect?: string | null;
+            /**
+             * Origin
+             * @default user
+             */
+            origin: string;
+            /** Text */
+            text: string;
+        };
+        /** RuleSetOut */
+        RuleSetOut: {
+            /** Approved At */
+            approved_at: string | null;
+            /** Based On */
+            based_on: {
+                [key: string]: unknown;
+            };
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            rules: components["schemas"]["SearchRulesModel-Output"];
+            /** Status */
+            status: string;
+            /** Version */
+            version: number;
+        };
+        /** RulesStateOut */
+        RulesStateOut: {
+            approved: components["schemas"]["RuleSetOut"] | null;
+            proposal: components["schemas"]["RuleSetOut"] | null;
+            /** Stale */
+            stale: boolean;
+        };
         /** RunOut */
         RunOut: {
             /** Current Step */
@@ -882,6 +987,48 @@ export interface components {
              * Format: date-time
              */
             saved_at: string;
+        };
+        /** SearchRulesModel */
+        "SearchRulesModel-Input": {
+            /** Blocked Locations */
+            blocked_locations?: components["schemas"]["PlaceRuleModel"][];
+            /** Max Age Days */
+            max_age_days: number;
+            /** Preferred Locations */
+            preferred_locations?: components["schemas"]["PlaceRuleModel"][];
+            /** Seniority */
+            seniority?: string[];
+            /** Stack Keywords */
+            stack_keywords?: components["schemas"]["RuleItemModel"][];
+            /** Title Avoid */
+            title_avoid?: components["schemas"]["RuleItemModel"][];
+            /** Title Words */
+            title_words: components["schemas"]["RuleItemModel"][];
+            /** Work Modes */
+            work_modes?: string[];
+            /** Years Experience */
+            years_experience?: number | string | null;
+        };
+        /** SearchRulesModel */
+        "SearchRulesModel-Output": {
+            /** Blocked Locations */
+            blocked_locations?: components["schemas"]["PlaceRuleModel"][];
+            /** Max Age Days */
+            max_age_days: number;
+            /** Preferred Locations */
+            preferred_locations?: components["schemas"]["PlaceRuleModel"][];
+            /** Seniority */
+            seniority?: string[];
+            /** Stack Keywords */
+            stack_keywords?: components["schemas"]["RuleItemModel"][];
+            /** Title Avoid */
+            title_avoid?: components["schemas"]["RuleItemModel"][];
+            /** Title Words */
+            title_words: components["schemas"]["RuleItemModel"][];
+            /** Work Modes */
+            work_modes?: string[];
+            /** Years Experience */
+            years_experience?: string | null;
         };
         /** SettingsIn */
         SettingsIn: {
@@ -1664,6 +1811,117 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_rules_api_v1_search_rules_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RulesStateOut"];
+                };
+            };
+        };
+    };
+    edit_proposal_api_v1_search_rules_proposal_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SearchRulesModel-Input"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuleSetOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    make_proposal_api_v1_search_rules_proposal_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuleSetOut"];
+                };
+            };
+        };
+    };
+    discard_api_v1_search_rules_proposal_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    approve_api_v1_search_rules_proposal_approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuleSetOut"];
                 };
             };
         };
