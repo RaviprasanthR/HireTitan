@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Protocol
+from typing import Any, Literal, Protocol
 from uuid import UUID
 
 from hiretitan.search.domain.proposer import ProposalInput
@@ -64,6 +64,31 @@ class CareerOpsPort(Protocol):
 
     async def discover(self, careers_url: str) -> DiscoveryResult | None:
         """Work out which provider board sits behind a careers page, if it is one we can read."""
+        ...
+
+
+PageStatus = Literal["ok", "blocked", "failed", "unreadable"]
+
+
+@dataclass(frozen=True, slots=True)
+class PageFetch:
+    """The outcome of reading one careers page (T051).
+
+    ``blocked``: the site's robots.txt does not allow it, so it was never requested.
+    ``failed``: a network or server problem; worth trying again later.
+    ``unreadable``: it arrived but is not a page we can read (too big, not HTML).
+    """
+
+    status: PageStatus
+    body: str | None = None
+    final_url: str | None = None
+    from_cache: bool = False
+    error: str | None = None
+
+
+class PageFetcherPort(Protocol):
+    async def fetch(self, url: str) -> PageFetch:
+        """Read a careers page politely: robots.txt, spacing per host, caching, size limits."""
         ...
 
 
