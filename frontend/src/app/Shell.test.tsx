@@ -15,7 +15,11 @@ function renderAt(path: string, profile = true) {
         ? reply({ step: 'done', display_name: 'Jane', open_review_id: null, active_run_id: null })
         : url.endsWith('/profile')
           ? reply({ current: profile ? { id: 'v1' } : null })
-          : reply([]),
+          : url.includes('/jobs')
+            ? reply({ items: [], next_cursor: null })
+            : url.endsWith('/search/latest')
+              ? reply(null)
+              : reply([]),
     ),
   )
   const router = createMemoryRouter(routes, { initialEntries: [path] })
@@ -56,7 +60,7 @@ describe('Shell', () => {
   })
 
   it.each([
-    ['/', 'Home'],
+    ['/', 'Jobs'],
     ['/profile', 'Profile'],
     ['/preferences', 'Preferences'],
     ['/review', 'Review'],

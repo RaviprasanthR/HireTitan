@@ -1,6 +1,6 @@
 import type { RouteObject } from 'react-router'
 import {
-  HomePage,
+  ExplorePage,
   NotFoundPage,
   PreferencesPage,
   ProfileEditor,
@@ -22,7 +22,7 @@ export const routes: RouteObject[] = [
       {
         element: <Shell />,
         children: [
-          { path: '/', element: <HomePage /> },
+          { path: '/', element: <ExplorePage /> },
           { path: '/profile', element: <ProfilePage /> },
           { path: '/profile/edit', element: <ProfileEditor /> },
           { path: '/profile/review/:reviewId', element: <ProfileReviewPage /> },

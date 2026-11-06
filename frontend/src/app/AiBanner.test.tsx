@@ -16,6 +16,8 @@ function status(aiStatus: string, message: string | null = null) {
       resume_uploaded: false,
       profile_confirmed: false,
       preferences_saved: false,
+      rules_approved: false,
+      searched_once: false,
     },
     budget: { cap_usd: '25.00', spent_usd: '0', period: '2026-11' },
   }
@@ -23,11 +25,15 @@ function status(aiStatus: string, message: string | null = null) {
 
 function renderAt(path: string, aiStatus: string, message: string | null = null) {
   const fetchMock = vi.fn<(url: string, init?: RequestInit) => Promise<Response>>(async (url) =>
-      url.endsWith('/status')
-        ? json(status(aiStatus, message))
-        : url.endsWith('/onboarding')
-          ? json({ step: 'done', display_name: 'Jane', open_review_id: null, active_run_id: null })
-          : json([]),
+    url.endsWith('/status')
+      ? json(status(aiStatus, message))
+      : url.endsWith('/onboarding')
+        ? json({ step: 'done', display_name: 'Jane', open_review_id: null, active_run_id: null })
+        : url.includes('/jobs')
+          ? json({ items: [], next_cursor: null })
+          : url.endsWith('/search/latest')
+            ? json(null)
+            : json([]),
   )
   vi.stubGlobal('fetch', fetchMock)
   const router = createMemoryRouter(routes, { initialEntries: [path] })
@@ -78,7 +84,7 @@ describe('AiBanner', () => {
   it('R7_check_again_asks_the_server_to_recheck', async () => {
     const user = userEvent.setup()
     const fetchMock = renderAt('/', 'out_of_credit', 'No credit.')
-    await screen.findByRole('heading', { level: 1, name: 'Home' })
+    await screen.findByRole('heading', { level: 1, name: 'Jobs' })
     await user.click(await screen.findByRole('button', { name: 'Check again' }))
     await waitFor(() =>
       expect(
@@ -93,7 +99,7 @@ describe('AiBanner', () => {
 
   it.each(['working', 'unknown'])('no_banner_when_%s', async (aiStatus) => {
     renderAt('/', aiStatus)
-    await screen.findByRole('heading', { level: 1, name: 'Home' })
+    await screen.findByRole('heading', { level: 1, name: 'Jobs' })
     expect(screen.queryByRole('alert', { name: 'AI status' })).not.toBeInTheDocument()
     expect(screen.queryByRole('status', { name: 'AI status' })).not.toBeInTheDocument()
   })

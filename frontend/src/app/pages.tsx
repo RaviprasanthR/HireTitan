@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { useParams } from 'react-router'
-import { HomePage } from '@/features/home/HomePage'
+import { ExplorePage } from '@/features/explore/ExplorePage'
 import { PreferencesPage } from '@/features/preferences/PreferencesPage'
 import { ReviewPage } from '@/features/review/ReviewPage'
 import { SearchRulesPage } from '@/features/search-rules/SearchRulesPage'
@@ -27,4 +27,14 @@ export function ProfileReviewPage() {
 }
 export const NotFoundPage = () => <Page title="Page not found" />
 
-export { HomePage, SearchRulesPage, PreferencesPage, ReviewPage, SettingsPage, ProfileEditor, ProfilePage, VersionView as ProfileVersionPage, VersionsList as ProfileVersionsPage }
+export {
+  ExplorePage,
+  SearchRulesPage,
+  PreferencesPage,
+  ReviewPage,
+  SettingsPage,
+  ProfileEditor,
+  ProfilePage,
+  VersionView as ProfileVersionPage,
+  VersionsList as ProfileVersionsPage,
+}
