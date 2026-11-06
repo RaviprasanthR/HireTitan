@@ -38,8 +38,13 @@ from hiretitan.profile.api.reviews import create_reviews_router
 from hiretitan.profile.infra.parsing.sniff import MAX_BYTES
 from hiretitan.profile.infra.repos import VersionsRepo
 from hiretitan.search.api.rules import SearchRulesApiDeps, create_search_rules_router
+from hiretitan.search.api.runs import SearchRunsApiDeps, create_search_runs_router
 from hiretitan.search.application.synonyms_seed import load_title_synonyms
-from hiretitan.search_wiring import ProfileAndPreferencesSource, seed_companies
+from hiretitan.search_wiring import (
+    ProfileAndPreferencesSource,
+    SetupFinishedGate,
+    seed_companies,
+)
 from hiretitan.setup.api.data import DataApiDeps, create_data_router
 from hiretitan.setup.api.onboarding import OnboardingApiDeps, create_onboarding_router
 from hiretitan.setup.api.review_items import ReviewItemsApiDeps, create_review_items_router
@@ -190,6 +195,7 @@ def build_app(settings: Settings | None = None) -> FastAPI:
             yield
         await engine.dispose()
 
+    synonyms = load_title_synonyms(SEED_DIR / "title_synonyms.yaml")
     routers = [
         create_resumes_router(deps),
         create_reviews_router(deps),
@@ -203,7 +209,17 @@ def build_app(settings: Settings | None = None) -> FastAPI:
             SearchRulesApiDeps(
                 sessions=deps.sessions,
                 source=ProfileAndPreferencesSource,
-                synonyms=load_title_synonyms(SEED_DIR / "title_synonyms.yaml"),
+                synonyms=synonyms,
+            )
+        ),
+        create_search_runs_router(
+            SearchRunsApiDeps(
+                sessions=deps.sessions,
+                queue=deps.queue,
+                clock=clock,
+                source=ProfileAndPreferencesSource,
+                synonyms=synonyms,
+                setup_gate=SetupFinishedGate,
             )
         ),
         create_runs_router(deps.sessions, deps.queue),

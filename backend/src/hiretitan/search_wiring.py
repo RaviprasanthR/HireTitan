@@ -23,6 +23,7 @@ from hiretitan.search.domain.proposer import PlaceInput, ProposalInput
 from hiretitan.search.infra.careerops.adapter import CareerOpsAdapter
 from hiretitan.search.infra.careerops.fake import FileCareerOps
 from hiretitan.search.infra.repos import CompaniesRepo
+from hiretitan.setup.infra.settings_repo import SettingsRepo
 
 
 def build_career_ops(settings: Settings) -> CareerOpsPort:
@@ -69,6 +70,17 @@ def profile_card_source(
         )
 
     return read
+
+
+class SetupFinishedGate:
+    """``SetupGate``: the first-run setup was completed (the person pressed Finish)."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def setup_complete(self) -> bool:
+        record = await SettingsRepo(self._session).read_onboarding()
+        return record.setup_completed_at is not None
 
 
 class ProfileAndPreferencesSource:
