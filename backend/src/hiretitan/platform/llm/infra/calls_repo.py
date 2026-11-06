@@ -34,7 +34,7 @@ class CallsRepo:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def record(self, call: LlmCallRecord, *, created_at: datetime | None = None) -> None:
+    async def record(self, call: LlmCallRecord, *, created_at: datetime | None = None) -> UUID:
         row = LlmCallRow(
             run_id=call.run_id,
             task=call.task,
@@ -54,6 +54,7 @@ class CallsRepo:
             row.created_at = created_at
         self._session.add(row)
         await self._session.flush()
+        return row.id
 
     async def spent_in_month(self, year: int, month: int) -> Decimal:
         """Total ``cost_usd`` in the UTC calendar month."""

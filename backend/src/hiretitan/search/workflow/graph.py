@@ -3,7 +3,7 @@
 plan_run -> next_batch -> fetch_batch -> normalize -> dedup -> apply_rules -> store_batch ->
 next_batch ... -> finish. Companies are read in batches of 8; each batch is written in one
 transaction before the next starts, so jobs appear as the search goes (FR-008). The relevance
-check by the AI is added between ``apply_rules`` and ``store_batch`` (T031).
+check by the AI sits between ``apply_rules`` and ``store_batch`` (T031).
 """
 
 from __future__ import annotations
@@ -46,6 +46,7 @@ from hiretitan.search.domain.vendors import ENABLED_VENDORS
 from hiretitan.search.infra.models import JobRow, SearchRunRow
 from hiretitan.search.infra.repos import CompaniesRepo, RuleSetsRepo, SearchRunsRepo
 from hiretitan.search.infra.search_store import SearchStore
+from hiretitan.search.workflow.judge import JudgeDeps, judge_jobs, with_decision
 
 WORKFLOW_NAME: Final = "job_search"
 BATCH_SIZE: Final = 8
@@ -68,6 +69,7 @@ class SearchDeps:
     synonyms: Mapping[str, tuple[str, ...]]
     publish: Publish | None = None
     batch_size: int = BATCH_SIZE
+    judge: JudgeDeps | None = None  # None: no AI step at all (rules only)
 
 
 class SearchState(TypedDict, total=False):
@@ -370,15 +372,26 @@ async def apply_rules(deps: SearchDeps, state: State) -> State:
         )
         if isinstance(verdict, Skip):
             decision = DecisionInput("skipped", "rule", verdict.reason, rule_key=verdict.rule_key)
-            job = _with(job, decision)
+            job = with_decision(job, decision)
         jobs.append(job)
     return {"new": _dump(_NEW, jobs)}
 
 
-def _with(job: NewJob, decision: DecisionInput) -> NewJob:
-    fields = {name: getattr(job, name) for name in job.__dataclass_fields__}
-    fields["decision"] = decision
-    return NewJob(**fields)
+async def judge_relevance(deps: SearchDeps, state: State) -> State:
+    """The fast model decides the jobs the rules kept, 10 per call (FR-035a). Without a key, in
+    rules-only mode, or when an answer is unusable, they stay "not checked by AI" (FR-028)."""
+    if deps.judge is None:
+        return {}
+    async with deps.sessions() as session:
+        mode = (await _run(session, state)).mode
+    judged = await judge_jobs(
+        deps.judge,
+        _NEW.validate_python(state["new"]),
+        mode=mode,
+        run_id=UUID(state["run_id"]),
+        already_cost=Decimal(state.get("ai_cost", "0")),
+    )
+    return {"new": _dump(_NEW, judged.jobs), "ai_cost": str(judged.cost)}
 
 
 async def store_batch_node(deps: SearchDeps, state: State) -> State:
@@ -442,6 +455,7 @@ def build_graph(deps: SearchDeps) -> StateGraph[Any]:
         ("normalize", normalize),
         ("dedup", dedup),
         ("apply_rules", apply_rules),
+        ("judge_relevance", judge_relevance),
         ("store_batch", store_batch_node),
         ("finish", finish),
     ):
@@ -454,7 +468,8 @@ def build_graph(deps: SearchDeps) -> StateGraph[Any]:
     graph.add_edge("fetch_batch", "normalize")
     graph.add_edge("normalize", "dedup")
     graph.add_edge("dedup", "apply_rules")
-    graph.add_edge("apply_rules", "store_batch")
+    graph.add_edge("apply_rules", "judge_relevance")
+    graph.add_edge("judge_relevance", "store_batch")
     graph.add_edge("store_batch", "next_batch")
     graph.add_edge("finish", END)
     return graph
