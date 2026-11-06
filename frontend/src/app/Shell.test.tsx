@@ -36,12 +36,13 @@ describe('Shell', () => {
     vi.unstubAllGlobals()
   })
 
-  it('FR027_sidebar_has_six_sections', async () => {
+  it('FR027_sidebar_has_seven_sections', async () => {
     renderAt('/')
     const nav = await screen.findByRole('navigation', { name: 'Main' })
     const links = within(nav).getAllByRole('link')
     expect(links.map((link) => link.textContent)).toEqual([
       'Home',
+      'Applied',
       'Profile',
       'Preferences',
       'Search rules',

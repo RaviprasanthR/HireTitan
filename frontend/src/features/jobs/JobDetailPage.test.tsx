@@ -5,6 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { stubApi } from '@/test/api'
 import { JobDetailPage } from './JobDetailPage'
+import { UndoToast } from './UndoToast'
 
 function detail(over: Record<string, unknown> = {}) {
   return {
@@ -67,6 +68,14 @@ function renderPage(job = detail()) {
         status: 202,
         headers: { 'Content-Type': 'application/json' },
       })
+    if (call.path === '/jobs/j1/applied')
+      return call.method === 'DELETE'
+        ? { ...job, state: 'explore', applied_on: null }
+        : {
+            ...job,
+            state: 'applied',
+            applied_on: (call.body as { applied_on?: string } | undefined)?.applied_on ?? '2026-11-06',
+          }
     if (call.path === '/jobs/j1') return job
     return undefined
   })
@@ -78,6 +87,7 @@ function renderPage(job = detail()) {
         <Routes>
           <Route path="/jobs/:id" element={<JobDetailPage />} />
         </Routes>
+        <UndoToast />
       </MemoryRouter>
     </QueryClientProvider>,
   )
@@ -153,5 +163,76 @@ describe('JobDetailPage', () => {
     renderPage(detail({ canonical_url: null, sources: [] }))
     await screen.findByRole('heading', { level: 1, name: 'Backend Engineer' })
     expect(screen.queryByRole('link', { name: 'Open original posting' })).not.toBeInTheDocument()
+  })
+
+  it('US5_AS1_i_applied_marks_the_job_with_today', async () => {
+    const user = userEvent.setup()
+    const calls = renderPage()
+
+    await user.click(await screen.findByRole('button', { name: 'I applied' }))
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() =>
+      expect(calls.some((c) => c.method === 'POST' && c.path === '/jobs/j1/applied')).toBe(true),
+    )
+    const post = calls.find((c) => c.method === 'POST' && c.path === '/jobs/j1/applied')
+    expect(post?.body).toBeUndefined()
+    expect(await screen.findByRole('status')).toHaveTextContent(/marked as applied/i)
+  })
+
+  it('US5_AS1_the_date_can_be_changed', async () => {
+    const user = userEvent.setup()
+    const calls = renderPage()
+
+    await user.click(await screen.findByRole('button', { name: 'I applied' }))
+    const date = screen.getByLabelText('Date applied')
+    await user.clear(date)
+    await user.type(date, '2026-11-03')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() =>
+      expect(
+        calls.find((c) => c.method === 'POST' && c.path === '/jobs/j1/applied')?.body,
+      ).toEqual({ applied_on: '2026-11-03' }),
+    )
+  })
+
+  it('US5_AS3_undo_from_the_notice', async () => {
+    const user = userEvent.setup()
+    const calls = renderPage()
+    await user.click(await screen.findByRole('button', { name: 'I applied' }))
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    const notice = await screen.findByRole('status')
+    await user.click(within(notice).getByRole('button', { name: 'Undo' }))
+
+    await waitFor(() =>
+      expect(calls.some((c) => c.method === 'DELETE' && c.path === '/jobs/j1/applied')).toBe(true),
+    )
+  })
+
+  it('US5_AS4_pasted_job_can_be_marked_applied', async () => {
+    renderPage(
+      detail({
+        sources: [{ kind: 'manual', url: 'https://jobs.example.com/pasted' }],
+        decision: { outcome: 'shown', decided_by: 'person', reason: 'added by you' },
+      }),
+    )
+
+    expect(await screen.findByRole('button', { name: 'I applied' })).toBeInTheDocument()
+  })
+
+  it('a_skipped_job_can_be_marked_applied', async () => {
+    renderPage(detail({ state: 'skipped' }))
+
+    expect(await screen.findByRole('button', { name: 'I applied' })).toBeInTheDocument()
+  })
+
+  it('an_applied_job_shows_its_date_and_undo_instead', async () => {
+    renderPage(detail({ state: 'applied', applied_on: '2026-11-03' }))
+
+    expect(await screen.findByText('Applied on 3 Nov 2026')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Undo' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'I applied' })).not.toBeInTheDocument()
   })
 })

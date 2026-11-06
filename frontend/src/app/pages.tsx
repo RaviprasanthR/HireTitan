@@ -3,6 +3,7 @@ import { useParams } from 'react-router'
 import { ExplorePage } from '@/features/explore/ExplorePage'
 import { RunSummaryPage } from '@/features/explore/RunSummaryPage'
 import { SearchHistoryPage } from '@/features/explore/SearchHistoryPage'
+import { AppliedPage } from '@/features/jobs/AppliedPage'
 import { JobDetailPage } from '@/features/jobs/JobDetailPage'
 import { PreferencesPage } from '@/features/preferences/PreferencesPage'
 import { ReviewPage } from '@/features/review/ReviewPage'
@@ -31,6 +32,7 @@ export function ProfileReviewPage() {
 export const NotFoundPage = () => <Page title="Page not found" />
 
 export {
+  AppliedPage,
   ExplorePage,
   JobDetailPage,
   RunSummaryPage,

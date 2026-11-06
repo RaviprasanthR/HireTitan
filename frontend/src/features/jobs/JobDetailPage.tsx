@@ -1,6 +1,15 @@
 import { Link, useParams } from 'react-router'
 import { Button } from '@/components/ui/button'
-import { formatDate, isNotChecked, sourceLabel, useJob, useRecheck } from '@/features/explore/api'
+import {
+  formatDate,
+  formatDay,
+  isNotChecked,
+  sourceLabel,
+  useJob,
+  useRecheck,
+} from '@/features/explore/api'
+import { AppliedControl } from './AppliedControl'
+import { useUndoApplied } from './appliedApi'
 
 type Flag = { rule_id: string; severity: string; excerpt: string; location: string }
 
@@ -32,6 +41,7 @@ export function JobDetailPage() {
   const { id = '' } = useParams()
   const job = useJob(id)
   const recheck = useRecheck()
+  const undo = useUndoApplied()
   if (job.isPending) return <p>Loading…</p>
   if (job.isError) return <p role="alert">Could not load this job.</p>
   const data = job.data
@@ -73,6 +83,23 @@ export function JobDetailPage() {
             </div>
           )}
         </div>
+      )}
+
+      {data.state === 'applied' ? (
+        <div className="flex items-center gap-3 text-sm">
+          <span>Applied on {formatDay(data.applied_on)}</span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={undo.isPending}
+            onClick={() => undo.mutate(data.id)}
+          >
+            Undo
+          </Button>
+        </div>
+      ) : (
+        data.state !== 'deleted' && <AppliedControl id={data.id} />
       )}
 
       <div className="flex flex-wrap items-center gap-4 text-sm">

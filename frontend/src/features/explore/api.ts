@@ -57,6 +57,17 @@ export function useJobs(filters: JobFilters) {
   })
 }
 
+export function useAppliedJobs() {
+  return useInfiniteQuery({
+    queryKey: ['jobs', 'applied'],
+    initialPageParam: '',
+    queryFn: ({ pageParam }) =>
+      apiFetch<JobPage>(`/jobs${query({ list: 'applied', cursor: pageParam })}`),
+    getNextPageParam: (last) => last.next_cursor ?? undefined,
+    refetchOnWindowFocus: false,
+  })
+}
+
 export function useJob(id: string) {
   return useQuery({
     queryKey: ['jobs', 'one', id],
@@ -98,7 +109,7 @@ export function useSkipped(runId: string) {
   })
 }
 
-function useRefreshing() {
+export function useRefreshing() {
   const client = useQueryClient()
   return () =>
     Promise.all(
@@ -188,6 +199,17 @@ export function reasonOf(job: JobCard): string {
 
 export function isNotChecked(job: JobCard): boolean {
   return job.decision?.decided_by === 'rules_only_fallback'
+}
+
+/** A plain calendar day ("2026-11-03"), shown without any time-zone shift. */
+export function formatDay(value: string | null | undefined): string {
+  if (!value) return ''
+  const [year = 0, month = 1, day = 1] = value.split('-').map(Number)
+  return new Date(year, month - 1, day).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
 }
 
 export function formatDate(value: string | null | undefined): string {

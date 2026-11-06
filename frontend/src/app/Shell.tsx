@@ -1,10 +1,12 @@
 import { Outlet, NavLink } from 'react-router'
 import { AiBanner } from './AiBanner'
+import { UndoToast } from '@/features/jobs/UndoToast'
 import { Wordmark } from '@/components/Logo'
 import { cn } from '@/lib/utils'
 
 const sections = [
   { to: '/', label: 'Home', end: true },
+  { to: '/applied', label: 'Applied', end: false },
   { to: '/profile', label: 'Profile', end: false },
   { to: '/preferences', label: 'Preferences', end: false },
   { to: '/search/rules', label: 'Search rules', end: false },
@@ -44,6 +46,7 @@ export function Shell() {
           <Outlet />
         </main>
       </div>
+      <UndoToast />
     </div>
   )
 }
