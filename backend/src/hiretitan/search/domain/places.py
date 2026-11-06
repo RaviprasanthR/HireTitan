@@ -102,3 +102,11 @@ def same_city(a: str | None, b: str | None) -> bool:
     if not a or not b:
         return False
     return (canonical_city(a) or key(a)) == (canonical_city(b) or key(b))
+
+
+def city_aliases(city: str) -> frozenset[str]:
+    """Every spelling of this city (lower-case words), or just its own when it is not listed."""
+    canonical = canonical_city(city)
+    if canonical is None:
+        return frozenset({key(city)})
+    return frozenset(key(a) for a in CITY_ALIASES[canonical])
