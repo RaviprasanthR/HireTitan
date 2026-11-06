@@ -64,7 +64,7 @@ discover(careers_url: str) -> DiscoveryResult | None # vendor, board_id, live_jo
 | `test_US1_AS4_blocked_location_skipped` | US1 AS4, SC-004 |
 | `test_US1_AS5_restore_keeps_job_in_explore_on_next_search` | US1 AS5, FR-025 |
 | `test_US1_AS6_seen_again_job_is_not_judged_again` | US1 AS6, FR-026, SC-007 |
-| `test_US1_AS7_no_key_runs_rules_only_and_says_why` | US1 AS7, FR-033 (AI unavailable), FR-028 |
+| `test_US1_AS7_no_key_runs_rules_only_and_says_why` | US1 AS7, FR-028 |
 | `test_US1_AS8_out_of_credit_stops_keeps_batches_and_shows_message` | US1 AS8, FR-010a, SC-006a |
 | `test_US1_AS8_budget_reached_stops_and_next_search_continues` | US1 AS8, FR-010a |
 | `test_US1_AS9_stop_after_current_batch` | US1 AS9, FR-010 |
