@@ -54,6 +54,7 @@ COPY --from=scanner /opt/career-ops/LICENSE /usr/share/doc/career-ops/LICENSE
 
 ENV PATH="/app/backend/.venv/bin:$PATH" \
     HIRETITAN_FRONTEND_DIST=/app/frontend/dist \
+    HIRETITAN_SEED_DIR=/app/backend/seed \
     HIRETITAN_DATA_DIR=/data \
     HIRETITAN_CAREER_OPS_DIR=/opt/career-ops
 

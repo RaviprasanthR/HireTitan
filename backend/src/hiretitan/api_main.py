@@ -47,6 +47,7 @@ from hiretitan.search_wiring import (
     SetupFinishedGate,
     seed_companies,
 )
+from hiretitan.seed_dir import resolve_seed_dir
 from hiretitan.setup.api.data import DataApiDeps, create_data_router
 from hiretitan.setup.api.onboarding import OnboardingApiDeps, create_onboarding_router
 from hiretitan.setup.api.review_items import ReviewItemsApiDeps, create_review_items_router
@@ -57,7 +58,7 @@ from hiretitan.setup_wiring import RepoFacts, SqlDeleteAllStore
 API_PREFIX: Final = "/api/v1"
 MULTIPART_OVERHEAD: Final = 64 * 1024  # boundaries and headers around the file
 DEFAULT_DIST: Final = Path(__file__).resolve().parents[3] / "frontend" / "dist"
-SEED_DIR: Final = Path(__file__).resolve().parents[2] / "seed"
+SEED_DIR: Final = resolve_seed_dir()
 
 CSP: Final = "; ".join(
     [

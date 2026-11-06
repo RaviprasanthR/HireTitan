@@ -34,9 +34,10 @@ from hiretitan.search.workflow.graph import SearchDeps, job_search_workflow
 from hiretitan.search.workflow.judge import JudgeDeps
 from hiretitan.search.workflow.recheck import RECHECK_WORKFLOW, recheck_workflow
 from hiretitan.search_wiring import build_career_ops, profile_card_source
+from hiretitan.seed_dir import resolve_seed_dir
 from hiretitan.setup.infra.settings_repo import budget_cap_provider
 
-SEED_DIR = Path(__file__).resolve().parents[2] / "seed"
+SEED_DIR = resolve_seed_dir()
 
 
 def workflow_registry(deps: IngestDeps, search: SearchDeps) -> Mapping[str, WorkflowDef]:
