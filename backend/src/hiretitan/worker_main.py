@@ -28,12 +28,22 @@ from hiretitan.platform.runtime.runner import WorkflowDef, WorkflowRunner
 from hiretitan.platform.storage.local import LocalFileStorage
 from hiretitan.preferences.infra.repo import default_country_provider
 from hiretitan.profile.workflow.graph import WORKFLOW_NAME, IngestDeps, profile_ingest_workflow
+from hiretitan.search.application.synonyms_seed import load_title_synonyms
+from hiretitan.search.workflow.graph import WORKFLOW_NAME as SEARCH_WORKFLOW_NAME
+from hiretitan.search.workflow.graph import SearchDeps, job_search_workflow
+from hiretitan.search.workflow.judge import JudgeDeps
+from hiretitan.search_wiring import build_career_ops, profile_card_source
 from hiretitan.setup.infra.settings_repo import budget_cap_provider
 
+SEED_DIR = Path(__file__).resolve().parents[2] / "seed"
 
-def workflow_registry(deps: IngestDeps) -> Mapping[str, WorkflowDef]:
+
+def workflow_registry(deps: IngestDeps, search: SearchDeps) -> Mapping[str, WorkflowDef]:
     """Every workflow this install can run, by name. Features add theirs here."""
-    return {WORKFLOW_NAME: profile_ingest_workflow(deps)}
+    return {
+        WORKFLOW_NAME: profile_ingest_workflow(deps),
+        SEARCH_WORKFLOW_NAME: job_search_workflow(search),
+    }
 
 
 async def run_worker(settings: Settings, *, wait: bool = True) -> None:
@@ -61,10 +71,27 @@ async def run_worker(settings: Settings, *, wait: bool = True) -> None:
         publish=publisher.publish,
         default_country=default_country_provider(sessions),
     )
+    search_deps = SearchDeps(
+        sessions=sessions,
+        career_ops=build_career_ops(settings),
+        clock=SystemClock(),
+        synonyms=load_title_synonyms(SEED_DIR / "title_synonyms.yaml"),
+        publish=publisher.publish,
+        judge=JudgeDeps(
+            sessions=sessions,
+            llm=built.llm,
+            profile_card=profile_card_source(sessions),
+            prompts=ingest_deps.prompts,
+            provider=provider,
+        ),
+    )
     try:
         async with open_checkpointer(settings.database_url) as checkpointer:
             runtime.holder.runner = WorkflowRunner(
-                sessions, checkpointer, workflow_registry(ingest_deps), run_notifier(publisher)
+                sessions,
+                checkpointer,
+                workflow_registry(ingest_deps, search_deps),
+                run_notifier(publisher),
             )
             async with runtime.app.open_async():
                 await resume_on_startup(built.provider_status, sessions, runtime.queue)

@@ -39,7 +39,7 @@ from hiretitan.profile.infra.parsing.sniff import MAX_BYTES
 from hiretitan.profile.infra.repos import VersionsRepo
 from hiretitan.search.api.rules import SearchRulesApiDeps, create_search_rules_router
 from hiretitan.search.application.synonyms_seed import load_title_synonyms
-from hiretitan.search_wiring import ProfileAndPreferencesSource
+from hiretitan.search_wiring import ProfileAndPreferencesSource, seed_companies
 from hiretitan.setup.api.data import DataApiDeps, create_data_router
 from hiretitan.setup.api.onboarding import OnboardingApiDeps, create_onboarding_router
 from hiretitan.setup.api.review_items import ReviewItemsApiDeps, create_review_items_router
@@ -185,6 +185,7 @@ def build_app(settings: Settings | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+        await seed_companies(deps.sessions, SEED_DIR / "companies.yaml")
         async with runtime.app.open_async():  # the job queue connection, to defer jobs
             yield
         await engine.dispose()

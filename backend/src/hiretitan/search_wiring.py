@@ -6,13 +6,69 @@ The search module may not import other features' internals, so this composition-
 
 from __future__ import annotations
 
-from sqlalchemy.ext.asyncio import AsyncSession
+import asyncio
+from collections.abc import Awaitable, Callable
+from pathlib import Path
 
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
+from hiretitan.platform.config.settings import Settings
 from hiretitan.preferences.infra.repo import PreferencesRepo
 from hiretitan.profile.infra.repos import VersionsRepo
-from hiretitan.search.application.ports import ProposalFacts
+from hiretitan.search.application.ports import CareerOpsPort, ProposalFacts
 from hiretitan.search.application.rules import RulesUnavailableError
+from hiretitan.search.application.seed import SeedResult, load_seed
+from hiretitan.search.domain.cards import ProfileCard
 from hiretitan.search.domain.proposer import PlaceInput, ProposalInput
+from hiretitan.search.infra.careerops.adapter import CareerOpsAdapter
+from hiretitan.search.infra.careerops.fake import FileCareerOps
+from hiretitan.search.infra.repos import CompaniesRepo
+
+
+def build_career_ops(settings: Settings) -> CareerOpsPort:
+    """The job-board reader: the pinned career-ops, or the file-based fake for end-to-end runs."""
+    if settings.career_ops == "fake":
+        return FileCareerOps(settings.fake_career_ops_dir)
+    return CareerOpsAdapter(career_ops_dir=settings.career_ops_dir, data_dir=settings.data_dir)
+
+
+async def seed_companies(
+    sessions: async_sessionmaker[AsyncSession], path: Path
+) -> SeedResult | None:
+    """Load the shipped company list at start-up; no file yet (T057) means nothing to load."""
+    if not await asyncio.to_thread(path.exists):
+        return None
+    async with sessions() as session:
+        result = await load_seed(CompaniesRepo(session), path)
+        await session.commit()
+        return result
+
+
+def profile_card_source(
+    sessions: async_sessionmaker[AsyncSession],
+) -> Callable[[], Awaitable[ProfileCard | None]]:
+    """The profile card the relevance check reads: confirmed profile and saved preferences only."""
+
+    async def read() -> ProfileCard | None:
+        async with sessions() as session:
+            try:
+                facts = await ProfileAndPreferencesSource(session).read()
+            except RulesUnavailableError:
+                return None
+        source = facts.source
+        return ProfileCard(
+            target_roles=tuple(source.target_roles),
+            seniority=tuple(source.seniority_levels),
+            years_experience=source.years_experience,
+            key_skills=tuple(source.key_skills),
+            preferred_locations=tuple(
+                ", ".join(part for part in (p.city, p.country) if part)
+                for p in source.preferred_locations
+            ),
+            work_modes=tuple(sorted(source.work_modes)),
+        )
+
+    return read
 
 
 class ProfileAndPreferencesSource:

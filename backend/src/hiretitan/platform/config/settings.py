@@ -16,6 +16,7 @@ from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 LlmMode = Literal["openai", "fake"]
+CareerOpsMode = Literal["real", "fake"]
 
 
 class Settings(BaseSettings):
@@ -34,6 +35,13 @@ class Settings(BaseSettings):
     llm: LlmMode = Field(default="openai", validation_alias="HIRETITAN_LLM")
     frontend_dist: Path | None = Field(default=None, validation_alias="HIRETITAN_FRONTEND_DIST")
     fake_llm_dir: Path | None = Field(default=None, validation_alias="HIRETITAN_FAKE_LLM_DIR")
+    career_ops: CareerOpsMode = Field(default="real", validation_alias="HIRETITAN_CAREER_OPS")
+    career_ops_dir: Path = Field(
+        default=Path("/opt/career-ops"), validation_alias="HIRETITAN_CAREER_OPS_DIR"
+    )
+    fake_career_ops_dir: Path | None = Field(
+        default=None, validation_alias="HIRETITAN_FAKE_CAREER_OPS_DIR"
+    )
 
     explicit_database_url: SecretStr | None = Field(default=None, validation_alias="DATABASE_URL")
     postgres_user: str = Field(default="hiretitan", validation_alias="POSTGRES_USER")
@@ -45,7 +53,12 @@ class Settings(BaseSettings):
     postgres_port: int = Field(default=5432, ge=1, le=65535, validation_alias="POSTGRES_PORT")
 
     @field_validator(
-        "openai_api_key", "explicit_database_url", "fake_llm_dir", "frontend_dist", mode="before"
+        "openai_api_key",
+        "explicit_database_url",
+        "fake_llm_dir",
+        "fake_career_ops_dir",
+        "frontend_dist",
+        mode="before",
     )
     @classmethod
     def _blank_is_missing(cls, value: object) -> object:

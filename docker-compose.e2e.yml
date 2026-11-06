@@ -6,13 +6,17 @@
 x-fake-env: &fake-env
   HIRETITAN_LLM: fake
   HIRETITAN_FAKE_LLM_DIR: /fake-llm
+  HIRETITAN_CAREER_OPS: fake
+  HIRETITAN_FAKE_CAREER_OPS_DIR: /fake-career-ops
 
 services:
   api:
     environment: *fake-env
     volumes:
       - ./.e2e/fake_llm:/fake-llm
+      - ./.e2e/fake_career_ops:/fake-career-ops
   worker:
     environment: *fake-env
     volumes:
       - ./.e2e/fake_llm:/fake-llm
+      - ./.e2e/fake_career_ops:/fake-career-ops
