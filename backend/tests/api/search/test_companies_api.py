@@ -16,6 +16,7 @@ from hiretitan.api_main import create_app
 from hiretitan.platform.clock import FakeClock
 from hiretitan.platform.config.settings import Settings
 from hiretitan.search.api.companies import SearchCompaniesApiDeps, create_companies_router
+from hiretitan.search.infra.careerops.fake import FileCareerOps
 from hiretitan.search.infra.repos import CompaniesRepo
 
 NOW = datetime(2026, 11, 7, 9, tzinfo=UTC)
@@ -30,7 +31,9 @@ class Env:
 
 @pytest.fixture
 async def env(sessions: async_sessionmaker[AsyncSession], tmp_path: Path) -> AsyncIterator[Env]:
-    deps = SearchCompaniesApiDeps(sessions=sessions, clock=FakeClock(NOW))
+    deps = SearchCompaniesApiDeps(
+        sessions=sessions, clock=FakeClock(NOW), careers=FileCareerOps(None)
+    )
     app = create_app(
         Settings(), frontend_dist=tmp_path / "none", routers=[create_companies_router(deps)]
     )

@@ -49,7 +49,7 @@ Progress events go over the existing SSE stream (`/api/v1/events`): `search.batc
 | Method and path | Request → Response | Notes |
 |---|---|---|
 | `GET /companies?filter=all\|check_manually\|hidden` | → `200 {items: Company[], next_cursor}` | FR-016, FR-019 |
-| `POST /companies` | `{name, careers_url, city?, website?}` → `201 Company` + `discovery_run_id` | Starts board discovery (W8, R12) |
+| `POST /companies` | `{name, careers_url, city?, website?}` → `201 Company` (unresolved, not read) | Board discovery (R12) runs while the person waits on `GET .../discovery`, not as a queued workflow, so there is no `discovery_run_id` |
 | `GET /companies/{id}/discovery` | → `200 {status, suggestion: {ats_vendor, board_id, live_jobs} \| null}` | |
 | `POST /companies/{id}/discovery/confirm` · `/reject` | → `200 Company` | Confirm → `user_confirmed`; reject → careers-page route or `check_manually` (FR-017) |
 | `PATCH /companies/{id}` | partial `{name, city, website, careers_url, hidden}` → `200 Company` | Sets `user_modified` (FR-018) |

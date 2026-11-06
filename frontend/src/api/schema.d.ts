@@ -14,7 +14,8 @@ export interface paths {
         /** Companies */
         get: operations["companies_api_v1_companies_get"];
         put?: never;
-        post?: never;
+        /** Create */
+        post: operations["create_api_v1_companies_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -37,6 +38,57 @@ export interface paths {
         head?: never;
         /** Patch */
         patch: operations["patch_api_v1_companies__company_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/discovery": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Discovery */
+        get: operations["discovery_api_v1_companies__company_id__discovery_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/discovery/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm */
+        post: operations["confirm_api_v1_companies__company_id__discovery_confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/discovery/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject */
+        post: operations["reject_api_v1_companies__company_id__discovery_reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/data/delete-all": {
@@ -823,6 +875,23 @@ export interface components {
             /** Searched Once */
             searched_once: boolean;
         };
+        /** CompanyIn */
+        CompanyIn: {
+            /**
+             * Careers Url
+             * @default
+             */
+            careers_url: string;
+            /** City */
+            city?: string | null;
+            /**
+             * Name
+             * @default
+             */
+            name: string;
+            /** Website */
+            website?: string | null;
+        };
         /** CompanyOut */
         CompanyOut: {
             /** Ats Vendor */
@@ -975,6 +1044,15 @@ export interface components {
              * @constant
              */
             confirm: "DELETE";
+        };
+        /** DiscoveryOut */
+        DiscoveryOut: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "found" | "unsupported" | "none";
+            suggestion: components["schemas"]["SuggestionOut"] | null;
         };
         /** DraftSavedOut */
         DraftSavedOut: {
@@ -1780,6 +1858,17 @@ export interface components {
             budget: components["schemas"]["BudgetOut"];
             checklist: components["schemas"]["ChecklistOut"];
         };
+        /** SuggestionOut */
+        SuggestionOut: {
+            /** Ats Vendor */
+            ats_vendor: string;
+            /** Board Id */
+            board_id: string;
+            /** Live Jobs */
+            live_jobs: number | null;
+            /** Supported */
+            supported: boolean;
+        };
         /** SuggestionsOut */
         SuggestionsOut: {
             /** Key Skills */
@@ -1903,6 +1992,39 @@ export interface operations {
             };
         };
     };
+    create_api_v1_companies_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompanyIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     delete_api_v1_companies__company_id__delete: {
         parameters: {
             query?: never;
@@ -1946,6 +2068,99 @@ export interface operations {
                 "application/json": components["schemas"]["CompanyPatch"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    discovery_api_v1_companies__company_id__discovery_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiscoveryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_api_v1_companies__company_id__discovery_confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_api_v1_companies__company_id__discovery_reject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {

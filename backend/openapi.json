@@ -204,6 +204,44 @@
         "title": "ChecklistOut",
         "type": "object"
       },
+      "CompanyIn": {
+        "properties": {
+          "careers_url": {
+            "default": "",
+            "title": "Careers Url",
+            "type": "string"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "name": {
+            "default": "",
+            "title": "Name",
+            "type": "string"
+          },
+          "website": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Website"
+          }
+        },
+        "title": "CompanyIn",
+        "type": "object"
+      },
       "CompanyOut": {
         "properties": {
           "ats_vendor": {
@@ -692,6 +730,35 @@
           "confirm"
         ],
         "title": "DeleteAllIn",
+        "type": "object"
+      },
+      "DiscoveryOut": {
+        "properties": {
+          "status": {
+            "enum": [
+              "found",
+              "unsupported",
+              "none"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "suggestion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SuggestionOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "status",
+          "suggestion"
+        ],
+        "title": "DiscoveryOut",
         "type": "object"
       },
       "DraftSavedOut": {
@@ -3357,6 +3424,41 @@
         "title": "StatusOut",
         "type": "object"
       },
+      "SuggestionOut": {
+        "properties": {
+          "ats_vendor": {
+            "title": "Ats Vendor",
+            "type": "string"
+          },
+          "board_id": {
+            "title": "Board Id",
+            "type": "string"
+          },
+          "live_jobs": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Live Jobs"
+          },
+          "supported": {
+            "title": "Supported",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ats_vendor",
+          "board_id",
+          "supported",
+          "live_jobs"
+        ],
+        "title": "SuggestionOut",
+        "type": "object"
+      },
       "SuggestionsOut": {
         "properties": {
           "key_skills": {
@@ -3631,6 +3733,45 @@
         "tags": [
           "companies"
         ]
+      },
+      "post": {
+        "operationId": "create_api_v1_companies_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompanyIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompanyOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create",
+        "tags": [
+          "companies"
+        ]
       }
     },
     "/api/v1/companies/{company_id}": {
@@ -3715,6 +3856,135 @@
           }
         },
         "summary": "Patch",
+        "tags": [
+          "companies"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/discovery": {
+      "get": {
+        "operationId": "discovery_api_v1_companies__company_id__discovery_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscoveryOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Discovery",
+        "tags": [
+          "companies"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/discovery/confirm": {
+      "post": {
+        "operationId": "confirm_api_v1_companies__company_id__discovery_confirm_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompanyOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Confirm",
+        "tags": [
+          "companies"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/discovery/reject": {
+      "post": {
+        "operationId": "reject_api_v1_companies__company_id__discovery_reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompanyOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reject",
         "tags": [
           "companies"
         ]

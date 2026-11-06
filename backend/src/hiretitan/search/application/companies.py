@@ -126,7 +126,7 @@ def _web_link(value: str) -> bool:
     return parts.scheme in ("http", "https") and bool(parts.netloc) and " " not in value
 
 
-def _checked(changes: dict[str, Any]) -> dict[str, Any]:
+def check_fields(changes: dict[str, Any]) -> dict[str, Any]:
     errors: list[FieldIssue] = []
     values: dict[str, Any] = {}
     for field in EDITABLE:
@@ -156,7 +156,7 @@ async def update_company(
 ) -> CompanyView:
     """Edit name, city, website or careers link. Marks the company as edited by the person."""
     await _one(store, company_id)
-    values = _checked(changes)
+    values = check_fields(changes)
     if values:
         await store.set_fields(company_id, user_modified=True, **values)
     return view_of(await _one(store, company_id))

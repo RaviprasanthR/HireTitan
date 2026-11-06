@@ -46,6 +46,7 @@ from hiretitan.search.application.synonyms_seed import load_title_synonyms
 from hiretitan.search_wiring import (
     ProfileAndPreferencesSource,
     SetupFinishedGate,
+    build_career_ops,
     seed_companies,
 )
 from hiretitan.seed_dir import resolve_seed_dir
@@ -227,7 +228,11 @@ def build_app(settings: Settings | None = None) -> FastAPI:
             )
         ),
         create_duplicates_router(SearchDuplicatesApiDeps(sessions=deps.sessions, clock=clock)),
-        create_companies_router(SearchCompaniesApiDeps(sessions=deps.sessions, clock=clock)),
+        create_companies_router(
+            SearchCompaniesApiDeps(
+                sessions=deps.sessions, clock=clock, careers=build_career_ops(settings)
+            )
+        ),
         create_search_jobs_router(
             SearchJobsApiDeps(sessions=deps.sessions, queue=deps.queue, clock=clock)
         ),

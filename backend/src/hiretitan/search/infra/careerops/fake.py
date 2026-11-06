@@ -21,6 +21,7 @@ from hiretitan.search.application.ports import (
     ScanOk,
     ScanResult,
 )
+from hiretitan.search.infra.careerops.boards import discover_board
 
 
 def _posting(raw: dict[str, Any]) -> Posting:
@@ -57,4 +58,4 @@ class FileCareerOps:
         return {ref.company_id: self._read(ref) for ref in refs}
 
     async def discover(self, careers_url: str) -> DiscoveryResult | None:
-        return None
+        return discover_board(careers_url)
