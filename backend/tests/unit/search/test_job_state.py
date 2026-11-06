@@ -41,6 +41,12 @@ def test_explore_to_applied_needs_a_date() -> None:
     assert new.applied_on == date(2026, 11, 5)
 
 
+def test_US5_skipped_to_applied_is_allowed() -> None:
+    new = transition(S.skipped, S.applied, applied_on=date(2026, 11, 5))
+    assert new.state is S.applied
+    assert new.applied_on == date(2026, 11, 5)
+
+
 def test_explore_to_applied_without_a_date_rejected() -> None:
     with pytest.raises(IllegalJobTransitionError):
         transition(S.explore, S.applied)
@@ -70,7 +76,6 @@ def test_US1_AS6_seen_again_keeps_state() -> None:
         (S.deleted, S.skipped),
         (S.deleted, S.applied),
         (S.deleted, S.deleted),
-        (S.skipped, S.applied),
         (S.skipped, S.skipped),
         (S.explore, S.explore),
         (S.applied, S.skipped),

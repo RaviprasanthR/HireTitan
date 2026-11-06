@@ -8,7 +8,7 @@ and counts atomically (FR-008).
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Literal
 from uuid import UUID
 
@@ -16,6 +16,7 @@ from sqlalchemy import ColumnElement, and_, delete, exists, func, or_, select, u
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from hiretitan.platform.runtime.infra.models import WorkflowRunRow
+from hiretitan.search.domain.job_state import JobState
 from hiretitan.search.domain.vendors import ENABLED_VENDORS
 from hiretitan.search.infra.models import (
     CompanyRow,
@@ -316,6 +317,19 @@ class JobsRepo:
 
     async def set_state(self, job_id: UUID, state: str) -> None:
         await self._session.execute(update(JobRow).where(JobRow.id == job_id).values(state=state))
+        await self._session.flush()
+
+    async def state_of(self, job_id: UUID) -> JobState | None:
+        value = await self._session.scalar(select(JobRow.state).where(JobRow.id == job_id))
+        return JobState(value) if value is not None else None
+
+    async def set_status(self, job_id: UUID, state: JobState, applied_on: date | None) -> None:
+        """State and applied date change together (the table requires it)."""
+        await self._session.execute(
+            update(JobRow)
+            .where(JobRow.id == job_id)
+            .values(state=state.value, applied_on=applied_on)
+        )
         await self._session.flush()
 
     async def add_source(
