@@ -9,6 +9,7 @@ import {
   ProfileVersionPage,
   ProfileVersionsPage,
   ReviewPage,
+  SearchRulesPage,
   SettingsPage,
 } from './pages'
 import { SetupGate } from '@/features/setup/SetupGate'
@@ -31,6 +32,7 @@ export const routes: RouteObject[] = [
             element: <ProfileVersionPage />,
           },
           { path: '/preferences', element: <PreferencesPage /> },
+          { path: '/search/rules', element: <SearchRulesPage /> },
           { path: '/review', element: <ReviewPage /> },
           { path: '/settings', element: <SettingsPage /> },
           { path: '*', element: <NotFoundPage /> },

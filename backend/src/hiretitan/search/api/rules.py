@@ -10,7 +10,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Response
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from hiretitan.platform.web.problems import ProblemError
@@ -56,14 +56,14 @@ class PlaceRuleModel(BaseModel):
 class SearchRulesModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
     title_words: list[RuleItemModel]
-    title_avoid: list[RuleItemModel] = Field(default_factory=list)
-    blocked_locations: list[PlaceRuleModel] = Field(default_factory=list)
+    title_avoid: list[RuleItemModel]
+    blocked_locations: list[PlaceRuleModel]
     max_age_days: int
-    stack_keywords: list[RuleItemModel] = Field(default_factory=list)
-    preferred_locations: list[PlaceRuleModel] = Field(default_factory=list)
-    work_modes: list[str] = Field(default_factory=list)
-    seniority: list[str] = Field(default_factory=list)
-    years_experience: Decimal | None = None
+    stack_keywords: list[RuleItemModel]
+    preferred_locations: list[PlaceRuleModel]
+    work_modes: list[str]
+    seniority: list[str]
+    years_experience: Decimal | None
 
     @classmethod
     def from_domain(cls, rules: SearchRules) -> SearchRulesModel:

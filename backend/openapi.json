@@ -1727,7 +1727,14 @@
         },
         "required": [
           "title_words",
-          "max_age_days"
+          "title_avoid",
+          "blocked_locations",
+          "max_age_days",
+          "stack_keywords",
+          "preferred_locations",
+          "work_modes",
+          "seniority",
+          "years_experience"
         ],
         "title": "SearchRulesModel",
         "type": "object"
@@ -1802,7 +1809,14 @@
         },
         "required": [
           "title_words",
-          "max_age_days"
+          "title_avoid",
+          "blocked_locations",
+          "max_age_days",
+          "stack_keywords",
+          "preferred_locations",
+          "work_modes",
+          "seniority",
+          "years_experience"
         ],
         "title": "SearchRulesModel",
         "type": "object"

@@ -32,7 +32,7 @@ describe('Shell', () => {
     vi.unstubAllGlobals()
   })
 
-  it('FR027_sidebar_has_five_sections', async () => {
+  it('FR027_sidebar_has_six_sections', async () => {
     renderAt('/')
     const nav = await screen.findByRole('navigation', { name: 'Main' })
     const links = within(nav).getAllByRole('link')
@@ -40,6 +40,7 @@ describe('Shell', () => {
       'Home',
       'Profile',
       'Preferences',
+      'Search rules',
       'Review',
       'Settings',
     ])

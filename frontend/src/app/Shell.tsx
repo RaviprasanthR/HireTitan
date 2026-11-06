@@ -7,6 +7,7 @@ const sections = [
   { to: '/', label: 'Home', end: true },
   { to: '/profile', label: 'Profile', end: false },
   { to: '/preferences', label: 'Preferences', end: false },
+  { to: '/search/rules', label: 'Search rules', end: false },
   { to: '/review', label: 'Review', end: false },
   { to: '/settings', label: 'Settings', end: false },
 ] as const

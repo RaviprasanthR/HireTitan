@@ -995,44 +995,44 @@ export interface components {
         /** SearchRulesModel */
         "SearchRulesModel-Input": {
             /** Blocked Locations */
-            blocked_locations?: components["schemas"]["PlaceRuleModel"][];
+            blocked_locations: components["schemas"]["PlaceRuleModel"][];
             /** Max Age Days */
             max_age_days: number;
             /** Preferred Locations */
-            preferred_locations?: components["schemas"]["PlaceRuleModel"][];
+            preferred_locations: components["schemas"]["PlaceRuleModel"][];
             /** Seniority */
-            seniority?: string[];
+            seniority: string[];
             /** Stack Keywords */
-            stack_keywords?: components["schemas"]["RuleItemModel"][];
+            stack_keywords: components["schemas"]["RuleItemModel"][];
             /** Title Avoid */
-            title_avoid?: components["schemas"]["RuleItemModel"][];
+            title_avoid: components["schemas"]["RuleItemModel"][];
             /** Title Words */
             title_words: components["schemas"]["RuleItemModel"][];
             /** Work Modes */
-            work_modes?: string[];
+            work_modes: string[];
             /** Years Experience */
-            years_experience?: number | string | null;
+            years_experience: number | string | null;
         };
         /** SearchRulesModel */
         "SearchRulesModel-Output": {
             /** Blocked Locations */
-            blocked_locations?: components["schemas"]["PlaceRuleModel"][];
+            blocked_locations: components["schemas"]["PlaceRuleModel"][];
             /** Max Age Days */
             max_age_days: number;
             /** Preferred Locations */
-            preferred_locations?: components["schemas"]["PlaceRuleModel"][];
+            preferred_locations: components["schemas"]["PlaceRuleModel"][];
             /** Seniority */
-            seniority?: string[];
+            seniority: string[];
             /** Stack Keywords */
-            stack_keywords?: components["schemas"]["RuleItemModel"][];
+            stack_keywords: components["schemas"]["RuleItemModel"][];
             /** Title Avoid */
-            title_avoid?: components["schemas"]["RuleItemModel"][];
+            title_avoid: components["schemas"]["RuleItemModel"][];
             /** Title Words */
             title_words: components["schemas"]["RuleItemModel"][];
             /** Work Modes */
-            work_modes?: string[];
+            work_modes: string[];
             /** Years Experience */
-            years_experience?: string | null;
+            years_experience: string | null;
         };
         /** SettingsIn */
         SettingsIn: {
