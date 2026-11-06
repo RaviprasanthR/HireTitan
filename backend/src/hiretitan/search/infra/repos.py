@@ -90,6 +90,23 @@ class CompaniesRepo:
         )
         return list(result.scalars())
 
+    async def list_filtered(self, filter: str) -> list[CompanyRow]:
+        """``all`` (hidden ones too), ``hidden`` or ``check_manually``; deleted rows never."""
+        if filter == "check_manually":
+            return await self.list_check_manually()
+        if filter == "hidden":
+            result = await self._session.execute(
+                select(CompanyRow)
+                .where(CompanyRow.deleted_at.is_(None), CompanyRow.hidden.is_(True))
+                .order_by(func.lower(CompanyRow.name), CompanyRow.id)
+            )
+            return list(result.scalars())
+        return await self.list_all()
+
+    async def delete(self, company_id: UUID) -> None:
+        await self._session.execute(delete(CompanyRow).where(CompanyRow.id == company_id))
+        await self._session.flush()
+
     async def list_readable(self) -> list[CompanyRow]:
         result = await self._session.execute(
             select(CompanyRow)
