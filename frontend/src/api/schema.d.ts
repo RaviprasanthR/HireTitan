@@ -4,6 +4,41 @@
  */
 
 export interface paths {
+    "/api/v1/companies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Companies */
+        get: operations["companies_api_v1_companies_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete */
+        delete: operations["delete_api_v1_companies__company_id__delete"];
+        options?: never;
+        head?: never;
+        /** Patch */
+        patch: operations["patch_api_v1_companies__company_id__patch"];
+        trace?: never;
+    };
     "/api/v1/data/delete-all": {
         parameters: {
             query?: never;
@@ -787,6 +822,68 @@ export interface components {
             rules_approved: boolean;
             /** Searched Once */
             searched_once: boolean;
+        };
+        /** CompanyOut */
+        CompanyOut: {
+            /** Ats Vendor */
+            ats_vendor: string | null;
+            /** Board Id */
+            board_id: string | null;
+            /**
+             * Board Status
+             * @enum {string}
+             */
+            board_status: "board" | "careers_page" | "check_manually" | "unsupported" | "unresolved";
+            /** Careers Url */
+            careers_url: string | null;
+            /** City */
+            city: string | null;
+            /** Hidden */
+            hidden: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Last Check Error */
+            last_check_error: string | null;
+            /** Last Check Result */
+            last_check_result: string | null;
+            /** Last Checked At */
+            last_checked_at: string | null;
+            /** Name */
+            name: string;
+            /** Origin */
+            origin: string;
+            /** Resolution */
+            resolution: string;
+            /** User Modified */
+            user_modified: boolean;
+            /** Website */
+            website: string | null;
+        };
+        /** CompanyPage */
+        CompanyPage: {
+            /** Items */
+            items: components["schemas"]["CompanyOut"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
+        };
+        /**
+         * CompanyPatch
+         * @description Only the fields that are sent change; an empty text clears an optional field.
+         */
+        CompanyPatch: {
+            /** Careers Url */
+            careers_url?: string | null;
+            /** City */
+            city?: string | null;
+            /** Hidden */
+            hidden?: boolean | null;
+            /** Name */
+            name?: string | null;
+            /** Website */
+            website?: string | null;
         };
         /** CompanyResultOut */
         CompanyResultOut: {
@@ -1775,6 +1872,101 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    companies_api_v1_companies_get: {
+        parameters: {
+            query?: {
+                filter?: "all" | "check_manually" | "hidden";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_api_v1_companies__company_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_api_v1_companies__company_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompanyPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     delete_everything_api_v1_data_delete_all_post: {
         parameters: {
             query?: never;
