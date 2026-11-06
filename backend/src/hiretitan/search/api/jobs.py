@@ -26,9 +26,11 @@ from hiretitan.search.application.applied import (
     mark_applied,
     undo_applied,
 )
+from hiretitan.search.application.paste import PasteError, PasteInput, paste_job
 from hiretitan.search.application.search import RunQueue
 from hiretitan.search.domain.job_state import IllegalJobTransitionError, JobState, transition
 from hiretitan.search.infra.models import JobRow, JobSourceRow
+from hiretitan.search.infra.paste_store import SqlPasteStore
 from hiretitan.search.infra.repos import Cursor, DecisionsRepo, JobFilters, JobsRepo
 from hiretitan.search.workflow.recheck import RECHECK_WORKFLOW
 
@@ -56,6 +58,14 @@ class AppliedIn(BaseModel):
     applied_on: date | None = None
 
 
+class PasteIn(BaseModel):
+    # Every field has a default so a missing one is reported by the use case, field by field.
+    url: str = ""
+    description: str = ""
+    title: str | None = None
+    company: str | None = None
+
+
 class JobDetailOut(JobCardOut):
     description: str
     city: str | None
@@ -66,6 +76,10 @@ class JobDetailOut(JobCardOut):
     injection_flags: list[dict[str, Any]]
     decision_history: list[DecisionHistoryOut]
     first_search_id: UUID | None
+
+
+class PasteOut(JobDetailOut):
+    merged_into: UUID | None
 
 
 def _encode(cursor: Cursor) -> str:
@@ -200,6 +214,27 @@ def create_search_jobs_router(deps: SearchJobsApiDeps) -> APIRouter:
             await session.commit()
         await deps.queue.enqueue(run.id)
         return {"run_id": run.id}
+
+    @router.post("/paste", response_model=PasteOut, status_code=201)
+    async def paste(body: PasteIn, response: Response) -> Any:
+        async with deps.sessions() as session:
+            try:
+                result = await paste_job(
+                    SqlPasteStore(session),
+                    PasteInput(body.url, body.description, body.title, body.company),
+                    now=deps.clock.now(),
+                )
+            except PasteError as error:
+                return problem(
+                    422,
+                    str(error),
+                    errors=[{"field": e.field, "message": e.message} for e in error.errors],
+                )
+            await session.commit()
+            job = await detail(session, await load(session, result.job_id))
+        if result.merged_into is not None:
+            response.status_code = 200
+        return PasteOut(**job.model_dump(), merged_into=result.merged_into)
 
     @router.post("/{job_id}/applied", response_model=JobDetailOut)
     async def applied(job_id: UUID, body: AppliedIn | None = None) -> Any:

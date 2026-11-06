@@ -126,6 +126,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/jobs/paste": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Paste */
+        post: operations["paste_api_v1_jobs_paste_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/jobs/{job_id}": {
         parameters: {
             query?: never;
@@ -1068,6 +1085,79 @@ export interface components {
              */
             step: 1 | 2 | 3 | 4 | "done";
         };
+        /** PasteIn */
+        PasteIn: {
+            /** Company */
+            company?: string | null;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /** Title */
+            title?: string | null;
+            /**
+             * Url
+             * @default
+             */
+            url: string;
+        };
+        /** PasteOut */
+        PasteOut: {
+            /** Applied On */
+            applied_on: string | null;
+            /** Canonical Url */
+            canonical_url: string | null;
+            /** City */
+            city: string | null;
+            /** Company Name */
+            company_name: string;
+            /** Country */
+            country: string | null;
+            decision: components["schemas"]["DecisionOut"] | null;
+            /** Decision History */
+            decision_history: components["schemas"]["DecisionHistoryOut"][];
+            /** Description */
+            description: string;
+            /** First Search Id */
+            first_search_id: string | null;
+            /**
+             * First Seen At
+             * Format: date-time
+             */
+            first_seen_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Injection Flags */
+            injection_flags: {
+                [key: string]: unknown;
+            }[];
+            /** Listed */
+            listed: boolean;
+            /** Location Text */
+            location_text: string | null;
+            /** Merged Into */
+            merged_into: string | null;
+            /** Posted At */
+            posted_at: string | null;
+            /** Restored */
+            restored: boolean;
+            /** Skills Found */
+            skills_found: string[];
+            /** Sources */
+            sources: components["schemas"]["SourceOut"][];
+            /** State */
+            state: string;
+            /** Title */
+            title: string;
+            /** Work Mode */
+            work_mode: string | null;
+            /** Years Found */
+            years_found: string | null;
+        };
         /** PayModel */
         "PayModel-Input": {
             /** Basis */
@@ -1878,6 +1968,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DuplicatePairOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    paste_api_v1_jobs_paste_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasteIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PasteOut"];
                 };
             };
             /** @description Validation Error */
