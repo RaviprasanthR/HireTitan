@@ -47,6 +47,7 @@ from hiretitan.search.infra.models import JobRow, SearchRunRow
 from hiretitan.search.infra.repos import CompaniesRepo, RuleSetsRepo, SearchRunsRepo
 from hiretitan.search.infra.search_store import SearchStore
 from hiretitan.search.workflow.judge import JudgeDeps, judge_jobs, with_decision
+from hiretitan.search.workflow.stops import FINISHED, STOPPED_BY_USER
 
 WORKFLOW_NAME: Final = "job_search"
 BATCH_SIZE: Final = 8
@@ -84,6 +85,8 @@ class SearchState(TypedDict, total=False):
     new: list[dict[str, Any]]
     seen: list[dict[str, Any]]
     ai_cost: str
+    stop_outcome: str | None
+    stop_message: str | None
 
 
 @dataclass
@@ -391,7 +394,10 @@ async def judge_relevance(deps: SearchDeps, state: State) -> State:
         run_id=UUID(state["run_id"]),
         already_cost=Decimal(state.get("ai_cost", "0")),
     )
-    return {"new": _dump(_NEW, judged.jobs), "ai_cost": str(judged.cost)}
+    update: State = {"new": _dump(_NEW, judged.jobs), "ai_cost": str(judged.cost)}
+    if judged.stop is not None:
+        update |= {"stop_outcome": judged.stop.outcome, "stop_message": judged.stop.message}
+    return update
 
 
 async def store_batch_node(deps: SearchDeps, state: State) -> State:
@@ -422,19 +428,33 @@ async def store_batch_node(deps: SearchDeps, state: State) -> State:
         )
     if deps.publish is not None:
         await deps.publish("search.batch_done", counts.progress)
-    return {"index": index, "ai_cost": "0"}
+    update: State = {"index": index, "ai_cost": "0"}
+    if not state.get("stop_outcome"):
+        async with deps.sessions() as session:
+            if (await _run(session, state)).stop_requested:  # the person pressed Stop (FR-010)
+                update |= {"stop_outcome": STOPPED_BY_USER, "stop_message": None}
+    return update
+
+
+def after_store(state: State) -> str:
+    return "finish" if state.get("stop_outcome") else "next_batch"
 
 
 async def finish(deps: SearchDeps, state: State) -> State:
+    outcome = state.get("stop_outcome") or FINISHED
+    message = state.get("stop_message")
     async with deps.sessions() as session:
         await SearchRunsRepo(session).finish(
-            UUID(state["search_run_id"]), outcome="finished", finished_at=deps.clock.now()
+            UUID(state["search_run_id"]),
+            outcome=outcome,
+            finished_at=deps.clock.now(),
+            stop_message=message,
         )
         await session.commit()
     if deps.publish is not None:
         await deps.publish(
             "search.finished",
-            {"search_run_id": state["search_run_id"], "outcome": "finished", "stop_message": None},
+            {"search_run_id": state["search_run_id"], "outcome": outcome, "stop_message": message},
         )
     return {}
 
@@ -470,7 +490,9 @@ def build_graph(deps: SearchDeps) -> StateGraph[Any]:
     graph.add_edge("dedup", "apply_rules")
     graph.add_edge("apply_rules", "judge_relevance")
     graph.add_edge("judge_relevance", "store_batch")
-    graph.add_edge("store_batch", "next_batch")
+    graph.add_conditional_edges(
+        "store_batch", after_store, {"next_batch": "next_batch", "finish": "finish"}
+    )
     graph.add_edge("finish", END)
     return graph
 

@@ -4,7 +4,7 @@ Jobs that passed the free rules go to the fast model 10 at a time. A usable answ
 job ("shown" or "skipped", with the model's reason and where it came from). Anything else keeps
 the job in Explore as "not checked by AI": no key, rules-only mode, or an answer the validation
 chain could not use after its one repair (FR-028). A budget or credit stop is not swallowed here:
-it propagates so the graph can end the search cleanly (T032).
+it is reported in ``Judged.stop`` so the graph ends the search after storing the batch (T032).
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from hiretitan.platform.llm.infra.calls_repo import CallsRepo, LlmCallRecord
-from hiretitan.platform.llm.port import AiUnavailable, LlmPort, LlmRequest
+from hiretitan.platform.llm.port import AiUnavailable, LlmPort, LlmRequest, RetryableLlmError
 from hiretitan.platform.llm.prompts import PromptRegistry
 from hiretitan.platform.llm.validation import TaskSpec, ValidatedLlm
 from hiretitan.platform.untrusted.sanitize import sanitize
@@ -27,10 +27,10 @@ from hiretitan.prompts.judge_relevance.v1.checks import rule_errors
 from hiretitan.search.application.judge_prompt import render_judge_prompt
 from hiretitan.search.application.search import DecisionInput, NewJob
 from hiretitan.search.domain.cards import JOBS_PER_CALL_MAX, JobCardInput, ProfileCard
+from hiretitan.search.workflow.stops import Stop, stop_for
 
 PROMPT_NAME: Final = "judge_relevance"
 REASON_MAX: Final = 160
-KEY_PROBLEMS: Final = ("key_missing", "key_rejected")  # fall back to rules; others stop the run
 
 ProfileCardSource = Callable[[], Awaitable[ProfileCard | None]]
 
@@ -48,6 +48,7 @@ class JudgeDeps:
 class Judged:
     jobs: list[NewJob]
     cost: Decimal = Decimal(0)
+    stop: Stop | None = None  # budget reached or out of credit: the search ends after this batch
 
 
 def with_decision(job: NewJob, decision: DecisionInput) -> NewJob:
@@ -112,9 +113,10 @@ async def judge_jobs(
                 run_id=run_id,
             )
         except AiUnavailable as exc:
-            if exc.reason in KEY_PROBLEMS:
-                break  # the rest stay "not checked by AI"
-            raise
+            result.stop = stop_for(exc)  # None for a key problem: rules carry on (FR-028)
+            break  # this call's jobs and the rest stay "not checked by AI"
+        except RetryableLlmError:
+            continue  # a temporary provider error is not a stop (FR-028)
         if answered.outcome == "fallback" or not calls:
             continue  # this call's jobs stay "not checked by AI"
         call_id, call = calls[-1]
