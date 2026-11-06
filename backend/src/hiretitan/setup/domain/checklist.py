@@ -11,6 +11,8 @@ class Checklist:
     resume_uploaded: bool
     profile_confirmed: bool
     preferences_saved: bool
+    rules_approved: bool = False
+    searched_once: bool = False
 
 
 def build_checklist(
@@ -19,6 +21,8 @@ def build_checklist(
     resume_uploaded: bool,
     profile_confirmed: bool,
     preferences_saved: bool,
+    rules_approved: bool = False,
+    searched_once: bool = False,
 ) -> Checklist:
     """The AI key step is done only when the provider says it works."""
     return Checklist(
@@ -26,4 +30,6 @@ def build_checklist(
         resume_uploaded=resume_uploaded,
         profile_confirmed=profile_confirmed,
         preferences_saved=preferences_saved,
+        rules_approved=rules_approved,
+        searched_once=searched_once,
     )

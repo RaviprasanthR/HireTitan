@@ -534,6 +534,10 @@ export interface components {
             profile_confirmed: boolean;
             /** Resume Uploaded */
             resume_uploaded: boolean;
+            /** Rules Approved */
+            rules_approved: boolean;
+            /** Searched Once */
+            searched_once: boolean;
         };
         /** CompletedOut */
         CompletedOut: {

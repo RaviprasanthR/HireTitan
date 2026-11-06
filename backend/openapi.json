@@ -165,13 +165,23 @@
           "resume_uploaded": {
             "title": "Resume Uploaded",
             "type": "boolean"
+          },
+          "rules_approved": {
+            "title": "Rules Approved",
+            "type": "boolean"
+          },
+          "searched_once": {
+            "title": "Searched Once",
+            "type": "boolean"
           }
         },
         "required": [
           "key_ok",
           "resume_uploaded",
           "profile_confirmed",
-          "preferences_saved"
+          "preferences_saved",
+          "rules_approved",
+          "searched_once"
         ],
         "title": "ChecklistOut",
         "type": "object"

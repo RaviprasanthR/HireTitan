@@ -16,6 +16,8 @@ from hiretitan.platform.runtime.infra.runs_repo import RunsRepo
 from hiretitan.preferences.application.service import get_preferences
 from hiretitan.preferences.infra.repo import PreferencesRepo
 from hiretitan.profile.infra.repos import ResumeFilesRepo, ReviewsRepo, VersionsRepo
+from hiretitan.search.application import progress as search_progress
+from hiretitan.search.infra.repos import RuleSetsRepo, SearchRunsRepo
 
 
 class RepoFacts:
@@ -32,6 +34,12 @@ class RepoFacts:
 
     async def preferences_saved(self) -> bool:
         return (await get_preferences(PreferencesRepo(self._session))).saved_at is not None
+
+    async def rules_approved(self) -> bool:
+        return await search_progress.rules_approved(RuleSetsRepo(self._session))
+
+    async def searched_once(self) -> bool:
+        return await search_progress.searched_once(SearchRunsRepo(self._session))
 
     async def current_open_review_id(self) -> UUID | None:
         review = await ReviewsRepo(self._session).get_open()
