@@ -1,6 +1,9 @@
 import type { ReactNode } from 'react'
 import { useParams } from 'react-router'
 import { ExplorePage } from '@/features/explore/ExplorePage'
+import { RunSummaryPage } from '@/features/explore/RunSummaryPage'
+import { SearchHistoryPage } from '@/features/explore/SearchHistoryPage'
+import { JobDetailPage } from '@/features/jobs/JobDetailPage'
 import { PreferencesPage } from '@/features/preferences/PreferencesPage'
 import { ReviewPage } from '@/features/review/ReviewPage'
 import { SearchRulesPage } from '@/features/search-rules/SearchRulesPage'
@@ -29,6 +32,9 @@ export const NotFoundPage = () => <Page title="Page not found" />
 
 export {
   ExplorePage,
+  JobDetailPage,
+  RunSummaryPage,
+  SearchHistoryPage,
   SearchRulesPage,
   PreferencesPage,
   ReviewPage,
