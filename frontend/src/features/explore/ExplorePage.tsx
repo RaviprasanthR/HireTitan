@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import { useStatus } from '@/api/useStatus'
 import { Button } from '@/components/ui/button'
 import { AppliedControl } from '@/features/jobs/AppliedControl'
+import { PasteJobDialog } from '@/features/jobs/PasteJobDialog'
 import { SetupChecklist } from '@/features/home/HomePage'
 import { setupIsDone } from '@/features/home/setup'
 import { DuplicatesPanel } from './DuplicatesPanel'
@@ -82,7 +83,7 @@ function Filters({ value, onChange }: { value: JobFilters; onChange: (next: JobF
           <option value="">All sources</option>
           <option value="company_board">Company job board</option>
           <option value="careers_page">Careers page</option>
-          <option value="manual">Added by you</option>
+          <option value="paste">Added by you</option>
         </select>
       </label>
       <label className="flex flex-col gap-1 text-sm">
@@ -124,6 +125,7 @@ function Filters({ value, onChange }: { value: JobFilters; onChange: (next: JobF
 export function ExplorePage() {
   const status = useStatus()
   const [filters, setFilters] = useState<JobFilters>(NO_FILTERS)
+  const [adding, setAdding] = useState(false)
   const jobs = useJobs(filters)
   const setupDone = setupIsDone(status.data?.checklist)
   const items = jobs.data?.pages.flatMap((page) => page.items) ?? []
@@ -166,7 +168,15 @@ export function ExplorePage() {
 
   return (
     <section className="space-y-4">
-      <h1 className="text-2xl font-semibold">Jobs</h1>
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="text-2xl font-semibold">Jobs</h1>
+        {!adding && (
+          <Button type="button" variant="outline" size="sm" onClick={() => setAdding(true)}>
+            Add a job
+          </Button>
+        )}
+      </div>
+      {adding && <PasteJobDialog onClose={() => setAdding(false)} />}
       {status.data && !setupDone && <SetupChecklist showAllSet={false} />}
       {setupDone && <SearchPanel />}
       {setupDone && <DuplicatesPanel />}

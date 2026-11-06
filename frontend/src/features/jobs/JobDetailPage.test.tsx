@@ -214,7 +214,7 @@ describe('JobDetailPage', () => {
   it('US5_AS4_pasted_job_can_be_marked_applied', async () => {
     renderPage(
       detail({
-        sources: [{ kind: 'manual', url: 'https://jobs.example.com/pasted' }],
+        sources: [{ kind: 'paste', url: 'https://jobs.example.com/pasted' }],
         decision: { outcome: 'shown', decided_by: 'person', reason: 'added by you' },
       }),
     )

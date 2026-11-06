@@ -65,6 +65,17 @@ function renderPage({ status = STATUS, jobs = [], next = null }: Setup = {}) {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('ExplorePage', () => {
+  it('US4_add_a_job_button_opens_and_closes_the_paste_form', async () => {
+    const user = userEvent.setup()
+    renderPage({ jobs: [card('1', 'Backend Engineer')] })
+
+    await user.click(await screen.findByRole('button', { name: 'Add a job' }))
+    expect(screen.getByLabelText('Link to the job')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.queryByLabelText('Link to the job')).not.toBeInTheDocument()
+  })
+
   it('US1_AS1_lists_newest_first_with_reason', async () => {
     renderPage({
       jobs: [card('1', 'Backend Engineer'), card('2', 'Python Developer')],

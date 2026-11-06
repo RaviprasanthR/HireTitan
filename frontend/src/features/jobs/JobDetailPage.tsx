@@ -10,27 +10,7 @@ import {
 } from '@/features/explore/api'
 import { AppliedControl } from './AppliedControl'
 import { useUndoApplied } from './appliedApi'
-
-type Flag = { rule_id: string; severity: string; excerpt: string; location: string }
-
-function InjectionWarning({ flags }: { flags: Flag[] }) {
-  if (flags.length === 0) return null
-  return (
-    <div role="alert" className="space-y-1 rounded-lg border border-warning p-3 text-sm">
-      <p className="font-medium text-warning">
-        This posting contains text that looks like instructions to an AI.
-      </p>
-      <p>It was treated as plain text and did not change any decision. Be careful with it.</p>
-      <ul className="list-disc pl-5">
-        {flags.map((flag) => (
-          <li key={`${flag.rule_id}:${flag.excerpt}`}>
-            “{flag.excerpt}” ({flag.location})
-          </li>
-        ))}
-      </ul>
-    </div>
-  )
-}
+import { InjectionWarning, type InjectionFlag } from './InjectionWarning'
 
 function safeLink(url: string | null | undefined): string | null {
   return url && /^https?:\/\//i.test(url) ? url : null
@@ -57,7 +37,7 @@ export function JobDetailPage() {
     <section className="space-y-4">
       <h1 className="text-2xl font-semibold">{data.title}</h1>
       <p className="text-muted-small">{facts.join(' · ')}</p>
-      <InjectionWarning flags={data.injection_flags as Flag[]} />
+      <InjectionWarning flags={data.injection_flags as InjectionFlag[]} />
 
       {data.decision && (
         <div className="space-y-2 rounded-lg bg-surface p-4">

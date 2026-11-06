@@ -185,7 +185,7 @@ export function sourceLabel(kind: string): string {
       return 'Email alert'
     case 'aggregator':
       return 'Job site'
-    case 'manual':
+    case 'paste':
       return 'Added by you'
     default:
       return kind
