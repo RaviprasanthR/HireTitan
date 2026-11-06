@@ -341,6 +341,47 @@ def _real_llm_for(catalog: ModelCatalog) -> Callable[[str], LlmPort]:
     return build
 
 
+def _main_judge(
+    args: argparse.Namespace,
+    specs: list[tuple[str, str]],
+    catalog: ModelCatalog,
+    llm_for: Callable[[str], LlmPort] | None,
+    today: Callable[[], str],
+) -> int:
+    from evals.judge_relevance.runner import (
+        PROMPT_NAME as JUDGE_PROMPT,
+    )
+    from evals.judge_relevance.runner import (
+        estimate_judge_cost,
+        evaluate_judge,
+        render_judge_report,
+    )
+
+    estimates = [estimate_judge_cost(model, args.repeat, catalog) for _, model in specs]
+    print(f"Estimated cost (upper bound, {args.repeat} run(s) of 120 decisions per model):")
+    for (label, model), estimate in zip(specs, estimates, strict=True):
+        print(f"  {label} ({model}): up to ${estimate:.2f}")
+    print(f"  total: up to ${sum(estimates, Decimal(0)):.2f}")
+    if not args.yes:
+        print("Nothing was sent. Re-run with --yes to run the eval.")
+        return 2
+    build = llm_for or _real_llm_for(catalog)
+    try:
+        reports = [
+            asyncio.run(evaluate_judge(build(model), tier=label, model=model, repeat=args.repeat))
+            for label, model in specs
+        ]
+    except AiUnavailable as exc:
+        print(f"Stopped: the AI is unavailable ({exc}). Check OPENAI_API_KEY in .env.")
+        print("No report was written.")
+        return 1
+    args.reports_dir.mkdir(parents=True, exist_ok=True)
+    out = args.reports_dir / f"{JUDGE_PROMPT}-{today()}.md"
+    out.write_text(render_judge_report(reports, day=today()), encoding="utf-8")
+    print(f"Report written to {out}")
+    return 0 if all(r.passes for r in reports) else 3
+
+
 def main(
     argv: Sequence[str] | None = None,
     *,
@@ -348,19 +389,23 @@ def main(
     today: Callable[[], str] = lambda: datetime.now(UTC).date().isoformat(),
 ) -> int:
     parser = argparse.ArgumentParser(prog="python -m evals.run")
-    parser.add_argument("eval", choices=["extract_profile"])
+    parser.add_argument("eval", choices=["extract_profile", "judge_relevance"])
     parser.add_argument("--models", default="fast", help="comma list of tiers or model names")
     parser.add_argument("--yes", action="store_true", help="confirm the estimated cost")
+    parser.add_argument("--repeat", type=int, default=1, help="judge_relevance: runs per model")
     parser.add_argument("--reports-dir", type=Path, default=REPORTS_DIR)
     args = parser.parse_args(argv)
 
     catalog = ModelCatalog.load()
-    cases = load_cases()
+    cases = load_cases() if args.eval == "extract_profile" else []
     try:
         specs = [resolve_model(s.strip(), catalog) for s in args.models.split(",") if s.strip()]
     except UnknownModelError as exc:
         print(f"Error: {exc}")
         return 2
+
+    if args.eval == "judge_relevance":
+        return _main_judge(args, specs, catalog, llm_for, today)
 
     estimates = [estimate_cost(cases, model, catalog) for _, model in specs]
     print(f"Estimated cost (upper bound, {len(cases)} resumes per model):")
