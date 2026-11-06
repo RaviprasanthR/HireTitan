@@ -1,0 +1,61 @@
+# Role phrase -> synonyms (English). Used to propose and apply search rules (research R9).
+# Role-level facts only; nothing about any person. At most 20 synonyms per role.
+backend engineer:
+  - backend developer
+  - back end engineer
+  - back end developer
+  - server side engineer
+  - software engineer backend
+  - software engineer (backend)
+  - sde backend
+frontend engineer:
+  - frontend developer
+  - front end engineer
+  - front end developer
+  - ui engineer
+  - ui developer
+  - software engineer frontend
+  - software engineer (frontend)
+  - sde frontend
+full stack engineer:
+  - full stack developer
+  - fullstack engineer
+  - fullstack developer
+  - software engineer full stack
+  - sde full stack
+software engineer:
+  - software developer
+  - software development engineer
+  - sde
+  - programmer analyst
+data engineer:
+  - data platform engineer
+  - etl developer
+  - big data engineer
+  - analytics engineer
+data scientist:
+  - applied scientist
+  - machine learning scientist
+  - ml scientist
+machine learning engineer:
+  - ml engineer
+  - ai engineer
+  - applied ml engineer
+devops engineer:
+  - site reliability engineer
+  - sre
+  - platform engineer
+  - infrastructure engineer
+  - cloud engineer
+qa engineer:
+  - quality assurance engineer
+  - test engineer
+  - sdet
+  - software development engineer in test
+  - automation test engineer
+mobile engineer:
+  - mobile developer
+  - android developer
+  - ios developer
+  - android engineer
+  - ios engineer
