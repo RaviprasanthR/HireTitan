@@ -6,19 +6,26 @@ import base64
 import binascii
 import json
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Any, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Response
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from hiretitan.platform.clock import ClockPort
 from hiretitan.platform.runtime.infra.runs_repo import RunsRepo
-from hiretitan.platform.web.problems import ProblemError
+from hiretitan.platform.web.problems import ProblemError, problem
 from hiretitan.search.api.models import DecisionOut, JobCardOut, JobCardPage, job_cards
+from hiretitan.search.application.applied import (
+    AppliedDateError,
+    JobNotFoundError,
+    mark_applied,
+    undo_applied,
+)
 from hiretitan.search.application.search import RunQueue
 from hiretitan.search.domain.job_state import IllegalJobTransitionError, JobState, transition
 from hiretitan.search.infra.models import JobRow, JobSourceRow
@@ -43,6 +50,10 @@ class DecisionHistoryOut(DecisionOut):
     prompt_version: str | None
     provider: str | None
     model: str | None
+
+
+class AppliedIn(BaseModel):
+    applied_on: date | None = None
 
 
 class JobDetailOut(JobCardOut):
@@ -189,6 +200,45 @@ def create_search_jobs_router(deps: SearchJobsApiDeps) -> APIRouter:
             await session.commit()
         await deps.queue.enqueue(run.id)
         return {"run_id": run.id}
+
+    @router.post("/{job_id}/applied", response_model=JobDetailOut)
+    async def applied(job_id: UUID, body: AppliedIn | None = None) -> Any:
+        today = deps.clock.now().date()
+        async with deps.sessions() as session:
+            row = await load(session, job_id)  # a deleted job is not found
+            if row.state == JobState.applied:
+                raise ProblemError(
+                    409, "You already marked this job as applied.", reason="already_applied"
+                )
+            try:
+                await mark_applied(
+                    JobsRepo(session),
+                    job_id,
+                    today=today,
+                    applied_on=body.applied_on if body else None,
+                )
+            except AppliedDateError as error:
+                return problem(
+                    422,
+                    str(error),
+                    errors=[{"field": "applied_on", "message": str(error)}],
+                )
+            except JobNotFoundError as error:
+                raise _not_found() from error
+            except IllegalJobTransitionError as error:
+                raise ProblemError(409, str(error)) from error
+            await session.commit()
+            return await detail(session, await load(session, job_id))
+
+    @router.delete("/{job_id}/applied", response_model=JobDetailOut)
+    async def undo(job_id: UUID) -> JobDetailOut:
+        async with deps.sessions() as session:
+            row = await load(session, job_id)
+            if row.state != JobState.applied:
+                raise ProblemError(409, "This job is not marked as applied.", reason="not_applied")
+            await undo_applied(JobsRepo(session), job_id)
+            await session.commit()
+            return await detail(session, await load(session, job_id))
 
     @router.delete("/{job_id}", status_code=204)
     async def delete_job(job_id: UUID) -> Response:

@@ -354,7 +354,14 @@ class JobsRepo:
         """Keyset paging, so rows added while the person scrolls never shift a page (SC-010)."""
         limit = max(1, min(limit, MAX_PAGE_SIZE))
         by_company = filters.sort == "company"
-        key: Any = func.lower(JobRow.company_name) if by_company else JobRow.sort_key
+        by_applied = filters.state == "applied"  # the Applied list is newest application first
+        key: Any = (
+            func.lower(JobRow.company_name)
+            if by_company
+            else JobRow.applied_on
+            if by_applied
+            else JobRow.sort_key
+        )
         query = select(JobRow).where(JobRow.state == filters.state)
         if filters.company_id is not None:
             query = query.where(JobRow.company_id == filters.company_id)
@@ -369,16 +376,13 @@ class JobsRepo:
                 )
             )
         if cursor is not None:
+            value: Any = cursor.sort_value
+            if by_applied and not by_company and isinstance(value, str):
+                value = date.fromisoformat(value)
             if by_company:
-                after = or_(
-                    key > cursor.sort_value,
-                    and_(key == cursor.sort_value, JobRow.id > cursor.id),
-                )
+                after = or_(key > value, and_(key == value, JobRow.id > cursor.id))
             else:
-                after = or_(
-                    key < cursor.sort_value,
-                    and_(key == cursor.sort_value, JobRow.id > cursor.id),
-                )
+                after = or_(key < value, and_(key == value, JobRow.id > cursor.id))
             query = query.where(after)
         order = (key.asc() if by_company else key.desc(), JobRow.id.asc())
         result = await self._session.execute(query.order_by(*order).limit(limit + 1))
@@ -387,8 +391,14 @@ class JobsRepo:
         next_cursor = None
         if len(rows) > limit:
             last = items[-1]
-            value: datetime | str = last.company_name.lower() if by_company else last.sort_key
-            next_cursor = Cursor(value, last.id)
+            token: datetime | str
+            if by_company:
+                token = last.company_name.lower()
+            elif by_applied and last.applied_on is not None:
+                token = last.applied_on.isoformat()
+            else:
+                token = last.sort_key
+            next_cursor = Cursor(token, last.id)
         return Page(items, next_cursor)
 
 
