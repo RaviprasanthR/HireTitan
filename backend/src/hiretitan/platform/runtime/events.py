@@ -21,7 +21,9 @@ from hiretitan.platform.runtime.infra.runs_repo import Run
 from hiretitan.platform.runtime.runner import Notify
 
 CHANNEL: Final = "hiretitan_events"
-EVENT_TYPES: Final = frozenset({"run.updated", "status.updated", "profile.updated"})
+EVENT_TYPES: Final = frozenset(
+    {"run.updated", "status.updated", "profile.updated", "search.batch_done", "search.finished"}
+)
 
 
 @dataclass(frozen=True, slots=True)
