@@ -3,12 +3,13 @@
 ``start_search`` checks that setup is complete, that rules are approved and that no other
 search is active, then records the run and hands it to the queue. ``store_batch`` writes one
 batch (jobs, sources, decisions, company results, counts, cost and the progress event) in a
-single transaction, so a stopped or crashed search never leaves a half-written batch.
+single transaction, so a stopped or crashed search never leaves a half-written batch. The
+caller announces the finished batch once it is committed.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime
 from decimal import Decimal
 from typing import Any, Literal, Protocol
@@ -123,6 +124,7 @@ class BatchCounts:
     added: int = 0
     merged: int = 0
     not_checked_by_ai: int = 0
+    progress: dict[str, Any] = field(default_factory=dict)  # for the progress event
 
 
 class SearchTransaction(Protocol):
@@ -158,8 +160,6 @@ class SearchTransaction(Protocol):
         """Add the counts and the cost, count the batch, set ``next_index``; return the
         progress numbers for the event."""
         ...
-
-    async def publish(self, event: str, data: dict[str, Any]) -> None: ...
 
     async def commit(self) -> None: ...
 
@@ -221,6 +221,5 @@ async def store_batch(store: SearchTransaction, write: BatchWrite) -> BatchCount
         not_checked_by_ai=not_checked,
     )
     progress = await store.advance_run(run_id, counts, write.next_index, write.ai_cost_delta)
-    await store.publish("search.batch_done", {"search_run_id": str(run_id), **progress})
     await store.commit()
-    return counts
+    return replace(counts, progress={"search_run_id": str(run_id), **progress})

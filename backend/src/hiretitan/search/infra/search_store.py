@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from datetime import datetime
 from decimal import Decimal
 from typing import Any
@@ -12,7 +11,6 @@ from sqlalchemy import func, select, text, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from hiretitan.platform.runtime.events import CHANNEL
 from hiretitan.platform.runtime.infra.runs_repo import RunsRepo
 from hiretitan.search.application.search import (
     BatchCounts,
@@ -170,13 +168,6 @@ class SearchStore:
             "added": run.added,
             "ai_cost_usd": str(run.ai_cost_usd),
         }
-
-    async def publish(self, event: str, data: dict[str, Any]) -> None:
-        # NOTIFY is delivered when the transaction commits, so it never announces a lost batch
-        await self._session.execute(
-            text("SELECT pg_notify(:channel, :payload)"),
-            {"channel": CHANNEL, "payload": json.dumps({"event": event, "data": data})},
-        )
 
     async def commit(self) -> None:
         await self._session.commit()

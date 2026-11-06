@@ -209,6 +209,30 @@ class SearchRunsRepo:
             await self._session.refresh(row)
         return row
 
+    async def by_workflow_run(self, workflow_run_id: UUID) -> SearchRunRow | None:
+        result = await self._session.execute(
+            select(SearchRunRow).where(SearchRunRow.workflow_run_id == workflow_run_id)
+        )
+        return result.scalar_one_or_none()
+
+    async def previous(self, search_run: SearchRunRow) -> SearchRunRow | None:
+        """The search before this one, if any."""
+        result = await self._session.execute(
+            select(SearchRunRow)
+            .where(
+                SearchRunRow.id != search_run.id,
+                SearchRunRow.created_at <= search_run.created_at,
+            )
+            .order_by(SearchRunRow.created_at.desc(), SearchRunRow.id.desc())
+        )
+        return result.scalars().first()
+
+    async def set_company_order(self, search_run_id: UUID, order: list[UUID]) -> None:
+        await self._session.execute(
+            update(SearchRunRow).where(SearchRunRow.id == search_run_id).values(company_order=order)
+        )
+        await self._session.flush()
+
     async def active(self) -> SearchRunRow | None:
         """The search that is queued, running or paused (FR-009), if any."""
         result = await self._session.execute(
