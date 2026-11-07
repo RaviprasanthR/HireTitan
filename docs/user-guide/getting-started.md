@@ -75,3 +75,7 @@ cd ../frontend && npm ci && npm run dev         # a third
 ```
 
 Set `HIRETITAN_LLM=fake` in `.env` to run with scripted replies and no key. Tests: `cd backend && uv run pytest` (needs Docker; they start their own PostgreSQL), `cd frontend && npm test`.
+
+## Next
+
+Finding jobs: [Job search](job-search.md).
