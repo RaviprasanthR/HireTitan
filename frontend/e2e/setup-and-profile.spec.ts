@@ -55,12 +55,13 @@ test('SC001_journey_completes', async ({ page, request }) => {
   await expect(page.getByLabel('Employer 1')).toHaveValue('Acme Corp')
   await page.getByRole('button', { name: 'Confirm profile' }).click()
 
-  // A6/A8: preferences, then the finished app greets by name.
+  // A6/A8: preferences, then the finished app opens on the jobs page (feature 002 replaced
+  // the home greeting).
   await expect(page.getByRole('heading', { name: 'What are you looking for?' })).toBeVisible()
   await page.getByLabel('Target roles').fill('Backend Engineer')
   await page.getByLabel('Target roles').press('Enter')
   await page.getByRole('button', { name: 'Finish setup' }).click()
-  await expect(page.getByText('Welcome back, Jane')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Jobs', level: 1 })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Preferences' })).toBeVisible()
 
   // A9/A10: a newer resume opens a review with its changes.
