@@ -63,7 +63,7 @@ class CompaniesStore(Protocol):
 
     async def set_fields(self, company_id: UUID, **fields: Any) -> None: ...
 
-    async def delete(self, company_id: UUID) -> None: ...
+    async def remove(self, company_id: UUID) -> None: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -172,6 +172,6 @@ async def hide_company(store: CompaniesStore, company_id: UUID, *, hidden: bool)
 async def delete_company(store: CompaniesStore, company_id: UUID, *, now: datetime) -> None:
     row = await _one(store, company_id)
     if row.origin == "user":
-        await store.delete(company_id)
+        await store.remove(company_id)
     else:
         await store.set_fields(company_id, deleted_at=now)

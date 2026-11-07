@@ -28,7 +28,13 @@ from hiretitan.platform.runtime.infra.runs_repo import Run
 from hiretitan.platform.runtime.runner import WorkflowDef
 from hiretitan.platform.untrusted.sanitize import sanitize
 from hiretitan.platform.untrusted.screen import screen
-from hiretitan.search.application.ports import BoardRef, CareerOpsPort, ScanError, ScanOk
+from hiretitan.search.application.ports import (
+    BoardRef,
+    CareerOpsPort,
+    PageFetcherPort,
+    ScanError,
+    ScanOk,
+)
 from hiretitan.search.application.search import (
     BatchWrite,
     CompanyOutcome,
@@ -47,7 +53,8 @@ from hiretitan.search.infra.models import JobRow, SearchRunRow
 from hiretitan.search.infra.repos import CompaniesRepo, RuleSetsRepo, SearchRunsRepo
 from hiretitan.search.infra.search_store import SearchStore
 from hiretitan.search.workflow.judge import JudgeDeps, judge_jobs, with_decision
-from hiretitan.search.workflow.stops import FINISHED, STOPPED_BY_USER
+from hiretitan.search.workflow.pages import read_careers_page
+from hiretitan.search.workflow.stops import FINISHED, STOPPED_BY_USER, Stop
 
 WORKFLOW_NAME: Final = "job_search"
 BATCH_SIZE: Final = 8
@@ -71,6 +78,8 @@ class SearchDeps:
     publish: Publish | None = None
     batch_size: int = BATCH_SIZE
     judge: JudgeDeps | None = None  # None: no AI step at all (rules only)
+    pages: PageFetcherPort | None = None  # None: careers pages cannot be read
+    page_ai: bool = False  # the AI reads pages with no job data; off until the T053 eval passes
 
 
 class SearchState(TypedDict, total=False):
@@ -93,7 +102,8 @@ class SearchState(TypedDict, total=False):
 class Fetched:
     company_id: UUID
     company_name: str
-    vendor: str
+    vendor: str | None
+    source_kind: str
     title: str
     url: str
     location: str | None
@@ -106,7 +116,8 @@ class Fetched:
 class Prepared:
     company_id: UUID
     company_name: str
-    vendor: str
+    vendor: str | None
+    source_kind: str
     source_url: str
     job: NormalizedJob
     description: str
@@ -152,7 +163,8 @@ async def plan_run(deps: SearchDeps, state: State) -> State:
             companies = [
                 c
                 for c in await CompaniesRepo(session).list_readable()
-                if c.ats_vendor in ENABLED_VENDORS and c.board_id
+                if (c.ats_vendor in ENABLED_VENDORS and c.board_id)
+                or (c.resolution == "careers_page" and c.careers_url)
             ]
             previous = await runs.previous(run)
             leftover: list[UUID] = []
@@ -195,15 +207,20 @@ def after_next_batch(state: State) -> str:
 
 async def fetch_batch(deps: SearchDeps, state: State) -> State:
     refs: list[BoardRef] = []
+    pages: list[tuple[UUID, str, str]] = []  # (company id, name, careers url)
     names: dict[UUID, str] = {}
     async with deps.sessions() as session:
         repo = CompaniesRepo(session)
         for raw in state["batch"]:
             company = await repo.get(UUID(raw))
-            if company is None or not company.ats_vendor or not company.board_id:
+            if company is None:
                 continue
             names[company.id] = company.name
-            refs.append(BoardRef(company.id, company.ats_vendor, company.board_id))
+            if company.ats_vendor and company.board_id:
+                refs.append(BoardRef(company.id, company.ats_vendor, company.board_id))
+            elif company.resolution == "careers_page" and company.careers_url:
+                pages.append((company.id, company.name, company.careers_url))
+        mode = (await _run(session, state)).mode
     results = await deps.career_ops.scan(refs)  # one company failing never fails the others
     fetched: list[Fetched] = []
     outcomes: list[CompanyOutcome] = []
@@ -223,6 +240,7 @@ async def fetch_batch(deps: SearchDeps, state: State) -> State:
                 ref.company_id,
                 names[ref.company_id],
                 ref.vendor,
+                "company_board",
                 p.title,
                 p.url,
                 p.location,
@@ -232,7 +250,39 @@ async def fetch_batch(deps: SearchDeps, state: State) -> State:
             )
             for p in result.postings
         ]
-    return {"fetched": _dump(_FETCHED, fetched), "outcomes": _dump(_OUTCOMES, outcomes)}
+    update: State = {}
+    cost = Decimal(state.get("ai_cost", "0"))
+    stop: Stop | None = None
+    for company_id, name, url in pages:
+        use_ai = mode == "rules_and_ai" and deps.page_ai and stop is None
+        read = await read_careers_page(
+            deps.pages, deps.judge, url, use_ai=use_ai, run_id=UUID(state["run_id"])
+        )
+        cost += read.cost
+        stop = stop or read.stop
+        outcomes.append(CompanyOutcome(company_id, read.result, len(read.postings), read.error))
+        fetched += [
+            Fetched(
+                company_id,
+                name,
+                None,
+                "careers_page",
+                p.title,
+                p.url,
+                p.location,
+                p.posted_at,
+                p.description or "",
+                p.requisition_id,
+            )
+            for p in read.postings
+        ]
+    if stop is not None:
+        update |= {"stop_outcome": stop.outcome, "stop_message": stop.message}
+    return update | {
+        "fetched": _dump(_FETCHED, fetched),
+        "outcomes": _dump(_OUTCOMES, outcomes),
+        "ai_cost": str(cost),
+    }
 
 
 async def normalize(deps: SearchDeps, state: State) -> State:
@@ -268,7 +318,14 @@ async def normalize(deps: SearchDeps, state: State) -> State:
         )
         prepared.append(
             Prepared(
-                item.company_id, item.company_name, item.vendor, item.url, job, description, flags
+                item.company_id,
+                item.company_name,
+                item.vendor,
+                item.source_kind,
+                item.url,
+                job,
+                description,
+                flags,
             )
         )
     return {"prepared": _dump(_PREPARED, prepared)}
@@ -301,7 +358,7 @@ async def dedup(deps: SearchDeps, state: State) -> State:
             clauses = []
             if job.canonical_url:
                 clauses.append(JobRow.canonical_url == job.canonical_url)
-            if job.requisition_id:
+            if job.requisition_id and item.vendor:
                 clauses.append(
                     and_(
                         JobRow.ats_vendor == item.vendor,
@@ -321,7 +378,7 @@ async def dedup(deps: SearchDeps, state: State) -> State:
                 rows = (await session.scalars(select(JobRow).where(or_(*clauses)))).all()
                 found = exact_match(candidate, [_dedup_job(r) for r in rows])
                 if found is not None:
-                    seen.append(SeenJob(found, item.source_url))
+                    seen.append(SeenJob(found, item.source_url, item.source_kind))
                     continue
             same_company = (
                 await session.scalars(
@@ -352,6 +409,7 @@ async def dedup(deps: SearchDeps, state: State) -> State:
                     ats_vendor=item.vendor,
                     requisition_id=job.requisition_id,
                     source_url=item.source_url,
+                    source_kind=item.source_kind,
                     injection_flags=cast(list[dict[str, Any]], item.flags),
                     decision=DecisionInput("shown", "rules_only_fallback", FALLBACK_REASON),
                     candidates=others,

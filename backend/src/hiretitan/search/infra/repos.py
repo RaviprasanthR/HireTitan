@@ -103,7 +103,7 @@ class CompaniesRepo:
             return list(result.scalars())
         return await self.list_all()
 
-    async def delete(self, company_id: UUID) -> None:
+    async def remove(self, company_id: UUID) -> None:
         await self._session.execute(delete(CompanyRow).where(CompanyRow.id == company_id))
         await self._session.flush()
 

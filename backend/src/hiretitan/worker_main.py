@@ -29,6 +29,7 @@ from hiretitan.platform.storage.local import LocalFileStorage
 from hiretitan.preferences.infra.repo import default_country_provider
 from hiretitan.profile.workflow.graph import WORKFLOW_NAME, IngestDeps, profile_ingest_workflow
 from hiretitan.search.application.synonyms_seed import load_title_synonyms
+from hiretitan.search.infra.careers_page.fetcher import CareersPageFetcher
 from hiretitan.search.workflow.graph import WORKFLOW_NAME as SEARCH_WORKFLOW_NAME
 from hiretitan.search.workflow.graph import SearchDeps, job_search_workflow
 from hiretitan.search.workflow.judge import JudgeDeps
@@ -80,6 +81,7 @@ async def run_worker(settings: Settings, *, wait: bool = True) -> None:
         clock=SystemClock(),
         synonyms=load_title_synonyms(SEED_DIR / "title_synonyms.yaml"),
         publish=publisher.publish,
+        pages=CareersPageFetcher(settings.data_dir / "cache" / "careers_pages"),
         judge=JudgeDeps(
             sessions=sessions,
             llm=built.llm,
