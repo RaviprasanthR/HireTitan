@@ -11,6 +11,7 @@ import asyncio
 import sys
 from collections.abc import AsyncIterator, Callable, Sequence
 from contextlib import asynccontextmanager
+from functools import partial
 from http import HTTPStatus
 from pathlib import Path
 from typing import Any, Final
@@ -266,7 +267,7 @@ def build_app(settings: Settings | None = None) -> FastAPI:
             DataApiDeps(
                 sessions=deps.sessions,
                 storage=deps.storage,
-                store=SqlDeleteAllStore,
+                store=partial(SqlDeleteAllStore, company_seed=SEED_DIR / "companies.yaml"),
                 enqueue_key_check=enqueue_key_check,
             )
         ),

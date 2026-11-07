@@ -6,6 +6,8 @@ The setup module may not import other features directly, so this composition-lev
 
 from __future__ import annotations
 
+import asyncio
+from pathlib import Path
 from uuid import UUID
 
 from sqlalchemy import text
@@ -17,7 +19,8 @@ from hiretitan.preferences.application.service import get_preferences
 from hiretitan.preferences.infra.repo import PreferencesRepo
 from hiretitan.profile.infra.repos import ResumeFilesRepo, ReviewsRepo, VersionsRepo
 from hiretitan.search.application import progress as search_progress
-from hiretitan.search.infra.repos import RuleSetsRepo, SearchRunsRepo
+from hiretitan.search.application.seed import load_seed
+from hiretitan.search.infra.repos import CompaniesRepo, RuleSetsRepo, SearchRunsRepo
 
 
 class RepoFacts:
@@ -82,8 +85,9 @@ class SqlDeleteAllStore:
     """``DeleteAllStore`` over every module's tables (a composition-level adapter, because it
     spans features, the job queue and the checkpoint store)."""
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self, session: AsyncSession, company_seed: Path | None = None) -> None:
         self._session = session
+        self._company_seed = company_seed
 
     async def cancel_open_runs(self) -> None:
         runs = RunsRepo(self._session)
@@ -105,4 +109,7 @@ class SqlDeleteAllStore:
         await self._session.execute(
             text("INSERT INTO app.provider_status (provider, status) VALUES ('openai', 'unknown')")
         )
+        # The shipped company list, as a fresh install has it (FR-041).
+        if self._company_seed is not None and await asyncio.to_thread(self._company_seed.exists):
+            await load_seed(CompaniesRepo(self._session), self._company_seed)
         await self._session.commit()
