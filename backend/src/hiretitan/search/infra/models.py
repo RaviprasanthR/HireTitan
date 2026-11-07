@@ -169,6 +169,10 @@ class JobRow(IdTimestampMixin, Base):
         UniqueConstraint("ats_vendor", "requisition_id"),  # only binds when both are set
         CheckConstraint("char_length(company_name) BETWEEN 1 AND 120", name="company_name_length"),
         CheckConstraint("char_length(title) BETWEEN 1 AND 200", name="title_length"),
+        CheckConstraint(
+            "role_short IS NULL OR char_length(role_short) BETWEEN 1 AND 60",
+            name="role_short_length",
+        ),
         CheckConstraint("char_length(location_text) <= 200", name="location_text_length"),
         CheckConstraint(
             "work_mode IS NULL OR " + _in("work_mode", WORK_MODES), name="work_mode_values"
@@ -187,6 +191,7 @@ class JobRow(IdTimestampMixin, Base):
     )
     company_name: Mapped[str] = mapped_column(Text)
     title: Mapped[str] = mapped_column(Text)
+    role_short: Mapped[str | None] = mapped_column(Text)
     location_text: Mapped[str | None] = mapped_column(Text)
     city: Mapped[str | None] = mapped_column(Text)
     country: Mapped[str | None] = mapped_column(Text)

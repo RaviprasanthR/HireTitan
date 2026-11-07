@@ -1297,6 +1297,10 @@
             "title": "Restored",
             "type": "boolean"
           },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
           "sources": {
             "items": {
               "$ref": "#/components/schemas/SourceOut"
@@ -1327,6 +1331,7 @@
         "required": [
           "id",
           "title",
+          "role",
           "company_name",
           "location_text",
           "work_mode",
@@ -1502,6 +1507,10 @@
             "title": "Restored",
             "type": "boolean"
           },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
           "skills_found": {
             "items": {
               "type": "string"
@@ -1550,6 +1559,7 @@
         "required": [
           "id",
           "title",
+          "role",
           "company_name",
           "location_text",
           "work_mode",
@@ -1867,6 +1877,10 @@
             "title": "Restored",
             "type": "boolean"
           },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
           "skills_found": {
             "items": {
               "type": "string"
@@ -1915,6 +1929,7 @@
         "required": [
           "id",
           "title",
+          "role",
           "company_name",
           "location_text",
           "work_mode",

@@ -240,3 +240,15 @@ async def test_SC010_first_page_fast_with_1000_jobs(env: Env) -> None:
             )
         )
     assert "ix_jobs_state_sort" in plan
+
+
+async def test_role_is_the_ai_role_or_the_title_cut_down_by_rules(env: Env) -> None:
+    await add_job(env, "Senior Backend Engineer (Python) - Pune", days_ago=0)
+    await add_job(env, "Backend Engineer - Remote - Req 9912", days_ago=1, role_short="Backend Eng")
+
+    page = (await env.client.get("/api/v1/jobs", params={"list": "explore"})).json()
+
+    assert [(i["title"], i["role"]) for i in page["items"]] == [
+        ("Senior Backend Engineer (Python) - Pune", "Senior Backend Engineer"),
+        ("Backend Engineer - Remote - Req 9912", "Backend Eng"),
+    ]

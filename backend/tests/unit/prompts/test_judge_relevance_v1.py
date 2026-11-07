@@ -24,7 +24,7 @@ PROMPTS = Path(__file__).resolve().parents[3] / "src" / "hiretitan" / "prompts"
 
 @pytest.fixture(scope="module")
 def prompt():  # type: ignore[no-untyped-def]
-    return PromptRegistry(PROMPTS).load("judge_relevance")
+    return PromptRegistry(PROMPTS).load("judge_relevance", 1)
 
 
 def profile() -> ProfileCard:
@@ -68,7 +68,7 @@ def test_registry_loads_the_agreed_settings(prompt) -> None:  # type: ignore[no-
 def test_FR035a_card_excerpt_capped_at_1200() -> None:
     assert EXCERPT_MAX == 1200
     rendered = render_judge_prompt(
-        PromptRegistry(PROMPTS).load("judge_relevance"),
+        PromptRegistry(PROMPTS).load("judge_relevance", 1),
         profile(),
         [job(1, description="word " * 2000)],
     )

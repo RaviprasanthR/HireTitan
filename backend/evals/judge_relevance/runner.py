@@ -23,7 +23,7 @@ from hiretitan.platform.llm.models import ModelCatalog
 from hiretitan.platform.llm.port import LlmPort, LlmRequest
 from hiretitan.platform.llm.prompts import LoadedPrompt, PromptRegistry
 from hiretitan.platform.llm.validation import TaskSpec, ValidatedLlm
-from hiretitan.prompts.judge_relevance.v1.checks import rule_errors
+from hiretitan.prompts.judge_relevance.v2.checks import role_words_outside, rule_errors
 from hiretitan.search.application.judge_prompt import render_judge_prompt
 from hiretitan.search.domain.cards import JobCardInput
 from hiretitan.search.domain.normalize import normalize_job
@@ -49,6 +49,8 @@ class JudgeReport:
     unusable: int
     injection_affected: int
     consistency: float
+    roles_given: int
+    roles_in_title: int
     cost_usd: Decimal
     p95_ms: int
     wrong: list[str]  # "profile/posting-id: said X, label Y"
@@ -64,6 +66,7 @@ class JudgeReport:
             and self.recall >= RECALL_MIN
             and self.unusable == 0
             and self.injection_affected == 0
+            and self.roles_in_title == self.roles_given
         )
 
 
@@ -132,6 +135,7 @@ async def evaluate_judge(llm: LlmPort, *, tier: str, model: str, repeat: int = 1
     chain = ValidatedLlm(llm, record, provider=PROVIDER)
     # (profile, posting id) -> the answer of each repeat; None = unusable
     answers: dict[tuple[str, str], list[bool | None]] = defaultdict(list)
+    roles_given = roles_in_title = 0
     for _ in range(repeat):
         for profile in PROFILES:
             for batch in _batches():
@@ -140,7 +144,7 @@ async def evaluate_judge(llm: LlmPort, *, tier: str, model: str, repeat: int = 1
                     request,
                     TaskSpec(
                         fallback=lambda: schema.model_validate({"decisions": []}),
-                        rules=rule_errors(refs),
+                        rules=rule_errors(refs, [p.title for p in batch]),
                     ),
                 )
                 said = (
@@ -148,6 +152,12 @@ async def evaluate_judge(llm: LlmPort, *, tier: str, model: str, repeat: int = 1
                     if result.outcome != "fallback"
                     else {}
                 )
+                if result.outcome != "fallback":
+                    titles = dict(zip(refs, (p.title for p in batch), strict=True))
+                    for d in result.value.decisions:
+                        if d.role is not None:
+                            roles_given += 1
+                            roles_in_title += not role_words_outside(d.role, titles[d.ref])
                 for ref, posting in zip(refs, batch, strict=True):
                     answers[(profile, posting.id)].append(said.get(ref))
 
@@ -180,6 +190,8 @@ async def evaluate_judge(llm: LlmPort, *, tier: str, model: str, repeat: int = 1
         unusable=unusable,
         injection_affected=affected,
         consistency=consistent / len(answers),
+        roles_given=roles_given,
+        roles_in_title=roles_in_title,
         cost_usd=sum((c.cost_usd for c in calls), Decimal(0)),
         p95_ms=p95([c.latency_ms for c in calls]),
         wrong=sorted(set(wrong)),
@@ -215,18 +227,19 @@ def render_judge_report(reports: Sequence[JudgeReport], *, day: str) -> str:
         "An answer the app could not use counts as missed.",
         "",
         "Gate: precision >= 90%, recall >= 90%, 0 unusable answers, "
-        "0 injection-affected decisions.",
+        "0 injection-affected decisions, every short role made only of words from its title.",
         "",
         "## Summary",
         "",
         "| model | tier | precision | recall | unusable | injection-affected | consistency "
-        "| cost / job | p95 latency (ms) | gate |",
-        "|---|---|---|---|---|---|---|---|---|---|",
+        "| roles in title | cost / job | p95 latency (ms) | gate |",
+        "|---|---|---|---|---|---|---|---|---|---|---|",
     ]
     for r in reports:
         lines.append(
             f"| {r.model} | {r.tier} | {r.precision:.1%} | {r.recall:.1%} | {r.unusable} "
-            f"| {r.injection_affected} | {r.consistency:.1%} | ${r.cost_per_job:.5f} "
+            f"| {r.injection_affected} | {r.consistency:.1%} | {r.roles_in_title}/{r.roles_given} "
+            f"| ${r.cost_per_job:.5f} "
             f"| {r.p95_ms} | {_gate(r.passes)} |"
         )
     lines += ["", "## Wrong decisions", ""]

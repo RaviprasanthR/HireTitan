@@ -88,6 +88,8 @@ async def recheck(deps: SearchDeps, state: dict[str, Any]) -> dict[str, Any]:
             reason=decision.reason,
             **decision.provenance,
         )
+        if decision.role:
+            await JobsRepo(session).set_role_short(job_id, decision.role)
         if decision.outcome == "skipped":
             await JobsRepo(session).set_state(job_id, JobState.skipped.value)
         await session.commit()

@@ -49,7 +49,7 @@ async def test_US1_AS2_ai_reason_shown_with_job(env: Env) -> None:
     found = await decisions(env)
     kept = found["Backend Engineer"]
     assert (kept.outcome, kept.decided_by, kept.reason) == ("shown", "ai", "Python backend role")
-    assert (kept.prompt_name, kept.prompt_version) == (TASK, "1")
+    assert (kept.prompt_name, kept.prompt_version) == (TASK, "2")
     assert kept.llm_call_id is not None
     assert kept.provider
     assert kept.model
@@ -137,3 +137,32 @@ async def test_FR035a_calls_are_batched_by_10(env: Env) -> None:
 
     assert [c.prompt.user.count('"ref"') for c in env.llm.calls] == [10, 2]
     assert {r.decided_by for r in (await decisions(env)).values()} == {"ai"}
+
+
+async def test_role_from_the_judge_is_stored_and_shown(env: Env) -> None:
+    ref = await add_company(env, "Acme")
+    env.career_ops.script(ref, ScanOk([posting("Backend Engineer (Python) - Pune")]))
+    env.llm.add(
+        {
+            "decisions": [
+                {"ref": "j1", "relevant": True, "reason": "Fits", "role": "Backend Engineer"}
+            ]
+        }
+    )
+
+    await go(env, await new_search(env, mode="rules_and_ai"))
+
+    async with env.sessions() as session:
+        row = (await session.scalars(select(JobRow))).one()
+    assert row.role_short == "Backend Engineer"
+
+
+async def test_no_role_from_the_judge_leaves_it_empty(env: Env) -> None:
+    await scan_titles(env, TITLES[:1])
+    env.llm.add(answer(("j1", True, "Fits")))
+
+    await go(env, await new_search(env, mode="rules_and_ai"))
+
+    async with env.sessions() as session:
+        row = (await session.scalars(select(JobRow))).one()
+    assert row.role_short is None

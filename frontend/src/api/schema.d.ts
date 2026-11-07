@@ -1277,6 +1277,8 @@ export interface components {
             posted_at: string | null;
             /** Restored */
             restored: boolean;
+            /** Role */
+            role: string;
             /** Sources */
             sources: components["schemas"]["SourceOut"][];
             /** State */
@@ -1334,6 +1336,8 @@ export interface components {
             posted_at: string | null;
             /** Restored */
             restored: boolean;
+            /** Role */
+            role: string;
             /** Skills Found */
             skills_found: string[];
             /** Sources */
@@ -1438,6 +1442,8 @@ export interface components {
             posted_at: string | null;
             /** Restored */
             restored: boolean;
+            /** Role */
+            role: string;
             /** Skills Found */
             skills_found: string[];
             /** Sources */

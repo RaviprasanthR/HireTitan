@@ -59,6 +59,7 @@ class DecisionInput:
     rule_key: str | None = None
     # prompt_name, prompt_version, provider, model, llm_call_id (AI decisions only)
     provenance: dict[str, Any] = field(default_factory=dict)
+    role: str | None = None  # short role from the AI judge; none for rules and people
 
 
 @dataclass(frozen=True, slots=True)

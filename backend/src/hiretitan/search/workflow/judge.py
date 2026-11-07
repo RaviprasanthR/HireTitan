@@ -23,7 +23,7 @@ from hiretitan.platform.llm.port import AiUnavailable, LlmPort, LlmRequest, Retr
 from hiretitan.platform.llm.prompts import PromptRegistry
 from hiretitan.platform.llm.validation import TaskSpec, ValidatedLlm
 from hiretitan.platform.untrusted.sanitize import sanitize
-from hiretitan.prompts.judge_relevance.v1.checks import rule_errors
+from hiretitan.prompts.judge_relevance.v2.checks import rule_errors
 from hiretitan.search.application.judge_prompt import render_judge_prompt
 from hiretitan.search.application.search import DecisionInput, NewJob
 from hiretitan.search.domain.cards import JOBS_PER_CALL_MAX, JobCardInput, ProfileCard
@@ -31,6 +31,7 @@ from hiretitan.search.workflow.stops import Stop, stop_for
 
 PROMPT_NAME: Final = "judge_relevance"
 REASON_MAX: Final = 160
+ROLE_MAX: Final = 60
 
 ProfileCardSource = Callable[[], Awaitable[ProfileCard | None]]
 
@@ -68,6 +69,14 @@ def _card(job: NewJob) -> JobCardInput:
         years_found=job.years_found,
         description=job.description,
     )
+
+
+def _role(decision: object) -> str | None:
+    """The model's short role, cleaned; none when it gave none."""
+    raw = getattr(decision, "role", None)
+    if not raw:
+        return None
+    return " ".join(sanitize(raw).text.split())[:ROLE_MAX] or None
 
 
 async def judge_jobs(
@@ -109,7 +118,7 @@ async def judge_jobs(
                 request,
                 TaskSpec(
                     fallback=lambda: schema.model_validate({"decisions": []}),
-                    rules=rule_errors(built.refs),
+                    rules=rule_errors(built.refs, [jobs[i].title for i in chunk]),
                 ),
                 run_id=run_id,
             )
@@ -131,6 +140,7 @@ async def judge_jobs(
                     "shown" if decision.relevant else "skipped",
                     "ai",
                     " ".join(sanitize(decision.reason).text.split())[:REASON_MAX],
+                    role=_role(decision),
                     provenance={
                         "prompt_name": call.prompt_name,
                         "prompt_version": call.prompt_version,

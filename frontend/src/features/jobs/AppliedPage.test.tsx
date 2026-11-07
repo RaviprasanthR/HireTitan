@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -10,7 +10,8 @@ import { UndoToast } from './UndoToast'
 function applied(id: string, title: string, day: string) {
   return {
     id,
-    title,
+    title: `${title} (Python) - Pune`,
+    role: title,
     company_name: 'Acme',
     location_text: 'Pune, India',
     work_mode: 'remote',
@@ -100,7 +101,7 @@ describe('AppliedPage', () => {
         </MemoryRouter>
       </QueryClientProvider>,
     )
-    const toggle = await screen.findByRole('button', { name: 'Details for Newest' })
+    const toggle = await screen.findByRole('button', { name: 'Details for Newest (Python) - Pune' })
     expect(toggle).toHaveAttribute('aria-expanded', 'false')
     expect(screen.queryByText('Build services with Python.')).toBeNull()
 
@@ -112,23 +113,26 @@ describe('AppliedPage', () => {
     expect(screen.queryByText('Build services with Python.')).toBeNull()
   })
 
-  it('US5_AS3_undo_returns_the_job_to_the_list', async () => {
-    const user = userEvent.setup()
-    const calls = renderPage()
+  it('the_edit_icon_opens_the_job_where_the_date_can_be_changed_or_undone', async () => {
+    renderPage()
     const table = await screen.findByRole('table', { name: 'Applied jobs' })
-
     const [, newest] = within(table).getAllByRole('row')
     if (!newest) throw new Error('expected a first row')
-    await user.click(within(newest).getByRole('button', { name: 'Undo' }))
+    expect(within(newest).getByRole('link', { name: /^Edit / })).toHaveAttribute('href', '/jobs/a')
+  })
 
-    await waitFor(() =>
-      expect(
-        calls.some((call) => call.method === 'DELETE' && call.path === '/jobs/a/applied'),
-      ).toBe(true),
-    )
-    await waitFor(() =>
-      expect(within(screen.getByRole('table', { name: 'Applied jobs' })).getAllByRole('row')).toHaveLength(2),
-    )
+  it('shows_the_short_role_with_the_full_title_on_hover', async () => {
+    renderPage()
+    const link = await screen.findByRole('link', { name: 'Newest' })
+    expect(link).toHaveAttribute('title', 'Newest (Python) - Pune')
+  })
+
+  it('shows_the_status_and_source_as_tags', async () => {
+    renderPage()
+    const table = await screen.findByRole('table', { name: 'Applied jobs' })
+    const [, newest] = within(table).getAllByRole('row')
+    if (!newest) throw new Error('expected a first row')
+    expect(within(newest).getByText('Applied')).toHaveClass('ht-pill-green')
   })
 
   it('says_so_when_nothing_is_applied_yet', async () => {

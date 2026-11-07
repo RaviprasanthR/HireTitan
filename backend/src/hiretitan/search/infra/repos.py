@@ -332,6 +332,12 @@ class JobsRepo:
             await self._session.refresh(row)
         return row
 
+    async def set_role_short(self, job_id: UUID, role: str | None) -> None:
+        await self._session.execute(
+            update(JobRow).where(JobRow.id == job_id).values(role_short=role)
+        )
+        await self._session.flush()
+
     async def set_state(self, job_id: UUID, state: str) -> None:
         await self._session.execute(update(JobRow).where(JobRow.id == job_id).values(state=state))
         await self._session.flush()

@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from hiretitan.search.domain.role import short_role
 from hiretitan.search.infra.models import JobRow, JobSourceRow, RelevanceDecisionRow
 
 
@@ -27,6 +28,7 @@ class DecisionOut(BaseModel):
 class JobCardOut(BaseModel):
     id: UUID
     title: str
+    role: str  # short role: the AI's when it gave one, else the title cut down by rules
     company_name: str
     location_text: str | None
     work_mode: str | None
@@ -71,6 +73,7 @@ async def job_cards(session: AsyncSession, rows: Sequence[JobRow]) -> list[JobCa
         JobCardOut(
             id=row.id,
             title=row.title,
+            role=row.role_short or short_role(row.title),
             company_name=row.company_name,
             location_text=row.location_text,
             work_mode=row.work_mode,

@@ -63,6 +63,7 @@ class SearchStore:
             company_id=job.company_id,
             company_name=job.company_name,
             title=job.title,
+            role_short=job.decision.role,
             location_text=job.location_text,
             city=job.city,
             country=job.country,
