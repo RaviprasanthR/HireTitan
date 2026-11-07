@@ -55,25 +55,69 @@ function renderPage() {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('AppliedPage', () => {
-  it('FR037_lists_applied_jobs_with_their_dates_newest_first', async () => {
+  it('FR037_lists_applied_jobs_as_a_table_newest_first', async () => {
     const calls = renderPage()
 
-    const list = await screen.findByRole('list', { name: 'Applied jobs' })
-    const items = within(list).getAllByRole('listitem')
-    expect(items.map((item) => within(item).getByRole('link').textContent)).toEqual([
-      'Newest',
-      'Older',
-    ])
-    expect(items[0]).toHaveTextContent('Applied 5 Nov 2026')
+    const table = await screen.findByRole('table', { name: 'Applied jobs' })
+    expect(
+      within(table)
+        .getAllByRole('columnheader')
+        .map((header) => header.textContent),
+    ).toEqual(['Company', 'Role', 'Applied on', 'Status', 'Source', ''])
+    const [, newest, older] = within(table).getAllByRole('row')
+    if (!newest || !older) throw new Error('expected two rows')
+    expect(within(newest).getByRole('link', { name: 'Newest' })).toBeInTheDocument()
+    expect(within(older).getByRole('link', { name: 'Older' })).toBeInTheDocument()
+    expect(newest).toHaveTextContent('Acme')
+    expect(newest).toHaveTextContent('5 Nov 2026')
+    expect(newest).toHaveTextContent('Applied')
+    expect(newest).toHaveTextContent('Company job board')
     expect(calls.some((call) => call.path.includes('list=applied'))).toBe(true)
+  })
+
+  it('expanding_a_row_shows_the_description', async () => {
+    const user = userEvent.setup()
+    stubApi((call) => {
+      if (call.path === '/jobs/a')
+        return {
+          ...applied('a', 'Newest', '2026-11-05'),
+          description: 'Build services with Python.',
+          city: 'Pune',
+          country: 'IN',
+          skills_found: ['Python'],
+          sources: [{ kind: 'company_board', url: 'https://jobs.example.com/1', label: null }],
+          decision_history: [],
+          injection_flags: [],
+        }
+      if (call.path.startsWith('/jobs?'))
+        return { items: [applied('a', 'Newest', '2026-11-05')], next_cursor: null }
+      return undefined
+    })
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter>
+          <AppliedPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+    const toggle = await screen.findByRole('button', { name: 'Details for Newest' })
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByText('Build services with Python.')).toBeNull()
+
+    await user.click(toggle)
+
+    expect(await screen.findByText('Build services with Python.')).toBeInTheDocument()
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    await user.click(toggle)
+    expect(screen.queryByText('Build services with Python.')).toBeNull()
   })
 
   it('US5_AS3_undo_returns_the_job_to_the_list', async () => {
     const user = userEvent.setup()
     const calls = renderPage()
-    const list = await screen.findByRole('list', { name: 'Applied jobs' })
+    const table = await screen.findByRole('table', { name: 'Applied jobs' })
 
-    const [newest] = within(list).getAllByRole('listitem')
+    const [, newest] = within(table).getAllByRole('row')
     if (!newest) throw new Error('expected a first row')
     await user.click(within(newest).getByRole('button', { name: 'Undo' }))
 
@@ -83,9 +127,7 @@ describe('AppliedPage', () => {
       ).toBe(true),
     )
     await waitFor(() =>
-      expect(
-        within(screen.getByRole('list', { name: 'Applied jobs' })).getAllByRole('listitem'),
-      ).toHaveLength(1),
+      expect(within(screen.getByRole('table', { name: 'Applied jobs' })).getAllByRole('row')).toHaveLength(2),
     )
   })
 
