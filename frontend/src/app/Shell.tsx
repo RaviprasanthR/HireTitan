@@ -10,6 +10,7 @@ const sections = [
   { to: '/profile', label: 'Profile', end: false },
   { to: '/preferences', label: 'Preferences', end: false },
   { to: '/search/rules', label: 'Search rules', end: false },
+  { to: '/companies', label: 'Companies', end: false },
   { to: '/review', label: 'Review', end: false },
   { to: '/settings', label: 'Settings', end: false },
 ] as const

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { useParams } from 'react-router'
+import { CompaniesPage } from '@/features/companies/CompaniesPage'
 import { ExplorePage } from '@/features/explore/ExplorePage'
 import { RunSummaryPage } from '@/features/explore/RunSummaryPage'
 import { SearchHistoryPage } from '@/features/explore/SearchHistoryPage'
@@ -33,6 +34,7 @@ export const NotFoundPage = () => <Page title="Page not found" />
 
 export {
   AppliedPage,
+  CompaniesPage,
   ExplorePage,
   JobDetailPage,
   RunSummaryPage,

@@ -1,6 +1,7 @@
 import type { RouteObject } from 'react-router'
 import {
   AppliedPage,
+  CompaniesPage,
   ExplorePage,
   JobDetailPage,
   NotFoundPage,
@@ -37,6 +38,7 @@ export const routes: RouteObject[] = [
             element: <ProfileVersionPage />,
           },
           { path: '/preferences', element: <PreferencesPage /> },
+          { path: '/companies', element: <CompaniesPage /> },
           { path: '/search/rules', element: <SearchRulesPage /> },
           { path: '/search/history', element: <SearchHistoryPage /> },
           { path: '/search/runs/:id', element: <RunSummaryPage /> },
