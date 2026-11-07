@@ -82,6 +82,20 @@
         "title": "AppliedIn",
         "type": "object"
       },
+      "Body_import_preview_api_v1_companies_import_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_import_preview_api_v1_companies_import_post",
+        "type": "object"
+      },
       "Body_upload_resume_api_v1_resumes_post": {
         "properties": {
           "file": {
@@ -1016,6 +1030,202 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "ImportPreview": {
+        "properties": {
+          "add": {
+            "items": {
+              "$ref": "#/components/schemas/ImportRowOut"
+            },
+            "title": "Add",
+            "type": "array"
+          },
+          "invalid": {
+            "items": {
+              "$ref": "#/components/schemas/InvalidRowOut"
+            },
+            "title": "Invalid",
+            "type": "array"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          },
+          "update": {
+            "items": {
+              "$ref": "#/components/schemas/ImportUpdateOut"
+            },
+            "title": "Update",
+            "type": "array"
+          }
+        },
+        "required": [
+          "add",
+          "update",
+          "invalid",
+          "token"
+        ],
+        "title": "ImportPreview",
+        "type": "object"
+      },
+      "ImportResult": {
+        "properties": {
+          "added": {
+            "title": "Added",
+            "type": "integer"
+          },
+          "updated": {
+            "title": "Updated",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "added",
+          "updated"
+        ],
+        "title": "ImportResult",
+        "type": "object"
+      },
+      "ImportRowOut": {
+        "properties": {
+          "ats_vendor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ats Vendor"
+          },
+          "board_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Board Id"
+          },
+          "careers_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Careers Url"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "hidden": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hidden"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "row": {
+            "title": "Row",
+            "type": "integer"
+          },
+          "website": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Website"
+          }
+        },
+        "required": [
+          "row",
+          "name",
+          "city",
+          "website",
+          "careers_url",
+          "ats_vendor",
+          "board_id",
+          "hidden"
+        ],
+        "title": "ImportRowOut",
+        "type": "object"
+      },
+      "ImportUpdateOut": {
+        "properties": {
+          "changes": {
+            "additionalProperties": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Changes",
+            "type": "object"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "row": {
+            "title": "Row",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "row",
+          "id",
+          "name",
+          "changes"
+        ],
+        "title": "ImportUpdateOut",
+        "type": "object"
+      },
+      "InvalidRowOut": {
+        "properties": {
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "row": {
+            "title": "Row",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "row",
+          "reason"
+        ],
+        "title": "InvalidRowOut",
         "type": "object"
       },
       "JobCardOut": {
@@ -3769,6 +3979,108 @@
           }
         },
         "summary": "Create",
+        "tags": [
+          "companies"
+        ]
+      }
+    },
+    "/api/v1/companies/export": {
+      "get": {
+        "operationId": "export_api_v1_companies_export_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Export",
+        "tags": [
+          "companies"
+        ]
+      }
+    },
+    "/api/v1/companies/import": {
+      "post": {
+        "operationId": "import_preview_api_v1_companies_import_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_import_preview_api_v1_companies_import_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportPreview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Import Preview",
+        "tags": [
+          "companies"
+        ]
+      }
+    },
+    "/api/v1/companies/import/{token}/confirm": {
+      "post": {
+        "operationId": "import_confirm_api_v1_companies_import__token__confirm_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "title": "Token",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Import Confirm",
         "tags": [
           "companies"
         ]

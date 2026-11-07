@@ -54,7 +54,7 @@ Progress events go over the existing SSE stream (`/api/v1/events`): `search.batc
 | `POST /companies/{id}/discovery/confirm` · `/reject` | → `200 Company` | Confirm → `user_confirmed`; reject → careers-page route or `check_manually` (FR-017) |
 | `PATCH /companies/{id}` | partial `{name, city, website, careers_url, hidden}` → `200 Company` | Sets `user_modified` (FR-018) |
 | `DELETE /companies/{id}` | → `204` | User rows: hard delete. Built-in rows: tombstone (`deleted_at`) |
-| `POST /companies/import` | multipart CSV → `200 ImportPreview {add[], update[], invalid[{row, reason}], token}` | ≤ 1 MB, 2,000 rows (R11); nothing changes yet |
+| `POST /companies/import` | multipart CSV → `200 ImportPreview {add[], update[{row, id, name, changes{field:{from,to}}}], invalid[{row, reason}], token}` (`row` is the file's line number; an empty cell leaves the stored value alone; a preview lasts 30 minutes) | ≤ 1 MB, 2,000 rows (R11); nothing changes yet |
 | `POST /companies/import/{token}/confirm` | → `200 {added, updated}` | |
 | `GET /companies/export` | → `200 text/csv` | Same columns; round-trips through import |
 

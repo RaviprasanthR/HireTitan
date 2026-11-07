@@ -22,6 +22,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/companies/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export */
+        get: operations["export_api_v1_companies_export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Import Preview */
+        post: operations["import_preview_api_v1_companies_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/import/{token}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Import Confirm */
+        post: operations["import_confirm_api_v1_companies_import__token__confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/companies/{company_id}": {
         parameters: {
             query?: never;
@@ -833,6 +884,11 @@ export interface components {
             /** Applied On */
             applied_on?: string | null;
         };
+        /** Body_import_preview_api_v1_companies_import_post */
+        Body_import_preview_api_v1_companies_import_post: {
+            /** File */
+            file: string;
+        };
         /** Body_upload_resume_api_v1_resumes_post */
         Body_upload_resume_api_v1_resumes_post: {
             /** File */
@@ -1133,6 +1189,68 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** ImportPreview */
+        ImportPreview: {
+            /** Add */
+            add: components["schemas"]["ImportRowOut"][];
+            /** Invalid */
+            invalid: components["schemas"]["InvalidRowOut"][];
+            /** Token */
+            token: string;
+            /** Update */
+            update: components["schemas"]["ImportUpdateOut"][];
+        };
+        /** ImportResult */
+        ImportResult: {
+            /** Added */
+            added: number;
+            /** Updated */
+            updated: number;
+        };
+        /** ImportRowOut */
+        ImportRowOut: {
+            /** Ats Vendor */
+            ats_vendor: string | null;
+            /** Board Id */
+            board_id: string | null;
+            /** Careers Url */
+            careers_url: string | null;
+            /** City */
+            city: string | null;
+            /** Hidden */
+            hidden: boolean | null;
+            /** Name */
+            name: string;
+            /** Row */
+            row: number;
+            /** Website */
+            website: string | null;
+        };
+        /** ImportUpdateOut */
+        ImportUpdateOut: {
+            /** Changes */
+            changes: {
+                [key: string]: {
+                    [key: string]: unknown;
+                };
+            };
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Row */
+            row: number;
+        };
+        /** InvalidRowOut */
+        InvalidRowOut: {
+            /** Reason */
+            reason: string;
+            /** Row */
+            row: number;
         };
         /** JobCardOut */
         JobCardOut: {
@@ -2012,6 +2130,90 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CompanyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_api_v1_companies_export_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    import_preview_api_v1_companies_import_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_import_preview_api_v1_companies_import_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportPreview"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    import_confirm_api_v1_companies_import__token__confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportResult"];
                 };
             };
             /** @description Validation Error */

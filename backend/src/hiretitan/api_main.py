@@ -42,6 +42,7 @@ from hiretitan.search.api.duplicates import SearchDuplicatesApiDeps, create_dupl
 from hiretitan.search.api.jobs import SearchJobsApiDeps, create_search_jobs_router
 from hiretitan.search.api.rules import SearchRulesApiDeps, create_search_rules_router
 from hiretitan.search.api.runs import SearchRunsApiDeps, create_search_runs_router
+from hiretitan.search.application.companies_csv import MAX_BYTES as CSV_MAX_BYTES
 from hiretitan.search.application.synonyms_seed import load_title_synonyms
 from hiretitan.search_wiring import (
     ProfileAndPreferencesSource,
@@ -148,6 +149,12 @@ def create_app(
     app = FastAPI(title="HireTitan", docs_url=None, redoc_url=None, lifespan=lifespan)
     app.add_middleware(
         BodyLimitMiddleware, path=f"{API_PREFIX}/resumes", limit=MAX_BYTES + MULTIPART_OVERHEAD
+    )
+    app.add_middleware(
+        BodyLimitMiddleware,
+        path=f"{API_PREFIX}/companies/import",
+        limit=CSV_MAX_BYTES + MULTIPART_OVERHEAD,
+        message="The file is larger than 1 MB.",
     )
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_exception_handler(RequestValidationError, _validation_handler)
