@@ -79,7 +79,7 @@ class SearchDeps:
     batch_size: int = BATCH_SIZE
     judge: JudgeDeps | None = None  # None: no AI step at all (rules only)
     pages: PageFetcherPort | None = None  # None: careers pages cannot be read
-    page_ai: bool = False  # the AI reads pages with no job data; off until the T053 eval passes
+    page_ai: bool = False  # the AI reads pages with no job data; the worker turns it on
 
 
 class SearchState(TypedDict, total=False):

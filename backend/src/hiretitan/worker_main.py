@@ -82,6 +82,7 @@ async def run_worker(settings: Settings, *, wait: bool = True) -> None:
         synonyms=load_title_synonyms(SEED_DIR / "title_synonyms.yaml"),
         publish=publisher.publish,
         pages=CareersPageFetcher(settings.data_dir / "cache" / "careers_pages"),
+        page_ai=True,  # T053 eval passed 2026-11-08 (precision and recall 100%, 0 off-site links)
         judge=JudgeDeps(
             sessions=sessions,
             llm=built.llm,
