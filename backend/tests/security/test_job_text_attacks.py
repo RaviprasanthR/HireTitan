@@ -114,7 +114,7 @@ async def test_FR039_raw_text_reaches_only_toolless_bounded_steps(env: Env) -> N
 
     for request in llm.requests:
         assert not hasattr(request, "tools")  # the request type has no way to carry tools
-        assert request.max_output_tokens <= 1200
+        assert request.max_output_tokens <= 1500  # v2 added the short role
         schema = request.output_schema.model_json_schema()
         assert schema.get("additionalProperties") is False
         assert schema["properties"]["decisions"]["maxItems"] == 10

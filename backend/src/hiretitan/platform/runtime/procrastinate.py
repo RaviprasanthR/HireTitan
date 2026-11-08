@@ -7,6 +7,7 @@ importing this module needs no database.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any
@@ -28,6 +29,8 @@ RUN_WORKFLOW_TASK = "run_workflow"
 CHECK_PROVIDER_KEY_TASK = "check_provider_key"
 MAX_ATTEMPTS = len(RETRY_DELAYS_SECONDS) + 1
 
+logger = logging.getLogger(__name__)
+
 
 class RunRetry(BaseRetryStrategy):
     """Retry after 10 s, 1 min and 5 min, then let the runner mark the run failed."""
@@ -38,6 +41,15 @@ class RunRetry(BaseRetryStrategy):
         self, *, exception: BaseException, job: procrastinate.jobs.Job
     ) -> RetryDecision | None:
         delay = retry_delay_seconds(job.attempts + 1)
+        # A job that raises is retried quietly otherwise, so say why. The message is cut short
+        # and goes through the log redaction like every other log line.
+        logger.warning(
+            "job %s attempt %s failed: %s: %.200s",
+            job.id,
+            job.attempts + 1,
+            type(exception).__name__,
+            exception,
+        )
         return None if delay is None else RetryDecision(retry_in={"seconds": delay})
 
 
