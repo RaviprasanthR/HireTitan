@@ -11,6 +11,7 @@ from pathlib import Path
 from uuid import UUID
 
 from sqlalchemy import text
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from hiretitan.platform.runtime.domain.run_state import RunStatus, WaitingFor
@@ -81,6 +82,14 @@ ORDER BY 1
 """
 
 
+WIPE_ATTEMPTS = 3
+DEADLOCK_SQLSTATE = "40P01"
+
+
+def _is_deadlock(error: OperationalError) -> bool:
+    return getattr(error.orig, "sqlstate", None) == DEADLOCK_SQLSTATE
+
+
 class SqlDeleteAllStore:
     """``DeleteAllStore`` over every module's tables (a composition-level adapter, because it
     spans features, the job queue and the checkpoint store)."""
@@ -100,6 +109,20 @@ class SqlDeleteAllStore:
         await self._session.commit()
 
     async def wipe_and_reseed(self) -> None:
+        # The worker may hold locks in another order (its queue, a finishing search): Postgres
+        # then ends one side with a deadlock error, and the wipe starts over, up to three tries.
+        for attempt in range(1, WIPE_ATTEMPTS + 1):
+            try:
+                await self._wipe_once()
+            except OperationalError as error:
+                if attempt == WIPE_ATTEMPTS or not _is_deadlock(error):
+                    raise
+                await self._session.rollback()
+                await asyncio.sleep(0.2 * attempt)
+            else:
+                return
+
+    async def _wipe_once(self) -> None:
         tables = (await self._session.execute(text(_WIPE_TABLES))).scalars().all()
         await self._session.execute(
             text(f"TRUNCATE TABLE {', '.join(tables)} RESTART IDENTITY CASCADE")
