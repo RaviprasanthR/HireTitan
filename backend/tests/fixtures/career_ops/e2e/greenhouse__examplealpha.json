@@ -1,0 +1,28 @@
+{
+ "postings": [
+  {
+   "title": "Backend Engineer",
+   "url": "https://alpha.example.test/jobs/101",
+   "location": "Pune, India",
+   "posted_at": null,
+   "description": "Build APIs and data pipelines in Python for the Example Alpha billing platform. Three or more years of backend experience.",
+   "requisition_id": "A-101"
+  },
+  {
+   "title": "Senior Backend Engineer",
+   "url": "https://alpha.example.test/jobs/102",
+   "location": "Pune, India",
+   "posted_at": null,
+   "description": "Lead backend services in Python and PostgreSQL. Mentor engineers and own reliability.",
+   "requisition_id": "A-102"
+  },
+  {
+   "title": "Marketing Manager",
+   "url": "https://alpha.example.test/jobs/104",
+   "location": "Pune, India",
+   "posted_at": null,
+   "description": "Plan campaigns and manage the marketing calendar.",
+   "requisition_id": "A-104"
+  }
+ ]
+}
