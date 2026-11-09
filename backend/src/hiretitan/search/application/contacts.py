@@ -7,6 +7,7 @@ nothing under ``search/workflow``, ``prompts`` or ``platform/llm`` may import th
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import datetime
 from typing import Protocol
 from uuid import UUID
@@ -45,7 +46,7 @@ class ContactsStore(Protocol):
 
     async def get(self, contact_id: UUID) -> StoredContact | None: ...
 
-    async def list_for_company(self, company_id: UUID) -> list[StoredContact]: ...
+    async def list_for_company(self, company_id: UUID) -> Sequence[StoredContact]: ...
 
     async def update(self, contact_id: UUID, fields: ContactFields) -> StoredContact: ...
 
