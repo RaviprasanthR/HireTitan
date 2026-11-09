@@ -1445,6 +1445,8 @@ export interface components {
         JobCardOut: {
             /** Applied On */
             applied_on: string | null;
+            /** Company Id */
+            company_id?: string | null;
             /** Company Name */
             company_name: string;
             decision: components["schemas"]["DecisionOut"] | null;
@@ -1492,6 +1494,8 @@ export interface components {
             canonical_url: string | null;
             /** City */
             city: string | null;
+            /** Company Id */
+            company_id?: string | null;
             /** Company Name */
             company_name: string;
             /** Country */
@@ -1610,6 +1614,8 @@ export interface components {
             canonical_url: string | null;
             /** City */
             city: string | null;
+            /** Company Id */
+            company_id?: string | null;
             /** Company Name */
             company_name: string;
             /** Country */

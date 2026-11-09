@@ -8,6 +8,7 @@ import {
   useJob,
   useRecheck,
 } from '@/features/explore/api'
+import { CompanyPanel } from '@/features/companies/CompanyPanel'
 import { AppliedControl } from './AppliedControl'
 import { useUndoApplied } from './appliedApi'
 import { InjectionWarning, type InjectionFlag } from './InjectionWarning'
@@ -99,6 +100,13 @@ export function JobDetailPage() {
           </Link>
         )}
       </div>
+
+      {data.company_id && (
+        <section className="space-y-2">
+          <h2 className="text-lg font-semibold">People at {data.company_name}</h2>
+          <CompanyPanel companyId={data.company_id} companyName={data.company_name} />
+        </section>
+      )}
 
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">Description</h2>

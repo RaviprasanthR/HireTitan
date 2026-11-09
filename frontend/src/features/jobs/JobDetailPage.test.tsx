@@ -12,6 +12,7 @@ function detail(over: Record<string, unknown> = {}) {
     id: 'j1',
     title: 'Backend Engineer',
     company_name: 'Acme',
+    company_id: null,
     location_text: 'Pune, India',
     work_mode: 'remote',
     posted_at: '2026-11-04T00:00:00Z',
@@ -77,6 +78,25 @@ function renderPage(job = detail()) {
             applied_on: (call.body as { applied_on?: string } | undefined)?.applied_on ?? '2026-11-06',
           }
     if (call.path === '/jobs/j1') return job
+    if (call.path === '/companies/c1/contacts')
+      return {
+        items: [
+          {
+            id: 'k1',
+            company_id: 'c1',
+            name: 'Jane Example',
+            role: 'Recruiter',
+            linkedin_url: null,
+            email: null,
+            phone: null,
+            confidence: null,
+            note: null,
+            source: 'typed',
+            updated_at: '2026-11-09T09:00:00Z',
+          },
+        ],
+        note: { body: 'Prefers email.', source: 'typed', updated_at: '2026-11-09T09:00:00Z' },
+      }
     return undefined
   })
   render(
@@ -116,6 +136,24 @@ describe('JobDetailPage', () => {
     )
     const history = screen.getByRole('list', { name: 'Decision history' })
     expect(within(history).getAllByRole('listitem')).toHaveLength(2)
+  })
+
+  it('US2 AS5 job detail shows company contacts and note', async () => {
+    renderPage(detail({ company_id: 'c1' }))
+
+    const heading = await screen.findByRole('heading', { name: 'People at Acme' })
+    expect(heading).toBeInTheDocument()
+    expect(await screen.findByText('Jane Example')).toBeInTheDocument()
+    expect(screen.getByLabelText('Note about Acme')).toHaveValue('Prefers email.')
+  })
+
+  it('pasted job with no company shows no panel', async () => {
+    const calls = renderPage(detail({ company_id: null }))
+
+    await screen.findByRole('heading', { level: 1, name: 'Backend Engineer' })
+
+    expect(screen.queryByRole('heading', { name: /People at/ })).toBeNull()
+    expect(calls.some((c) => c.path.includes('/contacts'))).toBe(false)
   })
 
   it('FR038_shows_injection_warning', async () => {

@@ -1585,6 +1585,18 @@
             ],
             "title": "Applied On"
           },
+          "company_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Id"
+          },
           "company_name": {
             "title": "Company Name",
             "type": "string"
@@ -1752,6 +1764,18 @@
               }
             ],
             "title": "City"
+          },
+          "company_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Id"
           },
           "company_name": {
             "title": "Company Name",
@@ -2176,6 +2200,18 @@
               }
             ],
             "title": "City"
+          },
+          "company_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Id"
           },
           "company_name": {
             "title": "Company Name",

@@ -30,6 +30,7 @@ class JobCardOut(BaseModel):
     title: str
     role: str  # short role: the AI's when it gave one, else the title cut down by rules
     company_name: str
+    company_id: UUID | None = None  # None for a job pasted without a company on the list
     location_text: str | None
     work_mode: str | None
     posted_at: datetime | None
@@ -75,6 +76,7 @@ async def job_cards(session: AsyncSession, rows: Sequence[JobRow]) -> list[JobCa
             title=row.title,
             role=row.role_short or short_role(row.title),
             company_name=row.company_name,
+            company_id=row.company_id,
             location_text=row.location_text,
             work_mode=row.work_mode,
             posted_at=row.posted_at,
