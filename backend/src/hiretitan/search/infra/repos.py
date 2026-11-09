@@ -558,7 +558,7 @@ class ContactsRepo:
         await self._session.refresh(row)
         return row
 
-    async def delete(self, contact_id: UUID) -> None:
+    async def remove(self, contact_id: UUID) -> None:
         await self._session.execute(delete(ContactRow).where(ContactRow.id == contact_id))
         await self._session.flush()
 

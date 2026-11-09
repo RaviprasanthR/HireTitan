@@ -39,6 +39,7 @@ from hiretitan.profile.api.reviews import create_reviews_router
 from hiretitan.profile.infra.parsing.sniff import MAX_BYTES
 from hiretitan.profile.infra.repos import VersionsRepo
 from hiretitan.search.api.companies import SearchCompaniesApiDeps, create_companies_router
+from hiretitan.search.api.contacts import SearchContactsApiDeps, create_contacts_router
 from hiretitan.search.api.duplicates import SearchDuplicatesApiDeps, create_duplicates_router
 from hiretitan.search.api.jobs import SearchJobsApiDeps, create_search_jobs_router
 from hiretitan.search.api.rules import SearchRulesApiDeps, create_search_rules_router
@@ -241,6 +242,7 @@ def build_app(settings: Settings | None = None) -> FastAPI:
                 sessions=deps.sessions, clock=clock, careers=build_career_ops(settings)
             )
         ),
+        create_contacts_router(SearchContactsApiDeps(sessions=deps.sessions)),
         create_search_jobs_router(
             SearchJobsApiDeps(sessions=deps.sessions, queue=deps.queue, clock=clock)
         ),

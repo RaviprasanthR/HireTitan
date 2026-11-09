@@ -245,7 +245,7 @@ async def test_repo_add_get_list_update_delete_contact(db_session: AsyncSession)
     assert updated.role == "Talent Lead"
     assert updated.source == "import"  # an edit does not change where the row came from
 
-    await repo.delete(zed.id)
+    await repo.remove(zed.id)
     assert await repo.get(zed.id) is None
     assert [c.name for c in await repo.list_for_company(company_id)] == ["Jane Q Example"]
 
