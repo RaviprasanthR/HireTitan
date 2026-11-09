@@ -108,6 +108,10 @@ class CompanyOut(BaseModel):
     last_checked_at: datetime | None
     last_check_result: str | None
     last_check_error: str | None
+    # Filled by the list only; the other responses carry 0, false and null.
+    contact_count: int = 0
+    has_note: bool = False
+    openings: dict[str, int] | None = None
 
 
 class CompanyPage(BaseModel):
@@ -364,7 +368,8 @@ def create_companies_router(deps: SearchCompaniesApiDeps) -> APIRouter:
     @router.get("", response_model=CompanyPage)
     async def companies(filter: Literal["all", "check_manually", "hidden"] = "all") -> CompanyPage:
         async with deps.sessions() as session:
-            views = await list_companies(CompaniesRepo(session), filter)
+            counts = await ContactsRepo(session).counts_by_company()
+            views = await list_companies(CompaniesRepo(session), filter, counts)
         return CompanyPage(items=[out(v) for v in views])
 
     @router.post("", response_model=CompanyOut, status_code=201)

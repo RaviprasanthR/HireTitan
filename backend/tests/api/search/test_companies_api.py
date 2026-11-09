@@ -141,3 +141,64 @@ async def test_FR016_delete_removes_a_user_company_and_tombstones_a_built_in_one
         assert tombstone is not None
         assert tombstone.deleted_at == NOW
     assert (await env.client.delete(f"{BASE}/{shipped}")).status_code == 404
+
+
+# --- feature 002b (T015): contact count, note flag and the openings placeholder ---------------
+
+
+async def test_US2_AS1_company_row_has_contact_count_and_note_flag(env: Env) -> None:
+    from hiretitan.search.domain.contacts import ContactFields
+    from hiretitan.search.infra.repos import ContactsRepo, NotesRepo
+
+    busy = await add(env, "Busy Co")
+    await add(env, "Quiet Co")
+    noted = await add(env, "Noted Co")
+    async with env.sessions() as session:
+        contacts = ContactsRepo(session)
+        await contacts.add(busy, ContactFields(name="Jane Example"), source="typed")
+        await contacts.add(busy, ContactFields(name="John Sample"), source="import")
+        await NotesRepo(session).set(noted, "Spoke to HR.", source="typed")
+        await session.commit()
+
+    page = (await env.client.get(BASE)).json()
+
+    rows = {c["name"]: c for c in page["items"]}
+    assert (rows["Busy Co"]["contact_count"], rows["Busy Co"]["has_note"]) == (2, False)
+    assert (rows["Quiet Co"]["contact_count"], rows["Quiet Co"]["has_note"]) == (0, False)
+    assert (rows["Noted Co"]["contact_count"], rows["Noted Co"]["has_note"]) == (0, True)
+    assert all(c["openings"] is None for c in rows.values())  # filled in by T022
+
+
+async def test_companies_list_runs_a_fixed_number_of_queries(env: Env) -> None:
+    from sqlalchemy import event
+
+    from hiretitan.search.domain.contacts import ContactFields
+    from hiretitan.search.infra.repos import ContactsRepo
+
+    engine = env.sessions.kw["bind"].sync_engine
+    statements: list[str] = []
+
+    def capture(conn: object, cursor: object, statement: str, *rest: object) -> None:
+        statements.append(statement)
+
+    async def run_list() -> int:
+        statements.clear()
+        event.listen(engine, "before_cursor_execute", capture)
+        try:
+            assert (await env.client.get(BASE)).status_code == 200
+        finally:
+            event.remove(engine, "before_cursor_execute", capture)
+        return len(statements)
+
+    for i in range(3):
+        await add(env, f"Small {i}")
+    few = await run_list()
+
+    for i in range(30):
+        company = await add(env, f"Large {i}")
+        async with env.sessions() as session:
+            await ContactsRepo(session).add(company, ContactFields(name="Jane"), source="typed")
+            await session.commit()
+    many = await run_list()
+
+    assert few == many  # no query per company

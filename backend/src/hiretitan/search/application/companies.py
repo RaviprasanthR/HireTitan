@@ -8,7 +8,8 @@ so the loader does not bring it back; a company the person added is removed outr
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import Any, Final, Protocol
 from urllib.parse import urlsplit
@@ -83,6 +84,10 @@ class CompanyView:
     last_checked_at: datetime | None
     last_check_result: str | None
     last_check_error: str | None
+    # Filled only by the list (feature 002b); other responses carry the defaults.
+    contact_count: int = 0
+    has_note: bool = False
+    openings: dict[str, int] | None = None  # T022 fills this; None means "not searched yet"
 
 
 def view_of(row: StoredCompany) -> CompanyView:
@@ -112,8 +117,18 @@ async def _one(store: CompaniesStore, company_id: UUID) -> StoredCompany:
     return row
 
 
-async def list_companies(store: CompaniesStore, filter: str = "all") -> list[CompanyView]:
-    return [view_of(row) for row in await store.list_filtered(filter)]
+async def list_companies(
+    store: CompaniesStore,
+    filter: str = "all",
+    counts: Mapping[UUID, tuple[int, bool]] | None = None,
+) -> list[CompanyView]:
+    """The company list. ``counts`` maps a company id to (contact count, has a note)."""
+    known = counts or {}
+    views = []
+    for row in await store.list_filtered(filter):
+        contact_count, has_note = known.get(row.id, (0, False))
+        views.append(replace(view_of(row), contact_count=contact_count, has_note=has_note))
+    return views
 
 
 async def check_manually_list(store: CompaniesStore) -> list[CompanyView]:
