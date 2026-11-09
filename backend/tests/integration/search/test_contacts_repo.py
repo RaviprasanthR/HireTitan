@@ -7,6 +7,7 @@ bug cannot store a value the model forbids. All data here is synthetic (FR-026).
 from __future__ import annotations
 
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -16,8 +17,10 @@ from sqlalchemy import create_engine, event, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from hiretitan.search.application.seed import SeedError, load_seed
 from hiretitan.search.domain.contacts import ContactFields, link_key, name_key
 from hiretitan.search.infra.repos import CompaniesRepo, ContactsRepo, NotesRepo
+from hiretitan.setup_wiring import SqlDeleteAllStore
 
 CONTACT = (
     "INSERT INTO app.company_contacts (id, company_id, name, name_key, source{cols}) "
@@ -328,3 +331,59 @@ async def test_repo_note_upsert_and_delete_on_empty(db_session: AsyncSession) ->
     await repo.set(company_id, None, source="typed")  # an empty note removes the row
     assert await repo.get(company_id) is None
     await repo.set(company_id, None, source="typed")  # and removing nothing is fine
+
+
+# --- T007: wipe and seed paths already cover the new tables -----------------------------------
+
+FIXTURES = Path(__file__).parents[2] / "fixtures" / "companies"
+
+
+async def test_SC007_delete_all_removes_contacts_and_notes(db_session: AsyncSession) -> None:
+    company_id = await own_company(db_session)
+    await ContactsRepo(db_session).add(company_id, fields("Jane Example"), source="typed")
+    await NotesRepo(db_session).set(company_id, "Private note.", source="typed")
+    assert await count(db_session, "company_contacts") == 1
+
+    await SqlDeleteAllStore(db_session).wipe_and_reseed()
+
+    assert await count(db_session, "company_contacts") == 0
+    assert await count(db_session, "company_notes") == 0
+    assert await count(db_session, "companies") == 0
+
+
+async def test_FR025_seed_update_keeps_contacts_attached(db_session: AsyncSession) -> None:
+    companies = CompaniesRepo(db_session)
+    await load_seed(companies, FIXTURES / "seed_v1.yaml")
+    alpha = await companies.get_by_key("example-alpha")
+    assert alpha is not None
+    alpha_id = alpha.id
+    contact = await ContactsRepo(db_session).add(alpha_id, fields("Jane Example"), source="typed")
+    contact_id = contact.id
+
+    await load_seed(companies, FIXTURES / "seed_v2.yaml")
+
+    after = await companies.get_by_key("example-alpha")
+    assert after is not None
+    assert after.id == alpha_id  # the shipped list updates the row in place
+    kept = await ContactsRepo(db_session).get(contact_id)
+    assert kept is not None
+    assert kept.company_id == alpha_id
+
+
+async def test_FR021_seed_with_contacts_field_is_rejected(
+    db_session: AsyncSession, tmp_path: Path
+) -> None:
+    seed = tmp_path / "seed.yaml"
+    seed.write_text(
+        "- key: example-alpha\n"
+        "  name: Example Alpha\n"
+        "  resolution: unresolved\n"
+        "  seed_version: 1\n"
+        "  contacts:\n"
+        "    - name: Jane Example\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(SeedError, match="contacts"):
+        await load_seed(CompaniesRepo(db_session), seed)
+    assert await count(db_session, "companies") == 0
