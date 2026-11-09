@@ -125,6 +125,42 @@ export interface paths {
         patch: operations["patch_api_v1_companies__company_id__patch"];
         trace?: never;
     };
+    "/api/v1/companies/{company_id}/contacts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Contacts Of */
+        get: operations["contacts_of_api_v1_companies__company_id__contacts_get"];
+        put?: never;
+        /** Create Contact */
+        post: operations["create_contact_api_v1_companies__company_id__contacts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/contacts/{contact_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove Contact */
+        delete: operations["remove_contact_api_v1_companies__company_id__contacts__contact_id__delete"];
+        options?: never;
+        head?: never;
+        /** Change Contact */
+        patch: operations["change_contact_api_v1_companies__company_id__contacts__contact_id__patch"];
+        trace?: never;
+    };
     "/api/v1/companies/{company_id}/discovery": {
         parameters: {
             query?: never;
@@ -170,6 +206,23 @@ export interface paths {
         put?: never;
         /** Reject */
         post: operations["reject_api_v1_companies__company_id__discovery_reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/note": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Put Note */
+        put: operations["put_note_api_v1_companies__company_id__note_put"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1002,6 +1055,16 @@ export interface components {
             careers_url: string | null;
             /** City */
             city: string | null;
+            /**
+             * Contact Count
+             * @default 0
+             */
+            contact_count: number;
+            /**
+             * Has Note
+             * @default false
+             */
+            has_note: boolean;
             /** Hidden */
             hidden: boolean;
             /**
@@ -1017,6 +1080,10 @@ export interface components {
             last_checked_at: string | null;
             /** Name */
             name: string;
+            /** Openings */
+            openings?: {
+                [key: string]: number;
+            } | null;
             /** Origin */
             origin: string;
             /** Resolution */
@@ -1075,6 +1142,26 @@ export interface components {
              */
             setup_completed_at: string;
         };
+        /** ContactIn */
+        ContactIn: {
+            /** Confidence */
+            confidence?: string | null;
+            /** Email */
+            email?: string | null;
+            /** Linkedin Url */
+            linkedin_url?: string | null;
+            /**
+             * Name
+             * @default
+             */
+            name: string;
+            /** Note */
+            note?: string | null;
+            /** Phone */
+            phone?: string | null;
+            /** Role */
+            role?: string | null;
+        };
         /** ContactModel */
         ContactModel: {
             /** Email */
@@ -1090,6 +1177,69 @@ export interface components {
             name: string;
             /** Phone */
             phone?: string | null;
+        };
+        /** ContactOut */
+        ContactOut: {
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            /** Confidence */
+            confidence: ("high" | "medium" | "low") | null;
+            /** Email */
+            email: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Linkedin Url */
+            linkedin_url: string | null;
+            /** Name */
+            name: string;
+            /** Note */
+            note: string | null;
+            /** Phone */
+            phone: string | null;
+            /** Role */
+            role: string | null;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "import" | "typed";
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * ContactPatch
+         * @description Only the fields that are sent change; an empty text clears an optional field.
+         */
+        ContactPatch: {
+            /** Confidence */
+            confidence?: string | null;
+            /** Email */
+            email?: string | null;
+            /** Linkedin Url */
+            linkedin_url?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Note */
+            note?: string | null;
+            /** Phone */
+            phone?: string | null;
+            /** Role */
+            role?: string | null;
+        };
+        /** ContactsOut */
+        ContactsOut: {
+            /** Items */
+            items: components["schemas"]["ContactOut"][];
+            note: components["schemas"]["NoteOut"] | null;
         };
         /** DecisionHistoryOut */
         DecisionHistoryOut: {
@@ -1406,6 +1556,20 @@ export interface components {
         NameOut: {
             /** Display Name */
             display_name: string;
+        };
+        /** NoteIn */
+        NoteIn: {
+            /** Body */
+            body?: string | null;
+        };
+        /** NoteOut */
+        NoteOut: {
+            /** Body */
+            body: string | null;
+            /** Source */
+            source: ("import" | "typed") | null;
+            /** Updated At */
+            updated_at: string | null;
         };
         /** OnboardingOut */
         OnboardingOut: {
@@ -2496,6 +2660,138 @@ export interface operations {
             };
         };
     };
+    contacts_of_api_v1_companies__company_id__contacts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_contact_api_v1_companies__company_id__contacts_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_contact_api_v1_companies__company_id__contacts__contact_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                company_id: string;
+                contact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_contact_api_v1_companies__company_id__contacts__contact_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                company_id: string;
+                contact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     discovery_api_v1_companies__company_id__discovery_get: {
         parameters: {
             query?: never;
@@ -2576,6 +2872,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CompanyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_note_api_v1_companies__company_id__note_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NoteIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoteOut"];
                 };
             };
             /** @description Validation Error */
