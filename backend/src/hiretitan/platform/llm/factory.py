@@ -67,7 +67,15 @@ def build_llm(
         async def on_key_rejected() -> None:
             await holder[0].mark_rejected()
 
-        adapter = OpenAiAdapter(settings.openai_api_key, catalog, on_key_rejected=on_key_rejected)
+        async def on_out_of_credit(message: str) -> None:
+            await holder[0].mark_out_of_credit(message)
+
+        adapter = OpenAiAdapter(
+            settings.openai_api_key,
+            catalog,
+            on_key_rejected=on_key_rejected,
+            on_out_of_credit=on_out_of_credit,
+        )
         status = ProviderStatusService(
             sessions,
             adapter,

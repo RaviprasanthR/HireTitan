@@ -1,0 +1,20 @@
+{
+ "postings": [
+  {
+   "title": "Backend Engineer",
+   "url": "https://gamma.example.test/careers/201",
+   "location": "Pune, India",
+   "posted_at": null,
+   "description": "Join Example Gamma to build Python services and APIs for logistics customers.",
+   "requisition_id": "G-201"
+  },
+  {
+   "title": "Backend Developer (Go)",
+   "url": "https://gamma.example.test/careers/202",
+   "location": "Pune, India",
+   "posted_at": null,
+   "description": "Write Go microservices for the Example Gamma tracking platform.",
+   "requisition_id": "G-202"
+  }
+ ]
+}

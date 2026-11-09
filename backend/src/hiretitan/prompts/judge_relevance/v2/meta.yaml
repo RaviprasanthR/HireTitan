@@ -1,0 +1,6 @@
+version: 2
+tier: fast
+max_output_tokens: 1500
+changelog:
+  - "v1: first version. Judges up to 10 job cards against one profile card; one short reason per job."
+  - "v2: also returns a short `role` per job, taken from the words of the posting's own title (for the Applied table). No extra request."

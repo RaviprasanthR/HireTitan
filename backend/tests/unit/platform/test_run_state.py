@@ -53,6 +53,10 @@ def test_running_to_cancelled() -> None:
     assert transition(RUNNING, S.cancelled).status is S.cancelled
 
 
+def test_queued_to_failed_when_the_job_cannot_be_queued() -> None:
+    assert transition(QUEUED, S.failed).status is S.failed
+
+
 def test_awaiting_review_to_queued_clears_waiting_for() -> None:
     assert transition(AWAITING, S.queued) == QUEUED
 
@@ -75,7 +79,7 @@ def test_failed_to_queued() -> None:
 
 def test_exactly_the_documented_transitions_are_allowed() -> None:
     assert {
-        S.queued: frozenset({S.running}),
+        S.queued: frozenset({S.running, S.failed}),
         S.running: frozenset({S.awaiting_review, S.paused, S.done, S.failed, S.cancelled}),
         S.awaiting_review: frozenset({S.queued, S.cancelled}),
         S.paused: frozenset({S.queued, S.cancelled}),
@@ -149,5 +153,16 @@ def test_values_match_database_strings() -> None:
         "failed",
         "cancelled",
     ]
-    assert {r.value for r in PauseReason} == {"key_missing", "key_rejected", "budget_reached"}
+    assert {r.value for r in PauseReason} == {
+        "key_missing",
+        "key_rejected",
+        "budget_reached",
+        "out_of_credit",
+    }
     assert {w.value for w in WaitingFor} == {"profile_review", "injection_decision"}
+
+
+def test_R7_paused_accepts_out_of_credit() -> None:
+    new = transition(RUNNING, S.paused, pause_reason=PauseReason.out_of_credit)
+    assert new == RunState(S.paused, pause_reason=PauseReason.out_of_credit)
+    assert transition(new, S.queued) == RunState(S.queued)  # and it can be resumed

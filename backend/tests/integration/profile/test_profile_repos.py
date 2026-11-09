@@ -132,6 +132,14 @@ async def test_FR017_version_content_immutable(db_session: AsyncSession) -> None
         )
 
 
+async def test_FR017_a_version_cannot_be_deleted(db_session: AsyncSession) -> None:
+    version = await VersionsRepo(db_session).create_version(content(), created_by="manual")
+    with pytest.raises(DBAPIError, match="immutable"):
+        await db_session.execute(
+            text("DELETE FROM app.profile_versions WHERE id = :id"), {"id": version.id}
+        )
+
+
 @pytest.mark.parametrize(
     "assignment",
     ["number = 99", "created_by = 'manual'", "provider = 'x'", "source_deleted = false"],

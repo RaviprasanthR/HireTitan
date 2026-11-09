@@ -15,6 +15,7 @@ containers =
     hiretitan.profile
     hiretitan.preferences
     hiretitan.setup
+    hiretitan.search
 layers =
     api
     (workflow)
@@ -30,6 +31,7 @@ source_modules =
     hiretitan.profile.domain
     hiretitan.preferences.domain
     hiretitan.setup.domain
+    hiretitan.search.domain
 forbidden_modules =
     fastapi
     starlette
@@ -54,6 +56,10 @@ forbidden_modules =
     hiretitan.setup.domain
     hiretitan.setup.infra
     hiretitan.setup.api
+    hiretitan.search.domain
+    hiretitan.search.infra
+    hiretitan.search.workflow
+    hiretitan.search.api
 
 [importlinter:contract:preferences-boundary]
 name = preferences uses other modules only through their application layer
@@ -69,6 +75,10 @@ forbidden_modules =
     hiretitan.setup.domain
     hiretitan.setup.infra
     hiretitan.setup.api
+    hiretitan.search.domain
+    hiretitan.search.infra
+    hiretitan.search.workflow
+    hiretitan.search.api
 
 [importlinter:contract:setup-boundary]
 name = setup uses other modules only through their application layer
@@ -84,6 +94,28 @@ forbidden_modules =
     hiretitan.preferences.domain
     hiretitan.preferences.infra
     hiretitan.preferences.api
+    hiretitan.search.domain
+    hiretitan.search.infra
+    hiretitan.search.workflow
+    hiretitan.search.api
+
+[importlinter:contract:search-boundary]
+name = search uses other modules only through their application layer
+type = forbidden
+allow_indirect_imports = True
+source_modules =
+    hiretitan.search
+forbidden_modules =
+    hiretitan.profile.domain
+    hiretitan.profile.infra
+    hiretitan.profile.workflow
+    hiretitan.profile.api
+    hiretitan.preferences.domain
+    hiretitan.preferences.infra
+    hiretitan.preferences.api
+    hiretitan.setup.domain
+    hiretitan.setup.infra
+    hiretitan.setup.api
 
 # 4. The shared platform never depends on a feature module.
 [importlinter:contract:platform-independent]
@@ -95,3 +127,4 @@ forbidden_modules =
     hiretitan.profile
     hiretitan.preferences
     hiretitan.setup
+    hiretitan.search

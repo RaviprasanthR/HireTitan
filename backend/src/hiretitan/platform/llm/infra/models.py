@@ -50,7 +50,7 @@ class LlmCallRow(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
-STATUSES = ("unknown", "working", "missing", "rejected", "unreachable")
+STATUSES = ("unknown", "working", "missing", "rejected", "unreachable", "out_of_credit")
 
 
 class ProviderStatusRow(Base):

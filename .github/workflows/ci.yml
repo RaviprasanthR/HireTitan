@@ -63,6 +63,73 @@ jobs:
           uv run pip-licenses --packages $packages --from=mixed --format=json > licenses.json
           uv run python scripts/check_licenses.py licenses.json
 
+  careerops-contract:
+    # Runs the real pinned career-ops providers with every request intercepted and fails on any
+    # host, method or path outside backend/.../careerops/allowlist.py (research R2).
+    name: career-ops request allowlist
+    runs-on: ubuntu-24.04
+    env:
+      # Keep in step with CAREER_OPS_COMMIT in the Dockerfile (tag career-ops-v1.38.0).
+      CAREER_OPS_COMMIT: 115bc9873e3d43e23883f3c8f16436617facc62c
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: astral-sh/setup-uv@v7
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Fetch the pinned career-ops by commit hash
+        run: |
+          git init -q "$RUNNER_TEMP/career-ops"
+          cd "$RUNNER_TEMP/career-ops"
+          git remote add origin https://github.com/santifer/career-ops.git
+          git fetch -q --depth 1 origin "$CAREER_OPS_COMMIT"
+          git checkout -q FETCH_HEAD
+          test "$(git rev-parse HEAD)" = "$CAREER_OPS_COMMIT"
+
+      - name: Install its runtime packages from HireTitan's lockfile (no install scripts)
+        run: |
+          cd backend/scanner
+          npm ci --omit=dev --ignore-scripts
+          mv node_modules "$RUNNER_TEMP/career-ops/node_modules"
+
+      - name: Contract tests (recorded outputs and request allowlist)
+        working-directory: backend
+        env:
+          HIRETITAN_LLM: fake
+        run: |
+          export CAREER_OPS_DIR="$RUNNER_TEMP/career-ops"
+          uv run pytest tests/contract/careerops -q
+
+  scanner:
+    # The Node packages the pinned career-ops providers need (backend/scanner, research R1).
+    name: Scanner package gates
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: backend/scanner
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/scanner/package-lock.json
+
+      - name: Install (no install scripts, so no browser download)
+        run: npm ci --omit=dev --ignore-scripts
+
+      - name: Vulnerability audit (production dependencies)
+        run: npm audit --omit=dev
+
+      - name: Licence gate (production dependencies)
+        run: >
+          npx --yes license-checker@25.0.1 --production --excludePrivatePackages
+          --onlyAllow "MIT;MIT-0;BSD;BSD-2-Clause;BSD-3-Clause;0BSD;Apache-2.0;ISC;PSF;Python-2.0;MPL-2.0;LGPL-2.1;LGPL-3.0;OFL-1.1"
+
   frontend:
     name: Frontend gates
     runs-on: ubuntu-24.04

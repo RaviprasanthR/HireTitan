@@ -40,6 +40,19 @@ Date: 2026-11-03 · Input: the 62 companies in the seed sheet (company name and 
 3. **Resolution tooling for the seed list.** The `companies` table needs per-row resolution status and a maintainer workflow: run discovery, open the page, paste the board URL, verify live, mark `verified`. This is the same flow a user follows for user-added companies (W8).
 4. **Kula** (2 companies): small; decide in 002 whether to add an adapter or treat it as a careers page.
 
+## Seed list as shipped (T057, 2026-11-08)
+
+`backend/seed/companies.yaml` holds the 62 companies with company columns only (name, city, website, careers link). No contact, opening or note column was copied; `test_real_seed.py` checks this. Resolution pass, using the rules of this study and the provider allowlist:
+
+| Resolution | Count | Companies |
+|---|---|---|
+| `verified` (board HireTitan reads) | 6 | DevRev, Mitsogo (Greenhouse), Workday (Workday), Full Creative (Recruitee), Spendflo (Zoho Recruit), Amazon (Amazon, search phrase "Chennai"). Each board address was built by `board_request` without error; the live check is the group A result above. |
+| `careers_page` (careers page read, AI only if needed) | 36 | Every company with a careers link that is not in the next row |
+| `check_manually` | 10 | Zocket, SurveySparrow, Disprz, Zuper (Keka: robots.txt not checked, so not read); Roanuz (Zoho Recruit on `zohorecruit.in`, which the board address builder does not support); Chargebee, Klenty, Gallabox (link goes to LinkedIn or Wellfound, never read); ippopay, Toast (robots.txt disallows) |
+| `unresolved` (no careers link in the sheet) | 10 | Culture Monkey, Pepul, Lumel, Backspace, Paperflite, Enqos, Entropik, Moneyforward, Remitbee, ContentStack |
+
+**Group B not verified.** Freshworks (SmartRecruiters, off by decision), KLA, Alation, Conga (Workday), DTCC, PayPal, Viasat have no board address stored. They are `careers_page` until someone finds the board URL and confirms it live; that is a maintainer lookup, not done here. The same goes for the group I retry (Athenahealth, Zoho, M2P Fintech, Aithent) and the group J links.
+
 ## Next checks (not yet run)
 
 - Verify group B boards through career-ops (one read-only run).

@@ -42,6 +42,8 @@ class ChecklistOut(BaseModel):
     resume_uploaded: bool
     profile_confirmed: bool
     preferences_saved: bool
+    rules_approved: bool
+    searched_once: bool
 
 
 class BudgetOut(BaseModel):
@@ -83,6 +85,8 @@ def create_status_router(deps: StatusApiDeps) -> APIRouter:
                 resume_uploaded=checklist.resume_uploaded,
                 profile_confirmed=checklist.profile_confirmed,
                 preferences_saved=checklist.preferences_saved,
+                rules_approved=checklist.rules_approved,
+                searched_once=checklist.searched_once,
             ),
             budget=BudgetOut(
                 cap_usd=budget.cap_usd, spent_usd=budget.spent_usd, period=budget.period

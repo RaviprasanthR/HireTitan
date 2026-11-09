@@ -11,6 +11,7 @@ import asyncio
 import sys
 from collections.abc import AsyncIterator, Callable, Sequence
 from contextlib import asynccontextmanager
+from functools import partial
 from http import HTTPStatus
 from pathlib import Path
 from typing import Any, Final
@@ -37,6 +38,20 @@ from hiretitan.profile.api.resumes import ProfileApiDeps, create_resumes_router
 from hiretitan.profile.api.reviews import create_reviews_router
 from hiretitan.profile.infra.parsing.sniff import MAX_BYTES
 from hiretitan.profile.infra.repos import VersionsRepo
+from hiretitan.search.api.companies import SearchCompaniesApiDeps, create_companies_router
+from hiretitan.search.api.duplicates import SearchDuplicatesApiDeps, create_duplicates_router
+from hiretitan.search.api.jobs import SearchJobsApiDeps, create_search_jobs_router
+from hiretitan.search.api.rules import SearchRulesApiDeps, create_search_rules_router
+from hiretitan.search.api.runs import SearchRunsApiDeps, create_search_runs_router
+from hiretitan.search.application.companies_csv import MAX_BYTES as CSV_MAX_BYTES
+from hiretitan.search.application.synonyms_seed import load_title_synonyms
+from hiretitan.search_wiring import (
+    ProfileAndPreferencesSource,
+    SetupFinishedGate,
+    build_career_ops,
+    seed_companies,
+)
+from hiretitan.seed_dir import resolve_seed_dir
 from hiretitan.setup.api.data import DataApiDeps, create_data_router
 from hiretitan.setup.api.onboarding import OnboardingApiDeps, create_onboarding_router
 from hiretitan.setup.api.review_items import ReviewItemsApiDeps, create_review_items_router
@@ -47,6 +62,7 @@ from hiretitan.setup_wiring import RepoFacts, SqlDeleteAllStore
 API_PREFIX: Final = "/api/v1"
 MULTIPART_OVERHEAD: Final = 64 * 1024  # boundaries and headers around the file
 DEFAULT_DIST: Final = Path(__file__).resolve().parents[3] / "frontend" / "dist"
+SEED_DIR: Final = resolve_seed_dir()
 
 CSP: Final = "; ".join(
     [
@@ -135,6 +151,12 @@ def create_app(
     app.add_middleware(
         BodyLimitMiddleware, path=f"{API_PREFIX}/resumes", limit=MAX_BYTES + MULTIPART_OVERHEAD
     )
+    app.add_middleware(
+        BodyLimitMiddleware,
+        path=f"{API_PREFIX}/companies/import",
+        limit=CSV_MAX_BYTES + MULTIPART_OVERHEAD,
+        message="The file is larger than 1 MB.",
+    )
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_exception_handler(RequestValidationError, _validation_handler)
     app.add_exception_handler(StarletteHTTPException, _http_handler)
@@ -181,10 +203,12 @@ def build_app(settings: Settings | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+        await seed_companies(deps.sessions, SEED_DIR / "companies.yaml")
         async with runtime.app.open_async():  # the job queue connection, to defer jobs
             yield
         await engine.dispose()
 
+    synonyms = load_title_synonyms(SEED_DIR / "title_synonyms.yaml")
     routers = [
         create_resumes_router(deps),
         create_reviews_router(deps),
@@ -193,6 +217,32 @@ def build_app(settings: Settings | None = None) -> FastAPI:
             PreferencesApiDeps(
                 sessions=deps.sessions, clock=SystemClock(), profile_reader=VersionsRepo
             )
+        ),
+        create_search_rules_router(
+            SearchRulesApiDeps(
+                sessions=deps.sessions,
+                source=ProfileAndPreferencesSource,
+                synonyms=synonyms,
+            )
+        ),
+        create_search_runs_router(
+            SearchRunsApiDeps(
+                sessions=deps.sessions,
+                queue=deps.queue,
+                clock=clock,
+                source=ProfileAndPreferencesSource,
+                synonyms=synonyms,
+                setup_gate=SetupFinishedGate,
+            )
+        ),
+        create_duplicates_router(SearchDuplicatesApiDeps(sessions=deps.sessions, clock=clock)),
+        create_companies_router(
+            SearchCompaniesApiDeps(
+                sessions=deps.sessions, clock=clock, careers=build_career_ops(settings)
+            )
+        ),
+        create_search_jobs_router(
+            SearchJobsApiDeps(sessions=deps.sessions, queue=deps.queue, clock=clock)
         ),
         create_runs_router(deps.sessions, deps.queue),
         create_settings_router(
@@ -217,7 +267,7 @@ def build_app(settings: Settings | None = None) -> FastAPI:
             DataApiDeps(
                 sessions=deps.sessions,
                 storage=deps.storage,
-                store=SqlDeleteAllStore,
+                store=partial(SqlDeleteAllStore, company_seed=SEED_DIR / "companies.yaml"),
                 enqueue_key_check=enqueue_key_check,
             )
         ),

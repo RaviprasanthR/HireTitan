@@ -1,0 +1,25 @@
+# Synthetic company list, version 2: Alpha moved city and board, Beta is unchanged,
+# Gamma is gone from the list, Delta is new.
+- key: example-alpha
+  name: Example Alpha
+  city: Hyderabad
+  website: https://alpha.example.test
+  careers_url: https://alpha.example.test/careers
+  ats_vendor: greenhouse
+  board_id: examplealpha2
+  resolution: verified
+  seed_version: 2
+- key: example-beta
+  name: Example Beta
+  city: Chennai
+  website: https://beta.example.test
+  careers_url: https://beta.example.test/jobs
+  resolution: careers_page
+  seed_version: 2
+- key: example-delta
+  name: Example Delta
+  city: Mumbai
+  website: https://delta.example.test
+  careers_url: https://delta.example.test/careers
+  resolution: unresolved
+  seed_version: 2

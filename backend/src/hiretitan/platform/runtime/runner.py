@@ -56,6 +56,8 @@ class WorkflowDef:
 
     build: Callable[[BaseCheckpointSaver[Any]], Any]
     initial_input: Callable[[Run], dict[str, Any]]
+    # LangGraph stops a run after this many steps; a long loop (a search) needs more than 25
+    recursion_limit: int | None = None
 
 
 class RunQueue(Protocol):
@@ -126,7 +128,9 @@ class WorkflowRunner:
     async def _drive(self, run: Run, resume: Any) -> dict[str, Any]:
         definition = self._registry[run.workflow]
         graph = definition.build(self._checkpointer)
-        config = {"configurable": {"thread_id": str(run.id)}}
+        config: dict[str, Any] = {"configurable": {"thread_id": str(run.id)}}
+        if definition.recursion_limit is not None:
+            config["recursion_limit"] = definition.recursion_limit
         if resume is not None:
             graph_input: Any = Command(resume=resume)
         elif (await graph.aget_state(config)).next:

@@ -7,6 +7,8 @@ importing this module needs no database.
 
 from __future__ import annotations
 
+import logging
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any
 from uuid import UUID
@@ -27,6 +29,8 @@ RUN_WORKFLOW_TASK = "run_workflow"
 CHECK_PROVIDER_KEY_TASK = "check_provider_key"
 MAX_ATTEMPTS = len(RETRY_DELAYS_SECONDS) + 1
 
+logger = logging.getLogger(__name__)
+
 
 class RunRetry(BaseRetryStrategy):
     """Retry after 10 s, 1 min and 5 min, then let the runner mark the run failed."""
@@ -37,6 +41,15 @@ class RunRetry(BaseRetryStrategy):
         self, *, exception: BaseException, job: procrastinate.jobs.Job
     ) -> RetryDecision | None:
         delay = retry_delay_seconds(job.attempts + 1)
+        # A job that raises is retried quietly otherwise, so say why. The message is cut short
+        # and goes through the log redaction like every other log line.
+        logger.warning(
+            "job %s attempt %s failed: %s: %.200s",
+            job.id,
+            job.attempts + 1,
+            type(exception).__name__,
+            exception,
+        )
         return None if delay is None else RetryDecision(retry_in={"seconds": delay})
 
 
@@ -67,6 +80,10 @@ class Runtime:
     app: procrastinate.App
     holder: RunnerHolder = field(default_factory=RunnerHolder)
     provider_status: ProviderStatusService | None = None  # set by the composition root
+    # Called after "Check again" finds the key working: puts runs paused for out_of_credit back
+    # on the queue. The key check cannot see the credit balance, so a run that is still out of
+    # credit simply pauses again with the provider's message.
+    after_key_works: Callable[[], Awaitable[object]] | None = None
 
     @property
     def queue(self) -> ProcrastinateQueue:
@@ -92,6 +109,9 @@ def create_runtime(database_url: str) -> Runtime:
     async def check_provider_key() -> str:
         if runtime.provider_status is None:
             raise RuntimeError("Provider status is not set up: the worker has not started")
-        return await runtime.provider_status.check()
+        status = await runtime.provider_status.check()
+        if status == "working" and runtime.after_key_works is not None:
+            await runtime.after_key_works()
+        return status
 
     return runtime

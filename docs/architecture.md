@@ -227,7 +227,7 @@ Trigger: user asks for suggestions, or the profile or preferences change. The us
 | 5 | `save_rules` | D | approved rule set stored with version; used by W3 |
 
 ### W3 `search_run` (features 002 / 002b)
-Trigger: user clicks "Run search". **Rules first, AI optional**: the default run makes **no LLM calls**. AI appears only as a fallback for unstructured pages/emails (opt-in per source, cost shown) and in the separate, optional W3b.
+Trigger: user clicks "Search now". **Rules first, then the `fast` model judges the rest** (ADR-12): jobs that pass the rules are judged for relevance in groups of 10; a "rules only" run makes no LLM calls. The run works in **batches of 8 companies**, stores each batch in one transaction, publishes `search.batch_done` and shows the cost so far; Stop, the budget cap and an out-of-credit answer end the run after the batch is stored. As built (002), the graph is `plan_run → fetch_batch → normalize/dedup → rules → judge_relevance → store`, looping over batches. The diagram below is the earlier design and the table is still a fair guide to each step. W3b became the one-node `recheck_job` workflow ("Check again" on one job).
 
 ```mermaid
 flowchart LR
@@ -408,6 +408,8 @@ Each ADR: decision · why · alternatives. **Approved by Ravi 2026-11-03.**
 **ADR-10 Frontend stack.** Current stable React + Vite + TS, TanStack Query, React Router, Tailwind + shadcn/ui, generated OpenAPI client; dark theme from Ravi's palette (§10). *Why:* common, well documented, fast to build, typed end to end.
 
 **ADR-11 Default models per provider (OpenAI decided 2026-11-05).** Profile extraction uses the `fast` tier (`gpt-5.4-mini`). Eval on 15 synthetic English documents (11 resumes and 4 that are not; `backend/evals/reports/extract_profile-2026-11-05.md`, prompt v2): `fast` (`gpt-5.4-mini`) precision 100%, recall 100%, $0.0019 per document, p95 3.2 s, all 4 non-resumes rejected and no resume rejected by mistake; `strong` (`gpt-6-astra`) the same scores at $0.0193 per document, p95 6.4 s. An earlier run on prompt v1 (11 resumes) gave `fast` 97.9% recall (3 skills missed in a table layout) and `strong` 100%, so run-to-run variation is real. Both pass SC-003 and SC-007; `strong` costs about 10 to 16 times more for no measured gain. Other providers get their defaults from the same eval when their adapters are added. Rule: change the default only with a newer report that supports it (`test_defaults_match_latest_eval_report`). HireTitan is English-only, so the eval set is English. How to run and read an eval: `docs/how-we-choose-a-model.md`.
+
+**ADR-12 Relevance judging in the default search (decided 2026-11-06, feature 002).** The default search judges relevance with the `fast` model after the rules, instead of leaving AI to an on-demand step. Reason: the person wants only relevant jobs in the list. Eval of prompt `judge_relevance` v1 on 60 labelled postings, `gpt-5.4-mini`: precision 98.3%, recall 94.3%, no unusable answers, no injection-affected decisions, $0.00024 per job (`backend/evals/reports/`). To keep cost and waiting visible, W3 runs in batches with live cost and a Stop button instead of an upfront estimate (deviation D3, approved). Job text is untrusted input: it goes to the model inside quarantined blocks and the answer is validated. Without a key, in rules-only mode or after an unusable answer, jobs stay in Explore as "not checked by AI".
 
 ## 13. Open questions for Ravi
 

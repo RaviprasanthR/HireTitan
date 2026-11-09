@@ -25,6 +25,7 @@ class PauseReason(StrEnum):
     key_missing = "key_missing"
     key_rejected = "key_rejected"
     budget_reached = "budget_reached"
+    out_of_credit = "out_of_credit"
 
 
 class WaitingFor(StrEnum):
@@ -33,7 +34,7 @@ class WaitingFor(StrEnum):
 
 
 ALLOWED_TRANSITIONS: Final[dict[RunStatus, frozenset[RunStatus]]] = {
-    RunStatus.queued: frozenset({RunStatus.running}),
+    RunStatus.queued: frozenset({RunStatus.running, RunStatus.failed}),
     RunStatus.running: frozenset(
         {
             RunStatus.awaiting_review,

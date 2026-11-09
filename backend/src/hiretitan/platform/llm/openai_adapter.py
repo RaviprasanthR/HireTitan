@@ -4,7 +4,9 @@
   model rejects that, one retry in JSON mode with the schema in the instructions and a
   strict parse of the reply (constitution IV, degrade gracefully).
 * Errors: no key -> ``AiUnavailable("key_missing")`` before any network call; 401/403 ->
-  ``AiUnavailable("key_rejected")``; 429, 5xx and timeouts -> ``RetryableLlmError``.
+  ``AiUnavailable("key_rejected")``; 429 with ``insufficient_quota`` ->
+  ``AiUnavailable("out_of_credit", provider_message)``; other 429s, 5xx and timeouts ->
+  ``RetryableLlmError``.
   Retrying is the job queue's business, so the SDK's own retries are off.
 """
 
@@ -39,6 +41,14 @@ def _is_structured_output_unsupported(error: openai.BadRequestError) -> bool:
     return "json_schema" in text or "structured" in text or "text.format" in text
 
 
+def _error_message(error: openai.APIStatusError) -> str:
+    """The provider's own wording from the response body (the SDK adds a prefix to its own)."""
+    body = error.body
+    if isinstance(body, dict) and isinstance(body.get("message"), str):
+        return str(body["message"])
+    return error.message
+
+
 class OpenAiAdapter:
     provider = PROVIDER
 
@@ -49,10 +59,12 @@ class OpenAiAdapter:
         *,
         http_client: httpx2.AsyncClient | None = None,
         on_key_rejected: Callable[[], Awaitable[None]] | None = None,
+        on_out_of_credit: Callable[[str], Awaitable[None]] | None = None,
     ) -> None:
         self._has_key = api_key is not None
         self._catalog = catalog
         self._on_key_rejected = on_key_rejected
+        self._on_out_of_credit = on_out_of_credit
         self._client = openai.AsyncOpenAI(
             api_key=api_key.get_secret_value() if api_key else "unset",
             base_url=allowed_base_url("api.openai.com"),
@@ -77,8 +89,16 @@ class OpenAiAdapter:
             if self._on_key_rejected is not None:
                 await self._on_key_rejected()
             raise AiUnavailable("key_rejected") from None
+        except openai.RateLimitError as error:
+            # OpenAI answers 429 both for "slow down" and for "no credit left". Waiting does not
+            # fix the second, so it ends the run with the provider's own message (R7).
+            if error.code == "insufficient_quota":
+                unavailable = AiUnavailable("out_of_credit", _error_message(error))
+                if self._on_out_of_credit is not None and unavailable.provider_message:
+                    await self._on_out_of_credit(unavailable.provider_message)
+                raise unavailable from None
+            raise RetryableLlmError(type(error).__name__) from None
         except (
-            openai.RateLimitError,
             openai.InternalServerError,
             openai.APITimeoutError,
             openai.APIConnectionError,

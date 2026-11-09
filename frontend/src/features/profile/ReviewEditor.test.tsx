@@ -174,6 +174,23 @@ describe('ReviewEditor', () => {
     expect(await screen.findByText(/Current profile: Old headline/)).toBeInTheDocument()
   })
 
+  it('US1_AS8_changed_badge_stays_while_the_person_edits_that_job', async () => {
+    load(
+      review({
+        compare_to: content(),
+        changed_paths: ['experience[Acme Corp | Senior Engineer].end'],
+      }),
+    )
+    const user = userEvent.setup()
+    expect(await screen.findByText('Changed')).toBeInTheDocument()
+
+    await user.type(await screen.findByLabelText('Employer 1'), ' Ltd')
+    await waitFor(() => expect(calls.some((c) => c.method === 'PUT')).toBe(true))
+    await screen.findByText(/draft saved/i)
+
+    expect(screen.getByText('Changed')).toBeInTheDocument()
+  })
+
   it('US1_AS9_autosaves_draft', async () => {
     load()
     const user = userEvent.setup()

@@ -1,0 +1,26 @@
+[
+ {
+  "decisions": [
+   {
+    "ref": "j1",
+    "relevant": true,
+    "reason": "Python backend role that matches your target role."
+   },
+   {
+    "ref": "j2",
+    "relevant": true,
+    "reason": "Backend role using your Python and PostgreSQL skills."
+   },
+   {
+    "ref": "j3",
+    "relevant": false,
+    "reason": "The stack does not match your profile."
+   },
+   {
+    "ref": "j4",
+    "relevant": false,
+    "reason": "Seniority is above what your profile shows."
+   }
+  ]
+ }
+]

@@ -1,6 +1,9 @@
 import type { RouteObject } from 'react-router'
 import {
-  HomePage,
+  AppliedPage,
+  CompaniesPage,
+  ExplorePage,
+  JobDetailPage,
   NotFoundPage,
   PreferencesPage,
   ProfileEditor,
@@ -9,6 +12,9 @@ import {
   ProfileVersionPage,
   ProfileVersionsPage,
   ReviewPage,
+  RunSummaryPage,
+  SearchHistoryPage,
+  SearchRulesPage,
   SettingsPage,
 } from './pages'
 import { SetupGate } from '@/features/setup/SetupGate'
@@ -21,7 +27,8 @@ export const routes: RouteObject[] = [
       {
         element: <Shell />,
         children: [
-          { path: '/', element: <HomePage /> },
+          { path: '/', element: <ExplorePage /> },
+          { path: '/applied', element: <AppliedPage /> },
           { path: '/profile', element: <ProfilePage /> },
           { path: '/profile/edit', element: <ProfileEditor /> },
           { path: '/profile/review/:reviewId', element: <ProfileReviewPage /> },
@@ -31,6 +38,11 @@ export const routes: RouteObject[] = [
             element: <ProfileVersionPage />,
           },
           { path: '/preferences', element: <PreferencesPage /> },
+          { path: '/companies', element: <CompaniesPage /> },
+          { path: '/search/rules', element: <SearchRulesPage /> },
+          { path: '/search/history', element: <SearchHistoryPage /> },
+          { path: '/search/runs/:id', element: <RunSummaryPage /> },
+          { path: '/jobs/:id', element: <JobDetailPage /> },
           { path: '/review', element: <ReviewPage /> },
           { path: '/settings', element: <SettingsPage /> },
           { path: '*', element: <NotFoundPage /> },

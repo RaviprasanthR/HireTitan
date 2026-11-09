@@ -1,0 +1,34 @@
+{
+  "results": [
+    {
+      "company_id": "00000000-0000-4000-8000-000000000003",
+      "ok": true,
+      "postings": [
+        {
+          "title": "Backend Engineer",
+          "url": "https://jobs.ashby.example.test/examplecorp/1000",
+          "location": "Pune, Maharashtra, India",
+          "description": "Example Corp is hiring a Backend Engineer. You will build and run services in Python. 3+ years of experience expected.",
+          "posted_at": 1793000000000,
+          "requisition_id": "REQ-1000"
+        },
+        {
+          "title": "Data Analyst",
+          "url": "https://jobs.ashby.example.test/examplecorp/1001",
+          "location": "Chennai, Tamil Nadu, India",
+          "description": "Example Corp is hiring a Data Analyst. You will build and run services in Python. 3+ years of experience expected.",
+          "posted_at": 1793086400000,
+          "requisition_id": "REQ-1001"
+        },
+        {
+          "title": "Product Designer",
+          "url": "https://jobs.ashby.example.test/examplecorp/1002",
+          "location": "Remote - India",
+          "description": "Example Corp is hiring a Product Designer. You will build and run services in Python. 3+ years of experience expected.",
+          "posted_at": 1793172800000,
+          "requisition_id": "REQ-1002"
+        }
+      ]
+    }
+  ]
+}

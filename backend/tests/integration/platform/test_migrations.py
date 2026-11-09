@@ -6,12 +6,14 @@ from collections.abc import Callable
 from datetime import datetime
 from uuid import UUID
 
+import pytest
 from alembic import command
 from alembic.autogenerate import compare_metadata
 from alembic.config import Config
 from alembic.migration import MigrationContext
 from alembic.script import ScriptDirectory
 from sqlalchemy import String, create_engine, inspect, text
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -108,3 +110,30 @@ async def test_mixin_assigns_uuid7_and_utc_timestamps(db_session: AsyncSession) 
     assert first.created_at.tzinfo is not None
     assert first.created_at.utcoffset().total_seconds() == 0  # type: ignore[union-attr]
     assert first.updated_at >= first.created_at
+
+
+def test_0012_upgrade_and_downgrade(
+    fresh_database_url: str, make_alembic_config: Callable[[str], Config]
+) -> None:
+    """R7: 0012 lets a run pause for ``out_of_credit``; downgrading maps those rows back."""
+    cfg = make_alembic_config(fresh_database_url)
+    insert = text(
+        "INSERT INTO app.workflow_runs (id, workflow, status, pause_reason, created_at, "
+        "updated_at) VALUES (gen_random_uuid(), 'demo', 'paused', :reason, now(), now())"
+    )
+    command.upgrade(cfg, "0011")
+    engine = create_engine(fresh_database_url)
+    try:
+        with engine.begin() as conn, pytest.raises(DBAPIError):
+            conn.execute(insert, {"reason": "out_of_credit"})  # rejected before 0012
+
+        command.upgrade(cfg, "0012")
+        with engine.begin() as conn:
+            conn.execute(insert, {"reason": "out_of_credit"})  # accepted after
+
+        command.downgrade(cfg, "0011")
+        with engine.connect() as conn:
+            reasons = conn.execute(text("SELECT pause_reason FROM app.workflow_runs")).scalars()
+            assert list(reasons) == ["budget_reached"]
+    finally:
+        engine.dispose()
