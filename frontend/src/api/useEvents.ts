@@ -7,7 +7,18 @@ export const POLL_INTERVAL_MS = 3000
 type RunUpdated = { run_id: string }
 
 /** Everything that can change while a run is going; refetched on every poll. */
-const POLL_KEYS: QueryKey[] = [['runs'], ['review-items'], ['resumes'], ['status'], ['settings'], ['profile'], ['onboarding']]
+const POLL_KEYS: QueryKey[] = [
+  ['runs'],
+  ['review-items'],
+  ['resumes'],
+  ['status'],
+  ['settings'],
+  ['profile'],
+  ['onboarding'],
+  ['jobs'],
+  ['search-latest'],
+  ['search-run'],
+]
 
 /**
  * Listens to the server event stream and refetches the matching TanStack Query data.
@@ -56,6 +67,11 @@ export function useEvents(): { connected: boolean } {
     })
     source.addEventListener('status.updated', () => invalidate(['status'], ['settings']))
     source.addEventListener('profile.updated', () => invalidate(['profile'], ['onboarding']))
+    // A search batch is stored: the new jobs, the progress and the cost appear now (FR-008).
+    const searchChanged = () =>
+      invalidate(['jobs'], ['search-latest'], ['search-run'], ['search-runs'], ['status'])
+    source.addEventListener('search.batch_done', searchChanged)
+    source.addEventListener('search.finished', searchChanged)
 
     return () => {
       stopPolling()

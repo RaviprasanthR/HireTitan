@@ -66,7 +66,7 @@ def test_retry_strategy_follows_the_delay_schedule() -> None:
     now = datetime.now(UTC)
     seconds: list[int | None] = []
     for attempts in range(4):
-        job = cast(Any, SimpleNamespace(attempts=attempts))
+        job = cast(Any, SimpleNamespace(id=1, attempts=attempts))
         decision = strategy.get_retry_decision(exception=ValueError(), job=job)
         if decision is None:
             seconds.append(None)

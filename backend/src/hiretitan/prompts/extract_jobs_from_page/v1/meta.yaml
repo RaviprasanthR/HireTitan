@@ -1,0 +1,5 @@
+version: 1
+tier: fast
+max_output_tokens: 3000
+changelog:
+  - "v1: first version. Lists the jobs on a careers page that has no readable job data; at most 50, each with the link it was given on that site."

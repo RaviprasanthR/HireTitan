@@ -12,12 +12,14 @@ const KEY_STATUS: Record<string, string> = {
   missing: 'Missing',
   rejected: 'Rejected by the provider',
   unreachable: 'Provider could not be reached',
+  out_of_credit: 'Out of credit at the provider',
   unknown: 'Not checked yet',
 }
 
 const KEY_HELP: Record<string, string> = {
   missing: 'Add OPENAI_API_KEY to .env, then restart HireTitan.',
   rejected: 'Replace OPENAI_API_KEY in .env, then restart HireTitan.',
+  out_of_credit: 'Add credit with your provider, then press Check again.',
 }
 
 const input = 'w-full rounded-md border border-muted-foreground bg-background px-3 py-2 text-sm'

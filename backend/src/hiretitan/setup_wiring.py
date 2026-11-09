@@ -6,9 +6,12 @@ The setup module may not import other features directly, so this composition-lev
 
 from __future__ import annotations
 
+import asyncio
+from pathlib import Path
 from uuid import UUID
 
 from sqlalchemy import text
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from hiretitan.platform.runtime.domain.run_state import RunStatus, WaitingFor
@@ -16,6 +19,9 @@ from hiretitan.platform.runtime.infra.runs_repo import RunsRepo
 from hiretitan.preferences.application.service import get_preferences
 from hiretitan.preferences.infra.repo import PreferencesRepo
 from hiretitan.profile.infra.repos import ResumeFilesRepo, ReviewsRepo, VersionsRepo
+from hiretitan.search.application import progress as search_progress
+from hiretitan.search.application.seed import load_seed
+from hiretitan.search.infra.repos import CompaniesRepo, RuleSetsRepo, SearchRunsRepo
 
 
 class RepoFacts:
@@ -32,6 +38,12 @@ class RepoFacts:
 
     async def preferences_saved(self) -> bool:
         return (await get_preferences(PreferencesRepo(self._session))).saved_at is not None
+
+    async def rules_approved(self) -> bool:
+        return await search_progress.rules_approved(RuleSetsRepo(self._session))
+
+    async def searched_once(self) -> bool:
+        return await search_progress.searched_once(SearchRunsRepo(self._session))
 
     async def current_open_review_id(self) -> UUID | None:
         review = await ReviewsRepo(self._session).get_open()
@@ -70,12 +82,21 @@ ORDER BY 1
 """
 
 
+WIPE_ATTEMPTS = 3
+DEADLOCK_SQLSTATE = "40P01"
+
+
+def _is_deadlock(error: OperationalError) -> bool:
+    return getattr(error.orig, "sqlstate", None) == DEADLOCK_SQLSTATE
+
+
 class SqlDeleteAllStore:
     """``DeleteAllStore`` over every module's tables (a composition-level adapter, because it
     spans features, the job queue and the checkpoint store)."""
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self, session: AsyncSession, company_seed: Path | None = None) -> None:
         self._session = session
+        self._company_seed = company_seed
 
     async def cancel_open_runs(self) -> None:
         runs = RunsRepo(self._session)
@@ -88,6 +109,20 @@ class SqlDeleteAllStore:
         await self._session.commit()
 
     async def wipe_and_reseed(self) -> None:
+        # The worker may hold locks in another order (its queue, a finishing search): Postgres
+        # then ends one side with a deadlock error, and the wipe starts over, up to three tries.
+        for attempt in range(1, WIPE_ATTEMPTS + 1):
+            try:
+                await self._wipe_once()
+            except OperationalError as error:
+                if attempt == WIPE_ATTEMPTS or not _is_deadlock(error):
+                    raise
+                await self._session.rollback()
+                await asyncio.sleep(0.2 * attempt)
+            else:
+                return
+
+    async def _wipe_once(self) -> None:
         tables = (await self._session.execute(text(_WIPE_TABLES))).scalars().all()
         await self._session.execute(
             text(f"TRUNCATE TABLE {', '.join(tables)} RESTART IDENTITY CASCADE")
@@ -97,4 +132,7 @@ class SqlDeleteAllStore:
         await self._session.execute(
             text("INSERT INTO app.provider_status (provider, status) VALUES ('openai', 'unknown')")
         )
+        # The shipped company list, as a fresh install has it (FR-041).
+        if self._company_seed is not None and await asyncio.to_thread(self._company_seed.exists):
+            await load_seed(CompaniesRepo(self._session), self._company_seed)
         await self._session.commit()

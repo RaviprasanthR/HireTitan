@@ -127,4 +127,16 @@ describe('useEvents review fixes', () => {
 
     expect(keys(invalidate)).toContainEqual(['review'])
   })
+
+  it('FR008_search_events_refresh_jobs_and_progress', () => {
+    const { source, invalidate } = setup()
+    invalidate.mockClear()
+
+    act(() => source.emit('search.batch_done', { search_run_id: 's1', batches_done: 1 }))
+    act(() => source.emit('search.finished', { search_run_id: 's1', outcome: 'finished' }))
+
+    const refreshed = keys(invalidate).map((k) => k[0])
+    expect(refreshed).toEqual(expect.arrayContaining(['jobs', 'search-latest', 'search-run']))
+    expect(invalidate.mock.calls.length).toBeGreaterThanOrEqual(10)
+  })
 })

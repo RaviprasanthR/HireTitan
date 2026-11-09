@@ -1,0 +1,26 @@
+# Synthetic company list for the end-to-end journey. Every company is invented (example.test).
+- key: example-alpha
+  name: Example Alpha
+  city: Pune
+  website: https://alpha.example.test
+  careers_url: https://job-boards.greenhouse.io/examplealpha
+  ats_vendor: greenhouse
+  board_id: examplealpha
+  resolution: verified
+  seed_version: 1
+- key: example-gamma
+  name: Example Gamma
+  city: Pune
+  website: https://gamma.example.test
+  careers_url: https://jobs.lever.co/examplegamma
+  ats_vendor: lever
+  board_id: examplegamma
+  resolution: verified
+  seed_version: 1
+- key: example-delta
+  name: Example Delta
+  city: Pune
+  website: https://delta.example.test
+  careers_url: https://delta.example.test/careers
+  resolution: check_manually
+  seed_version: 1

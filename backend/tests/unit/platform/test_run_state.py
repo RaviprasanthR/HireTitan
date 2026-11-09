@@ -153,5 +153,16 @@ def test_values_match_database_strings() -> None:
         "failed",
         "cancelled",
     ]
-    assert {r.value for r in PauseReason} == {"key_missing", "key_rejected", "budget_reached"}
+    assert {r.value for r in PauseReason} == {
+        "key_missing",
+        "key_rejected",
+        "budget_reached",
+        "out_of_credit",
+    }
     assert {w.value for w in WaitingFor} == {"profile_review", "injection_decision"}
+
+
+def test_R7_paused_accepts_out_of_credit() -> None:
+    new = transition(RUNNING, S.paused, pause_reason=PauseReason.out_of_credit)
+    assert new == RunState(S.paused, pause_reason=PauseReason.out_of_credit)
+    assert transition(new, S.queued) == RunState(S.queued)  # and it can be resumed

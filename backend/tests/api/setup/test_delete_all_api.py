@@ -4,14 +4,16 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field, replace
+from datetime import UTC, datetime
 from decimal import Decimal
+from functools import partial
 from pathlib import Path
 from uuid import UUID
 
 import httpx
 import pytest
 from langgraph.checkpoint.base import BaseCheckpointSaver
-from sqlalchemy import text
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from hiretitan.api_main import create_app
@@ -27,6 +29,8 @@ from hiretitan.preferences.domain.defaults import default_preferences
 from hiretitan.preferences.infra.repo import PreferencesRepo
 from hiretitan.profile.domain.content import Contact, ProfileContent
 from hiretitan.profile.infra.repos import Provenance, ResumeFilesRepo, ReviewsRepo, VersionsRepo
+from hiretitan.search.infra.models import CompanyRow, JobRow
+from hiretitan.search.infra.repos import CompaniesRepo, JobsRepo, RuleSetsRepo
 from hiretitan.setup.api.data import DataApiDeps, create_data_router
 from hiretitan.setup.api.onboarding import OnboardingApiDeps, create_onboarding_router
 from hiretitan.setup.infra.settings_repo import SettingsRepo
@@ -34,7 +38,12 @@ from hiretitan.setup_wiring import RepoFacts, SqlDeleteAllStore
 
 URL = "/api/v1/data/delete-all"
 # Rows that exist on a fresh install and come back after a wipe.
-RESEEDED = {"settings", "provider_status"}
+RESEEDED = {"settings", "provider_status", "companies"}
+SEED = """
+- {key: acme, name: Acme, city: Pune, resolution: verified, ats_vendor: lever,
+  board_id: acme, seed_version: 1}
+- {key: beta, name: Beta, resolution: unresolved, seed_version: 1}
+"""
 
 
 @dataclass
@@ -54,6 +63,8 @@ async def env(
     fake_clock: FakeClock,
 ) -> AsyncIterator[Env]:
     storage = LocalFileStorage(tmp_path / "data")
+    seed = tmp_path / "companies.yaml"
+    seed.write_text(SEED, "utf-8")
     key_checks: list[int] = []
 
     async def enqueue_key_check() -> None:
@@ -67,7 +78,7 @@ async def env(
                 DataApiDeps(
                     sessions=sessions,
                     storage=storage,
-                    store=SqlDeleteAllStore,
+                    store=partial(SqlDeleteAllStore, company_seed=seed),
                     enqueue_key_check=enqueue_key_check,
                 )
             ),
@@ -208,6 +219,7 @@ async def test_SC008_no_rows_or_files_left(env: Env, fake_clock: FakeClock) -> N
     assert {t: n for t, n in after.items() if t.split(".")[1] in RESEEDED} == {
         "app.settings": 1,
         "app.provider_status": 1,
+        "app.companies": 2,  # the shipped list, back as it was
     }
     assert stored_files(env) == []
 
@@ -247,3 +259,82 @@ async def test_open_runs_are_cancelled_before_the_wipe(env: Env, fake_clock: Fak
 
     async with env.sessions() as session:
         assert await RunsRepo(session).get(run_id) is None
+
+
+async def search_data(env: Env) -> None:
+    """Jobs, rules, a company of the person's own, an edited and a deleted shipped company."""
+    async with env.sessions() as session:
+        companies = CompaniesRepo(session)
+        await companies.add(name="Mine", origin="user", resolution="unresolved")
+        acme = await companies.get_by_key("acme")
+        beta = await companies.get_by_key("beta")
+        assert acme is not None
+        assert beta is not None
+        await companies.set_fields(acme.id, name="Acme Edited", user_modified=True, hidden=True)
+        await companies.set_fields(beta.id, deleted_at=datetime(2026, 11, 7, tzinfo=UTC))
+        now = datetime(2026, 11, 7, tzinfo=UTC)
+        await JobsRepo(session).add(
+            company_id=acme.id,
+            company_name="Acme",
+            title="Backend Engineer",
+            first_seen_at=now,
+            last_seen_at=now,
+            description="d",
+            state="explore",
+        )
+        rule_sets = RuleSetsRepo(session)
+        await rule_sets.approve((await rule_sets.propose({}, {})).id)
+        await session.commit()
+
+
+async def test_SC013_delete_all_removes_jobs_rules_company_edits_and_history(
+    env: Env, fake_clock: FakeClock
+) -> None:
+    await populate(env, fake_clock)
+    async with env.sessions() as session:  # as the API does at start-up
+        from hiretitan.search.application.seed import load_seed
+
+        await load_seed(CompaniesRepo(session), env.data_dir.parent / "companies.yaml")
+        await session.commit()
+    await search_data(env)
+
+    assert (await env.client.post(URL, json={"confirm": "DELETE"})).status_code == 204
+
+    async with env.sessions() as session:
+        assert (await session.scalars(select(JobRow))).all() == []
+        names = sorted(c.name for c in await session.scalars(select(CompanyRow)))
+        counts = {
+            t: n
+            for t, n in (await table_counts(env)).items()
+            if n and t.split(".")[1] not in RESEEDED
+        }
+    assert names == ["Acme", "Beta"]  # the person's company, the edit and the deletion are gone
+    assert counts == {}
+
+
+async def test_SC013_shipped_list_restored_after_delete_all(
+    env: Env, fake_clock: FakeClock
+) -> None:
+    await populate(env, fake_clock)
+    async with env.sessions() as session:
+        from hiretitan.search.application.seed import load_seed
+
+        await load_seed(CompaniesRepo(session), env.data_dir.parent / "companies.yaml")
+        await session.commit()
+    await search_data(env)
+
+    assert (await env.client.post(URL, json={"confirm": "DELETE"})).status_code == 204
+
+    async with env.sessions() as session:
+        acme = await CompaniesRepo(session).get_by_key("acme")
+        beta = await CompaniesRepo(session).get_by_key("beta")
+    assert acme is not None
+    assert beta is not None
+    assert (acme.name, acme.city, acme.ats_vendor, acme.origin) == (
+        "Acme",
+        "Pune",
+        "lever",
+        "built_in",
+    )
+    assert (acme.hidden, acme.user_modified) == (False, False)
+    assert beta.deleted_at is None

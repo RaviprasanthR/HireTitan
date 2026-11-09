@@ -2,17 +2,26 @@
 #   node frontend/e2e/prepare.mjs
 #   docker compose -f docker-compose.yml -f docker-compose.e2e.yml up --build -d
 #   cd frontend && npx playwright test
-# The folder .e2e/fake_llm holds the scripts and the `key_status` file the test flips.
+# The folder .e2e/fake_llm holds the scripts and the `key_status` file the test flips; .e2e/seed holds
+# the synthetic company list and .e2e/fake_career_ops the fake job boards. Run prepare.mjs BEFORE `up`
+# (it recreates those folders; if you run it again later, recreate the containers with --force-recreate).
 x-fake-env: &fake-env
   HIRETITAN_LLM: fake
   HIRETITAN_FAKE_LLM_DIR: /fake-llm
+  HIRETITAN_CAREER_OPS: fake
+  HIRETITAN_FAKE_CAREER_OPS_DIR: /fake-career-ops
+  HIRETITAN_SEED_DIR: /seed
 
 services:
   api:
     environment: *fake-env
     volumes:
       - ./.e2e/fake_llm:/fake-llm
+      - ./.e2e/fake_career_ops:/fake-career-ops
+      - ./.e2e/seed:/seed
   worker:
     environment: *fake-env
     volumes:
       - ./.e2e/fake_llm:/fake-llm
+      - ./.e2e/fake_career_ops:/fake-career-ops
+      - ./.e2e/seed:/seed

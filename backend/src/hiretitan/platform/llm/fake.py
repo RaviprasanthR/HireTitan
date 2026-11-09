@@ -45,6 +45,10 @@ class FakeLlm:
             self._by_task[task].extend(steps)
         self.calls: list[LlmRequest[Any]] = []
 
+    def add(self, *steps: Step, task: str | None = None) -> None:
+        """Queue more scripted steps (for ``task`` only, or for any task)."""
+        (self._by_task[task] if task else self._queue).extend(steps)
+
     @classmethod
     def from_directory(cls, directory: Path) -> FakeLlm:
         """Load ``<task>.json`` files, each a list of outputs for that task, in order."""

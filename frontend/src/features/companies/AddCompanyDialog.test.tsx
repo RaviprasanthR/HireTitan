@@ -1,0 +1,129 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { problem, stubApi, type Call } from '@/test/api'
+import { AddCompanyDialog } from './AddCompanyDialog'
+
+const CREATED = {
+  id: 'n',
+  origin: 'user',
+  name: 'Newco',
+  city: null,
+  website: null,
+  careers_url: 'https://newco.example.com/careers',
+  ats_vendor: null,
+  board_id: null,
+  resolution: 'unresolved',
+  board_status: 'unresolved',
+  hidden: false,
+  user_modified: false,
+  last_checked_at: null,
+  last_check_result: null,
+  last_check_error: null,
+}
+
+function renderDialog(handler: (call: Call) => unknown) {
+  const calls = stubApi(handler)
+  const onClose = vi.fn()
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <AddCompanyDialog onClose={onClose} />
+    </QueryClientProvider>,
+  )
+  return { calls, onClose }
+}
+
+async function fillAndSubmit(user: ReturnType<typeof userEvent.setup>) {
+  await user.type(screen.getByLabelText('Company name'), 'Newco')
+  await user.type(screen.getByLabelText('Careers page link'), 'https://newco.example.com/careers')
+  await user.click(screen.getByRole('button', { name: 'Find job board' }))
+}
+
+afterEach(() => vi.unstubAllGlobals())
+
+describe('AddCompanyDialog', () => {
+  it('US3_AS2_confirm_suggested_board', async () => {
+    const user = userEvent.setup()
+    const { calls, onClose } = renderDialog((call) => {
+      if (call.method === 'POST' && call.path === '/companies') return CREATED
+      if (call.path === '/companies/n/discovery')
+        return {
+          status: 'found',
+          suggestion: { ats_vendor: 'lever', board_id: 'newco', supported: true, live_jobs: 12 },
+        }
+      if (call.path === '/companies/n/discovery/confirm')
+        return { ...CREATED, ats_vendor: 'lever', board_id: 'newco', board_status: 'board' }
+      return undefined
+    })
+
+    await fillAndSubmit(user)
+
+    expect(await screen.findByText(/lever/i)).toBeInTheDocument()
+    expect(screen.getByText(/12 open jobs/)).toBeInTheDocument()
+    expect(calls.some((c) => c.path.endsWith('/confirm'))).toBe(false) // only after the click
+    await user.click(screen.getByRole('button', { name: 'Yes, use this board' }))
+
+    expect(await screen.findByText(/will be read through lever/i)).toBeInTheDocument()
+    expect(calls.some((c) => c.path === '/companies/n/discovery/confirm')).toBe(true)
+    await user.click(screen.getByRole('button', { name: 'Done' }))
+    expect(onClose).toHaveBeenCalled()
+  })
+
+  it('US3_AS2_not_this_one_reads_the_careers_page', async () => {
+    const user = userEvent.setup()
+    const { calls } = renderDialog((call) => {
+      if (call.method === 'POST' && call.path === '/companies') return CREATED
+      if (call.path === '/companies/n/discovery')
+        return {
+          status: 'found',
+          suggestion: { ats_vendor: 'lever', board_id: 'other', supported: true, live_jobs: 3 },
+        }
+      if (call.path === '/companies/n/discovery/reject')
+        return { ...CREATED, resolution: 'careers_page', board_status: 'careers_page' }
+      return undefined
+    })
+
+    await fillAndSubmit(user)
+    await user.click(await screen.findByRole('button', { name: 'Not this one' }))
+
+    expect(await screen.findByText(/careers page will be read/i)).toBeInTheDocument()
+    await waitFor(() =>
+      expect(calls.some((c) => c.path === '/companies/n/discovery/reject')).toBe(true),
+    )
+  })
+
+  it('no_board_found_still_keeps_the_company', async () => {
+    const user = userEvent.setup()
+    renderDialog((call) => {
+      if (call.method === 'POST' && call.path === '/companies') return CREATED
+      if (call.path === '/companies/n/discovery') return { status: 'none', suggestion: null }
+      if (call.path === '/companies/n/discovery/reject')
+        return { ...CREATED, resolution: 'careers_page', board_status: 'careers_page' }
+      return undefined
+    })
+
+    await fillAndSubmit(user)
+
+    expect(await screen.findByText(/no job board found/i)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Read the careers page' }))
+    expect(await screen.findByText(/careers page will be read/i)).toBeInTheDocument()
+  })
+
+  it('shows_field_errors', async () => {
+    const user = userEvent.setup()
+    renderDialog((call) =>
+      call.method === 'POST'
+        ? problem(422, 'Invalid', {
+            errors: [
+              { field: 'careers_url', message: 'The link must start with http:// or https://.' },
+            ],
+          })
+        : undefined,
+    )
+
+    await fillAndSubmit(user)
+
+    expect(await screen.findByText(/must start with http/)).toBeInTheDocument()
+  })
+})

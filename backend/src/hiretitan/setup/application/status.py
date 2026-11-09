@@ -26,6 +26,10 @@ class SetupFacts(Protocol):
 
     async def preferences_saved(self) -> bool: ...
 
+    async def rules_approved(self) -> bool: ...
+
+    async def searched_once(self) -> bool: ...
+
     async def open_review_id(self, run_id: UUID) -> UUID | None: ...
 
     async def current_open_review_id(self) -> UUID | None: ...
@@ -77,6 +81,8 @@ async def get_status(
         resume_uploaded=await facts.resume_uploaded(),
         profile_confirmed=await facts.profile_confirmed(),
         preferences_saved=await facts.preferences_saved(),
+        rules_approved=await facts.rules_approved(),
+        searched_once=await facts.searched_once(),
     )
     budget = Budget(
         cap_usd=await settings.read_budget_cap(),

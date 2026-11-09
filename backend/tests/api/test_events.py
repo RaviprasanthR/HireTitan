@@ -82,3 +82,23 @@ async def test_run_status_change_streams_run_updated(
         "pause_reason": None,
         "waiting_for": None,
     }
+
+
+async def test_search_batch_done_streams(database_url: str, committed_engine: AsyncEngine) -> None:
+    app = FastAPI()
+    app.include_router(create_events_router(database_url), prefix="/api/v1")
+    progress = {"search_run_id": "run-1", "batches_done": 1, "jobs_found": 8, "added": 3}
+
+    async with (
+        serve(app) as base,
+        httpx.AsyncClient(base_url=base, timeout=10) as client,
+        client.stream("GET", "/api/v1/events") as response,
+    ):
+        lines = response.aiter_lines()
+        async for line in lines:
+            if line.startswith(":") and "ready" in line:
+                break
+        await EventPublisher(committed_engine).publish("search.batch_done", progress)
+        name, data = await asyncio.wait_for(next_event(lines), 5)
+
+    assert (name, data) == ("search.batch_done", progress)
