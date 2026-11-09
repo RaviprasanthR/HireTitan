@@ -47,6 +47,12 @@ describe('ImportExport', () => {
     )
   })
 
+  it('US1 offers the company sheet import next to the CSV import', () => {
+    renderIt(() => undefined)
+
+    expect(screen.getByRole('button', { name: 'Import a company sheet' })).toBeInTheDocument()
+  })
+
   it('US3_AS6_preview_then_confirm', async () => {
     const user = userEvent.setup()
     const calls = renderIt((call) => {

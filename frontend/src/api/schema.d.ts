@@ -73,6 +73,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/companies/sheet-import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sheet Preview */
+        post: operations["sheet_preview_api_v1_companies_sheet_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/sheet-import/{token}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sheet Confirm */
+        post: operations["sheet_confirm_api_v1_companies_sheet_import__token__confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/companies/{company_id}": {
         parameters: {
             query?: never;
@@ -886,6 +920,11 @@ export interface components {
         };
         /** Body_import_preview_api_v1_companies_import_post */
         Body_import_preview_api_v1_companies_import_post: {
+            /** File */
+            file: string;
+        };
+        /** Body_sheet_preview_api_v1_companies_sheet_import_post */
+        Body_sheet_preview_api_v1_companies_sheet_import_post: {
             /** File */
             file: string;
         };
@@ -1947,6 +1986,102 @@ export interface components {
             /** Tiers */
             tiers: components["schemas"]["TierOut"][];
         };
+        /** SheetColumnsOut */
+        SheetColumnsOut: {
+            /** Ignored */
+            ignored: string[];
+            /** Used */
+            used: string[];
+        };
+        /** SheetCompaniesOut */
+        SheetCompaniesOut: {
+            /** Matched */
+            matched: number;
+            /** To Add */
+            to_add: number;
+        };
+        /** SheetContactsOut */
+        SheetContactsOut: {
+            /** To Add */
+            to_add: number;
+            /** To Update */
+            to_update: number;
+        };
+        /** SheetIssueOut */
+        SheetIssueOut: {
+            /** Line */
+            line: number;
+            /** Reason */
+            reason: string;
+        };
+        /** SheetNotesOut */
+        SheetNotesOut: {
+            /** Kept Yours */
+            kept_yours: number;
+            /** To Change */
+            to_change: number;
+            /** To Set */
+            to_set: number;
+        };
+        /** SheetPreview */
+        SheetPreview: {
+            columns: components["schemas"]["SheetColumnsOut"];
+            companies: components["schemas"]["SheetCompaniesOut"];
+            contacts: components["schemas"]["SheetContactsOut"];
+            notes: components["schemas"]["SheetNotesOut"];
+            /** Rows */
+            rows: components["schemas"]["SheetRowOut"][];
+            /** Shortened */
+            shortened: components["schemas"]["SheetIssueOut"][];
+            /** Skipped */
+            skipped: components["schemas"]["SheetIssueOut"][];
+            /** Token */
+            token: string;
+        };
+        /** SheetResult */
+        SheetResult: {
+            /** Companies Added */
+            companies_added: number;
+            /** Contacts Added */
+            contacts_added: number;
+            /** Contacts Updated */
+            contacts_updated: number;
+            /** Matched */
+            matched: number;
+            /** Notes Changed */
+            notes_changed: number;
+            /** Notes Kept */
+            notes_kept: number;
+            /** Notes Set */
+            notes_set: number;
+            /** Shortened */
+            shortened: components["schemas"]["SheetIssueOut"][];
+            /** Skipped */
+            skipped: components["schemas"]["SheetIssueOut"][];
+        };
+        /** SheetRowOut */
+        SheetRowOut: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "matched" | "add" | "skip";
+            /** Company */
+            company: string;
+            /** Contacts Add */
+            contacts_add: number;
+            /** Contacts Update */
+            contacts_update: number;
+            /** Line */
+            line: number;
+            /**
+             * Notes
+             * @enum {string}
+             */
+            notes: "set" | "changed" | "kept" | "none";
+            /** Shortened */
+            shortened: boolean;
+        };
         /** SourceOut */
         SourceOut: {
             /** Kind */
@@ -2220,6 +2355,70 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ImportResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sheet_preview_api_v1_companies_sheet_import_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_sheet_preview_api_v1_companies_sheet_import_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SheetPreview"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sheet_confirm_api_v1_companies_sheet_import__token__confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SheetResult"];
                 };
             };
             /** @description Validation Error */

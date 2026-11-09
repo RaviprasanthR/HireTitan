@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { EXPORT_URL, useConfirmImport, usePreviewImport } from './api'
+import { SheetImportDialog } from './SheetImportDialog'
 
 /** Export the company list, or import one: a preview first, and nothing changes until Confirm. */
 export function ImportExport() {
@@ -37,6 +38,7 @@ export function ImportExport() {
           />
         </label>
       </div>
+      <SheetImportDialog />
       {preview.isError && (
         <p role="alert" className="text-sm text-danger">
           {preview.error.message}

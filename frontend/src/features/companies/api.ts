@@ -102,3 +102,26 @@ export function useConfirmImport() {
     onSuccess: refresh,
   })
 }
+
+export type SheetPreview = components['schemas']['SheetPreview']
+export type SheetResult = components['schemas']['SheetResult']
+
+export function useSheetPreview() {
+  return useMutation({
+    mutationFn: (file: File) => {
+      const body = new FormData()
+      body.append('file', file)
+      return apiFetch<SheetPreview>('/companies/sheet-import', { method: 'POST', body })
+    },
+  })
+}
+
+export function useSheetConfirm() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (token: string) =>
+      apiFetch<SheetResult>(`/companies/sheet-import/${token}/confirm`, { method: 'POST' }),
+    // contacts and notes show on the Companies page, so refresh it with the list
+    onSuccess: () => client.invalidateQueries({ queryKey: ['companies'] }),
+  })
+}

@@ -22,7 +22,7 @@ from uuid import UUID, uuid4
 
 from hiretitan.search.application.companies import CompanyError, check_fields
 from hiretitan.search.application.contacts import ContactsStore, NotesStore, StoredContact
-from hiretitan.search.application.discovery import add_company_from_import
+from hiretitan.search.application.discovery import DiscoveryStore, add_company_from_import
 from hiretitan.search.domain.company_match import (
     Ambiguous,
     CompanyRef,
@@ -44,12 +44,8 @@ NoteAction = Literal["set", "changed", "kept", "none"]
 RowAction = Literal["matched", "add", "skip"]
 
 
-class SheetCompaniesStore(Protocol):
-    async def list_filtered(self, filter: str) -> list[Any]: ...
-
-    async def add(self, **fields: Any) -> Any: ...
-
-    async def set_fields(self, company_id: UUID, **fields: Any) -> None: ...
+class SheetCompaniesStore(DiscoveryStore, Protocol):
+    """What the import needs from the companies: list, add (own) and fill a missing link."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -195,7 +191,7 @@ class _Run:
                 dropped.append(issue.field)
         if self.write:
             view = await add_company_from_import(
-                self.companies,  # type: ignore[arg-type]
+                self.companies,
                 name=name,
                 careers_url=values["careers_url"],
                 city=values["city"],
@@ -364,6 +360,7 @@ async def _run(run: _Run, layout: SheetLayout, rows: list[SheetRow]) -> SheetOut
             skipped.append(RowIssue(row.line, reason))
             outcomes.append(RowOutcome(row.line, row.name, "skip"))
             continue
+        action: RowAction
         if isinstance(result, Matched):
             company_id, action = result.company_id, "matched"
             await run.fill_missing(company_id, row)
@@ -411,7 +408,7 @@ async def _run(run: _Run, layout: SheetLayout, rows: list[SheetRow]) -> SheetOut
             RowOutcome(
                 row.line,
                 row.name,
-                action,  # type: ignore[arg-type]
+                action,
                 added,
                 updated,
                 note,
