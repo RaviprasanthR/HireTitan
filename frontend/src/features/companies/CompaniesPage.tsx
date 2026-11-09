@@ -11,6 +11,7 @@ import {
   type Company,
   type CompanyFilter,
 } from './api'
+import { CompanyPanel } from './CompanyPanel'
 import { Field, inputClass } from './Field'
 import { ImportExport } from './ImportExport'
 
@@ -72,8 +73,16 @@ function EditForm({ company, onDone }: { company: Company; onDone: () => void })
 function CompanyRow({ company, manual }: { company: Company; manual: boolean }) {
   const [editing, setEditing] = useState(false)
   const [confirming, setConfirming] = useState(false)
+  const [showPanel, setShowPanel] = useState(false)
   const edit = useEditCompany()
   const remove = useDeleteCompany()
+  const contacts = `${company.contact_count} contact${company.contact_count === 1 ? '' : 's'}`
+  // Deleting one of the person's own companies removes its contacts and note (FR-023); a
+  // shipped company is only hidden from the list, so its contacts stay.
+  const goesWith =
+    company.origin === 'user' && company.contact_count > 0
+      ? ` Its ${contacts}${company.has_note ? ' and the note' : ''} will be deleted too.`
+      : ''
   const checked = company.last_checked_at ? formatDay(company.last_checked_at.slice(0, 10)) : null
 
   return (
@@ -86,6 +95,10 @@ function CompanyRow({ company, manual }: { company: Company; manual: boolean }) 
           </p>
           <p className="text-sm text-muted-small">
             {[company.city, BOARD_STATUS[company.board_status]].filter(Boolean).join(' · ')}
+          </p>
+          <p className="text-sm text-muted-small">
+            {contacts}
+            {company.has_note && ' · Has a note'}
           </p>
           {manual && (
             <div className="space-y-1 text-sm">
@@ -112,9 +125,24 @@ function CompanyRow({ company, manual }: { company: Company; manual: boolean }) 
               type="button"
               variant="outline"
               size="sm"
+              aria-expanded={showPanel}
+              aria-label={`Contacts and note for ${company.name}`}
+              onClick={() => setShowPanel(!showPanel)}
+            >
+              Contacts
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
               disabled={edit.isPending}
               aria-label={`${company.hidden ? 'Show' : 'Hide'} ${company.name}`}
-              onClick={() => edit.mutate({ id: company.id, changes: { hidden: !company.hidden } })}
+              onClick={() =>
+                edit.mutate({
+                  id: company.id,
+                  changes: { hidden: !company.hidden },
+                })
+              }
             >
               {company.hidden ? 'Show' : 'Hide'}
             </Button>
@@ -145,12 +173,15 @@ function CompanyRow({ company, manual }: { company: Company; manual: boolean }) 
         </p>
       )}
       {editing && <EditForm company={company} onDone={() => setEditing(false)} />}
+      {showPanel && <CompanyPanel companyId={company.id} companyName={company.name} />}
       {confirming && (
         <div className="space-y-2">
           <p className="text-sm">
-            Delete {company.name}? {company.origin === 'built_in'
+            Delete {company.name}?{' '}
+            {company.origin === 'built_in'
               ? 'It will not come back with the shipped list.'
               : 'This cannot be undone.'}
+            {goesWith}
           </p>
           <div className="flex gap-2">
             <Button

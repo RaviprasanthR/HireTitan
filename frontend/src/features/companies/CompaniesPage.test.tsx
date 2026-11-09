@@ -22,6 +22,9 @@ function company(id: string, name: string, extra: Record<string, unknown> = {}) 
     last_checked_at: null,
     last_check_result: null,
     last_check_error: null,
+    contact_count: 0,
+    has_note: false,
+    openings: null,
     ...extra,
   }
 }
@@ -123,6 +126,83 @@ describe('CompaniesPage', () => {
 
     expect(await screen.findByText('The company needs a name.')).toBeInTheDocument()
     expect(calls.some((c) => c.method === 'PATCH' && c.path === '/companies/a')).toBe(true)
+  })
+
+  it('US2 AS1 row shows counts and note marker', async () => {
+    const busy = company('b', 'Busy', { contact_count: 2, has_note: true })
+    const quiet = company('q', 'Quiet')
+    renderPage((call) =>
+      call.path.startsWith('/companies') ? { items: [busy, quiet], next_cursor: null } : undefined,
+    )
+
+    const [busyRow, quietRow] = within(
+      await screen.findByRole('list', { name: 'Companies' }),
+    ).getAllByRole('listitem')
+
+    expect(busyRow).toHaveTextContent('2 contacts')
+    expect(busyRow).toHaveTextContent('Has a note')
+    expect(quietRow).toHaveTextContent('0 contacts')
+    expect(quietRow).not.toHaveTextContent('Has a note')
+  })
+
+  it('SC004 contacts reachable in two clicks', async () => {
+    const user = userEvent.setup()
+    const busy = company('b', 'Busy', { contact_count: 1 })
+    renderPage((call) => {
+      if (call.path === '/companies/b/contacts')
+        return {
+          items: [
+            {
+              id: 'k1',
+              company_id: 'b',
+              name: 'Jane Example',
+              role: 'Recruiter',
+              linkedin_url: null,
+              email: null,
+              phone: null,
+              confidence: null,
+              note: null,
+              source: 'typed',
+              updated_at: '2026-11-09T09:00:00Z',
+            },
+          ],
+          note: null,
+        }
+      return call.path.startsWith('/companies') ? { items: [busy], next_cursor: null } : undefined
+    })
+
+    await user.click(await screen.findByRole('button', { name: 'Contacts and note for Busy' }))
+
+    expect(await screen.findByText('Jane Example')).toBeInTheDocument()
+  })
+
+  it('FR023 delete confirmation states the contact count', async () => {
+    const user = userEvent.setup()
+    const mine = company('m', 'Mine', {
+      origin: 'user',
+      contact_count: 3,
+      has_note: true,
+    })
+    renderPage((call) =>
+      call.path.startsWith('/companies') ? { items: [mine], next_cursor: null } : undefined,
+    )
+
+    await user.click(await screen.findByRole('button', { name: 'Delete Mine' }))
+
+    expect(screen.getByText(/3 contacts and the note will be deleted too/)).toBeInTheDocument()
+  })
+
+  it('FR023 a built-in company keeps its contacts when deleted', async () => {
+    const user = userEvent.setup()
+    const shipped = company('s', 'Shipped', { contact_count: 3 })
+    renderPage((call) =>
+      call.path.startsWith('/companies') ? { items: [shipped], next_cursor: null } : undefined,
+    )
+
+    await user.click(await screen.findByRole('button', { name: 'Delete Shipped' }))
+
+    expect(screen.queryByText(/contacts and the note will be deleted/)).toBeNull()
+    expect(screen.getByText(/will not come back with the shipped list/)).toBeInTheDocument()
   })
 
   it('deleting_asks_first', async () => {
