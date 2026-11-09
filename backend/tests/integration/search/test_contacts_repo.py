@@ -12,9 +12,12 @@ from typing import Any
 import pytest
 from alembic import command
 from alembic.config import Config
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from hiretitan.search.domain.contacts import ContactFields, link_key, name_key
+from hiretitan.search.infra.repos import CompaniesRepo, ContactsRepo, NotesRepo
 
 CONTACT = (
     "INSERT INTO app.company_contacts (id, company_id, name, name_key, source{cols}) "
@@ -196,3 +199,132 @@ def test_migration_0015_upgrade_and_downgrade(
         command.upgrade(cfg, "head")  # and can be re-applied
     finally:
         engine.dispose()
+
+
+# --- T006: repositories -----------------------------------------------------------------------
+
+
+async def own_company(session: AsyncSession, name: str = "Example Co") -> Any:
+    row = await CompaniesRepo(session).add(name=name, origin="user", resolution="unresolved")
+    return row.id
+
+
+def fields(name: str = "Jane Example", **kw: str | None) -> ContactFields:
+    return ContactFields(name=name, **kw)
+
+
+async def test_repo_add_get_list_update_delete_contact(db_session: AsyncSession) -> None:
+    repo = ContactsRepo(db_session)
+    company_id = await own_company(db_session)
+
+    zed = await repo.add(company_id, fields("Zed Sample"), source="typed")
+    jane = await repo.add(
+        company_id,
+        fields("Jane Example", role="Recruiter", linkedin_url="https://www.linkedin.com/in/jane/"),
+        source="import",
+    )
+
+    assert jane.name_key == name_key("Jane Example")
+    assert jane.link_key == "linkedin.com/in/jane"
+    assert jane.source == "import"
+    assert (await repo.get(jane.id)) is not None
+    assert [c.name for c in await repo.list_for_company(company_id)] == [
+        "Jane Example",
+        "Zed Sample",
+    ]
+
+    updated = await repo.update(
+        jane.id, fields("Jane Q Example", role="Talent Lead", confidence="high")
+    )
+    assert updated.name == "Jane Q Example"
+    assert updated.name_key == name_key("Jane Q Example")
+    assert updated.link_key is None  # the link was not given, so it is cleared
+    assert updated.role == "Talent Lead"
+    assert updated.source == "import"  # an edit does not change where the row came from
+
+    await repo.delete(zed.id)
+    assert await repo.get(zed.id) is None
+    assert [c.name for c in await repo.list_for_company(company_id)] == ["Jane Q Example"]
+
+
+async def test_repo_find_by_name_key_and_by_link_key(db_session: AsyncSession) -> None:
+    repo = ContactsRepo(db_session)
+    company_id = await own_company(db_session)
+    other_id = await own_company(db_session, "Other Co")
+    jane = await repo.add(
+        company_id, fields(linkedin_url="https://linkedin.com/in/jane-example"), source="typed"
+    )
+    await repo.add(
+        other_id, fields(linkedin_url="https://linkedin.com/in/jane-example"), source="typed"
+    )
+
+    by_name = await repo.find_by_name_key(company_id, name_key("JANE  example"))
+    by_link = await repo.find_by_link_key(company_id, link_key("linkedin.com/in/jane-example/"))
+
+    assert by_name is not None
+    assert by_name.id == jane.id
+    assert by_link is not None
+    assert by_link.id == jane.id
+    assert await repo.find_by_name_key(company_id, "nobody") is None
+    assert await repo.find_by_link_key(company_id, "linkedin.com/in/nobody") is None
+    assert await repo.find_by_link_key(company_id, None) is None
+
+
+async def test_repo_duplicate_name_key_is_refused(db_session: AsyncSession) -> None:
+    repo = ContactsRepo(db_session)
+    company_id = await own_company(db_session)
+    await repo.add(company_id, fields("Jane Example"), source="typed")
+
+    with pytest.raises(IntegrityError):
+        async with db_session.begin_nested():
+            await repo.add(company_id, fields("jane  EXAMPLE"), source="typed")
+
+
+async def test_repo_counts_per_company_in_one_query(db_session: AsyncSession) -> None:
+    contacts = ContactsRepo(db_session)
+    notes = NotesRepo(db_session)
+    busy = await own_company(db_session, "Busy Co")
+    noted = await own_company(db_session, "Noted Co")
+    empty = await own_company(db_session, "Empty Co")
+    await contacts.add(busy, fields("A One"), source="typed")
+    await contacts.add(busy, fields("B Two"), source="typed")
+    await notes.set(busy, "Called twice.", source="typed")
+    await notes.set(noted, "Only a note.", source="import")
+
+    statements: list[str] = []
+    sync_engine = db_session.bind.sync_engine  # type: ignore[union-attr]
+
+    def capture(conn: Any, cursor: Any, statement: str, *rest: Any) -> None:
+        statements.append(statement)
+
+    event.listen(sync_engine, "before_cursor_execute", capture)
+    try:
+        counts = await contacts.counts_by_company()
+    finally:
+        event.remove(sync_engine, "before_cursor_execute", capture)
+
+    assert counts[busy] == (2, True)
+    assert counts[noted] == (0, True)
+    assert counts[empty] == (0, False)
+    assert len(statements) == 1
+
+
+async def test_repo_note_upsert_and_delete_on_empty(db_session: AsyncSession) -> None:
+    repo = NotesRepo(db_session)
+    company_id = await own_company(db_session)
+    assert await repo.get(company_id) is None
+
+    await repo.set(company_id, "First note.", source="import")
+    first = await repo.get(company_id)
+    assert first is not None
+    assert (first.body, first.source) == ("First note.", "import")
+
+    await repo.set(company_id, "Edited by hand.", source="typed")
+    second = await repo.get(company_id)
+    assert second is not None
+    assert (second.body, second.source) == ("Edited by hand.", "typed")
+    assert await count(db_session, "company_notes") == 1
+
+    await repo.set(company_id, None, source="typed")  # an empty note removes the row
+    assert await repo.get(company_id) is None
+    await repo.set(company_id, None, source="typed")  # and removing nothing is fine
