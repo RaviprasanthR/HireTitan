@@ -1,12 +1,14 @@
 import {
   ArrowDown,
   ArrowUp,
+  Briefcase,
   ChevronDown,
   ChevronUp,
   Eye,
   EyeOff,
   Globe,
   Pencil,
+  Search,
   StickyNote,
   Trash2,
   Users,
@@ -36,7 +38,7 @@ const AREAS: { area: Area; label: string }[] = [
   { area: 'qa', label: 'QA' },
 ]
 type Show = 'all' | 'contacts' | Area
-type SortKey = 'name' | 'city' | 'contacts' | 'note' | Area
+type SortKey = 'name' | 'city' | 'openings' | 'contacts' | 'note'
 type Sort = { key: SortKey; dir: 'asc' | 'desc' }
 
 const countOf = (company: Company, area: Area): number | null =>
@@ -50,10 +52,34 @@ const AREA_STYLE: Record<Area, string> = {
 }
 const CHIP = 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs whitespace-nowrap'
 
-/** The open roles by area: each count opens the jobs behind it; a company never searched has none. */
-function Openings({ company }: { company: Company }) {
-  if (!company.openings)
-    return <span className="text-xs text-muted-small">Open roles: Not searched yet</span>
+const totalOf = (company: Company): number | null =>
+  company.openings ? AREAS.reduce((sum, { area }) => sum + (countOf(company, area) ?? 0), 0) : null
+
+/** The row shows one number: all the open roles. It opens the company's jobs in Explore; a company
+ * never searched has no number, and zero has nothing to open. */
+function OpenTotal({ company }: { company: Company }) {
+  const total = totalOf(company)
+  if (total === null) return <span className="text-xs text-muted-small">Not searched yet</span>
+  const text = `${total} open roles`
+  return total > 0 ? (
+    <Link
+      to={`/?company_id=${company.id}`}
+      className={`${CHIP} w-fit bg-sky-500/15 text-sky-300 transition-colors hover:bg-sky-500/30`}
+    >
+      <Briefcase aria-hidden className="size-3" />
+      {text}
+    </Link>
+  ) : (
+    <span className={`${CHIP} w-fit bg-white/5 text-muted-small opacity-70`}>
+      <Briefcase aria-hidden className="size-3" />
+      {text}
+    </span>
+  )
+}
+
+/** The open roles by area, shown in the expanded details: each count opens the jobs behind it. */
+function Breakdown({ company }: { company: Company }) {
+  if (!company.openings) return <>Not searched yet</>
   return (
     <span className="flex flex-wrap items-center gap-1.5">
       {AREAS.map(({ area, label }) => {
@@ -162,7 +188,7 @@ function EditForm({ company, onDone }: { company: Company; onDone: () => void })
 
 // The columns of the list: the header row and every company row share them, so they line up.
 const COLUMNS =
-  'md:grid md:grid-cols-[minmax(9rem,14rem)_minmax(6rem,9rem)_17rem_8.5rem_minmax(8rem,1fr)_10rem] md:items-center md:gap-x-4'
+  'md:grid md:grid-cols-[minmax(9rem,14rem)_minmax(6rem,9rem)_9rem_8.5rem_minmax(8rem,1fr)_10rem] md:items-center md:gap-x-4'
 
 const shortUrl = (url: string) => url.replace(/^https?:\/\//, '').replace(/\/$/, '')
 
@@ -184,6 +210,7 @@ function Details({ company, checked }: { company: Company; checked: string | nul
     : 'Not checked yet'
   const rows: [string, React.ReactNode][] = [
     ['Location', company.city ?? '—'],
+    ['Open roles', <Breakdown key="roles" company={company} />],
     ['Website', company.website ? <ExternalLink url={company.website} /> : '—'],
     ['Careers page', company.careers_url ? <ExternalLink url={company.careers_url} /> : '—'],
     ['Job board', board],
@@ -227,14 +254,17 @@ function CompanyRow({ company, manual }: { company: Company; manual: boolean }) 
   const checked = company.last_checked_at ? formatDay(company.last_checked_at.slice(0, 10)) : null
 
   return (
-    <li aria-label={company.name} className="space-y-2 rounded-lg bg-surface px-3 py-1">
+    <li
+      aria-label={company.name}
+      className="space-y-2 rounded-lg bg-surface px-3 py-1 ring-1 ring-transparent transition duration-200 ease-out hover:-translate-y-px hover:bg-white/[0.04] hover:shadow-[0_8px_24px_-12px_rgba(76,201,240,0.45)] hover:ring-cyan-400/30 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+    >
       <div className={`flex min-h-8 flex-wrap items-center gap-x-4 gap-y-1 ${COLUMNS}`}>
         <h2 className="min-w-0 truncate font-semibold">
           {company.name}
           {company.hidden && <span className="ml-2 text-sm text-muted-small">(hidden)</span>}
         </h2>
         <span className="min-w-0 truncate text-sm text-muted-small">{company.city ?? ''}</span>
-        <Openings company={company} />
+        <OpenTotal company={company} />
         <span
           className={`${CHIP} w-fit ${
             company.contact_count > 0
@@ -379,11 +409,9 @@ const TEXT_SORTS: SortKey[] = ['name', 'city', 'note']
 const SORT_NAMES: Record<SortKey, string> = {
   name: 'company',
   city: 'location',
+  openings: 'open roles',
   contacts: 'contacts',
   note: 'note',
-  frontend: 'front end openings',
-  backend: 'back end openings',
-  qa: 'QA openings',
 }
 
 /** Compare two companies on one column. A missing value (no city, no note, never searched) is
@@ -394,7 +422,7 @@ function compareBy(sort: Sort) {
     if (sort.key === 'city') return c.city ? c.city.toLowerCase() : null
     if (sort.key === 'note') return c.note_preview ? c.note_preview.toLowerCase() : null
     if (sort.key === 'contacts') return c.contact_count
-    return countOf(c, sort.key)
+    return totalOf(c)
   }
   const sign = sort.dir === 'asc' ? 1 : -1
   return (a: Company, b: Company) => {
@@ -446,18 +474,11 @@ function HeaderRow({ sort, onSort }: { sort: Sort; onSort: (key: SortKey) => voi
   }
   return (
     <div
-      className={`hidden px-3 text-xs tracking-wide text-muted-small [scrollbar-gutter:stable] overflow-hidden ${COLUMNS}`}
+      className={`hidden overflow-hidden rounded-lg border border-cyan-300/15 bg-cyan-400/10 px-3 py-2 text-xs font-semibold tracking-wider text-cyan-100/80 shadow-sm [scrollbar-gutter:stable] ${COLUMNS}`}
     >
       {button('name', 'Company')}
       {button('city', 'Location')}
-      <span className="flex items-center gap-1">
-        <span aria-hidden className="-ml-1 px-1 uppercase">
-          Open roles
-        </span>
-        {AREAS.map(({ area }) =>
-          button(area, area === 'qa' ? 'QA' : area === 'frontend' ? 'FE' : 'BE'),
-        )}
-      </span>
+      {button('openings', 'Open roles')}
       {button('contacts', 'Contacts')}
       {button('note', 'Note')}
       <span />
@@ -472,11 +493,19 @@ export function CompaniesPage() {
   const [tools, setTools] = useState(false)
   const companies = useCompanies(filter)
   const [show, setShow] = useState<Show>('all')
+  const [query, setQuery] = useState('')
   const [sort, setSort] = useState<Sort>({ key: 'name', dir: 'asc' })
   const all = companies.data?.items ?? []
-  const shown = all.filter((c) =>
-    show === 'all' ? true : show === 'contacts' ? c.contact_count > 0 : (countOf(c, show) ?? 0) > 0,
-  )
+  const needle = query.trim().toLowerCase()
+  const shown = all
+    .filter((c) =>
+      show === 'all'
+        ? true
+        : show === 'contacts'
+          ? c.contact_count > 0
+          : (countOf(c, show) ?? 0) > 0,
+    )
+    .filter((c) => !needle || `${c.name} ${c.city ?? ''}`.toLowerCase().includes(needle))
   const items = [...shown].sort(compareBy(sort))
   // A new column starts with its natural order: A to Z for text, most first for counts.
   const sortBy = (key: SortKey) =>
@@ -514,6 +543,20 @@ export function CompaniesPage() {
       <div className="shrink-0 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-semibold">Companies</h1>
+          <label className="relative min-w-48 flex-1 sm:max-w-sm">
+            <Search
+              aria-hidden
+              className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-small"
+            />
+            <input
+              type="search"
+              aria-label="Search companies"
+              placeholder="Search companies…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className={`${inputClass} w-full pl-8`}
+            />
+          </label>
           <div className="flex gap-2">
             <Button
               type="button"

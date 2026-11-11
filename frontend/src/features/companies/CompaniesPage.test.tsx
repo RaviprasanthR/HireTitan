@@ -304,7 +304,7 @@ describe('CompaniesPage', () => {
 
   describe('open roles (US3)', () => {
     const busy = company('b', 'Busy', { openings: { frontend: 2, backend: 0, qa: 1 } })
-    const quiet = company('q', 'Quiet', { openings: { frontend: 0, backend: 3, qa: 0 } })
+    const quiet = company('q', 'Quiet', { openings: { frontend: 0, backend: 4, qa: 0 } })
     const never = company('n', 'Never')
     const talked = company('t', 'Talked', { contact_count: 2, openings: null })
     const all = (call: Call) =>
@@ -317,27 +317,57 @@ describe('CompaniesPage', () => {
         .getAllByRole('heading', { level: 2 })
         .map((h) => h.textContent)
 
-    it('US3_AS1_counts_link_to_the_companys_jobs', async () => {
+    it('US3_AS1_the_row_shows_the_total_and_the_details_show_each_area', async () => {
+      const user = userEvent.setup()
       renderPage(all)
       await screen.findByRole('list', { name: 'Companies' })
+      const row = rowOf('Busy')
 
-      const front = within(rowOf('Busy')).getByRole('link', { name: 'Front end: 2' })
-      expect(front).toHaveAttribute('href', '/?company_id=b&area=frontend')
-      expect(within(rowOf('Busy')).getByRole('link', { name: 'QA: 1' })).toHaveAttribute(
+      const total = within(row).getByRole('link', { name: '3 open roles' })
+      expect(total).toHaveAttribute('href', '/?company_id=b')
+      expect(within(row).queryByText(/Front end/)).toBeNull() // the split is in the details
+
+      await user.click(within(row).getByRole('button', { name: 'Details for Busy' }))
+
+      const details = within(row).getByRole('region', { name: 'Details for Busy' })
+      expect(within(details).getByRole('link', { name: 'Front end: 2' })).toHaveAttribute(
+        'href',
+        '/?company_id=b&area=frontend',
+      )
+      expect(within(details).getByRole('link', { name: 'QA: 1' })).toHaveAttribute(
         'href',
         '/?company_id=b&area=qa',
       )
       // A count of zero has nothing to open.
-      expect(within(rowOf('Busy')).queryByRole('link', { name: /Back end/ })).toBeNull()
-      expect(within(rowOf('Busy')).getByText('Back end: 0')).toBeInTheDocument()
+      expect(within(details).queryByRole('link', { name: /Back end/ })).toBeNull()
+      expect(within(details).getByText('Back end: 0')).toBeInTheDocument()
+    })
+
+    it('a company with no open roles shows 0 and has nothing to open', async () => {
+      renderPage((call) =>
+        call.path.startsWith('/companies')
+          ? { items: [company('z', 'Zero', { openings: { frontend: 0, backend: 0, qa: 0 } })] }
+          : undefined,
+      )
+      const row = await screen.findByRole('listitem', { name: 'Zero' })
+
+      expect(within(row).getByText('0 open roles')).toBeInTheDocument()
+      expect(within(row).queryByRole('link', { name: /open roles/ })).toBeNull()
     })
 
     it('US3_AS5_shows_not_searched_yet_not_zero', async () => {
+      const user = userEvent.setup()
       renderPage(all)
       await screen.findByRole('list', { name: 'Companies' })
+      const row = rowOf('Never')
 
-      expect(within(rowOf('Never')).getByText('Open roles: Not searched yet')).toBeInTheDocument()
-      expect(within(rowOf('Never')).queryByText(/Front end/)).toBeNull()
+      expect(within(row).getByText('Not searched yet')).toBeInTheDocument()
+      expect(within(row).queryByText(/open roles/)).toBeNull()
+      await user.click(within(row).getByRole('button', { name: 'Details for Never' }))
+      expect(within(row).getByRole('region', { name: 'Details for Never' })).toHaveTextContent(
+        'Not searched yet',
+      )
+      expect(within(row).queryByText(/Front end/)).toBeNull()
     })
 
     it('FR020_filter_by_has_back_end_openings_shows_only_that_company', async () => {
@@ -375,20 +405,22 @@ describe('CompaniesPage', () => {
       expect(names()).toEqual(['Talked'])
     })
 
-    it('FR020_sort_by_front_end_openings_from_the_header', async () => {
+    it('FR020_sort_by_open_roles_from_the_header', async () => {
       const user = userEvent.setup()
       renderPage(all)
       await screen.findByRole('list', { name: 'Companies' })
+      // There is one Open roles column; the split by area is not a header control.
+      expect(screen.queryByRole('button', { name: /front end openings/i })).toBeNull()
 
-      await user.click(screen.getByRole('button', { name: /Sort by front end openings/ }))
+      await user.click(screen.getByRole('button', { name: /Sort by open roles/ }))
 
       // Most first; a company never searched goes last.
-      expect(names()[0]).toBe('Busy')
+      expect(names().slice(0, 2)).toEqual(['Quiet', 'Busy'])
       expect(names().slice(-2)).toEqual(expect.arrayContaining(['Never', 'Talked']))
 
-      await user.click(screen.getByRole('button', { name: /Sort by front end openings/ }))
+      await user.click(screen.getByRole('button', { name: /Sort by open roles/ }))
 
-      expect(names()[0]).toBe('Quiet') // fewest first; never searched is still last
+      expect(names().slice(0, 2)).toEqual(['Busy', 'Quiet']) // fewest first, never searched last
       expect(names().slice(-2)).toEqual(expect.arrayContaining(['Never', 'Talked']))
     })
 
@@ -428,6 +460,38 @@ describe('CompaniesPage', () => {
       await user.click(screen.getByRole('button', { name: /Sort by company/ }))
 
       expect(names()).toEqual(['Charlie', 'Bravo', 'Alpha'])
+    })
+
+    it('a search box finds a company by name or city as you type', async () => {
+      const user = userEvent.setup()
+      renderPage(rows)
+      await screen.findByRole('list', { name: 'Companies' })
+      const box = screen.getByRole('searchbox', { name: 'Search companies' })
+
+      await user.type(box, 'ALP')
+      expect(names()).toEqual(['Alpha']) // any case
+
+      await user.clear(box)
+      await user.type(box, 'chennai')
+      expect(names()).toEqual(['Charlie']) // by city too
+
+      await user.clear(box)
+      await user.type(box, 'zzz')
+      expect(screen.getByText('No companies match this filter.')).toBeInTheDocument()
+
+      await user.clear(box)
+      expect(names()).toEqual(['Alpha', 'Bravo', 'Charlie'])
+    })
+
+    it('searching keeps the chosen sort order', async () => {
+      const user = userEvent.setup()
+      renderPage(rows)
+      await screen.findByRole('list', { name: 'Companies' })
+      await user.click(screen.getByRole('button', { name: /Sort by company/ })) // Z to A
+
+      await user.type(screen.getByRole('searchbox', { name: 'Search companies' }), 'a')
+
+      expect(names()).toEqual(['Charlie', 'Bravo', 'Alpha']) // all three have an a
     })
 
     it('sorts by location, and by note text, with empty values last', async () => {
