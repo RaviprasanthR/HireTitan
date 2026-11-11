@@ -594,6 +594,39 @@ class ContactsRepo:
         return {company_id: (int(n), bool(noted)) for company_id, n, noted in result.all()}
 
 
+class OpeningsRepo:
+    """Reads for the open-role counts (feature 002b, US3). Only Explore jobs that are listed."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def explore_titles(self) -> list[tuple[UUID, bool, str | None]]:
+        """One statement for every company: ``(id, searched, title)``, title ``None`` if no job."""
+        result = await self._session.execute(
+            select(CompanyRow.id, CompanyRow.last_checked_at.is_not(None), JobRow.title).outerjoin(
+                JobRow,
+                and_(
+                    JobRow.company_id == CompanyRow.id,
+                    JobRow.state == JobState.explore.value,
+                    JobRow.listed.is_(True),
+                ),
+            )
+        )
+        return [(company_id, bool(searched), title) for company_id, searched, title in result.all()]
+
+    async def explore_jobs(self, company_id: UUID) -> list[JobRow]:
+        result = await self._session.execute(
+            select(JobRow)
+            .where(
+                JobRow.company_id == company_id,
+                JobRow.state == JobState.explore.value,
+                JobRow.listed.is_(True),
+            )
+            .order_by(JobRow.sort_key.desc(), JobRow.id)
+        )
+        return list(result.scalars())
+
+
 def _apply_contact_fields(row: ContactRow, fields: ContactFields) -> None:
     row.name = fields.name
     row.name_key = name_key(fields.name)
