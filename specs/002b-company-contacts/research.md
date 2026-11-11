@@ -1,4 +1,4 @@
-# Research: Company contacts, notes and open roles (002b)
+# Research: Company contacts, notes and the applied flag (002b)
 
 No `NEEDS CLARIFICATION` remains in the plan. Each item below is a design choice that could reasonably go another way.
 
@@ -54,6 +54,8 @@ No `NEEDS CLARIFICATION` remains in the plan. Each item below is a design choice
 
 ## R6. Open-role counts: derived, with a pure title classifier
 
+> **Superseded 2026-11-11.** The open-role counts and the title classifier were removed at the maintainer's request (open roles go stale). The page shows the applied flag instead; see the change note in `spec.md`. Kept for the record.
+
 - **Decision**: no new column and no stored count. The Companies list runs one query for `(company_id, title)` of jobs with `state = 'explore'` and `listed = true`, and the pure function `areas_of(title)` returns a set of `frontend`, `backend`, `qa`. The application layer counts per company. A company with `last_checked_at IS NULL` returns `openings = null` ("not searched yet", FR-019). The click-through uses `GET /jobs?list=explore&company_id=…&area=…`; `area` is allowed only together with `company_id` (at most tens of rows), is classified in Python, and the whole set is returned without a cursor.
 - **Classifier**: lower-case tokens. `frontend`, `front end`, `front-end`, `react`, `angular`, `vue`, `ui` → front end. `backend`, `back end`, `back-end`, `api`, `python`, `java`, `golang`, `node`, `server` → back end; `Go` counts only when written with a capital in the original title. `qa`, `sdet`, `test`, `tester`, `testing`, `quality` → QA. `full stack` or `fullstack` → front end and back end. A title with `designer`, `recruiter`, `sales`, `marketing` or `writer` is excluded unless it also has an engineering word (`engineer`, `developer`, `sdet`).
 - **Rationale**: derived counts cannot drift from the Explore list (SC-005). A column on `jobs` would need a backfill migration that imports domain code, and every rule change would need another backfill. Jobs per install are in the low thousands, so one narrow query is cheap.
@@ -78,7 +80,7 @@ No `NEEDS CLARIFICATION` remains in the plan. Each item below is a design choice
 
 ## R10. The page: where the data shows
 
-- **Decision**: the Companies list gains per row: contact count, a note marker, three opening counts (or "not searched yet"), and client-side sort and filter ("has contacts", "has front end / back end / QA openings"). The list endpoint already returns all companies (002), so filtering on the client adds no endpoint. Opening a company shows a panel with its contacts (add, edit, delete with confirmation) and its note. Job detail shows the same panel for the job's `company_id`. All text renders as text; emails and phones are plain text; the LinkedIn link is an `<a target="_blank" rel="noopener noreferrer">`.
+- **Decision**: the Companies list gains per row: contact count, a note marker, the applied flag (changed 2026-11-11; it replaced the three opening counts), and client-side sort and filter ("has contacts", "has an application"). The list endpoint already returns all companies (002), so filtering on the client adds no endpoint. Opening a company shows a panel with its contacts (add, edit, delete with confirmation) and its note. Job detail shows the same panel for the job's `company_id`. All text renders as text; emails and phones are plain text; the LinkedIn link is an `<a target="_blank" rel="noopener noreferrer">`.
 - **Rationale**: two clicks or fewer from the page or from a job (SC-004). Server-side sorting is only needed if the list grows past a few hundred rows; it can be added later behind the same response shape.
 
 ## R11. Validation of typed and imported contacts

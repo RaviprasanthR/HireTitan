@@ -1,4 +1,4 @@
-# Data Model: Company contacts, notes and open roles (002b)
+# Data Model: Company contacts, notes and the applied flag (002b)
 
 Both tables live in the `app` schema and follow 001's conventions: UUIDv7 primary keys, `created_at` and `updated_at`, named constraints (`ck_…`, `uq_…`, `fk_…`, `ix_…`), SQLAlchemy models in `search/infra/models.py`. They are owned by the existing **`search`** module. Migration: `0015_company_contacts` (parent `0014_job_role_short` from feature 002). No change to `companies` or `jobs`.
 
@@ -34,9 +34,9 @@ Constraints and indexes:
 | body | text | 1–5,000 chars. Saving an empty note deletes the row |
 | source | text | `import` \| `typed`. An import sets `import`; any edit by hand sets `typed` (research R5) |
 
-### Open-role count (derived, not stored)
+### Applied flag (derived, not stored)
 
-Per company, from `jobs` where `company_id` matches, `state = 'explore'` and `listed = true`: the number of jobs whose title falls in each area (`areas_of(title)`, research R6). `null` for the whole value when `companies.last_checked_at IS NULL`. A job can count in more than one area (full stack: front end and back end); a job in no area counts nowhere.
+Per company: true when any `jobs` row with that `company_id` has `state = 'applied'`. Computed at read time with one query (`AppliedCompaniesRepo.company_ids`); nothing is stored and nothing can drift. (Replaces the open-role counts, 2026-11-11.)
 
 ### Import result (not stored)
 
@@ -59,7 +59,7 @@ SheetResult  = {matched, companies_added, contacts_added, contacts_updated, note
 - `ParsedContact {name, role, confidence, linkedin_url, email, phone, note}` and `ParsedCell {contacts: tuple[ParsedContact], leftover: tuple[str]}` returned by `contacts_cell.parse`, rendered back by `contacts_cell.render`.
 - `SheetRow {line, name, city, website, careers_url, contacts_cell, notes_cell}` and `SheetLayout {header_line, used, ignored}` from `sheet.read`.
 - `MatchResult = Matched(company_id) | NoMatch | Ambiguous(names)` from `company_match.match`.
-- `Area = Literal["frontend", "backend", "qa"]` and `areas_of(title) -> frozenset[Area]`.
+- (Removed 2026-11-11 with the open-role counts: the `Area` type and `areas_of`.)
 
 ## State and lifecycle
 
@@ -76,11 +76,11 @@ shipped list updated ──▶ built-in company rows updated in place, same id �
 | Where | Change |
 |---|---|
 | `setup_wiring.py` (wipe store) | none: it truncates every `app` table. A test proves the new tables are emptied |
-| `search/application/companies.py` | `CompanyView` gains `contact_count`, `has_note`, `openings` (null or `{frontend, backend, qa}`) |
+| `search/application/companies.py` | `CompanyView` gains `contact_count`, `has_note`, `note_preview` and `has_application` |
 | `search/application/companies_csv.py` | `export_csv(rows, contacts=None)`: with contacts adds the `contacts` and `notes` columns |
 | `ImportPreviews` (api/companies.py) | holds any plan object, not only a list of `ImportRow` |
 | `search/application/discovery.py` | new `add_company_from_import`: like 002's `add_company` but the careers link is optional (a sheet row can have only a name) |
-| `GET /jobs` | gains `company_id` and `area` filters (the contract in 002 already lists `company_id` among the filters) |
+| `GET /jobs` | the `company_id` filter (002 already lists it among the filters); no `area` filter |
 
 ## Validation summary (from the requirements)
 

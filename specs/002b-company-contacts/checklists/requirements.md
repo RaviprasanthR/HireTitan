@@ -1,4 +1,4 @@
-# Specification Quality Checklist: Company contacts, notes and open roles
+# Specification Quality Checklist: Company contacts, notes and the applied flag
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
 **Created**: 2026-11-08

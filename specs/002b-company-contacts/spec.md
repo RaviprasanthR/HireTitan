@@ -1,4 +1,4 @@
-# Feature Specification: Company contacts, notes and open roles
+# Feature Specification: Company contacts, notes and the applied flag
 
 **Feature Branch**: `002b-company-contacts`
 
@@ -59,7 +59,7 @@ On the Companies page, each company shows how many contacts and whether it has a
 
 ---
 
-### User Story 3 - See which companies have open front end, back end and QA roles (Priority: P2)
+### User Story 3 - See which companies have open front end, back end and QA roles (Priority: P2) - DROPPED 2026-11-11 (see the change note above)
 
 The Companies page shows, per company, how many open jobs HireTitan has found there for front end, back end and QA roles, from HireTitan's own search results. The person can sort or filter by these counts to see which companies are worth their time right now. The openings columns in an imported sheet are a stale snapshot and are not used for these counts.
 
@@ -135,7 +135,7 @@ Contacts and notes stay in the person's own install. They are never written to t
 - **FR-014**: When a job is opened in Explore or Applied, the contacts and note of its company MUST be shown with it.
 - **FR-015**: HireTitan MUST NOT open, fetch or read any contact link, MUST NOT send any message, email, connection request or application to a contact, and MUST NOT look up people on any site.
 
-**Open-role counts**
+**Open-role counts (dropped 2026-11-11)**
 
 - **FR-016**: The Companies page MUST show per company the number of open jobs found by HireTitan in each of three areas: front end, back end, QA; each count MUST link to those jobs.
 - **FR-017**: A job MUST be placed in areas by its title (and, when available, the short role from feature 002); a full stack job counts as front end and back end; a job that fits no area is not counted.
@@ -168,7 +168,7 @@ Contacts and notes stay in the person's own install. They are never written to t
 - **SC-002**: Re-importing the same file creates 0 new contacts, companies or notes.
 - **SC-003**: Every skipped row is listed with a reason; 0 rows are dropped without being reported.
 - **SC-004**: The person can see who to contact at a company in 2 clicks or fewer from the Companies page or from a job.
-- **SC-005**: Open-role counts match the jobs in Explore for 100% of companies in a test set, and title-to-area placement is correct for at least 95% of a labelled set of 100 synthetic job titles.
+- **SC-005** (dropped 2026-11-11): Open-role counts match the jobs in Explore for 100% of companies in a test set, and title-to-area placement is correct for at least 95% of a labelled set of 100 synthetic job titles.
 - **SC-006**: 0 AI calls contain contact data or company notes, checked by recording every AI call during a search with contacts present.
 - **SC-007**: After Delete all my data, 0 contacts and 0 notes remain; the default export contains 0 contact fields.
 

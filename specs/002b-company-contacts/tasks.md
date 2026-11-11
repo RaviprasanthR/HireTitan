@@ -2,7 +2,7 @@
 description: "Task list for 002b-company-contacts"
 ---
 
-# Tasks: Company contacts, notes and open roles
+# Tasks: Company contacts, notes and the applied flag
 
 **Input**: Design documents from `specs/002b-company-contacts/`
 
@@ -82,7 +82,7 @@ description: "Task list for 002b-company-contacts"
 
 ---
 
-## Phase 5: User Story 3 - Open front end, back end and QA roles (Priority: P2)
+## Phase 5: User Story 3 - Open front end, back end and QA roles (Priority: P2) - DROPPED 2026-11-11 (built, then removed; see the change note)
 
 **Goal**: per-company open-role counts from HireTitan's own jobs, with filters and click-through.
 

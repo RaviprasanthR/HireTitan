@@ -1,4 +1,4 @@
-# Implementation Plan: Company contacts, notes and open roles
+# Implementation Plan: Company contacts, notes and the applied flag
 
 **Branch**: `002b-company-contacts` | **Date**: 2026-11-08 | **Spec**: [spec.md](spec.md)
 
@@ -9,7 +9,7 @@
 On the Companies page, each company gains three things that belong to the person:
 - **Contacts** (name, role, LinkedIn link, email, phone, confidence, note) that they type or import.
 - **One private note.**
-- **Live counts** of open front end, back end and QA jobs, derived from the jobs 002 already stores.
+- **Applied flag** (changed 2026-11-11, replacing the open-role counts): whether the person has an application at each company, derived from the jobs 002 already stores.
 
 Approach, in one paragraph: a sheet importer reads the maintainer-style spreadsheet (CSV download) with a tolerant header finder and a contacts-cell parser. It shows a preview (same preview-then-confirm pattern as 002's company import), then attaches contacts and notes to companies matched by website, then name. Unknown companies are added as the person's own. Re-imports are idempotent through a unique key on `(company, name)`. Open-role counts are not stored: a pure title classifier runs over the company's open Explore jobs at read time. Contacts never reach any AI call, enforced by an import-linter contract and a recorded-calls test. Delete-all already truncates every `app` table; a test proves the new tables are covered.
 
@@ -36,7 +36,7 @@ Design decisions are in [research.md](research.md).
 
 **Project Type**: web application (api + worker + SPA), extending 001 and 002. No worker or workflow change: everything here is request/response.
 
-**Performance Goals**: importing the 62-row sheet in under 10 s (SC-001; expected well under 1 s); the Companies list with counts in three queries (companies, contact and note counts, open jobs), no per-company query.
+**Performance Goals**: importing the 62-row sheet in under 10 s (SC-001; expected well under 1 s); the Companies list in four queries (companies, contact counts, note previews, applied companies), no per-company query.
 
 **Constraints**:
 - No outbound action; no link is fetched or opened by the server (FR-015).
@@ -93,11 +93,9 @@ backend/
 │   │   ├── contacts_cell.py     # contacts-cell parser and renderer (pure; round-trips)
 │   │   ├── sheet.py             # header finder, column aliases, row reader (pure)
 │   │   ├── company_match.py     # website and name keys, match result (pure)
-│   │   └── job_area.py          # title -> {frontend, backend, qa} (pure)
 │   ├── application/
 │   │   ├── contacts.py          # contact CRUD, note get/set
 │   │   ├── sheet_import.py      # preview_sheet / apply_sheet (reuses the add-company path)
-│   │   ├── openings.py          # open-role counts per company; a company's jobs by area
 │   │   └── companies_csv.py     # (002 file) export gains include_contacts
 │   ├── infra/
 │   │   ├── models.py            # (002 file) + ContactRow, CompanyNoteRow
@@ -105,13 +103,12 @@ backend/
 │   └── api/
 │       ├── companies.py         # (002 file) + counts on the list, sheet-import routes, export flag
 │       ├── contacts.py          # /companies/{id}/contacts, /companies/{id}/note
-│       └── jobs.py              # (002 file) + area filter with company_id
 └── tests/
-    ├── unit/search/             # sheet, contacts_cell, company_match, job_area, contacts
+    ├── unit/search/             # sheet, contacts_cell, company_match, contacts
     ├── integration/search/      # repos, uniqueness, cascade, delete-all, seed guard
-    ├── api/search/              # sheet import, contacts, notes, openings, export
+    ├── api/search/              # sheet import, contacts, notes, export
     ├── security/test_contacts_privacy.py   # no AI call, no HTTP client, no send path
-    └── fixtures/sheets/         # synthetic sheet CSVs, job_titles_labelled.csv
+    └── fixtures/sheets/         # synthetic sheet CSVs
 
 frontend/src/features/
 ├── companies/                   # (002) + count columns, filters, company panel, sheet import dialog

@@ -28,12 +28,6 @@ Rows in: 13. Matched: 3 (Alpha, Beta, Gamma). Added: 8. Skipped: 2.
 **Contacts expected after import (SC-001): 30** = 3 (Alpha) + 1 (Beta) + 1 (Delta) + 20 (Epsilon)
 + 2 (Eta) + 1 (Theta) + 1 (Iota) + 1 (Lambda). The openings columns are ignored (FR-008).
 
-## job_titles_labelled.csv
-
-100 synthetic job titles with the areas a person would expect (`frontend`, `backend`, `qa`,
-`none`, or `frontend|backend`). Used by the SC-005 accuracy test. Labels are written from common
-sense, not from the classifier: never edit them to make the code pass.
-
 ## not_a_sheet.csv
 
 A CSV with no company-name column; the importer must refuse it and list the headers it saw.

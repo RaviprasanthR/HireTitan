@@ -1,4 +1,4 @@
-# Quickstart: validating company contacts, notes and open roles (002b)
+# Quickstart: validating company contacts, notes and the applied flag (002b)
 
 A run-through that proves the feature works end to end. Prerequisites: feature 002 merged into the branch (see the dependency note in [plan.md](plan.md)), Docker Desktop running (tests use Testcontainers), a confirmed profile and approved search rules (the 002 quickstart sets these up). Contracts: [rest-api.md](contracts/rest-api.md). Tables: [data-model.md](data-model.md).
 
@@ -6,7 +6,7 @@ A run-through that proves the feature works end to end. Prerequisites: feature 0
 
 ```bash
 cd backend
-uv run pytest tests/unit/search tests/integration/search tests/api/search tests/security -k "contacts or sheet or openings or job_area or company_match"
+uv run pytest tests/unit/search tests/integration/search tests/api/search tests/security -k "contacts or sheet or company_match"
 uv run lint-imports
 cd ../frontend && npm run typecheck && npm test
 ```
@@ -21,9 +21,9 @@ Expected: all green. `lint-imports` fails if the workflows, prompts or LLM port 
    - It shows companies matched and to add, contacts to add, notes to set, and the rows it will skip with reasons (one with no company name, one that matches two companies).
 3. **Confirm**. The result shows matched, companies added, contacts added, notes set, and the skipped rows. A company that was on the shipped list keeps its name, city, careers link and job board.
 4. Import the same file again. The preview says nothing to add or update (SC-002).
-5. On the Companies page, check each company row: contact count, note marker, and three opening counts or "not searched yet". Sort by back end openings; filter by "has contacts".
+5. On the Companies page, check each company row: contact count, the note preview and the Applied chip. Filter by "has contacts" or "has an application"; click a column header to sort (a second click reverses it); type in the search box to find a company by name or city.
 6. Open a company: see its contacts (name, role, confidence, LinkedIn link) and note. Add a contact with only a name; edit one; type a bad link (`not a link`) and see the error; delete one and confirm. Edit the note, then re-import the sheet: your edited note stays and the result says so.
-7. Run a search (Explore → Search now). Counts update from the new jobs. Click a count: you land on that company's jobs for that area (the same number).
+7. In Explore, mark a job as applied (**I applied**): that company shows **Applied** on the Companies page. Undo it and the chip goes away.
 8. Open a job in Explore: its company's contacts and note are shown with it.
 9. Export the company list. The file has no contact data. Export again with **Include contacts and notes**: the `contacts` and `notes` columns appear. Settings → Delete all my data → the company list is back to the shipped state with no contacts or notes. Import the opt-in export: contacts are back.
 
