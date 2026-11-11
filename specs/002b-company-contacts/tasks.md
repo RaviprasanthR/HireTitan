@@ -117,8 +117,8 @@ description: "Task list for 002b-company-contacts"
 
 - [x] T028 [P] Playwright: add a contacts step to `frontend/e2e/job-search.spec.ts` against the synthetic stack (import `product_companies_sample.csv`, see counts, open a company, add a contact, run a search, click a count, export with contacts, delete all, assert empty). SC-004: assert that a company's contacts are reached in two clicks or fewer from the Companies page.
 - [x] T029 [P] Docs: add a section "Company contacts and notes" to `docs/user-guide/` (how to export a sheet as CSV, what the import does with each column, what is never sent anywhere), update `docs/architecture.md` and the endpoint table, and note the CSV-only decision.
-- [ ] T030 Success-criteria sweep: write the SC-001 to SC-007 map (success criterion to test names, as 001 and 002 did) for the PR description, run the full backend and frontend suites, `ruff`, `mypy --strict`, `lint-imports`, coverage gates. Fix what fails.
-- [ ] T031 Final cross-story review pass over the whole branch diff (the per-story reviews already happened at each phase checkpoint): python/FastAPI, security, database, React. Record anything found across stories, and the fixes, in `docs/CONTEXT.md`.
+- [x] T030 Success-criteria sweep: write the SC-001 to SC-007 map (success criterion to test names, as 001 and 002 did) for the PR description, run the full backend and frontend suites, `ruff`, `mypy --strict`, `lint-imports`, coverage gates. Fix what fails.
+- [x] T031 Final cross-story review pass over the whole branch diff (the per-story reviews already happened at each phase checkpoint): python/FastAPI, security, database, React. Record anything found across stories, and the fixes, in `docs/CONTEXT.md`.
 - [ ] T032 Update `docs/CONTEXT.md` (history entry, status, next steps) and `docs/clarified-requirements.md` §12 (renumber the other `002b more-sources`). Open the PR to `master` with the success-criteria map.
 
 ---
