@@ -85,3 +85,65 @@ def test_US1_AS6_seen_again_keeps_state() -> None:
 def test_illegal_transitions_rejected(current: JobState, target: JobState) -> None:
     with pytest.raises(IllegalJobTransitionError):
         transition(current, target, applied_on=date(2026, 11, 5))
+
+
+# --- 002d: the inquired state (data-model.md, "Job state (changed)") ------------------------
+
+
+@pytest.mark.parametrize("state", [S.explore, S.skipped])
+def test_US2_AS1_explore_and_skipped_can_become_inquired(state: JobState) -> None:
+    new = transition(state, S.inquired, inquired_on=date(2026, 11, 12))
+
+    assert new.state is S.inquired
+    assert new.inquired_on == date(2026, 11, 12)
+    assert new.applied_on is None
+
+
+def test_US2_AS2_inquired_can_become_applied() -> None:
+    new = transition(S.inquired, S.applied, applied_on=date(2026, 11, 13))
+
+    assert new.state is S.applied
+    assert new.applied_on == date(2026, 11, 13)
+    assert new.inquired_on is None  # moving on clears the inquiry date
+
+
+def test_FR007_applied_cannot_become_inquired() -> None:
+    with pytest.raises(IllegalJobTransitionError):
+        transition(S.applied, S.inquired, inquired_on=date(2026, 11, 12))
+
+
+def test_US2_AS3_undo_inquired_returns_to_explore() -> None:
+    new = transition(S.inquired, S.explore)
+
+    assert new.state is S.explore
+    assert new.inquired_on is None
+    assert new.applied_on is None
+    assert new.restored is False
+
+
+def test_inquired_needs_a_date() -> None:
+    with pytest.raises(IllegalJobTransitionError, match="inquired"):
+        transition(S.explore, S.inquired)
+
+
+def test_an_inquired_job_can_be_deleted() -> None:
+    assert transition(S.inquired, S.deleted).state is S.deleted
+
+
+@pytest.mark.parametrize(
+    ("current", "target"),
+    [
+        (S.inquired, S.skipped),
+        (S.inquired, S.inquired),
+        (S.deleted, S.inquired),
+    ],
+)
+def test_illegal_transitions_involving_inquired_are_rejected(
+    current: JobState, target: JobState
+) -> None:
+    with pytest.raises(IllegalJobTransitionError):
+        transition(current, target, applied_on=date(2026, 11, 5), inquired_on=date(2026, 11, 5))
+
+
+def test_seen_again_keeps_an_inquired_job_inquired() -> None:
+    assert apply_found_again(S.inquired) is S.inquired
