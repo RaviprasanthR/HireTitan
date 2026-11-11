@@ -4,7 +4,7 @@
 
 ```bash
 cd backend
-uv run pytest tests/unit/search tests/api/search tests/workflow/search tests/architecture tests/integration -k "pipeline or inquired or job_state or stops or no_cost or migration_0016 or companies or duplicates"
+uv run pytest tests/unit/search tests/api/search tests/workflow/search tests/architecture tests/integration -k "pipeline or inquired or job_state or stops or no_cost or migrations or companies or duplicates"
 uv run lint-imports
 cd ../frontend && npx tsc --noEmit -p . && npm test
 ```

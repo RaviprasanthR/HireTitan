@@ -21,7 +21,7 @@ Design decisions are in [research.md](research.md).
 
 **Primary Dependencies**: unchanged, minus **`tiktoken`** (only the budget guard used it; removing it also removes the one-off download of `o200k_base` from a host outside the outbound allowlist, an open item since 001).
 
-**Storage**: PostgreSQL 16, `app` schema. One migration, `0016_pipeline_and_no_cost` ([data-model.md](data-model.md)): `jobs` gains `inquired_on` and the `inquired` state; `settings.budget_cap_usd`, `llm_calls.cost_usd` and `estimated_cost_usd`, and `search_runs.ai_cost_usd` are dropped; runs paused for `budget_reached` become `failed`; the pause-reason check loses `budget_reached`.
+**Storage**: PostgreSQL 16, `app` schema. Two migrations ([data-model.md](data-model.md)): `0016_inquired` (`jobs` gains `inquired_on` and the `inquired` state) early, and `0017_no_cost` after the code no longer uses cost (`settings.budget_cap_usd`, `llm_calls.cost_usd` and `estimated_cost_usd`, and `search_runs.ai_cost_usd` are dropped; runs paused for `budget_reached` become `failed`; the pause-reason check loses `budget_reached`).
 
 **Testing**: pytest + Testcontainers Postgres (state machine, mark and undo, pipeline list, migration up and down with a budget-paused run, company pipeline flag); a scan test that no API response or page carries a cost field; Vitest + Testing Library (tabs, inquired button, redirects, menu, review notice, settings); the Playwright journeys updated (no cost, new menu) plus a pipeline step.
 
@@ -72,7 +72,7 @@ specs/002d-navigation-and-pipeline/
 
 ```text
 backend/
-├── alembic/versions/0016_pipeline_and_no_cost.py      # new
+├── alembic/versions/0016_inquired.py, 0017_no_cost.py   # new
 └── src/hiretitan/
     ├── platform/llm/
     │   ├── budget.py                # removed

@@ -42,14 +42,19 @@ A duplicate merge gives the kept job the stronger of the two states, `applied` >
 | `app.workflow_runs` | `budget_reached` as a pause reason |
 | `platform/llm/models.yaml` | prices and `prices_checked_on` (tiers stay) |
 
-## Migration `0016_pipeline_and_no_cost`
+## Migrations
 
-Upgrade, in one transaction:
+Two migrations, so every task leaves the suite green: the ORM models stop using the cost columns before `0017` drops them.
+
+**`0016_inquired`** (foundational):
 
 1. `jobs`: add `inquired_on date NULL`; widen the state check to include `inquired`; add check `inquired_on_iff_inquired`: `(state = 'inquired') = (inquired_on IS NOT NULL)`.
-2. `workflow_runs`: rows with `status = 'paused' AND pause_reason = 'budget_reached'` become `status = 'failed'`, `pause_reason = NULL`, `error = 'Paused by the old AI budget, which HireTitan no longer has. Start it again.'`; then the pause-reason check drops `budget_reached`.
-3. Drop `settings.budget_cap_usd` (and its check), `llm_calls.cost_usd`, `llm_calls.estimated_cost_usd`, `search_runs.ai_cost_usd`.
 
-Downgrade: re-add the dropped columns (`budget_cap_usd` default 25.00, costs default 0), re-add `budget_reached` to the pause-reason check, move any `inquired` job back to `explore`, drop `inquired_on` and its check, narrow the state check. Failed runs stay failed.
+**`0017_no_cost`** (after the cost code is gone), in one transaction:
+
+1. `workflow_runs`: rows with `status = 'paused' AND pause_reason = 'budget_reached'` become `status = 'failed'`, `pause_reason = NULL`, `error = 'Paused by the old AI budget, which HireTitan no longer has. Start it again.'`; then the pause-reason check drops `budget_reached`.
+2. Drop `settings.budget_cap_usd` (and its check), `llm_calls.cost_usd`, `llm_calls.estimated_cost_usd`, `search_runs.ai_cost_usd`.
+
+Downgrades: `0017` re-adds the dropped columns (`budget_cap_usd` default 25.00, costs default 0) and `budget_reached` in the pause-reason check (failed runs stay failed); `0016` moves any `inquired` job back to `explore`, drops `inquired_on` and its check and narrows the state check.
 
 The model/migration drift test from 001 covers the new column and checks.

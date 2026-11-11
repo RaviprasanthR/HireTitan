@@ -45,7 +45,7 @@ No field whose name contains `cost`, `budget`, `spend` or `price` (checked by a 
 | `workflow/search/test_inquired_kept.py` | `test_SC006_search_again_keeps_inquired_jobs` | search |
 | `api/search/test_duplicates_api.py` | `test_R9_merge_keeps_the_stronger_pipeline_state` | merge |
 | `api/search/test_companies_api.py` | `test_FR009_company_pipeline_is_applied_inquired_or_null` | companies |
-| `integration/test_migration_0016.py` | `test_FR014_budget_paused_runs_become_failed`, `test_migration_0016_up_down_up` | migration |
+| `integration/platform/test_migrations.py` | `test_0016_inquired_up_down`, `test_FR014_0017_budget_paused_runs_become_failed`, `test_0017_no_cost_up_down` | migration |
 | `architecture/test_no_cost_fields.py` | `test_SC003_no_cost_budget_or_spend_field_in_the_api`, `test_FR011_no_budget_guard_in_the_llm_stack` | no cost |
 | `workflow/search/test_stops.py` | `test_FR012_out_of_credit_still_pauses_and_resumes`, `test_SC004_no_budget_stop_however_much_was_used` | stops |
 | frontend (Vitest) | Home tabs and redirects, I inquired with Undo, pipeline table, menu has four entries, review notice, Profile tabs and redirects, Settings shows key and delete only, no cost text on any page | UI |
