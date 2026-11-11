@@ -201,7 +201,7 @@ function CompanyRow({ company, manual }: { company: Company; manual: boolean }) 
   return (
     <li
       aria-label={company.name}
-      className="space-y-2 rounded-lg bg-surface px-3 py-1 ring-1 ring-transparent transition duration-200 ease-out hover:-translate-y-px hover:bg-white/[0.04] hover:shadow-[0_8px_24px_-12px_rgba(76,201,240,0.45)] hover:ring-cyan-400/30 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+      className="space-y-2 rounded-lg bg-surface px-3 py-1 ring-1 ring-transparent transition duration-200 ease-out hover:-translate-y-px hover:bg-white/[0.04] hover:shadow-[0_8px_24px_-12px_rgba(167,139,250,0.5)] hover:ring-violet-400/30 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
     >
       <div className={`flex min-h-8 flex-wrap items-center gap-x-4 gap-y-1 ${COLUMNS}`}>
         <h2 className="min-w-0 truncate font-semibold">
@@ -210,7 +210,7 @@ function CompanyRow({ company, manual }: { company: Company; manual: boolean }) 
               href={company.website}
               target="_blank"
               rel="noreferrer noopener"
-              className="hover:text-cyan-300 hover:underline"
+              className="hover:text-orange-300 hover:underline"
             >
               {company.name}
             </a>
@@ -224,7 +224,7 @@ function CompanyRow({ company, manual }: { company: Company; manual: boolean }) 
         <span
           className={`${CHIP} w-fit ${
             company.contact_count > 0
-              ? 'bg-teal-500/15 text-teal-300'
+              ? 'bg-fuchsia-500/15 text-fuchsia-300'
               : 'bg-white/5 text-muted-small opacity-70'
           }`}
         >
@@ -232,12 +232,12 @@ function CompanyRow({ company, manual }: { company: Company; manual: boolean }) 
           {contacts}
         </span>
         <span
-          className="flex min-w-0 flex-1 items-center gap-1.5 text-xs text-rose-200/80 md:min-w-0"
+          className="flex min-w-0 flex-1 items-center gap-1.5 text-xs text-amber-200/80 md:min-w-0"
           title={company.note_preview ?? undefined}
         >
           {company.note_preview && (
             <>
-              <StickyNote aria-hidden className="size-3 shrink-0 text-rose-300" />
+              <StickyNote aria-hidden className="size-3 shrink-0 text-amber-300" />
               <span className="truncate">{company.note_preview}</span>
             </>
           )}
@@ -248,7 +248,7 @@ function CompanyRow({ company, manual }: { company: Company; manual: boolean }) 
               <IconButton
                 title="Details"
                 label={`Details for ${company.name}`}
-                tone="text-cyan-300 hover:bg-cyan-500/20 hover:text-cyan-200"
+                tone="text-slate-300 hover:bg-slate-400/20 hover:text-white"
                 aria-expanded={showPanel}
                 onClick={() => setShowPanel(!showPanel)}
               >
@@ -259,7 +259,7 @@ function CompanyRow({ company, manual }: { company: Company; manual: boolean }) 
                   asChild
                   variant="ghost"
                   size="icon-sm"
-                  className="text-sky-300 hover:bg-sky-500/20 hover:text-sky-200"
+                  className="text-orange-300 hover:bg-orange-500/20 hover:text-orange-200"
                 >
                   <a
                     href={company.website}
@@ -279,7 +279,7 @@ function CompanyRow({ company, manual }: { company: Company; manual: boolean }) 
                   asChild
                   variant="ghost"
                   size="icon-sm"
-                  className="text-indigo-300 hover:bg-indigo-500/20 hover:text-indigo-200"
+                  className="text-violet-300 hover:bg-violet-500/20 hover:text-violet-200"
                 >
                   <a
                     href={company.careers_url}
@@ -297,7 +297,7 @@ function CompanyRow({ company, manual }: { company: Company; manual: boolean }) 
               <IconButton
                 title={company.hidden ? 'Show' : 'Hide'}
                 label={`${company.hidden ? 'Show' : 'Hide'} ${company.name}`}
-                tone="text-amber-300 hover:bg-amber-500/20 hover:text-amber-200"
+                tone="text-yellow-300 hover:bg-yellow-500/20 hover:text-yellow-200"
                 disabled={edit.isPending}
                 onClick={() =>
                   edit.mutate({
@@ -445,16 +445,16 @@ function HeaderRow({ sort, onSort }: { sort: Sort; onSort: (key: SortKey) => voi
         {text}
         {active &&
           (sort.dir === 'asc' ? (
-            <ArrowUp aria-hidden className="size-3" />
+            <ArrowUp aria-hidden className="size-3 text-amber-300" />
           ) : (
-            <ArrowDown aria-hidden className="size-3" />
+            <ArrowDown aria-hidden className="size-3 text-amber-300" />
           ))}
       </button>
     )
   }
   return (
     <div
-      className={`hidden overflow-hidden rounded-lg border border-cyan-300/15 bg-cyan-400/10 px-3 py-2 text-xs font-semibold tracking-wider text-cyan-100/80 shadow-sm [scrollbar-gutter:stable] ${COLUMNS}`}
+      className={`hidden overflow-hidden rounded-lg border border-slate-200/15 bg-slate-200/10 px-3 py-2 text-xs font-semibold tracking-wider text-slate-200 shadow-sm [scrollbar-gutter:stable] ${COLUMNS}`}
     >
       {button('name', 'Company')}
       {button('city', 'Location')}
