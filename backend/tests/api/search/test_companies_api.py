@@ -229,36 +229,47 @@ async def test_companies_list_runs_a_fixed_number_of_queries(env: Env) -> None:
     assert few == many  # no query per company
 
 
-# --- feature 002b (T022): open-role counts on the list ----------------------------------------
+# --- the list says whether the person has an application at each company ---------------------
 
 
-async def test_US3_AS1_company_row_has_openings(env: Env) -> None:
+async def _job(env: Env, company: UUID, title: str, state: str) -> None:
+    from datetime import date
+
     from hiretitan.search.infra.repos import JobsRepo
 
-    company = await add(env, "Busy Co", last_checked_at=NOW)
     async with env.sessions() as session:
-        for title in ("Frontend Engineer", "Full Stack Developer", "Sales Manager"):
-            await JobsRepo(session).add(
-                company_id=company,
-                company_name="Busy Co",
-                title=title,
-                description="text",
-                state="explore",
-                first_seen_at=NOW,
-                last_seen_at=NOW,
-            )
+        await JobsRepo(session).add(
+            company_id=company,
+            company_name="x",
+            title=title,
+            description="text",
+            state=state,
+            applied_on=date(2026, 11, 3) if state == "applied" else None,
+            first_seen_at=NOW,
+            last_seen_at=NOW,
+        )
         await session.commit()
 
-    (row,) = (await env.client.get(BASE)).json()["items"]
 
-    assert row["openings"] == {"frontend": 2, "backend": 1, "qa": 0}
-
-
-async def test_US3_AS5_row_openings_null_when_never_searched(env: Env) -> None:
-    await add(env, "Never Searched")
-    await add(env, "Searched Empty", last_checked_at=NOW)
+async def test_company_row_says_whether_there_is_an_application(env: Env) -> None:
+    applied = await add(env, "Applied Co")
+    browsing = await add(env, "Browsing Co")
+    await add(env, "Nothing Co")
+    await _job(env, applied, "Backend Engineer", "applied")
+    await _job(env, applied, "Frontend Engineer", "explore")
+    await _job(env, browsing, "Backend Engineer", "explore")
+    await _job(env, browsing, "QA Engineer", "skipped")
 
     rows = {c["name"]: c for c in (await env.client.get(BASE)).json()["items"]}
 
-    assert rows["Never Searched"]["openings"] is None
-    assert rows["Searched Empty"]["openings"] == {"frontend": 0, "backend": 0, "qa": 0}
+    assert rows["Applied Co"]["has_application"] is True
+    assert rows["Browsing Co"]["has_application"] is False  # looking at jobs is not applying
+    assert rows["Nothing Co"]["has_application"] is False
+
+
+async def test_the_list_no_longer_carries_open_role_counts(env: Env) -> None:
+    await add(env, "Any Co")
+
+    (row,) = (await env.client.get(BASE)).json()["items"]
+
+    assert "openings" not in row

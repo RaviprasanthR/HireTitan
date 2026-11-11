@@ -601,37 +601,19 @@ class ContactsRepo:
         return {company_id: (int(n), bool(noted)) for company_id, n, noted in result.all()}
 
 
-class OpeningsRepo:
-    """Reads for the open-role counts (feature 002b, US3). Only Explore jobs that are listed."""
+class AppliedCompaniesRepo:
+    """Which companies have a job the person applied to (feature 002b). Nothing is stored."""
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def explore_titles(self) -> list[tuple[UUID, bool, str | None]]:
-        """One statement for every company: ``(id, searched, title)``, title ``None`` if no job."""
+    async def company_ids(self) -> set[UUID]:
         result = await self._session.execute(
-            select(CompanyRow.id, CompanyRow.last_checked_at.is_not(None), JobRow.title).outerjoin(
-                JobRow,
-                and_(
-                    JobRow.company_id == CompanyRow.id,
-                    JobRow.state == JobState.explore.value,
-                    JobRow.listed.is_(True),
-                ),
-            )
+            select(JobRow.company_id)
+            .where(JobRow.state == JobState.applied.value, JobRow.company_id.is_not(None))
+            .distinct()
         )
-        return [(company_id, bool(searched), title) for company_id, searched, title in result.all()]
-
-    async def explore_jobs(self, company_id: UUID) -> list[JobRow]:
-        result = await self._session.execute(
-            select(JobRow)
-            .where(
-                JobRow.company_id == company_id,
-                JobRow.state == JobState.explore.value,
-                JobRow.listed.is_(True),
-            )
-            .order_by(JobRow.sort_key.desc(), JobRow.id)
-        )
-        return list(result.scalars())
+        return {company_id for company_id in result.scalars() if company_id is not None}
 
 
 def _apply_contact_fields(row: ContactRow, fields: ContactFields) -> None:

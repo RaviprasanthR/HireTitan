@@ -332,6 +332,11 @@
             "title": "Contact Count",
             "type": "integer"
           },
+          "has_application": {
+            "default": false,
+            "title": "Has Application",
+            "type": "boolean"
+          },
           "has_note": {
             "default": false,
             "title": "Has Note",
@@ -394,20 +399,6 @@
               }
             ],
             "title": "Note Preview"
-          },
-          "openings": {
-            "anyOf": [
-              {
-                "additionalProperties": {
-                  "type": "integer"
-                },
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Openings"
           },
           "origin": {
             "title": "Origin",
@@ -5520,27 +5511,6 @@
                 }
               ],
               "title": "Company Id"
-            }
-          },
-          {
-            "in": "query",
-            "name": "area",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "enum": [
-                    "frontend",
-                    "backend",
-                    "qa"
-                  ],
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Area"
             }
           },
           {

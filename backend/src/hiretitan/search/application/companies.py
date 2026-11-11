@@ -8,7 +8,7 @@ so the loader does not bring it back; a company the person added is removed outr
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Collection, Mapping
 from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import Any, Final, Protocol
@@ -88,7 +88,7 @@ class CompanyView:
     contact_count: int = 0
     has_note: bool = False
     note_preview: str | None = None  # the note on one line, shortened for the list row
-    openings: dict[str, int] | None = None  # None means "not searched yet"
+    has_application: bool = False  # a job at this company is in the applied state
 
 
 NOTE_PREVIEW_MAX = 120
@@ -137,16 +137,16 @@ async def list_companies(
     store: CompaniesStore,
     filter: str = "all",
     counts: Mapping[UUID, tuple[int, bool]] | None = None,
-    openings: Mapping[UUID, dict[str, int] | None] | None = None,
+    applied: Collection[UUID] | None = None,
     note_heads: Mapping[UUID, str] | None = None,
 ) -> list[CompanyView]:
     """The company list.
 
-    ``counts`` maps a company id to (contact count, has a note); ``openings`` maps it to the open
-    roles per area, or ``None`` when the company was never searched.
+    ``counts`` maps a company id to (contact count, has a note); ``applied`` holds the ids of the
+    companies where the person has applied to a job.
     """
     known = counts or {}
-    roles = openings or {}
+    applied_ids = applied or ()
     heads = note_heads or {}
     views = []
     for row in await store.list_filtered(filter):
@@ -157,7 +157,7 @@ async def list_companies(
                 contact_count=contact_count,
                 has_note=has_note,
                 note_preview=note_preview(heads.get(row.id)),
-                openings=roles.get(row.id),
+                has_application=row.id in applied_ids,
             )
         )
     return views

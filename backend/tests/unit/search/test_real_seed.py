@@ -42,7 +42,10 @@ def test_seed_keys_are_unique_slugs(rows: list[dict[str, object]]) -> None:
 
 
 def test_seed_has_the_whole_sheet(rows: list[dict[str, object]]) -> None:
-    assert len(rows) == 62
+    # 62 companies on the main tab and two more, with no links yet, on the second tab
+    assert len(rows) == 64
+    names = {str(row["name"]) for row in rows}
+    assert {"Quivly AI", "Drivetrain"} <= names
 
 
 def test_seed_boards_use_only_enabled_providers(rows: list[dict[str, object]]) -> None:
