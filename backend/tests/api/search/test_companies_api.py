@@ -141,3 +141,135 @@ async def test_FR016_delete_removes_a_user_company_and_tombstones_a_built_in_one
         assert tombstone is not None
         assert tombstone.deleted_at == NOW
     assert (await env.client.delete(f"{BASE}/{shipped}")).status_code == 404
+
+
+# --- feature 002b (T015): contact count, note flag and the openings placeholder ---------------
+
+
+async def test_US2_AS1_company_row_has_contact_count_and_note_flag(env: Env) -> None:
+    from hiretitan.search.domain.contacts import ContactFields
+    from hiretitan.search.infra.repos import ContactsRepo, NotesRepo
+
+    busy = await add(env, "Busy Co")
+    await add(env, "Quiet Co")
+    noted = await add(env, "Noted Co")
+    async with env.sessions() as session:
+        contacts = ContactsRepo(session)
+        await contacts.add(busy, ContactFields(name="Jane Example"), source="typed")
+        await contacts.add(busy, ContactFields(name="John Sample"), source="import")
+        await NotesRepo(session).set(noted, "Spoke to HR.", source="typed")
+        await session.commit()
+
+    page = (await env.client.get(BASE)).json()
+
+    rows = {c["name"]: c for c in page["items"]}
+    assert (rows["Busy Co"]["contact_count"], rows["Busy Co"]["has_note"]) == (2, False)
+    assert (rows["Quiet Co"]["contact_count"], rows["Quiet Co"]["has_note"]) == (0, False)
+    assert (rows["Noted Co"]["contact_count"], rows["Noted Co"]["has_note"]) == (0, True)
+
+
+async def test_company_row_has_a_short_one_line_note_preview(env: Env) -> None:
+    from hiretitan.search.infra.repos import NotesRepo
+
+    long_note = "Spoke to HR on Monday.\n\nShe said   to apply " + "again soon " * 30
+    short, long, none = (
+        await add(env, "Short Co"),
+        await add(env, "Long Co"),
+        await add(env, "None Co"),
+    )
+    async with env.sessions() as session:
+        await NotesRepo(session).set(short, "Call back  Friday", source="typed")
+        await NotesRepo(session).set(long, long_note, source="typed")
+        await session.commit()
+
+    rows = {c["name"]: c for c in (await env.client.get(BASE)).json()["items"]}
+
+    assert rows["Short Co"]["note_preview"] == "Call back Friday"
+    preview = rows["Long Co"]["note_preview"]
+    assert preview.startswith("Spoke to HR on Monday. She said to apply again soon")
+    assert len(preview) <= 120
+    assert preview.endswith("…")
+    assert "\n" not in preview
+    assert rows["None Co"]["note_preview"] is None
+    assert none  # the company exists
+
+
+async def test_companies_list_runs_a_fixed_number_of_queries(env: Env) -> None:
+    from sqlalchemy import event
+
+    from hiretitan.search.domain.contacts import ContactFields
+    from hiretitan.search.infra.repos import ContactsRepo
+
+    engine = env.sessions.kw["bind"].sync_engine
+    statements: list[str] = []
+
+    def capture(conn: object, cursor: object, statement: str, *rest: object) -> None:
+        statements.append(statement)
+
+    async def run_list() -> int:
+        statements.clear()
+        event.listen(engine, "before_cursor_execute", capture)
+        try:
+            assert (await env.client.get(BASE)).status_code == 200
+        finally:
+            event.remove(engine, "before_cursor_execute", capture)
+        return len(statements)
+
+    for i in range(3):
+        await add(env, f"Small {i}")
+    few = await run_list()
+
+    for i in range(30):
+        company = await add(env, f"Large {i}")
+        async with env.sessions() as session:
+            await ContactsRepo(session).add(company, ContactFields(name="Jane"), source="typed")
+            await session.commit()
+    many = await run_list()
+
+    assert few == many  # no query per company
+
+
+# --- the list says whether the person has an application at each company ---------------------
+
+
+async def _job(env: Env, company: UUID, title: str, state: str) -> None:
+    from datetime import date
+
+    from hiretitan.search.infra.repos import JobsRepo
+
+    async with env.sessions() as session:
+        await JobsRepo(session).add(
+            company_id=company,
+            company_name="x",
+            title=title,
+            description="text",
+            state=state,
+            applied_on=date(2026, 11, 3) if state == "applied" else None,
+            first_seen_at=NOW,
+            last_seen_at=NOW,
+        )
+        await session.commit()
+
+
+async def test_company_row_says_whether_there_is_an_application(env: Env) -> None:
+    applied = await add(env, "Applied Co")
+    browsing = await add(env, "Browsing Co")
+    await add(env, "Nothing Co")
+    await _job(env, applied, "Backend Engineer", "applied")
+    await _job(env, applied, "Frontend Engineer", "explore")
+    await _job(env, browsing, "Backend Engineer", "explore")
+    await _job(env, browsing, "QA Engineer", "skipped")
+
+    rows = {c["name"]: c for c in (await env.client.get(BASE)).json()["items"]}
+
+    assert rows["Applied Co"]["has_application"] is True
+    assert rows["Browsing Co"]["has_application"] is False  # looking at jobs is not applying
+    assert rows["Nothing Co"]["has_application"] is False
+
+
+async def test_the_list_no_longer_carries_open_role_counts(env: Env) -> None:
+    await add(env, "Any Co")
+
+    (row,) = (await env.client.get(BASE)).json()["items"]
+
+    assert "openings" not in row

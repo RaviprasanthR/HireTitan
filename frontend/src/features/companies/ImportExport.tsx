@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { EXPORT_URL, useConfirmImport, usePreviewImport } from './api'
+import { SheetImportDialog } from './SheetImportDialog'
 
 /** Export the company list, or import one: a preview first, and nothing changes until Confirm. */
 export function ImportExport() {
   const preview = usePreviewImport()
   const confirm = useConfirmImport()
   const [done, setDone] = useState<string | null>(null)
+  const [withContacts, setWithContacts] = useState(false)
   const plan = preview.data && !confirm.isSuccess ? preview.data : null
 
   function reset() {
@@ -17,9 +19,21 @@ export function ImportExport() {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-3">
-        <a href={EXPORT_URL} download className="text-sm font-medium text-link underline">
+        <a
+          href={withContacts ? `${EXPORT_URL}?include_contacts=true` : EXPORT_URL}
+          download
+          className="text-sm font-medium text-link underline"
+        >
           Export CSV
         </a>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={withContacts}
+            onChange={(event) => setWithContacts(event.target.checked)}
+          />
+          Include contacts and notes
+        </label>
         <label className="text-sm font-medium">
           Import CSV
           <input
@@ -37,6 +51,11 @@ export function ImportExport() {
           />
         </label>
       </div>
+      <p className="text-sm text-muted-small">
+        With contacts and notes, the file will hold other people&apos;s details (names, emails,
+        phones). Keep it private.
+      </p>
+      <SheetImportDialog />
       {preview.isError && (
         <p role="alert" className="text-sm text-danger">
           {preview.error.message}

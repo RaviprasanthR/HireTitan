@@ -102,3 +102,98 @@ export function useConfirmImport() {
     onSuccess: refresh,
   })
 }
+
+export type SheetPreview = components['schemas']['SheetPreview']
+export type SheetResult = components['schemas']['SheetResult']
+
+export function useSheetPreview() {
+  return useMutation({
+    mutationFn: (file: File) => {
+      const body = new FormData()
+      body.append('file', file)
+      return apiFetch<SheetPreview>('/companies/sheet-import', { method: 'POST', body })
+    },
+  })
+}
+
+export function useSheetConfirm() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (token: string) =>
+      apiFetch<SheetResult>(`/companies/sheet-import/${token}/confirm`, { method: 'POST' }),
+    // contacts and notes show on the Companies page, so refresh it with the list
+    onSuccess: () =>
+      Promise.all([
+        client.invalidateQueries({ queryKey: ['companies'] }),
+        client.invalidateQueries({ queryKey: ['contacts'] }), // open panels and note editors
+      ]),
+  })
+}
+
+export type Contact = components['schemas']['ContactOut']
+export type ContactsPanelData = components['schemas']['ContactsOut']
+export type Note = components['schemas']['NoteOut']
+export type ContactInput = {
+  name: string
+  role: string
+  linkedin_url: string
+  email: string
+  phone: string
+  confidence: string
+  note: string
+}
+
+function useRefreshContacts(companyId: string) {
+  const client = useQueryClient()
+  return () =>
+    Promise.all([
+      client.invalidateQueries({ queryKey: ['contacts', companyId] }),
+      client.invalidateQueries({ queryKey: ['companies'] }), // the list shows the counts
+    ])
+}
+
+export function useContacts(companyId: string) {
+  return useQuery({
+    queryKey: ['contacts', companyId],
+    queryFn: () => apiFetch<ContactsPanelData>(`/companies/${companyId}/contacts`),
+  })
+}
+
+export function useAddContact(companyId: string) {
+  const refresh = useRefreshContacts(companyId)
+  return useMutation({
+    mutationFn: (values: ContactInput) =>
+      apiFetch<Contact>(`/companies/${companyId}/contacts`, { method: 'POST', json: values }),
+    onSuccess: refresh,
+  })
+}
+
+export function useEditContact(companyId: string) {
+  const refresh = useRefreshContacts(companyId)
+  return useMutation({
+    mutationFn: ({ id, values }: { id: string; values: ContactInput }) =>
+      apiFetch<Contact>(`/companies/${companyId}/contacts/${id}`, {
+        method: 'PATCH',
+        json: values,
+      }),
+    onSuccess: refresh,
+  })
+}
+
+export function useDeleteContact(companyId: string) {
+  const refresh = useRefreshContacts(companyId)
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiFetch(`/companies/${companyId}/contacts/${id}`, { method: 'DELETE' }),
+    onSuccess: refresh,
+  })
+}
+
+export function useSaveNote(companyId: string) {
+  const refresh = useRefreshContacts(companyId)
+  return useMutation({
+    mutationFn: (body: string) =>
+      apiFetch<Note>(`/companies/${companyId}/note`, { method: 'PUT', json: { body } }),
+    onSuccess: refresh,
+  })
+}

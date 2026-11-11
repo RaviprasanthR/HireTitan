@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import secrets
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
@@ -16,6 +17,7 @@ from hiretitan.platform.clock import ClockPort
 from hiretitan.platform.web.problems import ProblemError, problem
 from hiretitan.search.application.companies import (
     EDITABLE,
+    NOTE_HEAD,
     CompanyError,
     CompanyNotFoundError,
     CompanyView,
@@ -26,9 +28,9 @@ from hiretitan.search.application.companies import (
 )
 from hiretitan.search.application.companies_csv import (
     MAX_BYTES,
+    MAX_ROWS,
     CsvFileError,
     ImportPlan,
-    ImportRow,
     apply_import,
     export_csv,
     preview_import,
@@ -41,7 +43,20 @@ from hiretitan.search.application.discovery import (
     suggest_board,
 )
 from hiretitan.search.application.ports import CareerOpsPort
-from hiretitan.search.infra.repos import CompaniesRepo
+from hiretitan.search.application.sheet_import import (
+    RowIssue,
+    SheetOutcome,
+    apply_sheet,
+    preview_sheet,
+)
+from hiretitan.search.domain.contacts_cell import ParsedContact
+from hiretitan.search.domain.sheet import SheetError, SheetLayout, SheetRow, read
+from hiretitan.search.infra.repos import (
+    AppliedCompaniesRepo,
+    CompaniesRepo,
+    ContactsRepo,
+    NotesRepo,
+)
 
 PREVIEW_LIFETIME = timedelta(minutes=30)
 PREVIEWS_KEPT = 10
@@ -53,19 +68,37 @@ class ImportPreviews:
     and a lost preview just means uploading the file again."""
 
     def __init__(self) -> None:
-        self._held: dict[str, tuple[datetime, list[ImportRow]]] = {}
+        self._held: dict[str, tuple[datetime, object]] = {}
 
-    def hold(self, rows: list[ImportRow], now: datetime) -> str:
+    def hold(self, plan: object, now: datetime) -> str:
         self._held = {t: v for t, v in self._held.items() if v[0] > now}
         while len(self._held) >= PREVIEWS_KEPT:
             del self._held[next(iter(self._held))]
         token = secrets.token_urlsafe(24)
-        self._held[token] = (now + PREVIEW_LIFETIME, rows)
+        self._held[token] = (now + PREVIEW_LIFETIME, plan)
         return token
 
-    def take(self, token: str, now: datetime) -> list[ImportRow] | None:
-        held = self._held.pop(token, None)
-        return held[1] if held is not None and held[0] > now else None
+    def peek(self, token: str, now: datetime, kind: type) -> Any:
+        """The held plan if it is of ``kind`` and still fresh; a token of the other kind stays."""
+        held = self._held.get(token)
+        if held is None:
+            return None
+        if held[0] <= now:
+            del self._held[token]
+            return None
+        return held[1] if isinstance(held[1], kind) else None
+
+    def drop(self, token: str) -> None:
+        """Use the token up, after the import it stood for has been saved."""
+        self._held.pop(token, None)
+
+
+@dataclass(frozen=True, slots=True)
+class HeldSheet:
+    """A previewed company sheet: the rows are applied on Confirm."""
+
+    layout: SheetLayout
+    rows: list[SheetRow]
 
 
 @dataclass(frozen=True)
@@ -92,6 +125,11 @@ class CompanyOut(BaseModel):
     last_checked_at: datetime | None
     last_check_result: str | None
     last_check_error: str | None
+    # Filled by the list only; the other responses carry 0, false and null.
+    contact_count: int = 0
+    has_note: bool = False
+    note_preview: str | None = None
+    has_application: bool = False
 
 
 class CompanyPage(BaseModel):
@@ -164,6 +202,128 @@ class ImportResult(BaseModel):
     updated: int
 
 
+class SheetColumnsOut(BaseModel):
+    used: list[str]
+    ignored: list[str]
+
+
+class SheetCompaniesOut(BaseModel):
+    matched: int
+    to_add: int
+
+
+class SheetContactsOut(BaseModel):
+    to_add: int
+    to_update: int
+
+
+class SheetNotesOut(BaseModel):
+    to_set: int
+    to_change: int
+    kept_yours: int
+
+
+class SheetRowOut(BaseModel):
+    line: int
+    company: str
+    action: Literal["matched", "add", "skip"]
+    contacts_add: int
+    contacts_update: int
+    notes: Literal["set", "changed", "kept", "none"]
+    shortened: bool
+
+
+class SheetIssueOut(BaseModel):
+    line: int
+    reason: str
+
+
+class SheetPreview(BaseModel):
+    token: str
+    columns: SheetColumnsOut
+    companies: SheetCompaniesOut
+    contacts: SheetContactsOut
+    notes: SheetNotesOut
+    rows: list[SheetRowOut]
+    skipped: list[SheetIssueOut]
+    shortened: list[SheetIssueOut]
+
+
+class SheetResult(BaseModel):
+    matched: int
+    companies_added: int
+    contacts_added: int
+    contacts_updated: int
+    notes_set: int
+    notes_changed: int
+    notes_kept: int
+    skipped: list[SheetIssueOut]
+    shortened: list[SheetIssueOut]
+
+
+def _issues(issues: tuple[RowIssue, ...]) -> list[SheetIssueOut]:
+    return [SheetIssueOut(line=i.line, reason=i.reason) for i in issues]
+
+
+def _sheet_preview_of(outcome: SheetOutcome, token: str) -> SheetPreview:
+    return SheetPreview(
+        token=token,
+        columns=SheetColumnsOut(
+            used=list(outcome.layout.used), ignored=list(outcome.layout.ignored)
+        ),
+        companies=SheetCompaniesOut(matched=outcome.matched, to_add=outcome.companies_added),
+        contacts=SheetContactsOut(
+            to_add=outcome.contacts_added, to_update=outcome.contacts_updated
+        ),
+        notes=SheetNotesOut(
+            to_set=outcome.notes_set,
+            to_change=outcome.notes_changed,
+            kept_yours=outcome.notes_kept,
+        ),
+        rows=[
+            SheetRowOut(
+                line=r.line,
+                company=r.company,
+                action=r.action,
+                contacts_add=r.contacts_add,
+                contacts_update=r.contacts_update,
+                notes=r.note,
+                shortened=r.shortened,
+            )
+            for r in outcome.rows
+        ],
+        skipped=_issues(outcome.skipped),
+        shortened=_issues(outcome.shortened),
+    )
+
+
+def _sheet_result_of(outcome: SheetOutcome) -> SheetResult:
+    return SheetResult(
+        matched=outcome.matched,
+        companies_added=outcome.companies_added,
+        contacts_added=outcome.contacts_added,
+        contacts_updated=outcome.contacts_updated,
+        notes_set=outcome.notes_set,
+        notes_changed=outcome.notes_changed,
+        notes_kept=outcome.notes_kept,
+        skipped=_issues(outcome.skipped),
+        shortened=_issues(outcome.shortened),
+    )
+
+
+def _sheet_text(filename: str | None, data: bytes) -> str:
+    """The sheet as text, or a 415 when the file is not a CSV (checked before anything is read)."""
+    if not (filename or "").lower().endswith(".csv"):
+        raise ProblemError(415, "Save the sheet as a CSV file and upload that.")
+    try:
+        text = data.decode("utf-8-sig")
+    except UnicodeDecodeError as error:
+        raise ProblemError(415, "This is not a text (CSV) file.") from error
+    if "\x00" in text:
+        raise ProblemError(415, "This is not a text (CSV) file.")
+    return text
+
+
 def _preview_of(plan: ImportPlan, token: str) -> ImportPreview:
     return ImportPreview(
         add=[
@@ -190,6 +350,12 @@ def _preview_of(plan: ImportPlan, token: str) -> ImportPreview:
         ],
         invalid=[InvalidRowOut(row=i.line, reason=i.reason) for i in plan.invalid],
         token=token,
+    )
+
+
+def _expired() -> ProblemError:
+    return ProblemError(
+        404, "That import has expired. Upload the file again.", code="preview_expired"
     )
 
 
@@ -226,7 +392,10 @@ def create_companies_router(deps: SearchCompaniesApiDeps) -> APIRouter:
     @router.get("", response_model=CompanyPage)
     async def companies(filter: Literal["all", "check_manually", "hidden"] = "all") -> CompanyPage:
         async with deps.sessions() as session:
-            views = await list_companies(CompaniesRepo(session), filter)
+            counts = await ContactsRepo(session).counts_by_company()
+            applied = await AppliedCompaniesRepo(session).company_ids()
+            heads = await NotesRepo(session).heads(NOTE_HEAD)
+            views = await list_companies(CompaniesRepo(session), filter, counts, applied, heads)
         return CompanyPage(items=[out(v) for v in views])
 
     @router.post("", response_model=CompanyOut, status_code=201)
@@ -246,11 +415,22 @@ def create_companies_router(deps: SearchCompaniesApiDeps) -> APIRouter:
         return out(view)
 
     @router.get("/export")
-    async def export() -> Response:
+    async def export(include_contacts: bool = False) -> Response:
         async with deps.sessions() as session:
             rows = await CompaniesRepo(session).list_all()
+            people: dict[UUID, list[ParsedContact]] | None = None
+            notes: dict[UUID, str] | None = None
+            if include_contacts:  # opt-in only: other people's details (FR-021)
+                people = {}
+                for c in await ContactsRepo(session).list_all():
+                    people.setdefault(c.company_id, []).append(
+                        ParsedContact(
+                            c.name, c.role, c.confidence, c.linkedin_url, c.email, c.phone, c.note
+                        )
+                    )
+                notes = {n.company_id: n.body for n in await NotesRepo(session).list_all()}
         return Response(
-            export_csv(list(rows)),
+            export_csv(list(rows), people, notes),
             media_type="text/csv; charset=utf-8",
             headers={"Content-Disposition": 'attachment; filename="companies.csv"'},
         )
@@ -267,13 +447,50 @@ def create_companies_router(deps: SearchCompaniesApiDeps) -> APIRouter:
 
     @router.post("/import/{token}/confirm", response_model=ImportResult)
     async def import_confirm(token: str) -> ImportResult:
-        rows = deps.previews.take(token, deps.clock.now())
+        rows = deps.previews.peek(token, deps.clock.now(), list)
         if rows is None:
-            raise ProblemError(404, "That import has expired. Upload the file again.")
+            raise _expired()
         async with deps.sessions() as session:
             added, updated = await apply_import(CompaniesRepo(session), rows)
             await session.commit()
+        deps.previews.drop(token)
         return ImportResult(added=added, updated=updated)
+
+    @router.post("/sheet-import", response_model=SheetPreview)
+    async def sheet_preview(file: UploadFile) -> SheetPreview:
+        data = await _read_csv(file)
+        source = _sheet_text(file.filename, data)
+        try:
+            layout, rows = read(source)
+        except SheetError as error:
+            raise ProblemError(422, str(error), headers=list(error.headers)) from error
+        except csv.Error as error:
+            raise ProblemError(422, "A cell in this file is too large to read.") from error
+        if len(rows) > MAX_ROWS:
+            raise ProblemError(422, "The file has more than 2,000 rows.")
+        async with deps.sessions() as session:
+            outcome = await preview_sheet(
+                CompaniesRepo(session), ContactsRepo(session), NotesRepo(session), layout, rows
+            )
+        token = deps.previews.hold(HeldSheet(layout, rows), deps.clock.now())
+        return _sheet_preview_of(outcome, token)
+
+    @router.post("/sheet-import/{token}/confirm", response_model=SheetResult)
+    async def sheet_confirm(token: str) -> SheetResult:
+        held = deps.previews.peek(token, deps.clock.now(), HeldSheet)
+        if held is None:
+            raise _expired()
+        async with deps.sessions() as session:
+            outcome = await apply_sheet(
+                CompaniesRepo(session),
+                ContactsRepo(session),
+                NotesRepo(session),
+                held.layout,
+                held.rows,
+            )
+            await session.commit()
+        deps.previews.drop(token)
+        return _sheet_result_of(outcome)
 
     @router.get("/{company_id}/discovery", response_model=DiscoveryOut)
     async def discovery(company_id: UUID) -> DiscoveryOut:

@@ -252,3 +252,37 @@ async def test_role_is_the_ai_role_or_the_title_cut_down_by_rules(env: Env) -> N
         ("Senior Backend Engineer (Python) - Pune", "Senior Backend Engineer"),
         ("Backend Engineer - Remote - Req 9912", "Backend Eng"),
     ]
+
+
+async def test_US2_AS5_job_card_and_detail_carry_the_company_id(env: Env) -> None:
+    job_id = await add_job(env, "Backend Engineer", company="Acme")
+    async with env.sessions() as session:
+        company = next(c for c in await CompaniesRepo(session).list_all() if c.name == "Acme")
+
+    detail = (await env.client.get(f"/api/v1/jobs/{job_id}")).json()
+    card = (await env.client.get("/api/v1/jobs")).json()["items"][0]
+
+    assert detail["company_id"] == str(company.id)
+    assert card["company_id"] == str(company.id)
+
+
+async def test_US2_AS5_a_job_without_a_company_has_a_null_company_id(env: Env) -> None:
+    async with env.sessions() as session:
+        job = await JobsRepo(session).add(
+            company_id=None,
+            company_name="Pasted Co",
+            title="Pasted Role",
+            first_seen_at=NOW,
+            last_seen_at=NOW,
+            description="pasted text",
+            state="explore",
+        )
+        await DecisionsRepo(session).record(
+            job.id, outcome="shown", decided_by="ai", reason="Pasted by hand"
+        )
+        await session.commit()
+        job_id = job.id
+
+    detail = (await env.client.get(f"/api/v1/jobs/{job_id}")).json()
+
+    assert detail["company_id"] is None

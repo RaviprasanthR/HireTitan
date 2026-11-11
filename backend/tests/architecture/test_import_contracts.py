@@ -68,21 +68,48 @@ PLANTED_VIOLATIONS: dict[str, dict[str, str]] = {
 }
 
 
-@pytest.mark.parametrize("violation", sorted(PLANTED_VIOLATIONS))
-def test_constitution_VI_planted_violation_fails(violation: str, tmp_path: Path) -> None:
+def _lint_with_plants(plants: dict[str, str], tmp_path: Path) -> subprocess.CompletedProcess[str]:
     src_root = tmp_path / "src"
     shutil.copytree(
         BACKEND / "src" / "hiretitan",
         src_root / "hiretitan",
         ignore=shutil.ignore_patterns("__pycache__"),
     )
-    for rel_path, source in PLANTED_VIOLATIONS[violation].items():
+    for rel_path, source in plants.items():
         target = src_root / "hiretitan" / rel_path
         target.parent.mkdir(parents=True, exist_ok=True)
         if not target.exists():
             target.write_text(source, encoding="utf-8")
+    return _run_lint_imports(src_root, tmp_path)
 
-    result = _run_lint_imports(src_root, tmp_path)
+
+@pytest.mark.parametrize("violation", sorted(PLANTED_VIOLATIONS))
+def test_constitution_VI_planted_violation_fails(violation: str, tmp_path: Path) -> None:
+    result = _lint_with_plants(PLANTED_VIOLATIONS[violation], tmp_path)
 
     assert result.returncode != 0, f"{violation} was not caught:\n{result.stdout}"
+    assert "BROKEN" in result.stdout
+
+
+# feature 002b (FR-022): contacts and notes never reach an AI prompt, so the search workflow,
+# the prompts and the LLM platform may not import the contacts code. Each plant brings its own
+# contacts module because the real one is written later in the feature.
+CONTACTS_MODULE = "search/application/contacts.py"
+CONTACTS_PLANTS = {
+    "search_workflow": "search/workflow/bad.py",
+    "prompts": "prompts/bad.py",
+    "platform_llm": "platform/llm/bad.py",
+}
+
+
+@pytest.mark.parametrize("where", sorted(CONTACTS_PLANTS))
+def test_FR022_workflows_prompts_and_llm_cannot_import_contacts(where: str, tmp_path: Path) -> None:
+    plants = {
+        CONTACTS_MODULE: "",
+        CONTACTS_PLANTS[where]: "import hiretitan.search.application.contacts\n",
+    }
+
+    result = _lint_with_plants(plants, tmp_path)
+
+    assert result.returncode != 0, f"{where} was not caught:\n{result.stdout}"
     assert "BROKEN" in result.stdout

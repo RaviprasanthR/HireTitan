@@ -13,13 +13,17 @@ from typing import Any, Literal
 from uuid import UUID
 
 from sqlalchemy import ColumnElement, and_, delete, exists, func, or_, select, update
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from hiretitan.platform.runtime.infra.models import WorkflowRunRow
+from hiretitan.search.domain.contacts import ContactFields, link_key, name_key
 from hiretitan.search.domain.job_state import JobState
 from hiretitan.search.domain.vendors import ENABLED_VENDORS
 from hiretitan.search.infra.models import (
+    CompanyNoteRow,
     CompanyRow,
+    ContactRow,
     JobRow,
     JobSourceRow,
     PossibleDuplicateRow,
@@ -515,4 +519,147 @@ class DuplicatesRepo:
             .where(PossibleDuplicateRow.id == pair_id)
             .values(status=status, decided_at=decided_at)
         )
+        await self._session.flush()
+
+
+# --- contacts and notes (feature 002b) -------------------------------------------------------
+
+
+class ContactsRepo:
+    """The person's own contacts at companies. Never read by a workflow or a prompt (FR-022)."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def add(self, company_id: UUID, fields: ContactFields, *, source: str) -> ContactRow:
+        row = ContactRow(company_id=company_id, source=source)
+        _apply_contact_fields(row, fields)
+        self._session.add(row)
+        await self._session.flush()
+        await self._session.refresh(row)
+        return row
+
+    async def get(self, contact_id: UUID) -> ContactRow | None:
+        return await self._session.get(ContactRow, contact_id)
+
+    async def list_for_company(self, company_id: UUID) -> list[ContactRow]:
+        result = await self._session.execute(
+            select(ContactRow)
+            .where(ContactRow.company_id == company_id)
+            .order_by(ContactRow.name_key, ContactRow.id)
+        )
+        return list(result.scalars())
+
+    async def update(self, contact_id: UUID, fields: ContactFields) -> ContactRow:
+        """Replace every editable field; the row keeps its ``source``."""
+        row = await self._session.get_one(ContactRow, contact_id)
+        _apply_contact_fields(row, fields)
+        await self._session.flush()
+        await self._session.refresh(row)
+        return row
+
+    async def remove(self, contact_id: UUID) -> None:
+        await self._session.execute(delete(ContactRow).where(ContactRow.id == contact_id))
+        await self._session.flush()
+
+    async def find_by_name_key(self, company_id: UUID, key: str) -> ContactRow | None:
+        result = await self._session.execute(
+            select(ContactRow).where(
+                ContactRow.company_id == company_id, ContactRow.name_key == key
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def find_by_link_key(self, company_id: UUID, key: str | None) -> ContactRow | None:
+        """The first contact of the company with this link; two may share one by mistake."""
+        if key is None:
+            return None
+        result = await self._session.execute(
+            select(ContactRow)
+            .where(ContactRow.company_id == company_id, ContactRow.link_key == key)
+            .order_by(ContactRow.created_at, ContactRow.id)
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
+
+    async def list_all(self) -> list[ContactRow]:
+        """Every contact, for the opt-in export (FR-021)."""
+        result = await self._session.execute(
+            select(ContactRow).order_by(ContactRow.company_id, ContactRow.name_key, ContactRow.id)
+        )
+        return list(result.scalars())
+
+    async def counts_by_company(self) -> dict[UUID, tuple[int, bool]]:
+        """``{company_id: (contact_count, has_note)}`` for every company, in one statement."""
+        contact_count = (
+            select(func.count()).where(ContactRow.company_id == CompanyRow.id).scalar_subquery()
+        )
+        has_note = exists().where(CompanyNoteRow.company_id == CompanyRow.id)
+        result = await self._session.execute(
+            select(CompanyRow.id, contact_count.label("contacts"), has_note.label("has_note"))
+        )
+        return {company_id: (int(n), bool(noted)) for company_id, n, noted in result.all()}
+
+
+class AppliedCompaniesRepo:
+    """Which companies have a job the person applied to (feature 002b). Nothing is stored."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def company_ids(self) -> set[UUID]:
+        result = await self._session.execute(
+            select(JobRow.company_id)
+            .where(JobRow.state == JobState.applied.value, JobRow.company_id.is_not(None))
+            .distinct()
+        )
+        return {company_id for company_id in result.scalars() if company_id is not None}
+
+
+def _apply_contact_fields(row: ContactRow, fields: ContactFields) -> None:
+    row.name = fields.name
+    row.name_key = name_key(fields.name)
+    row.role = fields.role
+    row.linkedin_url = fields.linkedin_url
+    row.link_key = link_key(fields.linkedin_url)
+    row.email = fields.email
+    row.phone = fields.phone
+    row.confidence = fields.confidence
+    row.note = fields.note
+
+
+class NotesRepo:
+    """One note per company. An empty body removes it (FR-010)."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def get(self, company_id: UUID) -> CompanyNoteRow | None:
+        return await self._session.get(CompanyNoteRow, company_id, populate_existing=True)
+
+    async def heads(self, limit: int) -> dict[UUID, str]:
+        """``{company_id: first characters of the note}`` for every company with a note."""
+        result = await self._session.execute(
+            select(CompanyNoteRow.company_id, func.left(CompanyNoteRow.body, limit))
+        )
+        return {company_id: head for company_id, head in result.all()}
+
+    async def list_all(self) -> list[CompanyNoteRow]:
+        """Every note, for the opt-in export (FR-021)."""
+        result = await self._session.execute(select(CompanyNoteRow))
+        return list(result.scalars())
+
+    async def set(self, company_id: UUID, body: str | None, *, source: str) -> None:
+        if body is None:
+            await self._session.execute(
+                delete(CompanyNoteRow).where(CompanyNoteRow.company_id == company_id)
+            )
+        else:
+            stmt = pg_insert(CompanyNoteRow).values(company_id=company_id, body=body, source=source)
+            await self._session.execute(
+                stmt.on_conflict_do_update(
+                    index_elements=[CompanyNoteRow.company_id],
+                    set_={"body": body, "source": source, "updated_at": func.now()},
+                )
+            )
         await self._session.flush()

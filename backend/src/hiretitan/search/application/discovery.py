@@ -78,6 +78,29 @@ async def add_company(
     return view_of(row)
 
 
+async def add_company_from_import(
+    store: DiscoveryStore,
+    *,
+    name: str,
+    careers_url: str | None = None,
+    city: str | None = None,
+    website: str | None = None,
+) -> CompanyView:
+    """A company of the person's own from an imported sheet row. Like ``add_company`` but the
+    careers link is optional (a sheet row can have only a name); it stays unresolved, so board
+    discovery and confirmation still apply as for a company added by hand."""
+    values = check_fields(
+        {
+            "name": name,
+            "careers_url": careers_url or "",
+            "city": city or "",
+            "website": website or "",
+        }
+    )
+    row = await store.add(origin="user", resolution="unresolved", **values)
+    return view_of(row)
+
+
 async def _company(store: DiscoveryStore, company_id: UUID) -> Any:
     row = await store.get(company_id)
     if row is None or row.deleted_at is not None:

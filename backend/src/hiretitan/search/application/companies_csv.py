@@ -26,13 +26,15 @@ from hiretitan.search.application.companies import (
     StoredCompany,
     check_fields,
 )
+from hiretitan.search.domain.contacts_cell import ParsedContact, render
 
 COLUMNS: Final = ("name", "city", "website", "careers_url", "ats_vendor", "board_id", "hidden")
+PEOPLE_COLUMNS: Final = ("contacts", "notes")
 MAX_BYTES: Final = 1_048_576
 MAX_ROWS: Final = 2000
 BOARD_ID_MAX: Final = 200
 _VENDOR: Final = re.compile(r"[a-z][a-z0-9_]{0,39}")
-_FORMULA_START: Final = ("=", "+", "-", "@")
+_FORMULA_START: Final = ("=", "+", "-", "@", "\t", "\r")
 _TRUE: Final = frozenset({"true", "yes", "1", "y"})
 _FALSE: Final = frozenset({"false", "no", "0", "n"})
 _COMPARED: Final = ("name", "city", "website", "careers_url", "ats_vendor", "board_id", "hidden")
@@ -101,11 +103,26 @@ def _unsafe(text: str) -> str:
     return text[1:] if text.startswith("'") and text[1:2] in _FORMULA_START else text
 
 
-def export_csv(rows: list[StoredCompany]) -> str:
+def export_csv(
+    rows: list[StoredCompany],
+    contacts: dict[UUID, list[ParsedContact]] | None = None,
+    notes: dict[UUID, str] | None = None,
+) -> str:
+    """The company list. ``contacts`` and ``notes`` are given only when the person opted in
+    (FR-021); then two more columns follow, in the grammar the sheet import reads (FR-024)."""
+    with_people = contacts is not None or notes is not None
     out = io.StringIO()
     writer = csv.writer(out, lineterminator="\n")
-    writer.writerow(COLUMNS)
+    writer.writerow((*COLUMNS, *PEOPLE_COLUMNS) if with_people else COLUMNS)
     for row in rows:
+        extra = (
+            [
+                _safe(render((contacts or {}).get(row.id, []))),
+                _safe((notes or {}).get(row.id, "")),
+            ]
+            if with_people
+            else []
+        )
         writer.writerow(
             [
                 _safe(row.name),
@@ -115,6 +132,7 @@ def export_csv(rows: list[StoredCompany]) -> str:
                 _safe(row.ats_vendor),
                 _safe(row.board_id),
                 "true" if row.hidden else "false",
+                *extra,
             ]
         )
     return out.getvalue()
@@ -176,19 +194,22 @@ def parse_csv(data: bytes) -> tuple[list[ImportRow], list[InvalidRow]]:
     rows: list[ImportRow] = []
     invalid: list[InvalidRow] = []
     seen = 0
-    for cells in reader:
-        line = reader.line_num
-        if not any((v or "").strip() for v in cells.values() if isinstance(v, str)):
-            continue  # a blank line
-        seen += 1
-        if seen > MAX_ROWS:
-            raise CsvFileError(422, "The file has more than 2,000 rows.")
-        try:
-            rows.append(_row_of(line, {k: v for k, v in cells.items() if isinstance(v, str)}))
-        except CompanyError as error:
-            invalid.append(InvalidRow(line, " ".join(e.message for e in error.errors)))
-        except ValueError as error:
-            invalid.append(InvalidRow(line, str(error)))
+    try:
+        for cells in reader:
+            line = reader.line_num
+            if not any((v or "").strip() for v in cells.values() if isinstance(v, str)):
+                continue  # a blank line
+            seen += 1
+            if seen > MAX_ROWS:
+                raise CsvFileError(422, "The file has more than 2,000 rows.")
+            try:
+                rows.append(_row_of(line, {k: v for k, v in cells.items() if isinstance(v, str)}))
+            except CompanyError as error:
+                invalid.append(InvalidRow(line, " ".join(e.message for e in error.errors)))
+            except ValueError as error:
+                invalid.append(InvalidRow(line, str(error)))
+    except csv.Error as error:
+        raise CsvFileError(422, "A cell in this file is too large to read.") from error
     return rows, invalid
 
 

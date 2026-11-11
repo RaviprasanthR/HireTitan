@@ -17,7 +17,7 @@ const sections = [
 
 export function Shell() {
   return (
-    <div data-testid="app-root" className="flex min-h-screen bg-background text-foreground">
+    <div data-testid="app-root" className="flex h-screen overflow-hidden bg-background text-foreground">
       <aside className="flex w-56 shrink-0 flex-col gap-6 bg-surface p-4">
         <Wordmark className="px-3" />
         <nav aria-label="Main" className="flex flex-col gap-1">
@@ -39,11 +39,11 @@ export function Shell() {
           ))}
         </nav>
       </aside>
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <div data-testid="banner-slot">
           <AiBanner />
         </div>
-        <main className="flex-1 p-8">
+        <main className="flex min-h-0 flex-1 flex-col overflow-y-auto p-8">
           <Outlet />
         </main>
       </div>

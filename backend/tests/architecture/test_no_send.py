@@ -293,3 +293,69 @@ def test_planted_search_http_violation_is_caught(source: str, is_fetcher: bool) 
 )
 def test_allowed_search_http_usage_passes(source: str, is_fetcher: bool) -> None:
     assert search_http_violations(source, is_fetcher=is_fetcher) == []
+
+
+# Feature 002b (FR-015): the contacts code only stores and shows other people's details. It has no
+# way to send anything and no HTTP client at all (LinkedIn links are stored, never fetched).
+CONTACTS_GLOBS = (
+    "search/domain/contacts*.py",
+    "search/domain/sheet.py",
+    "search/domain/company_match.py",
+    "search/application/contacts.py",
+    "search/application/sheet_import.py",
+)
+CONTACTS_FORBIDDEN_CLIENT_MODULES = ("httpx", "requests", "aiohttp", "urllib.request")
+
+
+def contacts_client_violations(source: str) -> list[str]:
+    tree = ast.parse(source)
+    return sorted(
+        {m for m in _imported_modules(tree) if _matches(m, CONTACTS_FORBIDDEN_CLIENT_MODULES)}
+    )
+
+
+def _contacts_sources() -> list[tuple[Path, str]]:
+    paths = sorted({p for pattern in CONTACTS_GLOBS for p in PACKAGE.glob(pattern)})
+    return [(p, p.read_text(encoding="utf-8")) for p in paths]
+
+
+def test_FR015_no_send_path_in_contacts_code() -> None:
+    violations = {
+        str(path.relative_to(PACKAGE)): found
+        for path, source in _contacts_sources()
+        if (found := sending_violations(source))
+    }
+    assert violations == {}
+
+
+def test_FR015_contacts_code_has_no_http_client() -> None:
+    violations = {
+        str(path.relative_to(PACKAGE)): found
+        for path, source in _contacts_sources()
+        if (found := contacts_client_violations(source))
+    }
+    assert violations == {}
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "import httpx\n",
+        "from httpx import AsyncClient\n",
+        "import requests\n",
+        "import aiohttp\n",
+        "from urllib.request import urlopen\n",
+    ],
+)
+def test_FR015_planted_http_client_in_contacts_code_is_caught(source: str) -> None:
+    assert contacts_client_violations(source)
+
+
+@pytest.mark.parametrize("source", ["import smtplib\n", "from twilio.rest import Client\n"])
+def test_FR015_planted_sender_in_contacts_code_is_caught(source: str) -> None:
+    assert sending_violations(source)
+
+
+def test_FR015_contacts_globs_are_not_stale() -> None:
+    # every pattern must still point at the search package, so a rename can't empty the scan
+    assert all(pattern.startswith("search/") for pattern in CONTACTS_GLOBS)

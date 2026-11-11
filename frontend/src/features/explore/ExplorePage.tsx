@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { useStatus } from '@/api/useStatus'
 import { Button } from '@/components/ui/button'
 import { AppliedControl } from '@/features/jobs/AppliedControl'
@@ -124,12 +124,21 @@ function Filters({ value, onChange }: { value: JobFilters; onChange: (next: JobF
 
 export function ExplorePage() {
   const status = useStatus()
-  const [filters, setFilters] = useState<JobFilters>(NO_FILTERS)
+  const [params, setParams] = useSearchParams()
+  const [picked, setPicked] = useState<JobFilters>(NO_FILTERS)
+  // A company can arrive in the link; it is not typed in.
+  const company_id = params.get('company_id') ?? ''
+  const filters = { ...picked, company_id }
+  const setFilters = (next: JobFilters) => setPicked(next)
   const [adding, setAdding] = useState(false)
   const jobs = useJobs(filters)
   const setupDone = setupIsDone(status.data?.checklist)
   const items = jobs.data?.pages.flatMap((page) => page.items) ?? []
-  const filtered = filters.source !== '' || filters.work_mode !== '' || filters.city !== ''
+  const filtered =
+    filters.source !== '' ||
+    filters.work_mode !== '' ||
+    filters.city !== '' ||
+    company_id !== ''
 
   let list
   if (jobs.isPending || status.isPending) {
@@ -180,6 +189,22 @@ export function ExplorePage() {
       {status.data && !setupDone && <SetupChecklist showAllSet={false} />}
       {setupDone && <SearchPanel />}
       {setupDone && <DuplicatesPanel />}
+      {company_id && (
+        <p className="flex items-center gap-2 text-sm">
+          <span className="rounded-full bg-surface px-3 py-1">
+            Company: {items[0]?.company_name ?? 'this company'}
+          </span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            aria-label="Remove the company filter"
+            onClick={() => setParams({})}
+          >
+            ✕
+          </Button>
+        </p>
+      )}
       <Filters value={filters} onChange={setFilters} />
       {list}
     </section>

@@ -61,6 +61,7 @@ backend/
     profile/         resume upload, parsing, profile versions          (001)
     preferences/     job preferences                                    (001)
     companies/       company list, seed loader, CSV import/export       (002)
+                     + contacts, notes, company sheet import            (002b)
     jobs/            search rules, search runs, rule filter, AI check, scoring (002)
     applications/    tracking, follow-ups, data export                  (003)
     outreach/        drafts                                             (004)
@@ -314,7 +315,7 @@ Exact schemas are designed per feature. Ownership by area:
 | Setup | `settings` (budget cap, tier → model mapping; **no API keys**, those live in `.env`) | 001 |
 | Profile | `resume_files`, `profiles`, `profile_versions` (each linked to its source resume file), `preferences`, `style_guides` | 001 (style guide: 004) |
 | Runtime | `workflow_runs`, `llm_calls`, `events`, plus Procrastinate's own queue tables | 001 (foundation) |
-| Search | `companies` (built-in seed + user), `sources`, `search_rules`, `source_runs`, `jobs`, `job_sources`, `job_facts`, `filter_decisions` (rule and AI), `job_scores` | 002 |
+| Search | `companies` (built-in seed + user), `company_contacts` and `company_notes` (002b, the person's own), `sources`, `search_rules`, `source_runs`, `jobs`, `job_sources`, `job_facts`, `filter_decisions` (rule and AI), `job_scores` | 002 |
 | Applications | `applications`, `application_events`, `contacts` (entered by the user), `offers` | 003 |
 | Outreach | `drafts`, `draft_versions` | 004 |
 | Resumes | `tailored_resumes` | 005 |
@@ -338,6 +339,7 @@ Cross-cutting rules: UUID primary keys; `created_at`/`updated_at`; AI-produced r
 - Careers-page fetching: honest User-Agent (`HireTitan/<version> (+repo URL)`), robots.txt, per-host rate limit, cache, timeouts, size caps. HTML is parsed, never executed.
 - Uploads: type sniffing (not just the extension), size limit, parsed in the worker.
 - SPA: strict Content Security Policy; model output is rendered as text, never as HTML.
+- **Company contacts and notes (002b)** are the person's own data in their local database only: never in `seed/companies.yaml`, never sent to an AI (import-linter contract `contacts-stay-out-of-ai-paths` plus a recorded-call test in `tests/security/test_contacts_privacy.py`), never fetched (LinkedIn links are stored and shown, not opened), left out of the CSV export unless the person ticks "Include contacts and notes", and removed by Delete all my data.
 
 ## 10. Frontend
 
@@ -362,6 +364,8 @@ React (current stable; exact version pinned in the 001 plan) + Vite + TypeScript
 Palette changed 2026-11-04 to Ravi's slate scale `#06141B #11212D #253745 #4A5C6A #9BA8AB #CCD0CF`. The slate scale has no saturated colour, so on 2026-11-05 one accent was added: ice cyan `#4cc9f0`. The page background is a top-to-bottom gradient (`#253745` to `#11212d` to `#06141b`, 2026-11-05). Gradients (panels, primary actions, the bolt) and shadows (panels, primary actions, dialogs) are CSS variables in `theme.css`.
 
 **First-run setup (001, US5):** until setup is finished, every page shows one centred card instead of the app: (1) name, (2) resume (upload, paste or "Type it in myself"), (3) check the profile, (4) preferences, ending in "Finish setup". The card comes from saved data (`GET /onboarding`), so closing the tab returns the user to the same card; a stored `setup_completed_at` keeps the cards from coming back, and "Delete all my data" clears it. Design: `docs/superpowers/specs/2026-11-04-first-run-onboarding-design.md`.
+
+**Companies page (002, 002b):** a sortable table, one compact row per company (name linking to the company site, city, an Applied chip when a job there is in the applied state, contact count, the start of the note, icon actions for details, company site, careers page, hide, edit and delete), a search box, a "Show" filter, and import and export behind one Import / export button. A row expands to every detail of the company, then its contacts and note. The company sheet import reads **CSV only** (a spreadsheet saved as CSV; no Excel reader, so no extra dependency). Open-role counts were built and then dropped on 2026-11-11 because they go stale. Only the list scrolls; the menu and the page header stay in place.
 
 **First-level UI (001), after setup:** a sidebar shell with **Home** (setup checklist: key found and working, resume uploaded, profile confirmed, preferences set) · **Profile** (upload, extraction progress, review/edit/confirm, hidden-text and injection flags) · **Preferences** (form) · **Review** (items waiting for approval) · **Settings** (budget cap, key status, tier → model mapping, usage and spend).
 

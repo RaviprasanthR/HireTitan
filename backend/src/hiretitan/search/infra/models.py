@@ -25,6 +25,7 @@ from sqlalchemy import (
     PrimaryKeyConstraint,
     Text,
     UniqueConstraint,
+    func,
     text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
@@ -284,3 +285,69 @@ class PossibleDuplicateRow(IdTimestampMixin, Base):
     similarity: Mapped[Decimal] = mapped_column(Numeric(5, 2))
     status: Mapped[str] = mapped_column(Text, server_default=text("'open'"))
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+CONTACT_CONFIDENCES = ("high", "medium", "low")
+CONTACT_SOURCES = ("import", "typed")
+
+
+class ContactRow(IdTimestampMixin, Base):
+    """A person the user knows at a company (feature 002b). The user's own data, never AI input."""
+
+    __tablename__ = "company_contacts"
+    __table_args__ = (
+        UniqueConstraint("company_id", "name_key", name="uq_company_contacts_company_name"),
+        Index(
+            "ix_company_contacts_company_link",
+            "company_id",
+            "link_key",
+            postgresql_where=text("link_key IS NOT NULL"),
+        ),
+        CheckConstraint(
+            "confidence IS NULL OR " + _in("confidence", CONTACT_CONFIDENCES), name="confidence"
+        ),
+        CheckConstraint("char_length(name) BETWEEN 1 AND 120", name="name_length"),
+        CheckConstraint("char_length(name_key) BETWEEN 1 AND 120", name="name_key_not_empty"),
+        CheckConstraint("char_length(role) <= 120", name="role_length"),
+        CheckConstraint("char_length(linkedin_url) <= 500", name="linkedin_url_length"),
+        CheckConstraint("char_length(email) <= 254", name="email_length"),
+        CheckConstraint("phone IS NULL OR phone ~ '^[0-9 +()-]{5,30}$'", name="phone_shape"),
+        CheckConstraint("char_length(note) <= 2000", name="note_length"),
+        CheckConstraint(_in("source", CONTACT_SOURCES), name="source_values"),
+    )
+
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey(f"{APP_SCHEMA}.companies.id", ondelete="CASCADE")
+    )
+    name: Mapped[str] = mapped_column(Text)
+    name_key: Mapped[str] = mapped_column(Text)
+    role: Mapped[str | None] = mapped_column(Text)
+    linkedin_url: Mapped[str | None] = mapped_column(Text)
+    link_key: Mapped[str | None] = mapped_column(Text)
+    email: Mapped[str | None] = mapped_column(Text)
+    phone: Mapped[str | None] = mapped_column(Text)
+    confidence: Mapped[str | None] = mapped_column(Text)
+    note: Mapped[str | None] = mapped_column(Text)
+    source: Mapped[str] = mapped_column(Text)
+
+
+class CompanyNoteRow(Base):
+    """One free-text note per company; saving an empty note deletes the row (FR-010)."""
+
+    __tablename__ = "company_notes"
+    __table_args__ = (
+        CheckConstraint("char_length(body) BETWEEN 1 AND 5000", name="body_length"),
+        CheckConstraint(_in("source", CONTACT_SOURCES), name="source_values"),
+    )
+
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey(f"{APP_SCHEMA}.companies.id", ondelete="CASCADE"), primary_key=True
+    )
+    body: Mapped[str] = mapped_column(Text)
+    source: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )

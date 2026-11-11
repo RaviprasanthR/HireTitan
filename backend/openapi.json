@@ -96,6 +96,20 @@
         "title": "Body_import_preview_api_v1_companies_import_post",
         "type": "object"
       },
+      "Body_sheet_preview_api_v1_companies_sheet_import_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_sheet_preview_api_v1_companies_sheet_import_post",
+        "type": "object"
+      },
       "Body_upload_resume_api_v1_resumes_post": {
         "properties": {
           "file": {
@@ -313,6 +327,21 @@
             ],
             "title": "City"
           },
+          "contact_count": {
+            "default": 0,
+            "title": "Contact Count",
+            "type": "integer"
+          },
+          "has_application": {
+            "default": false,
+            "title": "Has Application",
+            "type": "boolean"
+          },
+          "has_note": {
+            "default": false,
+            "title": "Has Note",
+            "type": "boolean"
+          },
           "hidden": {
             "title": "Hidden",
             "type": "boolean"
@@ -359,6 +388,17 @@
           "name": {
             "title": "Name",
             "type": "string"
+          },
+          "note_preview": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note Preview"
           },
           "origin": {
             "title": "Origin",
@@ -553,6 +593,83 @@
         "title": "CompletedOut",
         "type": "object"
       },
+      "ContactIn": {
+        "properties": {
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "linkedin_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Linkedin Url"
+          },
+          "name": {
+            "default": "",
+            "title": "Name",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          }
+        },
+        "title": "ContactIn",
+        "type": "object"
+      },
       "ContactModel": {
         "additionalProperties": false,
         "properties": {
@@ -608,6 +725,234 @@
           }
         },
         "title": "ContactModel",
+        "type": "object"
+      },
+      "ContactOut": {
+        "properties": {
+          "company_id": {
+            "format": "uuid",
+            "title": "Company Id",
+            "type": "string"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "enum": [
+                  "high",
+                  "medium",
+                  "low"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "linkedin_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Linkedin Url"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
+          "source": {
+            "enum": [
+              "import",
+              "typed"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "company_id",
+          "name",
+          "role",
+          "linkedin_url",
+          "email",
+          "phone",
+          "confidence",
+          "note",
+          "source",
+          "updated_at"
+        ],
+        "title": "ContactOut",
+        "type": "object"
+      },
+      "ContactPatch": {
+        "description": "Only the fields that are sent change; an empty text clears an optional field.",
+        "properties": {
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "linkedin_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Linkedin Url"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          }
+        },
+        "title": "ContactPatch",
+        "type": "object"
+      },
+      "ContactsOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ContactOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NoteOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "note"
+        ],
+        "title": "ContactsOut",
         "type": "object"
       },
       "DecisionHistoryOut": {
@@ -1242,6 +1587,18 @@
             ],
             "title": "Applied On"
           },
+          "company_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Id"
+          },
           "company_name": {
             "title": "Company Name",
             "type": "string"
@@ -1409,6 +1766,18 @@
               }
             ],
             "title": "City"
+          },
+          "company_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Id"
           },
           "company_name": {
             "title": "Company Name",
@@ -1637,6 +2006,72 @@
         "title": "NameOut",
         "type": "object"
       },
+      "NoteIn": {
+        "properties": {
+          "body": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body"
+          }
+        },
+        "title": "NoteIn",
+        "type": "object"
+      },
+      "NoteOut": {
+        "properties": {
+          "body": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "enum": [
+                  "import",
+                  "typed"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "required": [
+          "body",
+          "source",
+          "updated_at"
+        ],
+        "title": "NoteOut",
+        "type": "object"
+      },
       "OnboardingOut": {
         "properties": {
           "active_run_id": {
@@ -1767,6 +2202,18 @@
               }
             ],
             "title": "City"
+          },
+          "company_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Id"
           },
           "company_name": {
             "title": "Company Name",
@@ -3576,6 +4023,273 @@
         "title": "SettingsOut",
         "type": "object"
       },
+      "SheetColumnsOut": {
+        "properties": {
+          "ignored": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Ignored",
+            "type": "array"
+          },
+          "used": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Used",
+            "type": "array"
+          }
+        },
+        "required": [
+          "used",
+          "ignored"
+        ],
+        "title": "SheetColumnsOut",
+        "type": "object"
+      },
+      "SheetCompaniesOut": {
+        "properties": {
+          "matched": {
+            "title": "Matched",
+            "type": "integer"
+          },
+          "to_add": {
+            "title": "To Add",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "matched",
+          "to_add"
+        ],
+        "title": "SheetCompaniesOut",
+        "type": "object"
+      },
+      "SheetContactsOut": {
+        "properties": {
+          "to_add": {
+            "title": "To Add",
+            "type": "integer"
+          },
+          "to_update": {
+            "title": "To Update",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "to_add",
+          "to_update"
+        ],
+        "title": "SheetContactsOut",
+        "type": "object"
+      },
+      "SheetIssueOut": {
+        "properties": {
+          "line": {
+            "title": "Line",
+            "type": "integer"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "line",
+          "reason"
+        ],
+        "title": "SheetIssueOut",
+        "type": "object"
+      },
+      "SheetNotesOut": {
+        "properties": {
+          "kept_yours": {
+            "title": "Kept Yours",
+            "type": "integer"
+          },
+          "to_change": {
+            "title": "To Change",
+            "type": "integer"
+          },
+          "to_set": {
+            "title": "To Set",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "to_set",
+          "to_change",
+          "kept_yours"
+        ],
+        "title": "SheetNotesOut",
+        "type": "object"
+      },
+      "SheetPreview": {
+        "properties": {
+          "columns": {
+            "$ref": "#/components/schemas/SheetColumnsOut"
+          },
+          "companies": {
+            "$ref": "#/components/schemas/SheetCompaniesOut"
+          },
+          "contacts": {
+            "$ref": "#/components/schemas/SheetContactsOut"
+          },
+          "notes": {
+            "$ref": "#/components/schemas/SheetNotesOut"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/SheetRowOut"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "shortened": {
+            "items": {
+              "$ref": "#/components/schemas/SheetIssueOut"
+            },
+            "title": "Shortened",
+            "type": "array"
+          },
+          "skipped": {
+            "items": {
+              "$ref": "#/components/schemas/SheetIssueOut"
+            },
+            "title": "Skipped",
+            "type": "array"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "columns",
+          "companies",
+          "contacts",
+          "notes",
+          "rows",
+          "skipped",
+          "shortened"
+        ],
+        "title": "SheetPreview",
+        "type": "object"
+      },
+      "SheetResult": {
+        "properties": {
+          "companies_added": {
+            "title": "Companies Added",
+            "type": "integer"
+          },
+          "contacts_added": {
+            "title": "Contacts Added",
+            "type": "integer"
+          },
+          "contacts_updated": {
+            "title": "Contacts Updated",
+            "type": "integer"
+          },
+          "matched": {
+            "title": "Matched",
+            "type": "integer"
+          },
+          "notes_changed": {
+            "title": "Notes Changed",
+            "type": "integer"
+          },
+          "notes_kept": {
+            "title": "Notes Kept",
+            "type": "integer"
+          },
+          "notes_set": {
+            "title": "Notes Set",
+            "type": "integer"
+          },
+          "shortened": {
+            "items": {
+              "$ref": "#/components/schemas/SheetIssueOut"
+            },
+            "title": "Shortened",
+            "type": "array"
+          },
+          "skipped": {
+            "items": {
+              "$ref": "#/components/schemas/SheetIssueOut"
+            },
+            "title": "Skipped",
+            "type": "array"
+          }
+        },
+        "required": [
+          "matched",
+          "companies_added",
+          "contacts_added",
+          "contacts_updated",
+          "notes_set",
+          "notes_changed",
+          "notes_kept",
+          "skipped",
+          "shortened"
+        ],
+        "title": "SheetResult",
+        "type": "object"
+      },
+      "SheetRowOut": {
+        "properties": {
+          "action": {
+            "enum": [
+              "matched",
+              "add",
+              "skip"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "company": {
+            "title": "Company",
+            "type": "string"
+          },
+          "contacts_add": {
+            "title": "Contacts Add",
+            "type": "integer"
+          },
+          "contacts_update": {
+            "title": "Contacts Update",
+            "type": "integer"
+          },
+          "line": {
+            "title": "Line",
+            "type": "integer"
+          },
+          "notes": {
+            "enum": [
+              "set",
+              "changed",
+              "kept",
+              "none"
+            ],
+            "title": "Notes",
+            "type": "string"
+          },
+          "shortened": {
+            "title": "Shortened",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "line",
+          "company",
+          "action",
+          "contacts_add",
+          "contacts_update",
+          "notes",
+          "shortened"
+        ],
+        "title": "SheetRowOut",
+        "type": "object"
+      },
       "SourceOut": {
         "properties": {
           "kind": {
@@ -4002,6 +4716,18 @@
     "/api/v1/companies/export": {
       "get": {
         "operationId": "export_api_v1_companies_export_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "include_contacts",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Include Contacts",
+              "type": "boolean"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -4010,6 +4736,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "Export",
@@ -4101,6 +4837,89 @@
         ]
       }
     },
+    "/api/v1/companies/sheet-import": {
+      "post": {
+        "operationId": "sheet_preview_api_v1_companies_sheet_import_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_sheet_preview_api_v1_companies_sheet_import_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SheetPreview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sheet Preview",
+        "tags": [
+          "companies"
+        ]
+      }
+    },
+    "/api/v1/companies/sheet-import/{token}/confirm": {
+      "post": {
+        "operationId": "sheet_confirm_api_v1_companies_sheet_import__token__confirm_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "title": "Token",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SheetResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sheet Confirm",
+        "tags": [
+          "companies"
+        ]
+      }
+    },
     "/api/v1/companies/{company_id}": {
       "delete": {
         "operationId": "delete_api_v1_companies__company_id__delete",
@@ -4185,6 +5004,207 @@
         "summary": "Patch",
         "tags": [
           "companies"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/contacts": {
+      "get": {
+        "operationId": "contacts_of_api_v1_companies__company_id__contacts_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Contacts Of",
+        "tags": [
+          "contacts"
+        ]
+      },
+      "post": {
+        "operationId": "create_contact_api_v1_companies__company_id__contacts_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Contact",
+        "tags": [
+          "contacts"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/contacts/{contact_id}": {
+      "delete": {
+        "operationId": "remove_contact_api_v1_companies__company_id__contacts__contact_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contact Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Remove Contact",
+        "tags": [
+          "contacts"
+        ]
+      },
+      "patch": {
+        "operationId": "change_contact_api_v1_companies__company_id__contacts__contact_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contact Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Change Contact",
+        "tags": [
+          "contacts"
         ]
       }
     },
@@ -4314,6 +5334,59 @@
         "summary": "Reject",
         "tags": [
           "companies"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/note": {
+      "put": {
+        "operationId": "put_note_api_v1_companies__company_id__note_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NoteIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoteOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Note",
+        "tags": [
+          "contacts"
         ]
       }
     },
