@@ -47,6 +47,34 @@ describe('ImportExport', () => {
     )
   })
 
+  it('US4 AS2 default export link has no contacts', () => {
+    renderIt(() => undefined)
+
+    const box = screen.getByRole('checkbox', { name: /include contacts and notes/i })
+    expect(box).not.toBeChecked()
+    expect(screen.getByRole('link', { name: 'Export CSV' }).getAttribute('href')).not.toContain(
+      'include_contacts',
+    )
+    expect(screen.getByText(/other people.s details/i)).toBeInTheDocument()
+  })
+
+  it('US4 AS3 option adds include_contacts=true', async () => {
+    const user = userEvent.setup()
+    renderIt(() => undefined)
+
+    await user.click(screen.getByRole('checkbox', { name: /include contacts and notes/i }))
+
+    expect(screen.getByRole('link', { name: 'Export CSV' })).toHaveAttribute(
+      'href',
+      '/api/v1/companies/export?include_contacts=true',
+    )
+    await user.click(screen.getByRole('checkbox', { name: /include contacts and notes/i }))
+    expect(screen.getByRole('link', { name: 'Export CSV' })).toHaveAttribute(
+      'href',
+      '/api/v1/companies/export',
+    )
+  })
+
   it('US1 offers the company sheet import next to the CSV import', () => {
     renderIt(() => undefined)
 
