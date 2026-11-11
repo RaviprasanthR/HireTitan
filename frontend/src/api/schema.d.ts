@@ -1463,6 +1463,8 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Inquired On */
+            inquired_on: string | null;
             /** Listed */
             listed: boolean;
             /** Location Text */
@@ -1524,6 +1526,8 @@ export interface components {
             injection_flags: {
                 [key: string]: unknown;
             }[];
+            /** Inquired On */
+            inquired_on: string | null;
             /** Listed */
             listed: boolean;
             /** Location Text */
@@ -1644,6 +1648,8 @@ export interface components {
             injection_flags: {
                 [key: string]: unknown;
             }[];
+            /** Inquired On */
+            inquired_on: string | null;
             /** Listed */
             listed: boolean;
             /** Location Text */

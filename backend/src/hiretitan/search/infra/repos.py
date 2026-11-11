@@ -350,12 +350,19 @@ class JobsRepo:
         value = await self._session.scalar(select(JobRow.state).where(JobRow.id == job_id))
         return JobState(value) if value is not None else None
 
-    async def set_status(self, job_id: UUID, state: JobState, applied_on: date | None) -> None:
-        """State and applied date change together (the table requires it)."""
+    async def set_status(
+        self,
+        job_id: UUID,
+        state: JobState,
+        applied_on: date | None,
+        inquired_on: date | None = None,
+    ) -> None:
+        """State and its date change together (the table requires it): the date that does not
+        belong to the new state is cleared."""
         await self._session.execute(
             update(JobRow)
             .where(JobRow.id == job_id)
-            .values(state=state.value, applied_on=applied_on)
+            .values(state=state.value, applied_on=applied_on, inquired_on=inquired_on)
         )
         await self._session.flush()
 

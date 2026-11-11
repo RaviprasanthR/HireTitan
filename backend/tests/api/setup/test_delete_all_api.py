@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field, replace
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from functools import partial
 from pathlib import Path
@@ -338,3 +338,23 @@ async def test_SC013_shipped_list_restored_after_delete_all(
     )
     assert (acme.hidden, acme.user_modified) == (False, False)
     assert beta.deleted_at is None
+
+
+async def test_delete_all_removes_inquired_jobs(env: Env) -> None:
+    async with env.sessions() as session:
+        await JobsRepo(session).add(
+            company_id=None,
+            company_name="Acme",
+            title="Asked About",
+            first_seen_at=datetime(2026, 11, 7, tzinfo=UTC),
+            last_seen_at=datetime(2026, 11, 7, tzinfo=UTC),
+            description="d",
+            state="inquired",
+            inquired_on=date(2026, 11, 7),
+        )
+        await session.commit()
+
+    assert (await env.client.post(URL, json={"confirm": "DELETE"})).status_code == 204
+
+    async with env.sessions() as session:
+        assert (await session.scalars(select(JobRow))).all() == []

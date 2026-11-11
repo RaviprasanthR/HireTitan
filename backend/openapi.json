@@ -1623,6 +1623,18 @@
             "title": "Id",
             "type": "string"
           },
+          "inquired_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inquired On"
+          },
           "listed": {
             "title": "Listed",
             "type": "boolean"
@@ -1699,7 +1711,8 @@
           "sources",
           "decision",
           "listed",
-          "applied_on"
+          "applied_on",
+          "inquired_on"
         ],
         "title": "JobCardOut",
         "type": "object"
@@ -1845,6 +1858,18 @@
             "title": "Injection Flags",
             "type": "array"
           },
+          "inquired_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inquired On"
+          },
           "listed": {
             "title": "Listed",
             "type": "boolean"
@@ -1940,6 +1965,7 @@
           "decision",
           "listed",
           "applied_on",
+          "inquired_on",
           "description",
           "city",
           "country",
@@ -2281,6 +2307,18 @@
             "title": "Injection Flags",
             "type": "array"
           },
+          "inquired_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inquired On"
+          },
           "listed": {
             "title": "Listed",
             "type": "boolean"
@@ -2388,6 +2426,7 @@
           "decision",
           "listed",
           "applied_on",
+          "inquired_on",
           "description",
           "city",
           "country",
