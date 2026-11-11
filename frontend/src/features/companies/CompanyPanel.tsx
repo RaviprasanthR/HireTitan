@@ -137,7 +137,10 @@ function ContactItem({ contact, companyId }: { contact: Contact; companyId: stri
           initial={valuesOf(contact)}
           pending={edit.isPending}
           error={edit.error}
-          onCancel={() => setEditing(false)}
+          onCancel={() => {
+            edit.reset()
+            setEditing(false)
+          }}
           onSubmit={(values) =>
             edit.mutate({ id: contact.id, values }, { onSuccess: () => setEditing(false) })
           }
@@ -254,6 +257,11 @@ function NoteEditor({
       <Button type="button" size="sm" disabled={save.isPending} onClick={() => save.mutate(body)}>
         Save note
       </Button>
+      {save.isSuccess && (
+        <p role="status" className="text-sm text-muted-small">
+          Note saved
+        </p>
+      )}
     </div>
   )
 }
@@ -289,7 +297,10 @@ export function CompanyPanel({
           initial={EMPTY}
           pending={add.isPending}
           error={add.error}
-          onCancel={() => setAdding(false)}
+          onCancel={() => {
+            add.reset()
+            setAdding(false)
+          }}
           onSubmit={(values) => add.mutate(values, { onSuccess: () => setAdding(false) })}
         />
       ) : (

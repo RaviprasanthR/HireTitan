@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ApiError } from '@/api/client'
 import { Button } from '@/components/ui/button'
 import { useSheetConfirm, useSheetPreview, type SheetPreview, type SheetResult } from './api'
@@ -96,6 +96,16 @@ export function SheetImportDialog() {
   const preview = useSheetPreview()
   const confirm = useSheetConfirm()
   const plan = preview.data && !confirm.isSuccess ? preview.data : null
+  const trigger = useRef<HTMLButtonElement>(null)
+  const fileInput = useRef<HTMLInputElement>(null)
+  const wasOpen = useRef(false)
+
+  // Keyboard and screen-reader users follow the focus: into the dialog, and back on close.
+  useEffect(() => {
+    if (open) fileInput.current?.focus()
+    else if (wasOpen.current) trigger.current?.focus()
+    wasOpen.current = open
+  }, [open])
 
   function close() {
     preview.reset()
@@ -106,7 +116,13 @@ export function SheetImportDialog() {
   if (!open) {
     return (
       <div className="space-y-2">
-        <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}>
+        <Button
+          ref={trigger}
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setOpen(true)}
+        >
           Import a company sheet
         </Button>
         {done && <p role="status">{done}</p>}
@@ -116,7 +132,14 @@ export function SheetImportDialog() {
 
   const seen = headersSeen(preview.error)
   return (
-    <div role="dialog" aria-label="Import a company sheet" className="space-y-3">
+    <div
+      role="dialog"
+      aria-label="Import a company sheet"
+      className="space-y-3"
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') close()
+      }}
+    >
       <p className="text-sm text-muted-foreground">
         Save your spreadsheet as a CSV file and choose it here. Contacts and notes stay on this
         computer and are never sent to an AI.
@@ -124,6 +147,7 @@ export function SheetImportDialog() {
       <label className="block text-sm font-medium">
         Company sheet (CSV)
         <input
+          ref={fileInput}
           type="file"
           accept=".csv,text/csv"
           className="ml-2 text-sm"

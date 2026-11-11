@@ -197,6 +197,18 @@ describe('ExplorePage', () => {
     await waitFor(() => expect(calls.some((c) => c.path.includes('cursor=abc'))).toBe(true))
   })
 
+  it('review: an unknown area in the link is not sent to the API', async () => {
+    const calls = renderPage({
+      jobs: [card('1', 'Backend Engineer')],
+      url: '/?company_id=c1&area=bogus',
+    })
+
+    await waitFor(() => expect(calls.some((c) => c.path.startsWith('/jobs?'))).toBe(true))
+    const first = calls.find((c) => c.path.startsWith('/jobs?'))
+    expect(first?.path).toContain('company_id=c1')
+    expect(first?.path).not.toContain('area=')
+  })
+
   it('explore_shows_and_clears_the_company_area_filter', async () => {
     const user = userEvent.setup()
     const calls = renderPage({

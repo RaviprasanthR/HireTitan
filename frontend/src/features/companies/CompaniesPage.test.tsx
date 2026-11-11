@@ -270,6 +270,21 @@ describe('CompaniesPage', () => {
       expect(names()).toEqual(['Quiet'])
     })
 
+    it('review: a filter that hides everything says so, not that there are no companies', async () => {
+      const user = userEvent.setup()
+      renderPage((call) =>
+        call.path.startsWith('/companies') && call.method === 'GET'
+          ? { items: [company('a', 'Acme', { openings: { frontend: 1, backend: 0, qa: 0 } })] }
+          : undefined,
+      )
+      await screen.findByRole('list', { name: 'Companies' })
+
+      await user.selectOptions(screen.getByLabelText('Show'), 'qa')
+
+      expect(screen.getByText('No companies match this filter.')).toBeInTheDocument()
+      expect(screen.queryByText(/No companies yet/)).toBeNull()
+    })
+
     it('FR020_filter_by_has_contacts', async () => {
       const user = userEvent.setup()
       renderPage(all)

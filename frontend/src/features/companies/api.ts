@@ -122,7 +122,11 @@ export function useSheetConfirm() {
     mutationFn: (token: string) =>
       apiFetch<SheetResult>(`/companies/sheet-import/${token}/confirm`, { method: 'POST' }),
     // contacts and notes show on the Companies page, so refresh it with the list
-    onSuccess: () => client.invalidateQueries({ queryKey: ['companies'] }),
+    onSuccess: () =>
+      Promise.all([
+        client.invalidateQueries({ queryKey: ['companies'] }),
+        client.invalidateQueries({ queryKey: ['contacts'] }), // open panels and note editors
+      ]),
   })
 }
 

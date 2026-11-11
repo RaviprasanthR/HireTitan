@@ -59,7 +59,9 @@ export function JobDetailPage() {
                 <span className="text-sm text-muted-small">Checking with the AI…</span>
               )}
               {recheck.isError && (
-                <span className="text-sm text-danger">{recheck.error.message}</span>
+                <span role="alert" className="text-sm text-danger">
+                  {recheck.error.message}
+                </span>
               )}
             </div>
           )}

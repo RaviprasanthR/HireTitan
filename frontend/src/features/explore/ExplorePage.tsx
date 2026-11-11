@@ -134,7 +134,8 @@ export function ExplorePage() {
   const [picked, setPicked] = useState<JobFilters>(NO_FILTERS)
   // A company (and area) arrives in the link from the Companies page; they are not typed in.
   const company_id = params.get('company_id') ?? ''
-  const area = company_id ? (params.get('area') ?? '') : ''
+  const asked = params.get('area') ?? ''
+  const area = company_id && asked in AREA_LABELS ? asked : ''
   const filters = { ...picked, company_id, area }
   const setFilters = (next: JobFilters) => setPicked(next)
   const [adding, setAdding] = useState(false)

@@ -98,6 +98,41 @@ describe('SheetImportDialog', () => {
     await waitFor(() => expect(screen.queryByRole('region', { name: 'Sheet preview' })).toBeNull())
   })
 
+  it('review: focus moves into the dialog and back to the button on Escape', async () => {
+    const user = userEvent.setup()
+    renderIt(() => undefined)
+    const dialog = await open(user)
+
+    expect(within(dialog).getByLabelText('Company sheet (CSV)')).toHaveFocus()
+
+    await user.keyboard('{Escape}')
+
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Import a company sheet' })).toHaveFocus()
+  })
+
+  it('review: a confirmed import refreshes the open contacts panels too', async () => {
+    const user = userEvent.setup()
+    const client = new QueryClient()
+    const spy = vi.spyOn(client, 'invalidateQueries')
+    stubApi((call) => {
+      if (call.path === '/companies/sheet-import') return PREVIEW
+      if (call.path === '/companies/sheet-import/sheet123/confirm') return RESULT
+      return undefined
+    })
+    render(
+      <QueryClientProvider client={client}>
+        <SheetImportDialog />
+      </QueryClientProvider>,
+    )
+    const dialog = await open(user)
+    await user.upload(within(dialog).getByLabelText('Company sheet (CSV)'), sheetFile())
+
+    await user.click(await screen.findByRole('button', { name: 'Confirm import' }))
+
+    await waitFor(() => expect(spy).toHaveBeenCalledWith({ queryKey: ['contacts'] }))
+  })
+
   it('US1 AS5 confirm is disabled while nothing would change', async () => {
     const user = userEvent.setup()
     renderIt((call) => (call.path === '/companies/sheet-import' ? NOTHING : undefined))

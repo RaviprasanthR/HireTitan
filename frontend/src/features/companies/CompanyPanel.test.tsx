@@ -159,6 +159,43 @@ describe('CompanyPanel', () => {
     expect(screen.getByLabelText('LinkedIn link')).toHaveAttribute('aria-invalid', 'true')
   })
 
+  it('review: a refused form does not show its old error when opened again', async () => {
+    const user = userEvent.setup()
+    renderIt((call) => {
+      if (call.method === 'POST')
+        return problem(422, 'Unprocessable', {
+          detail: 'The link must be a web address.',
+          errors: [{ field: 'linkedin_url', message: 'The link must be a web address.' }],
+        })
+      return list(call)
+    })
+    await screen.findByRole('list', { name: 'Contacts at Example Co' })
+    await user.click(screen.getByRole('button', { name: 'Add a contact' }))
+    await user.type(screen.getByLabelText('Name'), 'Bad Link')
+    await user.type(screen.getByLabelText('LinkedIn link'), 'x')
+    await user.click(screen.getByRole('button', { name: 'Save contact' }))
+    await screen.findByText('The link must be a web address.')
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    await user.click(screen.getByRole('button', { name: 'Add a contact' }))
+
+    expect(screen.queryByText('The link must be a web address.')).toBeNull()
+    expect(screen.getByLabelText('LinkedIn link')).not.toHaveAttribute('aria-invalid', 'true')
+  })
+
+  it('review: saving the note says it was saved', async () => {
+    const user = userEvent.setup()
+    renderIt((call) => {
+      if (call.method === 'PUT') return { body: 'New.', source: 'typed', updated_at: 'x' }
+      return list(call)
+    })
+    await screen.findByRole('list', { name: 'Contacts at Example Co' })
+
+    await user.click(screen.getByRole('button', { name: 'Save note' }))
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Note saved')
+  })
+
   it('shows a name that already exists as a message', async () => {
     const user = userEvent.setup()
     renderIt((call) => {

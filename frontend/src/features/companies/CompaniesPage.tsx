@@ -269,9 +269,11 @@ export function CompaniesPage() {
   else if (items.length === 0)
     body = (
       <p>
-        {filter === 'check_manually'
-          ? 'Nothing to check by hand right now.'
-          : 'No companies yet. Add one by its careers page link.'}
+        {all.length > 0
+          ? 'No companies match this filter.'
+          : filter === 'check_manually'
+            ? 'Nothing to check by hand right now.'
+            : 'No companies yet. Add one by its careers page link.'}
       </p>
     )
   else
