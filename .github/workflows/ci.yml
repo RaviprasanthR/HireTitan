@@ -219,7 +219,14 @@ jobs:
         run: npm ci
 
       - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+        # The runner's apt mirrors sometimes fail to resolve (DNS errors), so try up to 3 times.
+        run: |
+          for attempt in 1 2 3; do
+            npx playwright install --with-deps chromium && exit 0
+            echo "Chromium install failed (attempt $attempt of 3)"
+            [ "$attempt" -lt 3 ] && sleep $((attempt * 45))
+          done
+          exit 1
 
       - name: Prepare the stack (no AI key, scripted replies)
         working-directory: .
