@@ -14,7 +14,7 @@ Builds on features 001 (`specs/001-setup-and-profile/`), 002 (`specs/002-job-sea
 
 ### Session 2026-11-11
 
-- Q (2026-11-12): What should the app look like? → A: Ravi's mockup: flat dark navy, one orange accent, icon sidebar with a logo block, Companies as lines with a second line, slate chip buttons; the row hover tint is a soft, low-opacity rust and the row action icons keep their earlier colours. Added as User Story 6.
+- Q (2026-11-12): What should the app look like? → A: Ravi's mockup: flat dark navy, one orange accent, icon sidebar, no logo (the name is plain text), Companies as lines with a second line, slate chip buttons; the row hover tint is a soft, low-opacity rust and the row action icons keep their earlier colours. Added as User Story 6. Later the same day: no logo anywhere, the name is plain text.
 - Q: When a company's only pipeline job is inquired, what does the Companies page show? → A: an **Inquired** chip (an applied job anywhere at the company shows **Applied** instead), and the filter becomes **In pipeline**, listing companies with an applied or an inquired job.
 
 ## User Scenarios & Testing *(mandatory)*
@@ -111,16 +111,16 @@ The menu has four entries: **Home**, **Companies**, **Profile**, **Settings**. I
 
 ### User Story 6 - A calmer, flat look (Priority: P2)
 
-The whole app uses one flat dark theme: a dark navy page, a slightly lighter sidebar, white text, and one warm accent, orange, for the active menu item, links, focus and selected states. There are no gradients or glows. The sidebar shows an outline icon next to every item, a thin line on its right edge, and the HireTitan logo block at the bottom. On the Companies page each company is a plain line with a thin divider instead of a card, with a smaller second line under the name (the company's website), a plain title-case column header, and the row action icons in their own colours. Hovering a row tints it with a soft, see-through rust. The page's buttons (Show, Import / export, Check manually, Add a company) are filled slate chips with an icon.
+The whole app uses one flat dark theme: a dark navy page, a slightly lighter sidebar, white text, and one warm accent, orange, for the active menu item, links, focus and selected states. There are no gradients or glows. The sidebar shows an outline icon next to every item and a thin line on its right edge. There is no logo anywhere: the app name is plain text, HireTitan, at the top of the sidebar, and the browser tab has no icon. On the Companies page each company is a plain line with a thin divider instead of a card, with a smaller second line under the name (the company's website), a plain title-case column header, and the row action icons in their own colours. Hovering a row tints it with a soft, see-through rust. The page's buttons (Show, Import / export, Check manually, Add a company) are filled slate chips with an icon.
 
 **Why this priority**: the app is used for long sessions; a calm, flat look with one accent is easier on the eyes and makes the important things (the active section, the row under the pointer) stand out.
 
-**Independent Test**: open any page: the page is flat navy, the active menu item is orange with its icon, every menu item has an icon, the logo block is at the bottom of the sidebar; on Companies the rows are lines with dividers and a second line, hovering a row shows a soft rust tint, the action icons keep their colours, the toolbar buttons are slate chips with icons; every text colour on the page and the surfaces meets the AA contrast ratio.
+**Independent Test**: open any page: the page is flat navy, the active menu item is orange with its icon, every menu item has an icon, the name HireTitan is plain text at the top of the sidebar with no logo; on Companies the rows are lines with dividers and a second line, hovering a row shows a soft rust tint, the action icons keep their colours, the toolbar buttons are slate chips with icons; every text colour on the page and the surfaces meets the AA contrast ratio.
 
 **Acceptance Scenarios**:
 
 1. **Given** any page, **When** the person opens it, **Then** the background is flat dark navy with no gradient, text is white or muted grey, and the only accent colour is orange.
-2. **Given** the sidebar, **When** the person looks at it, **Then** every item has an outline icon, the current section is highlighted with the orange accent, a thin line separates the sidebar from the page, and the HireTitan logo block sits at the bottom.
+2. **Given** the sidebar, **When** the person looks at it, **Then** every item has an outline icon, the current section is highlighted with the orange accent, a thin line separates the sidebar from the page, and the app name is plain text with no logo or other graphic.
 3. **Given** the Companies page, **When** the person looks at the list, **Then** each company is a plain line with a divider, its name has the website in a smaller second line, the header is plain title-case text, and the action icons show their own colours (details, website, careers page, hide, edit, delete).
 4. **Given** the Companies page, **When** the person points at a row, **Then** the row gets a soft, see-through rust tint that leaves its text and icons easy to read.
 5. **Given** the Companies toolbar, **When** the person looks at it, **Then** Show, Import / export, Check manually and Add a company are filled slate chips, each with an icon.
@@ -176,7 +176,7 @@ The whole app uses one flat dark theme: a dark navy page, a slightly lighter sid
 **Look (User Story 6)**
 
 - **FR-021**: The app MUST use one flat dark theme: no gradients or glows; a dark navy page, a slightly lighter sidebar and panels, white and muted grey text, and orange as the only accent (active menu item, links, focus ring, selected states). Every text colour MUST reach a contrast ratio of at least 4.5:1 on the page and panel colours.
-- **FR-022**: The sidebar MUST show an outline icon next to each item, highlight the current section with the accent, have a thin divider on its right edge, and show the HireTitan logo block at its bottom.
+- **FR-022**: The sidebar MUST show an outline icon next to each item, highlight the current section with the accent, and have a thin divider on its right edge. The app MUST show no logo or other graphic mark anywhere (sidebar, setup screens, browser tab, README); the app name is plain text, HireTitan, at the top of the sidebar.
 - **FR-023**: On the Companies page each company MUST be a plain line with a thin divider (not a card), with the website shown as a smaller second line under the name when the company has one, and a plain title-case column header.
 - **FR-024**: Pointing at a company row MUST tint it with a soft, see-through rust; the row action icons MUST keep their own colours (details, website, careers page, hide, edit, delete).
 - **FR-025**: The Companies toolbar buttons (Show, Import / export, Check manually, Add a company) MUST be filled slate chips, each with an icon.

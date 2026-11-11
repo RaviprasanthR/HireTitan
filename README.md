@@ -1,4 +1,3 @@
-<p align="center"><img src="docs/assets/logo.svg" alt="HireTitan" width="96" height="96"></p>
 
 # HireTitan
 

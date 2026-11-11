@@ -13,7 +13,7 @@ Five things, all on code that 001, 002 and 002b already built:
 - **No AI cost (constitution 2.0.0).** Remove the budget guard, the price table and cost calculator, the `tiktoken` dependency, the settings budget, the `budget_reached` pause and search stop, cost columns on AI calls and search runs, the settings API, and every cost display. The provider's out-of-credit pause stays exactly as it is. Runs paused for the budget are failed with a clear message by the migration.
 - **Navigation.** The sidebar becomes Home, Companies, Profile, Settings. Profile gets tabs (`/profile`, `/profile/preferences`, `/profile/search-rules`); old addresses redirect. Review leaves the menu and becomes a count notice on Home. Settings shows only the key status and Delete all.
 
-- **A calmer, flat look** (User Story 6, Ravi's mockup, 2026-11-12): one flat dark navy theme with an orange accent and no gradients; an icon sidebar with a right divider and a logo block; Companies rows as lines with a second line, a soft see-through rust hover and coloured action icons; slate chip buttons. Theme tokens change in `tokens.ts` and `theme.css`; the contrast test checks them.
+- **A calmer, flat look** (User Story 6, Ravi's mockup, 2026-11-12): one flat dark navy theme with an orange accent and no gradients; an icon sidebar with a right divider and no logo (the name is plain text); Companies rows as lines with a second line, a soft see-through rust hover and coloured action icons; slate chip buttons. Theme tokens change in `tokens.ts` and `theme.css`; the contrast test checks them.
 
 Design decisions are in [research.md](research.md).
 

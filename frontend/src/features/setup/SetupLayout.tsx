@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { X } from 'lucide-react'
 import { Link } from 'react-router'
 import { AiBanner } from '@/app/AiBanner'
-import { Wordmark } from '@/components/Logo'
+import { AppName } from '@/components/AppName'
 
 const STEPS = 4
 
@@ -33,7 +33,7 @@ export function SetupLayout({
             </Link>
           )}
           <header className="space-y-3">
-            <Wordmark size={48} />
+            <AppName className="text-3xl" />
             {step !== undefined && (
               <div className="space-y-1">
                 <p className="text-sm text-muted-small">

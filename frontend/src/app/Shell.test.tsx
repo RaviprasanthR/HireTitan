@@ -60,6 +60,36 @@ describe('Shell', () => {
     expect(screen.getByRole('main')).toHaveClass('overflow-y-auto')
   })
 
+  it('FR022 every menu item has an outline icon', async () => {
+    renderAt('/')
+    const nav = await screen.findByRole('navigation', { name: 'Main' })
+
+    for (const link of within(nav).getAllByRole('link')) {
+      const icon = link.querySelector('svg')
+      expect(icon, link.textContent ?? '').not.toBeNull()
+      expect(icon).toHaveAttribute('aria-hidden', 'true')
+    }
+  })
+
+  it('FR022 the app name is plain text at the top of the sidebar, with no logo', async () => {
+    renderAt('/')
+    const nav = await screen.findByRole('navigation', { name: 'Main' })
+    const sidebar = nav.closest('aside') as HTMLElement
+
+    expect(within(sidebar).getAllByText('HireTitan')).toHaveLength(1)
+    expect(sidebar.firstElementChild).toHaveTextContent('HireTitan')
+    // the only graphics in the sidebar are the eight menu icons
+    expect(sidebar.querySelectorAll('svg')).toHaveLength(within(nav).getAllByRole('link').length)
+    expect(sidebar.querySelector('img')).toBeNull()
+  })
+
+  it('FR022 the sidebar has a thin divider on its right edge', async () => {
+    renderAt('/')
+    const nav = await screen.findByRole('navigation', { name: 'Main' })
+
+    expect(nav.closest('aside')).toHaveClass('border-r')
+  })
+
   it('marks_the_current_section', async () => {
     renderAt('/profile')
     expect(await screen.findByRole('link', { name: 'Profile' })).toHaveAttribute(

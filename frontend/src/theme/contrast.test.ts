@@ -29,8 +29,6 @@ const pairs: Pair[] = [
   { fg: 'warning', bg: 'surface', min: 4.5, use: 'warning text on panels' },
   { fg: 'danger', bg: 'surface', min: 4.5, use: 'error text on panels' },
   { fg: 'success', bg: 'divider', min: 3, use: 'the green progress fill on its track' },
-  { fg: 'logo', bg: 'background', min: 4.5, use: 'the bolt on the page' },
-  { fg: 'logo', bg: 'surface', min: 4.5, use: 'the bolt in the sidebar' },
 ]
 
 describe('theme', () => {
@@ -68,7 +66,7 @@ describe('theme', () => {
   })
 
   it('accent_is_a_real_colour_not_another_grey', () => {
-    for (const colour of [tokens.accent, tokens.logo]) {
+    for (const colour of [tokens.accent]) {
       const n = Number.parseInt(colour.replace('#', ''), 16)
       const channels = [(n >> 16) & 255, (n >> 8) & 255, n & 255]
       expect(Math.max(...channels) - Math.min(...channels)).toBeGreaterThanOrEqual(100)

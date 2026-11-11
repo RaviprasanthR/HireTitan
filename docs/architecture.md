@@ -358,7 +358,6 @@ React (current stable; exact version pinned in the 001 plan) + Vite + TypeScript
 | `heading` | `#f1f3f7` | headings, brighter than body text for hierarchy (7:1 or better) |
 | `primary` | `#243044` (slate chip) | button, chip and active-nav fill, with `#f0a35e` text (6:1 or better) |
 | `text` | `#e3e7ee` | body text (12:1 or better) |
-| `logo` | `#f0a35e` | the bolt logo (sidebar, setup header, tab icon), one flat colour |
 | `success` / `warning` / `danger` | `#3fb950` / `#d29922` / `#f85149` | status badges and progress fills (kept from the earlier palettes) |
 
 Palette changed 2026-11-12 (feature 002d, user story 6) to a **flat** theme from Ravi's mockup: dark navy, one orange accent, no gradients and no glows (a test fails if `theme.css` gains either; the only exception is the moving stripes of the progress bar). Panels have a hairline border instead of a shadow. A list row under the pointer gets a soft see-through rust tint (`rgb(156 79 55 / 0.25)`). Earlier palettes: Deep Obsidian and Titan Blue (2026-11-04), the slate scale with ice cyan (2026-11-04/05).
