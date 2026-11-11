@@ -10,6 +10,8 @@
 
 Builds on feature 002 (`specs/002-job-search/`): the Companies page, the shipped company list, the person's own companies, spreadsheet import and export, search results and Delete all my data. Earlier decisions recorded in `docs/CONTEXT.md` (2026-11-07) are carried in here: contacts are the person's own data, kept only in their own install; LinkedIn links are stored and shown but never opened or read by HireTitan; HireTitan never contacts anyone (drafting messages is feature 004).
 
+> **Change of scope, 2026-11-11 (maintainer decision).** User Story 3 (open front end, back end and QA counts, FR-017 to FR-020 and SC-005) is **dropped**: open roles change all the time and HireTitan does not keep them current, so showing them would mislead. In its place the Companies page shows one simple fact per company: **whether the person has an application there** (a job in the applied state). It is a yes or no (`has_application` in the company list), shown as an "Applied" column, a "Has an application" filter and a sort. The sheet import still ignores the sheet's own openings columns (FR-008). The work done for T019 to T023 (title-to-area classifier, openings counts, the `area` filter on `GET /jobs`) was removed. Other Companies page changes the same day: one compact row per company with aligned columns, a sortable header, a search box, a company-site icon and a careers-page icon, the company name opening the company site, details on expand, and import and export behind one button.
+
 ## Clarifications
 
 ### Session 2026-11-08

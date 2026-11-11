@@ -12,6 +12,8 @@ description: "Task list for 002b-company-contacts"
 
 **Organization**: tasks are grouped by user story. Order: US1 and US2 (P1), then US3 and US4 (P2). Implementation pauses for Ravi's review at the end of every phase.
 
+> **Change of scope, 2026-11-11.** T019 to T023 (open-role counts) were built and then **removed** at the maintainer's request; see the change note in `spec.md`. The Companies page now shows `has_application` instead (tests in `test_companies_api.py` and `CompaniesPage.test.tsx`). The tasks below are kept for the record.
+
 ## Format: `[ID] [P?] [Story] Description`
 
 - **[P]**: can run in parallel (different files, no dependency on an unfinished task)
