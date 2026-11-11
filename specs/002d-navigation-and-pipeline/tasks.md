@@ -25,7 +25,7 @@ description: "Task list for 002d-navigation-and-pipeline"
 
 **Purpose**: a known-green baseline before anything changes.
 
-- [ ] T001 Record the baseline on branch `002d-navigation-and-pipeline` (cut from `master` at `e6b1af2`): run the backend suite, `ruff`, `mypy --strict`, `lint-imports`, and the frontend `tsc`, `eslint`, `npm test`; write the counts into `docs/CONTEXT.md` under the 002d entry. No code change.
+- [x] T001 Record the baseline on branch `002d-navigation-and-pipeline` (cut from `master` at `e6b1af2`): run the backend suite, `ruff`, `mypy --strict`, `lint-imports`, and the frontend `tsc`, `eslint`, `npm test`; write the counts into `docs/CONTEXT.md` under the 002d entry. No code change.
 
 ---
 
