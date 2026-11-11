@@ -132,7 +132,11 @@ describe('CompaniesPage', () => {
   })
 
   it('US2 AS1 row shows counts and note marker', async () => {
-    const busy = company('b', 'Busy', { contact_count: 2, has_note: true })
+    const busy = company('b', 'Busy', {
+      contact_count: 2,
+      has_note: true,
+      note_preview: 'Spoke to HR on Monday.',
+    })
     const quiet = company('q', 'Quiet')
     renderPage((call) =>
       call.path.startsWith('/companies') ? { items: [busy, quiet], next_cursor: null } : undefined,
@@ -143,9 +147,31 @@ describe('CompaniesPage', () => {
     ).getAllByRole('listitem')
 
     expect(busyRow).toHaveTextContent('2 contacts')
-    expect(busyRow).toHaveTextContent('Has a note')
+    expect(busyRow).toHaveTextContent('Spoke to HR on Monday.')
     expect(quietRow).toHaveTextContent('0 contacts')
-    expect(quietRow).not.toHaveTextContent('Has a note')
+    expect(quietRow).not.toHaveTextContent('Spoke to HR')
+  })
+
+  it('a row is one line of name, counts, note and icon actions with tooltips', async () => {
+    renderPage((call) =>
+      call.path.startsWith('/companies')
+        ? { items: [company('b', 'Busy', { has_note: true, note_preview: 'Call back Friday' })] }
+        : undefined,
+    )
+    const row = await screen.findByRole('listitem', { name: 'Busy' })
+
+    expect(within(row).getByTitle('Call back Friday')).toBeInTheDocument() // the note, in full
+    for (const [name, title] of [
+      ['Contacts and note for Busy', 'Contacts and note'],
+      ['Hide Busy', 'Hide'],
+      ['Edit Busy', 'Edit'],
+      ['Delete Busy', 'Delete'],
+    ]) {
+      const button = within(row).getByRole('button', { name })
+      expect(button).toHaveAttribute('title', title)
+      expect(button.querySelector('svg')).not.toBeNull() // an icon, not a text button
+      expect(button).toHaveTextContent('')
+    }
   })
 
   it('SC004 contacts reachable in two clicks', async () => {

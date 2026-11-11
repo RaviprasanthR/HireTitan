@@ -87,7 +87,23 @@ class CompanyView:
     # Filled only by the list (feature 002b); other responses carry the defaults.
     contact_count: int = 0
     has_note: bool = False
+    note_preview: str | None = None  # the note on one line, shortened for the list row
     openings: dict[str, int] | None = None  # None means "not searched yet"
+
+
+NOTE_PREVIEW_MAX = 120
+NOTE_HEAD = NOTE_PREVIEW_MAX * 4  # enough text to fill the preview once spaces are collapsed
+
+
+def note_preview(head: str | None) -> str | None:
+    """One line, spaces collapsed, at most ``NOTE_PREVIEW_MAX`` characters, ending in an ellipsis
+    when it was cut. ``head`` is the start of the note."""
+    text = " ".join((head or "").split())
+    if not text:
+        return None
+    if len(text) <= NOTE_PREVIEW_MAX:
+        return text
+    return text[: NOTE_PREVIEW_MAX - 1].rstrip() + "…"
 
 
 def view_of(row: StoredCompany) -> CompanyView:
@@ -122,6 +138,7 @@ async def list_companies(
     filter: str = "all",
     counts: Mapping[UUID, tuple[int, bool]] | None = None,
     openings: Mapping[UUID, dict[str, int] | None] | None = None,
+    note_heads: Mapping[UUID, str] | None = None,
 ) -> list[CompanyView]:
     """The company list.
 
@@ -130,6 +147,7 @@ async def list_companies(
     """
     known = counts or {}
     roles = openings or {}
+    heads = note_heads or {}
     views = []
     for row in await store.list_filtered(filter):
         contact_count, has_note = known.get(row.id, (0, False))
@@ -138,6 +156,7 @@ async def list_companies(
                 view_of(row),
                 contact_count=contact_count,
                 has_note=has_note,
+                note_preview=note_preview(heads.get(row.id)),
                 openings=roles.get(row.id),
             )
         )

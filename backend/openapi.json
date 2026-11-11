@@ -384,6 +384,17 @@
             "title": "Name",
             "type": "string"
           },
+          "note_preview": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note Preview"
+          },
           "openings": {
             "anyOf": [
               {
@@ -4714,6 +4725,18 @@
     "/api/v1/companies/export": {
       "get": {
         "operationId": "export_api_v1_companies_export_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "include_contacts",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Include Contacts",
+              "type": "boolean"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -4722,6 +4745,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "Export",

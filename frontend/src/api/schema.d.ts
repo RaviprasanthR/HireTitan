@@ -1080,6 +1080,8 @@ export interface components {
             last_checked_at: string | null;
             /** Name */
             name: string;
+            /** Note Preview */
+            note_preview?: string | null;
             /** Openings */
             openings?: {
                 [key: string]: number;
@@ -2456,7 +2458,9 @@ export interface operations {
     };
     export_api_v1_companies_export_get: {
         parameters: {
-            query?: never;
+            query?: {
+                include_contacts?: boolean;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -2470,6 +2474,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

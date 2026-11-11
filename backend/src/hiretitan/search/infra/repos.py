@@ -655,6 +655,13 @@ class NotesRepo:
     async def get(self, company_id: UUID) -> CompanyNoteRow | None:
         return await self._session.get(CompanyNoteRow, company_id, populate_existing=True)
 
+    async def heads(self, limit: int) -> dict[UUID, str]:
+        """``{company_id: first characters of the note}`` for every company with a note."""
+        result = await self._session.execute(
+            select(CompanyNoteRow.company_id, func.left(CompanyNoteRow.body, limit))
+        )
+        return {company_id: head for company_id, head in result.all()}
+
     async def list_all(self) -> list[CompanyNoteRow]:
         """Every note, for the opt-in export (FR-021)."""
         result = await self._session.execute(select(CompanyNoteRow))

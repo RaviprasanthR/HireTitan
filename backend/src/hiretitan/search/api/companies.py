@@ -17,6 +17,7 @@ from hiretitan.platform.clock import ClockPort
 from hiretitan.platform.web.problems import ProblemError, problem
 from hiretitan.search.application.companies import (
     EDITABLE,
+    NOTE_HEAD,
     CompanyError,
     CompanyNotFoundError,
     CompanyView,
@@ -123,6 +124,7 @@ class CompanyOut(BaseModel):
     # Filled by the list only; the other responses carry 0, false and null.
     contact_count: int = 0
     has_note: bool = False
+    note_preview: str | None = None
     openings: dict[str, int] | None = None
 
 
@@ -388,7 +390,8 @@ def create_companies_router(deps: SearchCompaniesApiDeps) -> APIRouter:
         async with deps.sessions() as session:
             counts = await ContactsRepo(session).counts_by_company()
             openings = await openings_by_company(OpeningsRepo(session))
-            views = await list_companies(CompaniesRepo(session), filter, counts, openings)
+            heads = await NotesRepo(session).heads(NOTE_HEAD)
+            views = await list_companies(CompaniesRepo(session), filter, counts, openings, heads)
         return CompanyPage(items=[out(v) for v in views])
 
     @router.post("", response_model=CompanyOut, status_code=201)

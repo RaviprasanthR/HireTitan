@@ -1,3 +1,4 @@
+import { Eye, EyeOff, Pencil, StickyNote, Trash2, Users } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { ApiError } from '@/api/client'
@@ -28,12 +29,20 @@ type SortBy = 'name' | Area
 const countOf = (company: Company, area: Area): number | null =>
   company.openings ? (company.openings[area] ?? 0) : null
 
+// One colour per area, so a glance tells them apart.
+const AREA_STYLE: Record<Area, string> = {
+  frontend: 'bg-violet-500/15 text-violet-300 hover:bg-violet-500/25',
+  backend: 'bg-sky-500/15 text-sky-300 hover:bg-sky-500/25',
+  qa: 'bg-amber-500/15 text-amber-300 hover:bg-amber-500/25',
+}
+const CHIP = 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs whitespace-nowrap'
+
 /** The open roles by area: each count opens the jobs behind it; a company never searched has none. */
 function Openings({ company }: { company: Company }) {
   if (!company.openings)
-    return <p className="text-sm text-muted-small">Open roles: Not searched yet</p>
+    return <span className="text-xs text-muted-small">Open roles: Not searched yet</span>
   return (
-    <p className="flex flex-wrap gap-x-4 text-sm text-muted-small">
+    <span className="flex flex-wrap items-center gap-1.5">
       {AREAS.map(({ area, label }) => {
         const count = countOf(company, area) ?? 0
         const text = `${label}: ${count}`
@@ -41,15 +50,45 @@ function Openings({ company }: { company: Company }) {
           <Link
             key={area}
             to={`/?company_id=${company.id}&area=${area}`}
-            className="text-link underline"
+            className={`${CHIP} ${AREA_STYLE[area]}`}
           >
             {text}
           </Link>
         ) : (
-          <span key={area}>{text}</span>
+          <span key={area} className={`${CHIP} bg-white/5 text-muted-small opacity-70`}>
+            {text}
+          </span>
         )
       })}
-    </p>
+    </span>
+  )
+}
+
+/** A small round icon button; each action has its own colour and a tooltip. */
+function IconButton({
+  title,
+  label,
+  tone,
+  children,
+  ...props
+}: {
+  title: string
+  label: string
+  tone: string
+  children: React.ReactNode
+} & Omit<React.ComponentProps<typeof Button>, 'title' | 'aria-label' | 'children'>) {
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon-sm"
+      title={title}
+      aria-label={label}
+      className={tone}
+      {...props}
+    >
+      {children}
+    </Button>
   )
 }
 
@@ -124,58 +163,55 @@ function CompanyRow({ company, manual }: { company: Company; manual: boolean }) 
   const checked = company.last_checked_at ? formatDay(company.last_checked_at.slice(0, 10)) : null
 
   return (
-    <li aria-label={company.name} className="space-y-2 rounded-lg bg-surface p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
-          <h2 className="font-semibold">
+    <li aria-label={company.name} className="space-y-2 rounded-lg bg-surface px-3 py-1.5">
+      <div className="flex min-h-8 flex-wrap items-center gap-x-4 gap-y-1">
+        <div className="flex min-w-0 items-baseline gap-2 md:w-72 md:shrink-0">
+          <h2 className="truncate font-semibold">
             {company.name}
             {company.hidden && <span className="ml-2 text-sm text-muted-small">(hidden)</span>}
           </h2>
-          <p className="text-sm text-muted-small">
+          <span className="truncate text-xs text-muted-small">
             {[company.city, BOARD_STATUS[company.board_status]].filter(Boolean).join(' · ')}
-          </p>
-          <p className="text-sm text-muted-small">
-            {contacts}
-            {company.has_note && ' · Has a note'}
-          </p>
-          <Openings company={company} />
-          {manual && (
-            <div className="space-y-1 text-sm">
-              {company.careers_url && (
-                <a
-                  href={company.careers_url}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className="text-link underline"
-                >
-                  Open {company.name}’s careers page
-                </a>
-              )}
-              <p>{checked ? `Last checked ${checked}` : 'Not checked yet'}</p>
-              {company.last_check_error && (
-                <p className="text-muted-small">{company.last_check_error}</p>
-              )}
-            </div>
-          )}
+          </span>
         </div>
+        <Openings company={company} />
+        <span
+          className={`${CHIP} ${
+            company.contact_count > 0
+              ? 'bg-teal-500/15 text-teal-300'
+              : 'bg-white/5 text-muted-small opacity-70'
+          }`}
+        >
+          <Users aria-hidden className="size-3" />
+          {contacts}
+        </span>
+        <span
+          className="flex min-w-0 flex-1 items-center gap-1.5 text-xs text-rose-200/80 md:min-w-40"
+          title={company.note_preview ?? undefined}
+        >
+          {company.note_preview && (
+            <>
+              <StickyNote aria-hidden className="size-3 shrink-0 text-rose-300" />
+              <span className="truncate">{company.note_preview}</span>
+            </>
+          )}
+        </span>
         {!editing && !confirming && (
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
+          <div className="ml-auto flex gap-1">
+            <IconButton
+              title="Contacts and note"
+              label={`Contacts and note for ${company.name}`}
+              tone="text-cyan-300 hover:bg-cyan-500/20 hover:text-cyan-200"
               aria-expanded={showPanel}
-              aria-label={`Contacts and note for ${company.name}`}
               onClick={() => setShowPanel(!showPanel)}
             >
-              Contacts
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
+              <Users aria-hidden />
+            </IconButton>
+            <IconButton
+              title={company.hidden ? 'Show' : 'Hide'}
+              label={`${company.hidden ? 'Show' : 'Hide'} ${company.name}`}
+              tone="text-amber-300 hover:bg-amber-500/20 hover:text-amber-200"
               disabled={edit.isPending}
-              aria-label={`${company.hidden ? 'Show' : 'Hide'} ${company.name}`}
               onClick={() =>
                 edit.mutate({
                   id: company.id,
@@ -183,29 +219,45 @@ function CompanyRow({ company, manual }: { company: Company; manual: boolean }) 
                 })
               }
             >
-              {company.hidden ? 'Show' : 'Hide'}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              aria-label={`Edit ${company.name}`}
+              {company.hidden ? <Eye aria-hidden /> : <EyeOff aria-hidden />}
+            </IconButton>
+            <IconButton
+              title="Edit"
+              label={`Edit ${company.name}`}
+              tone="text-emerald-300 hover:bg-emerald-500/20 hover:text-emerald-200"
               onClick={() => setEditing(true)}
             >
-              Edit
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              aria-label={`Delete ${company.name}`}
+              <Pencil aria-hidden />
+            </IconButton>
+            <IconButton
+              title="Delete"
+              label={`Delete ${company.name}`}
+              tone="text-rose-300 hover:bg-rose-500/20 hover:text-rose-200"
               onClick={() => setConfirming(true)}
             >
-              Delete
-            </Button>
+              <Trash2 aria-hidden />
+            </IconButton>
           </div>
         )}
       </div>
+      {manual && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pb-1 text-sm">
+          {company.careers_url && (
+            <a
+              href={company.careers_url}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="text-link underline"
+            >
+              Open {company.name}’s careers page
+            </a>
+          )}
+          <span>{checked ? `Last checked ${checked}` : 'Not checked yet'}</span>
+          {company.last_check_error && (
+            <span className="text-muted-small">{company.last_check_error}</span>
+          )}
+        </div>
+      )}
       {edit.isError && !editing && (
         <p role="alert" className="text-sm text-danger">
           {edit.error.message}

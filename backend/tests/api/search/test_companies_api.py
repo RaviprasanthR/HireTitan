@@ -168,6 +168,32 @@ async def test_US2_AS1_company_row_has_contact_count_and_note_flag(env: Env) -> 
     assert (rows["Noted Co"]["contact_count"], rows["Noted Co"]["has_note"]) == (0, True)
 
 
+async def test_company_row_has_a_short_one_line_note_preview(env: Env) -> None:
+    from hiretitan.search.infra.repos import NotesRepo
+
+    long_note = "Spoke to HR on Monday.\n\nShe said   to apply " + "again soon " * 30
+    short, long, none = (
+        await add(env, "Short Co"),
+        await add(env, "Long Co"),
+        await add(env, "None Co"),
+    )
+    async with env.sessions() as session:
+        await NotesRepo(session).set(short, "Call back  Friday", source="typed")
+        await NotesRepo(session).set(long, long_note, source="typed")
+        await session.commit()
+
+    rows = {c["name"]: c for c in (await env.client.get(BASE)).json()["items"]}
+
+    assert rows["Short Co"]["note_preview"] == "Call back Friday"
+    preview = rows["Long Co"]["note_preview"]
+    assert preview.startswith("Spoke to HR on Monday. She said to apply again soon")
+    assert len(preview) <= 120
+    assert preview.endswith("…")
+    assert "\n" not in preview
+    assert rows["None Co"]["note_preview"] is None
+    assert none  # the company exists
+
+
 async def test_companies_list_runs_a_fixed_number_of_queries(env: Env) -> None:
     from sqlalchemy import event
 
