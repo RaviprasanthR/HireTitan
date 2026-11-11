@@ -582,6 +582,13 @@ class ContactsRepo:
         )
         return result.scalar_one_or_none()
 
+    async def list_all(self) -> list[ContactRow]:
+        """Every contact, for the opt-in export (FR-021)."""
+        result = await self._session.execute(
+            select(ContactRow).order_by(ContactRow.company_id, ContactRow.name_key, ContactRow.id)
+        )
+        return list(result.scalars())
+
     async def counts_by_company(self) -> dict[UUID, tuple[int, bool]]:
         """``{company_id: (contact_count, has_note)}`` for every company, in one statement."""
         contact_count = (
@@ -647,6 +654,11 @@ class NotesRepo:
 
     async def get(self, company_id: UUID) -> CompanyNoteRow | None:
         return await self._session.get(CompanyNoteRow, company_id, populate_existing=True)
+
+    async def list_all(self) -> list[CompanyNoteRow]:
+        """Every note, for the opt-in export (FR-021)."""
+        result = await self._session.execute(select(CompanyNoteRow))
+        return list(result.scalars())
 
     async def set(self, company_id: UUID, body: str | None, *, source: str) -> None:
         if body is None:

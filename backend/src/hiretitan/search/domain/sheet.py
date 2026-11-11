@@ -41,6 +41,7 @@ OPENINGS_HEADERS: Final = (
 )
 _LOOKUP: Final = {alias: column for column, names in ALIASES.items() for alias in names}
 _KNOWN: Final = frozenset(_LOOKUP) | frozenset(OPENINGS_HEADERS)
+_FORMULA_START: Final = ("=", "+", "-", "@")
 _NON_WORD: Final = re.compile(r"[^a-z0-9]+")
 
 
@@ -81,6 +82,8 @@ def _cell(row: list[str], index: int | None, limit: int) -> tuple[str | None, bo
     text = clean(row[index])
     if text is None:
         return None, False
+    if text.startswith("'") and text[1:2] in _FORMULA_START:  # an export wrote it (FR-021)
+        text = text[1:]
     return text[:limit], len(text) > limit
 
 

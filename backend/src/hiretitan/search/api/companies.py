@@ -48,6 +48,7 @@ from hiretitan.search.application.sheet_import import (
     apply_sheet,
     preview_sheet,
 )
+from hiretitan.search.domain.contacts_cell import ParsedContact
 from hiretitan.search.domain.sheet import SheetError, SheetLayout, SheetRow, read
 from hiretitan.search.infra.repos import CompaniesRepo, ContactsRepo, NotesRepo, OpeningsRepo
 
@@ -391,11 +392,22 @@ def create_companies_router(deps: SearchCompaniesApiDeps) -> APIRouter:
         return out(view)
 
     @router.get("/export")
-    async def export() -> Response:
+    async def export(include_contacts: bool = False) -> Response:
         async with deps.sessions() as session:
             rows = await CompaniesRepo(session).list_all()
+            people: dict[UUID, list[ParsedContact]] | None = None
+            notes: dict[UUID, str] | None = None
+            if include_contacts:  # opt-in only: other people's details (FR-021)
+                people = {}
+                for c in await ContactsRepo(session).list_all():
+                    people.setdefault(c.company_id, []).append(
+                        ParsedContact(
+                            c.name, c.role, c.confidence, c.linkedin_url, c.email, c.phone, c.note
+                        )
+                    )
+                notes = {n.company_id: n.body for n in await NotesRepo(session).list_all()}
         return Response(
-            export_csv(list(rows)),
+            export_csv(list(rows), people, notes),
             media_type="text/csv; charset=utf-8",
             headers={"Content-Disposition": 'attachment; filename="companies.csv"'},
         )
