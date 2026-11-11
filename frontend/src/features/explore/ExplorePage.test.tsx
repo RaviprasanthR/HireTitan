@@ -33,9 +33,10 @@ type Setup = {
   status?: typeof STATUS
   jobs?: ReturnType<typeof card>[]
   next?: string | null
+  url?: string
 }
 
-function renderPage({ status = STATUS, jobs = [], next = null }: Setup = {}) {
+function renderPage({ status = STATUS, jobs = [], next = null, url = '/' }: Setup = {}) {
   const calls = stubApi((call: Call) => {
     if (call.path === '/status') return status
     if (call.path === '/onboarding') return { display_name: null }
@@ -54,7 +55,7 @@ function renderPage({ status = STATUS, jobs = [], next = null }: Setup = {}) {
   })
   render(
     <QueryClientProvider client={client}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[url]}>
         <ExplorePage />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -194,5 +195,29 @@ describe('ExplorePage', () => {
     })
     await user.click(await screen.findByRole('button', { name: /load more/i }))
     await waitFor(() => expect(calls.some((c) => c.path.includes('cursor=abc'))).toBe(true))
+  })
+
+  it('explore_shows_and_clears_the_company_area_filter', async () => {
+    const user = userEvent.setup()
+    const calls = renderPage({
+      jobs: [card('1', 'Backend Engineer')],
+      url: '/?company_id=c1&area=backend',
+    })
+
+    expect(await screen.findByText('Company: Acme · Back end')).toBeInTheDocument()
+    await waitFor(() => {
+      const first = calls.find((c) => c.path.startsWith('/jobs?'))
+      expect(first?.path).toContain('company_id=c1')
+      expect(first?.path).toContain('area=backend')
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Remove the company filter' }))
+
+    expect(screen.queryByText(/Company: Acme/)).toBeNull()
+    await waitFor(() => {
+      const last = [...calls].reverse().find((c) => c.path.startsWith('/jobs?'))
+      expect(last?.path).not.toContain('company_id')
+      expect(last?.path).not.toContain('area')
+    })
   })
 })

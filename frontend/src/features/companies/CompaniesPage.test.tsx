@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { problem, stubApi, type Call } from '@/test/api'
 import { CompaniesPage } from './CompaniesPage'
@@ -45,7 +46,9 @@ function renderPage(handler: (call: Call) => unknown) {
     <QueryClientProvider
       client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
     >
-      <CompaniesPage />
+      <MemoryRouter>
+        <CompaniesPage />
+      </MemoryRouter>
     </QueryClientProvider>,
   )
   return calls
@@ -217,5 +220,76 @@ describe('CompaniesPage', () => {
     await user.click(screen.getByRole('button', { name: 'Yes, delete' }))
 
     await waitFor(() => expect(calls).toContainEqual({ method: 'DELETE', path: '/companies/a' }))
+  })
+
+  describe('open roles (US3)', () => {
+    const busy = company('b', 'Busy', { openings: { frontend: 2, backend: 0, qa: 1 } })
+    const quiet = company('q', 'Quiet', { openings: { frontend: 0, backend: 3, qa: 0 } })
+    const never = company('n', 'Never')
+    const talked = company('t', 'Talked', { contact_count: 2, openings: null })
+    const all = (call: Call) =>
+      call.path.startsWith('/companies')
+        ? { items: [never, busy, quiet, talked], next_cursor: null }
+        : undefined
+    const rowOf = (name: string) => screen.getByRole('listitem', { name })
+    const names = () =>
+      within(screen.getByRole('list', { name: 'Companies' }))
+        .getAllByRole('heading', { level: 2 })
+        .map((h) => h.textContent)
+
+    it('US3_AS1_counts_link_to_the_companys_jobs', async () => {
+      renderPage(all)
+      await screen.findByRole('list', { name: 'Companies' })
+
+      const front = within(rowOf('Busy')).getByRole('link', { name: 'Front end: 2' })
+      expect(front).toHaveAttribute('href', '/?company_id=b&area=frontend')
+      expect(within(rowOf('Busy')).getByRole('link', { name: 'QA: 1' })).toHaveAttribute(
+        'href',
+        '/?company_id=b&area=qa',
+      )
+      // A count of zero has nothing to open.
+      expect(within(rowOf('Busy')).queryByRole('link', { name: /Back end/ })).toBeNull()
+      expect(within(rowOf('Busy')).getByText('Back end: 0')).toBeInTheDocument()
+    })
+
+    it('US3_AS5_shows_not_searched_yet_not_zero', async () => {
+      renderPage(all)
+      await screen.findByRole('list', { name: 'Companies' })
+
+      expect(within(rowOf('Never')).getByText('Open roles: Not searched yet')).toBeInTheDocument()
+      expect(within(rowOf('Never')).queryByText(/Front end/)).toBeNull()
+    })
+
+    it('FR020_filter_by_has_back_end_openings_shows_only_that_company', async () => {
+      const user = userEvent.setup()
+      renderPage(all)
+      await screen.findByRole('list', { name: 'Companies' })
+
+      await user.selectOptions(screen.getByLabelText('Show'), 'backend')
+
+      expect(names()).toEqual(['Quiet'])
+    })
+
+    it('FR020_filter_by_has_contacts', async () => {
+      const user = userEvent.setup()
+      renderPage(all)
+      await screen.findByRole('list', { name: 'Companies' })
+
+      await user.selectOptions(screen.getByLabelText('Show'), 'contacts')
+
+      expect(names()).toEqual(['Talked'])
+    })
+
+    it('FR020_sort_by_front_end_openings', async () => {
+      const user = userEvent.setup()
+      renderPage(all)
+      await screen.findByRole('list', { name: 'Companies' })
+
+      await user.selectOptions(screen.getByLabelText('Sort by'), 'frontend')
+
+      // Most first; a company never searched goes last.
+      expect(names()[0]).toBe('Busy')
+      expect(names().slice(-2)).toEqual(expect.arrayContaining(['Never', 'Talked']))
+    })
   })
 })

@@ -16,6 +16,8 @@ export type JobFilters = {
   work_mode: string
   city: string
   sort: 'newest' | 'company'
+  company_id: string
+  area: string
 }
 
 export const NO_FILTERS: JobFilters = {
@@ -23,6 +25,8 @@ export const NO_FILTERS: JobFilters = {
   work_mode: '',
   city: '',
   sort: 'newest',
+  company_id: '',
+  area: '',
 }
 
 /** Batches of this many companies, as the search reads them (T030). */
@@ -49,6 +53,8 @@ export function useJobs(filters: JobFilters) {
           work_mode: filters.work_mode,
           city: filters.city,
           sort: filters.sort,
+          company_id: filters.company_id,
+          area: filters.area,
           cursor: pageParam,
         })}`,
       ),

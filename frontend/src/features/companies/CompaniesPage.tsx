@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router'
 import { ApiError } from '@/api/client'
 import { Button } from '@/components/ui/button'
 import { formatDay } from '@/features/explore/api'
@@ -14,6 +15,43 @@ import {
 import { CompanyPanel } from './CompanyPanel'
 import { Field, inputClass } from './Field'
 import { ImportExport } from './ImportExport'
+
+type Area = 'frontend' | 'backend' | 'qa'
+const AREAS: { area: Area; label: string }[] = [
+  { area: 'frontend', label: 'Front end' },
+  { area: 'backend', label: 'Back end' },
+  { area: 'qa', label: 'QA' },
+]
+type Show = 'all' | 'contacts' | Area
+type SortBy = 'name' | Area
+
+const countOf = (company: Company, area: Area): number | null =>
+  company.openings ? (company.openings[area] ?? 0) : null
+
+/** The open roles by area: each count opens the jobs behind it; a company never searched has none. */
+function Openings({ company }: { company: Company }) {
+  if (!company.openings)
+    return <p className="text-sm text-muted-small">Open roles: Not searched yet</p>
+  return (
+    <p className="flex flex-wrap gap-x-4 text-sm text-muted-small">
+      {AREAS.map(({ area, label }) => {
+        const count = countOf(company, area) ?? 0
+        const text = `${label}: ${count}`
+        return count > 0 ? (
+          <Link
+            key={area}
+            to={`/?company_id=${company.id}&area=${area}`}
+            className="text-link underline"
+          >
+            {text}
+          </Link>
+        ) : (
+          <span key={area}>{text}</span>
+        )
+      })}
+    </p>
+  )
+}
 
 const TABS: { filter: CompanyFilter; label: string }[] = [
   { filter: 'all', label: 'All companies' },
@@ -86,13 +124,13 @@ function CompanyRow({ company, manual }: { company: Company; manual: boolean }) 
   const checked = company.last_checked_at ? formatDay(company.last_checked_at.slice(0, 10)) : null
 
   return (
-    <li className="space-y-2 rounded-lg bg-surface p-4">
+    <li aria-label={company.name} className="space-y-2 rounded-lg bg-surface p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
-          <p className="font-semibold">
+          <h2 className="font-semibold">
             {company.name}
             {company.hidden && <span className="ml-2 text-sm text-muted-small">(hidden)</span>}
-          </p>
+          </h2>
           <p className="text-sm text-muted-small">
             {[company.city, BOARD_STATUS[company.board_status]].filter(Boolean).join(' · ')}
           </p>
@@ -100,6 +138,7 @@ function CompanyRow({ company, manual }: { company: Company; manual: boolean }) 
             {contacts}
             {company.has_note && ' · Has a note'}
           </p>
+          <Openings company={company} />
           {manual && (
             <div className="space-y-1 text-sm">
               {company.careers_url && (
@@ -212,7 +251,17 @@ export function CompaniesPage() {
   const [filter, setFilter] = useState<CompanyFilter>('all')
   const [adding, setAdding] = useState(false)
   const companies = useCompanies(filter)
-  const items = companies.data?.items ?? []
+  const [show, setShow] = useState<Show>('all')
+  const [sortBy, setSortBy] = useState<SortBy>('name')
+  const all = companies.data?.items ?? []
+  const shown = all.filter((c) =>
+    show === 'all' ? true : show === 'contacts' ? c.contact_count > 0 : (countOf(c, show) ?? 0) > 0,
+  )
+  // Most openings first; a company never searched goes last. Equal counts keep the name order.
+  const items =
+    sortBy === 'name'
+      ? shown
+      : [...shown].sort((a, b) => (countOf(b, sortBy) ?? -1) - (countOf(a, sortBy) ?? -1))
 
   let body
   if (companies.isPending) body = <p>Loading…</p>
@@ -261,6 +310,39 @@ export function CompaniesPage() {
           </Button>
         ))}
       </div>
+      <form
+        aria-label="Company filters"
+        className="flex flex-wrap items-end gap-3"
+        onSubmit={(e) => e.preventDefault()}
+      >
+        <label className="flex flex-col gap-1 text-sm">
+          Show
+          <select
+            className={inputClass}
+            value={show}
+            onChange={(e) => setShow(e.target.value as Show)}
+          >
+            <option value="all">All companies</option>
+            <option value="contacts">Has contacts</option>
+            <option value="frontend">Has front end openings</option>
+            <option value="backend">Has back end openings</option>
+            <option value="qa">Has QA openings</option>
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-sm">
+          Sort by
+          <select
+            className={inputClass}
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as SortBy)}
+          >
+            <option value="name">Name</option>
+            <option value="frontend">Front end openings</option>
+            <option value="backend">Back end openings</option>
+            <option value="qa">QA openings</option>
+          </select>
+        </label>
+      </form>
       {body}
     </section>
   )
