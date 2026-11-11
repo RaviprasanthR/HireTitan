@@ -1,6 +1,7 @@
 import {
   ArrowDown,
   ArrowUp,
+  BadgeCheck,
   Briefcase,
   ChevronDown,
   ChevronUp,
@@ -14,7 +15,6 @@ import {
   Users,
 } from 'lucide-react'
 import { useState } from 'react'
-import { Link } from 'react-router'
 import { ApiError } from '@/api/client'
 import { Button } from '@/components/ui/button'
 import { formatDay } from '@/features/explore/api'
@@ -31,74 +31,19 @@ import { CompanyPanel } from './CompanyPanel'
 import { Field, inputClass } from './Field'
 import { ImportExport } from './ImportExport'
 
-type Area = 'frontend' | 'backend' | 'qa'
-const AREAS: { area: Area; label: string }[] = [
-  { area: 'frontend', label: 'Front end' },
-  { area: 'backend', label: 'Back end' },
-  { area: 'qa', label: 'QA' },
-]
-type Show = 'all' | 'contacts' | Area
-type SortKey = 'name' | 'city' | 'openings' | 'contacts' | 'note'
+type Show = 'all' | 'contacts' | 'applied'
+type SortKey = 'name' | 'city' | 'applied' | 'contacts' | 'note'
 type Sort = { key: SortKey; dir: 'asc' | 'desc' }
 
-const countOf = (company: Company, area: Area): number | null =>
-  company.openings ? (company.openings[area] ?? 0) : null
-
-// One colour per area, so a glance tells them apart.
-const AREA_STYLE: Record<Area, string> = {
-  frontend: 'bg-violet-500/15 text-violet-300 hover:bg-violet-500/25',
-  backend: 'bg-sky-500/15 text-sky-300 hover:bg-sky-500/25',
-  qa: 'bg-amber-500/15 text-amber-300 hover:bg-amber-500/25',
-}
 const CHIP = 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs whitespace-nowrap'
 
-const totalOf = (company: Company): number | null =>
-  company.openings ? AREAS.reduce((sum, { area }) => sum + (countOf(company, area) ?? 0), 0) : null
-
-/** The row shows one number: all the open roles. It opens the company's jobs in Explore; a company
- * never searched has no number, and zero has nothing to open. */
-function OpenTotal({ company }: { company: Company }) {
-  const total = totalOf(company)
-  if (total === null) return <span className="text-xs text-muted-small">Not searched yet</span>
-  const text = `${total} open roles`
-  return total > 0 ? (
-    <Link
-      to={`/?company_id=${company.id}`}
-      className={`${CHIP} w-fit bg-sky-500/15 text-sky-300 transition-colors hover:bg-sky-500/30`}
-    >
-      <Briefcase aria-hidden className="size-3" />
-      {text}
-    </Link>
-  ) : (
-    <span className={`${CHIP} w-fit bg-white/5 text-muted-small opacity-70`}>
-      <Briefcase aria-hidden className="size-3" />
-      {text}
-    </span>
-  )
-}
-
-/** The open roles by area, shown in the expanded details: each count opens the jobs behind it. */
-function Breakdown({ company }: { company: Company }) {
-  if (!company.openings) return <>Not searched yet</>
+/** Whether the person has applied to a job at this company. Kept simple: yes or nothing. */
+function AppliedChip({ company }: { company: Company }) {
+  if (!company.has_application) return <span className="text-xs text-muted-small">—</span>
   return (
-    <span className="flex flex-wrap items-center gap-1.5">
-      {AREAS.map(({ area, label }) => {
-        const count = countOf(company, area) ?? 0
-        const text = `${label}: ${count}`
-        return count > 0 ? (
-          <Link
-            key={area}
-            to={`/?company_id=${company.id}&area=${area}`}
-            className={`${CHIP} ${AREA_STYLE[area]}`}
-          >
-            {text}
-          </Link>
-        ) : (
-          <span key={area} className={`${CHIP} bg-white/5 text-muted-small opacity-70`}>
-            {text}
-          </span>
-        )
-      })}
+    <span className={`${CHIP} w-fit bg-emerald-500/15 text-emerald-300`}>
+      <BadgeCheck aria-hidden className="size-3" />
+      Applied
     </span>
   )
 }
@@ -188,7 +133,7 @@ function EditForm({ company, onDone }: { company: Company; onDone: () => void })
 
 // The columns of the list: the header row and every company row share them, so they line up.
 const COLUMNS =
-  'md:grid md:grid-cols-[minmax(9rem,14rem)_minmax(6rem,9rem)_9rem_8.5rem_minmax(8rem,1fr)_10rem] md:items-center md:gap-x-4'
+  'md:grid md:grid-cols-[minmax(9rem,14rem)_minmax(6rem,9rem)_6.5rem_8.5rem_minmax(8rem,1fr)_12rem] md:items-center md:gap-x-4'
 
 const shortUrl = (url: string) => url.replace(/^https?:\/\//, '').replace(/\/$/, '')
 
@@ -210,7 +155,7 @@ function Details({ company, checked }: { company: Company; checked: string | nul
     : 'Not checked yet'
   const rows: [string, React.ReactNode][] = [
     ['Location', company.city ?? '—'],
-    ['Open roles', <Breakdown key="roles" company={company} />],
+    ['Application', company.has_application ? 'You have applied to a job here' : 'No application'],
     ['Website', company.website ? <ExternalLink url={company.website} /> : '—'],
     ['Careers page', company.careers_url ? <ExternalLink url={company.careers_url} /> : '—'],
     ['Job board', board],
@@ -260,11 +205,22 @@ function CompanyRow({ company, manual }: { company: Company; manual: boolean }) 
     >
       <div className={`flex min-h-8 flex-wrap items-center gap-x-4 gap-y-1 ${COLUMNS}`}>
         <h2 className="min-w-0 truncate font-semibold">
-          {company.name}
+          {company.website ? (
+            <a
+              href={company.website}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="hover:text-cyan-300 hover:underline"
+            >
+              {company.name}
+            </a>
+          ) : (
+            company.name
+          )}
           {company.hidden && <span className="ml-2 text-sm text-muted-small">(hidden)</span>}
         </h2>
         <span className="min-w-0 truncate text-sm text-muted-small">{company.city ?? ''}</span>
-        <OpenTotal company={company} />
+        <AppliedChip company={company} />
         <span
           className={`${CHIP} w-fit ${
             company.contact_count > 0
@@ -298,6 +254,26 @@ function CompanyRow({ company, manual }: { company: Company; manual: boolean }) 
               >
                 {showPanel ? <ChevronUp aria-hidden /> : <ChevronDown aria-hidden />}
               </IconButton>
+              {company.website ? (
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="icon-sm"
+                  className="text-sky-300 hover:bg-sky-500/20 hover:text-sky-200"
+                >
+                  <a
+                    href={company.website}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    title="Company website"
+                    aria-label={`Open ${company.name} website`}
+                  >
+                    <Globe aria-hidden />
+                  </a>
+                </Button>
+              ) : (
+                <span className="size-7" aria-hidden />
+              )}
               {company.careers_url ? (
                 <Button
                   asChild
@@ -312,7 +288,7 @@ function CompanyRow({ company, manual }: { company: Company; manual: boolean }) 
                     title="Careers page"
                     aria-label={`Open ${company.name} careers page`}
                   >
-                    <Globe aria-hidden />
+                    <Briefcase aria-hidden />
                   </a>
                 </Button>
               ) : (
@@ -409,7 +385,7 @@ const TEXT_SORTS: SortKey[] = ['name', 'city', 'note']
 const SORT_NAMES: Record<SortKey, string> = {
   name: 'company',
   city: 'location',
-  openings: 'open roles',
+  applied: 'applied',
   contacts: 'contacts',
   note: 'note',
 }
@@ -422,7 +398,7 @@ function compareBy(sort: Sort) {
     if (sort.key === 'city') return c.city ? c.city.toLowerCase() : null
     if (sort.key === 'note') return c.note_preview ? c.note_preview.toLowerCase() : null
     if (sort.key === 'contacts') return c.contact_count
-    return totalOf(c)
+    return c.has_application ? 1 : 0
   }
   const sign = sort.dir === 'asc' ? 1 : -1
   return (a: Company, b: Company) => {
@@ -442,9 +418,13 @@ function sortLabel(key: SortKey, sort: Sort): string {
     ? sort.dir === 'asc'
       ? 'A to Z'
       : 'Z to A'
-    : sort.dir === 'asc'
-      ? 'fewest first'
-      : 'most first'
+    : key === 'applied'
+      ? sort.dir === 'desc'
+        ? 'applied first'
+        : 'applied last'
+      : sort.dir === 'asc'
+        ? 'fewest first'
+        : 'most first'
   return `${base}, now ${text}`
 }
 
@@ -478,7 +458,7 @@ function HeaderRow({ sort, onSort }: { sort: Sort; onSort: (key: SortKey) => voi
     >
       {button('name', 'Company')}
       {button('city', 'Location')}
-      {button('openings', 'Open roles')}
+      {button('applied', 'Applied')}
       {button('contacts', 'Contacts')}
       {button('note', 'Note')}
       <span />
@@ -499,15 +479,11 @@ export function CompaniesPage() {
   const needle = query.trim().toLowerCase()
   const shown = all
     .filter((c) =>
-      show === 'all'
-        ? true
-        : show === 'contacts'
-          ? c.contact_count > 0
-          : (countOf(c, show) ?? 0) > 0,
+      show === 'all' ? true : show === 'contacts' ? c.contact_count > 0 : c.has_application,
     )
     .filter((c) => !needle || `${c.name} ${c.city ?? ''}`.toLowerCase().includes(needle))
   const items = [...shown].sort(compareBy(sort))
-  // A new column starts with its natural order: A to Z for text, most first for counts.
+  // A new column starts with its natural order: A to Z for text, most first for counts and applied.
   const sortBy = (key: SortKey) =>
     setSort((now) =>
       now.key === key
@@ -604,9 +580,7 @@ export function CompaniesPage() {
               >
                 <option value="all">All companies</option>
                 <option value="contacts">Has contacts</option>
-                <option value="frontend">Has front end openings</option>
-                <option value="backend">Has back end openings</option>
-                <option value="qa">Has QA openings</option>
+                <option value="applied">Has an application</option>
               </select>
             </label>
           </form>

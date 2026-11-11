@@ -1061,6 +1061,11 @@ export interface components {
              */
             contact_count: number;
             /**
+             * Has Application
+             * @default false
+             */
+            has_application: boolean;
+            /**
              * Has Note
              * @default false
              */
@@ -1082,10 +1087,6 @@ export interface components {
             name: string;
             /** Note Preview */
             note_preview?: string | null;
-            /** Openings */
-            openings?: {
-                [key: string]: number;
-            } | null;
             /** Origin */
             origin: string;
             /** Resolution */
@@ -3018,7 +3019,6 @@ export interface operations {
                 list?: "explore" | "applied";
                 source?: string | null;
                 company_id?: string | null;
-                area?: ("frontend" | "backend" | "qa") | null;
                 work_mode?: string | null;
                 city?: string | null;
                 sort?: "newest" | "company";

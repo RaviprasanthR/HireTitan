@@ -122,21 +122,13 @@ function Filters({ value, onChange }: { value: JobFilters; onChange: (next: JobF
   )
 }
 
-const AREA_LABELS: Record<string, string> = {
-  frontend: 'Front end',
-  backend: 'Back end',
-  qa: 'QA',
-}
-
 export function ExplorePage() {
   const status = useStatus()
   const [params, setParams] = useSearchParams()
   const [picked, setPicked] = useState<JobFilters>(NO_FILTERS)
-  // A company (and area) arrives in the link from the Companies page; they are not typed in.
+  // A company can arrive in the link; it is not typed in.
   const company_id = params.get('company_id') ?? ''
-  const asked = params.get('area') ?? ''
-  const area = company_id && asked in AREA_LABELS ? asked : ''
-  const filters = { ...picked, company_id, area }
+  const filters = { ...picked, company_id }
   const setFilters = (next: JobFilters) => setPicked(next)
   const [adding, setAdding] = useState(false)
   const jobs = useJobs(filters)
@@ -201,7 +193,6 @@ export function ExplorePage() {
         <p className="flex items-center gap-2 text-sm">
           <span className="rounded-full bg-surface px-3 py-1">
             Company: {items[0]?.company_name ?? 'this company'}
-            {AREA_LABELS[area] ? ` · ${AREA_LABELS[area]}` : ''}
           </span>
           <Button
             type="button"
