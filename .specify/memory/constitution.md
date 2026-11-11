@@ -47,11 +47,15 @@ Rationale: job postings and web pages are attacker-controllable input to an AI s
   workflow or lose user data.
 - Prompts MUST be versioned files; each AI artifact MUST record prompt version and model used.
   From version 2 onward, a prompt MUST pass its evaluation set before becoming active.
-- Every LLM call MUST be logged (provider, model, tokens, cost, latency, outcome) and MUST be
-  blocked when the user's budget cap is reached. Batch AI actions MUST show an estimated cost first.
+- Every LLM call MUST be logged (provider, model, tokens, latency, outcome).
+- HireTitan MUST NOT estimate, show or cap AI cost: no cost figures, no budget setting and no
+  budget guard. The only spend stop is the provider's own answer: an out-of-credit or quota
+  response MUST pause AI work, keep finished work, and show the provider's message.
 - Features MUST degrade gracefully when a model lacks a capability (e.g. native structured output).
 
-Rationale: users bring their own key and provider; reliability and cost must not depend on one vendor.
+Rationale: users bring their own key and provider; reliability must not depend on one vendor.
+Cost estimates from token counts and price tables proved unreliable, so HireTitan shows none and
+leaves spending limits to the provider account the user controls.
 
 ### V. Test-First (NON-NEGOTIABLE)
 
@@ -146,4 +150,4 @@ Rationale: anyone must be able to clone it and trust it with their career data.
   justified in the plan's Complexity Tracking table.
 - Runtime development guidance lives in `CLAUDE.md` and `docs/CONTEXT.md`.
 
-**Version**: 1.1.0 | **Ratified**: 2026-11-03 | **Last Amended**: 2026-11-03
+**Version**: 2.0.0 | **Ratified**: 2026-11-03 | **Last Amended**: 2026-11-11
