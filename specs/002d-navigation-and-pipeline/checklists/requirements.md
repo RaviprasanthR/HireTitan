@@ -33,3 +33,4 @@
 
 - The one open question (inquired jobs on the Companies page) was answered on 2026-11-11: option A, see Clarifications in spec.md.
 - Old page addresses (`/applied`, `/preferences`, `/search/rules`, `/review`) are named because they are user-visible links, not implementation detail.
+- User Story 6 (the flat look, FR-021 to FR-025, SC-007) was added on 2026-11-12 from Ravi's mockup; the items above still pass.
