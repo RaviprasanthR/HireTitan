@@ -248,6 +248,13 @@ async def test_db_rejects_applied_without_date_and_date_without_applied(
     await job(db_session, "applied_on", "current_date", state="applied")
 
 
+async def test_inquired_on_iff_inquired(db_session: AsyncSession) -> None:
+    await bad_job(db_session, state="inquired")
+    await bad_job(db_session, "inquired_on", "current_date", state="explore")
+    await bad_job(db_session, "inquired_on", "current_date", state="applied")
+    await job(db_session, "inquired_on", "current_date", state="inquired")
+
+
 async def test_db_rejects_bad_job_values(db_session: AsyncSession) -> None:
     await bad_job(db_session, state="maybe")
     await bad_job(db_session, "work_mode", "'office'")

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import datetime
+from datetime import date, datetime
 from uuid import UUID
 
 import pytest
@@ -135,5 +135,42 @@ def test_0012_upgrade_and_downgrade(
         with engine.connect() as conn:
             reasons = conn.execute(text("SELECT pause_reason FROM app.workflow_runs")).scalars()
             assert list(reasons) == ["budget_reached"]
+    finally:
+        engine.dispose()
+
+
+def test_0016_inquired_up_down(
+    fresh_database_url: str, make_alembic_config: Callable[[str], Config]
+) -> None:
+    """002d: 0016 adds the ``inquired`` job state with its own date; downgrading puts inquired
+    jobs back in Explore."""
+    cfg = make_alembic_config(fresh_database_url)
+    insert = text(
+        "INSERT INTO app.jobs (id, company_name, title, first_seen_at, last_seen_at, description, "
+        "state, inquired_on, created_at, updated_at) VALUES (gen_random_uuid(), 'Acme', 'Dev', "
+        "now(), now(), 'text', :state, :inquired_on, now(), now())"
+    )
+    command.upgrade(cfg, "0015")
+    engine = create_engine(fresh_database_url)
+    try:
+        columns = {c["name"] for c in inspect(engine).get_columns("jobs", schema="app")}
+        assert "inquired_on" not in columns
+
+        command.upgrade(cfg, "0016")
+        columns = {c["name"] for c in inspect(engine).get_columns("jobs", schema="app")}
+        assert "inquired_on" in columns
+        with engine.begin() as conn:
+            conn.execute(insert, {"state": "inquired", "inquired_on": date(2026, 11, 12)})
+        with engine.begin() as conn, pytest.raises(DBAPIError):  # inquired needs its date
+            conn.execute(insert, {"state": "inquired", "inquired_on": None})
+        with engine.begin() as conn, pytest.raises(DBAPIError):  # only inquired has the date
+            conn.execute(insert, {"state": "explore", "inquired_on": date(2026, 11, 12)})
+
+        command.downgrade(cfg, "0015")
+        with engine.connect() as conn:
+            states = conn.execute(text("SELECT state FROM app.jobs")).scalars()
+            assert list(states) == ["explore"]
+        columns = {c["name"] for c in inspect(engine).get_columns("jobs", schema="app")}
+        assert "inquired_on" not in columns
     finally:
         engine.dispose()
