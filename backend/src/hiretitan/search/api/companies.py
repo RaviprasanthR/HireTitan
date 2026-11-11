@@ -40,6 +40,7 @@ from hiretitan.search.application.discovery import (
     reject_board,
     suggest_board,
 )
+from hiretitan.search.application.openings import openings_by_company
 from hiretitan.search.application.ports import CareerOpsPort
 from hiretitan.search.application.sheet_import import (
     RowIssue,
@@ -48,7 +49,7 @@ from hiretitan.search.application.sheet_import import (
     preview_sheet,
 )
 from hiretitan.search.domain.sheet import SheetError, SheetLayout, SheetRow, read
-from hiretitan.search.infra.repos import CompaniesRepo, ContactsRepo, NotesRepo
+from hiretitan.search.infra.repos import CompaniesRepo, ContactsRepo, NotesRepo, OpeningsRepo
 
 PREVIEW_LIFETIME = timedelta(minutes=30)
 PREVIEWS_KEPT = 10
@@ -369,7 +370,8 @@ def create_companies_router(deps: SearchCompaniesApiDeps) -> APIRouter:
     async def companies(filter: Literal["all", "check_manually", "hidden"] = "all") -> CompanyPage:
         async with deps.sessions() as session:
             counts = await ContactsRepo(session).counts_by_company()
-            views = await list_companies(CompaniesRepo(session), filter, counts)
+            openings = await openings_by_company(OpeningsRepo(session))
+            views = await list_companies(CompaniesRepo(session), filter, counts, openings)
         return CompanyPage(items=[out(v) for v in views])
 
     @router.post("", response_model=CompanyOut, status_code=201)

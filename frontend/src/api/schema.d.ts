@@ -3005,6 +3005,7 @@ export interface operations {
                 list?: "explore" | "applied";
                 source?: string | null;
                 company_id?: string | null;
+                area?: ("frontend" | "backend" | "qa") | null;
                 work_mode?: string | null;
                 city?: string | null;
                 sort?: "newest" | "company";

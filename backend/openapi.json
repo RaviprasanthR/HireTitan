@@ -5491,6 +5491,27 @@
           },
           {
             "in": "query",
+            "name": "area",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "frontend",
+                    "backend",
+                    "qa"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Area"
+            }
+          },
+          {
+            "in": "query",
             "name": "work_mode",
             "required": false,
             "schema": {

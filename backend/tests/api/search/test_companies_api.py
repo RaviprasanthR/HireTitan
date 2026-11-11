@@ -166,7 +166,6 @@ async def test_US2_AS1_company_row_has_contact_count_and_note_flag(env: Env) -> 
     assert (rows["Busy Co"]["contact_count"], rows["Busy Co"]["has_note"]) == (2, False)
     assert (rows["Quiet Co"]["contact_count"], rows["Quiet Co"]["has_note"]) == (0, False)
     assert (rows["Noted Co"]["contact_count"], rows["Noted Co"]["has_note"]) == (0, True)
-    assert all(c["openings"] is None for c in rows.values())  # filled in by T022
 
 
 async def test_companies_list_runs_a_fixed_number_of_queries(env: Env) -> None:
@@ -202,3 +201,38 @@ async def test_companies_list_runs_a_fixed_number_of_queries(env: Env) -> None:
     many = await run_list()
 
     assert few == many  # no query per company
+
+
+# --- feature 002b (T022): open-role counts on the list ----------------------------------------
+
+
+async def test_US3_AS1_company_row_has_openings(env: Env) -> None:
+    from hiretitan.search.infra.repos import JobsRepo
+
+    company = await add(env, "Busy Co", last_checked_at=NOW)
+    async with env.sessions() as session:
+        for title in ("Frontend Engineer", "Full Stack Developer", "Sales Manager"):
+            await JobsRepo(session).add(
+                company_id=company,
+                company_name="Busy Co",
+                title=title,
+                description="text",
+                state="explore",
+                first_seen_at=NOW,
+                last_seen_at=NOW,
+            )
+        await session.commit()
+
+    (row,) = (await env.client.get(BASE)).json()["items"]
+
+    assert row["openings"] == {"frontend": 2, "backend": 1, "qa": 0}
+
+
+async def test_US3_AS5_row_openings_null_when_never_searched(env: Env) -> None:
+    await add(env, "Never Searched")
+    await add(env, "Searched Empty", last_checked_at=NOW)
+
+    rows = {c["name"]: c for c in (await env.client.get(BASE)).json()["items"]}
+
+    assert rows["Never Searched"]["openings"] is None
+    assert rows["Searched Empty"]["openings"] == {"frontend": 0, "backend": 0, "qa": 0}

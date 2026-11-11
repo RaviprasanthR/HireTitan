@@ -87,7 +87,7 @@ class CompanyView:
     # Filled only by the list (feature 002b); other responses carry the defaults.
     contact_count: int = 0
     has_note: bool = False
-    openings: dict[str, int] | None = None  # T022 fills this; None means "not searched yet"
+    openings: dict[str, int] | None = None  # None means "not searched yet"
 
 
 def view_of(row: StoredCompany) -> CompanyView:
@@ -121,13 +121,26 @@ async def list_companies(
     store: CompaniesStore,
     filter: str = "all",
     counts: Mapping[UUID, tuple[int, bool]] | None = None,
+    openings: Mapping[UUID, dict[str, int] | None] | None = None,
 ) -> list[CompanyView]:
-    """The company list. ``counts`` maps a company id to (contact count, has a note)."""
+    """The company list.
+
+    ``counts`` maps a company id to (contact count, has a note); ``openings`` maps it to the open
+    roles per area, or ``None`` when the company was never searched.
+    """
     known = counts or {}
+    roles = openings or {}
     views = []
     for row in await store.list_filtered(filter):
         contact_count, has_note = known.get(row.id, (0, False))
-        views.append(replace(view_of(row), contact_count=contact_count, has_note=has_note))
+        views.append(
+            replace(
+                view_of(row),
+                contact_count=contact_count,
+                has_note=has_note,
+                openings=roles.get(row.id),
+            )
+        )
     return views
 
 
