@@ -69,7 +69,7 @@ The person never sees an AI cost figure, a budget or a "budget reached" pause. A
 2. **Given** Settings, the Profile page and the setup screens, **When** the person opens them, **Then** none shows a cost, a spend total or a budget.
 3. **Given** any amount of AI use in a month, **When** the person starts more AI work, **Then** it is never paused or refused because of a budget.
 4. **Given** the provider answers that the account is out of credit, **When** that happens during a search or a resume reading, **Then** the work pauses with the provider's message, finished work is kept, and **Check again** resumes it after credit is added.
-5. **Given** earlier installs that saved a budget or have runs paused because of a budget, **When** they update, **Then** those paused runs carry on (or can be resumed) and the stored budget is no longer used or shown.
+5. **Given** earlier installs that saved a budget or have runs paused because of a budget, **When** they update, **Then** those runs end with a clear message saying the old budget is gone and can be started again, and the stored budget is no longer used or shown.
 
 ---
 
@@ -165,7 +165,7 @@ The menu has four entries: **Home**, **Companies**, **Profile**, **Settings**. I
 
 ### Measurable Outcomes
 
-- **SC-001**: The menu has exactly 4 entries, and every screen of the earlier menu is reachable in 2 clicks or fewer from it.
+- **SC-001**: The menu has exactly 4 entries, and every screen of the earlier menu is reachable in 2 clicks or fewer from it, except the review list, which is reached in 1 click from the Home notice whenever items are waiting (with nothing waiting there is nothing to review).
 - **SC-002**: Marking a job inquired, then applied, then undoing each takes 1 click per step (plus a date only when the person changes it), and the job is in the right tab after each step in 100% of cases in the test set.
 - **SC-003**: 0 screens show an AI cost, spend or budget, checked by a test that scans every page for cost text and by the end-to-end journey.
 - **SC-004**: 0 AI tasks are paused or refused for budget reasons, with any amount of earlier AI use; an out-of-credit answer still pauses work in 100% of the out-of-credit tests and Check again resumes it.
@@ -179,5 +179,5 @@ The menu has four entries: **Home**, **Companies**, **Profile**, **Settings**. I
 - Inquiring never sends anything: it is a note the person makes after asking someone themselves (constitution I).
 - The review list page stays as it is; only its menu entry is removed.
 - Removing the budget also removes the setup screens' budget wording and the 002 "full search cost under limit" test; the provider's out-of-credit handling from feature 002 stays as it is.
-- Stored cost figures in existing AI call records may stay in the database but are never shown; new records do not compute a cost.
+- Stored cost figures in existing AI call records and search runs are removed when the install is updated; new records do not compute a cost.
 - The Search history and search summary pages stay reachable from the Explore tab's search panel, without cost.

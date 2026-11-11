@@ -44,13 +44,13 @@ Design decisions are in [research.md](research.md).
 | **I. No outbound actions** | "I inquired" is a note the person makes; nothing is sent. The no-send architecture test stays green. |
 | **II. Truthful profile** | Not affected. |
 | **III. Untrusted input is data** | Not affected. |
-| **IV. Validated, versioned AI (2.0.0)** | This feature *is* the compliance work: no estimate, display or cap of cost; calls logged with provider, model, tokens, latency, outcome; out-of-credit pause unchanged. |
+| **IV. Validated, versioned AI (2.0.0)** | This feature *is* the compliance work: no estimate, display or cap of cost; calls logged with provider, model, tokens, latency, outcome; out-of-credit pause unchanged. Until US3 is done the existing code still breaks IV; that temporary deviation is recorded in Complexity Tracking. |
 | **V. Test-first** | Every task lists its tests first; the migration has an up/down test with a budget-paused run; real Postgres. |
 | **VI. Lean architecture** | Removes a wrapper (budget guard), a dependency and an API; adds one column and one state. No new port or module. |
 | **VII. Permitted sources** | Not affected. |
 | **VIII. Privacy and portability** | Delete all still wipes everything (inquired marks go with the jobs). |
 
-No violations; Complexity Tracking is empty.
+One temporary deviation, recorded in Complexity Tracking.
 
 ## Project Structure
 
@@ -106,4 +106,6 @@ frontend/e2e/                        # journeys follow the new menu; pipeline st
 
 ## Complexity Tracking
 
-None.
+| Deviation | Why it is needed | Simpler alternative rejected because |
+|---|---|---|
+| Constitution IV (2.0.0) is not yet met on this branch: the budget guard, budget pause, cost columns and cost displays from 001 and 002 stay in the code until US3 (T013 to T018) removes them; the feature is not merged until they are gone | US1 and US2 are the MVP and are reviewed first; the cost code is removed from the outside in so every task stays green | Removing all cost code in one task first would be one very large commit across about 30 files with no green steps in between |
