@@ -1,42 +1,30 @@
-/* HireTitan theme: dark only (architecture §10). Every colour is a variable, so a light
-   theme can be added later without touching components. Keep in step with tokens.ts. */
+/* HireTitan theme: dark only (architecture §10), flat colours only. Every colour is
+   a variable, so a light theme can be added later without touching components. Keep in step
+   with tokens.ts. Flat dark navy with one warm accent, orange (Ravi's mockup, 2026-11-12). */
 :root {
   color-scheme: dark;
 
-  /* Ravi's slate palette (2026-11-04): #06141B #11212D #253745 #4A5C6A #9BA8AB #CCD0CF.
-     It has no saturated accent, so primary actions are light (#CCD0CF to #9BA8AB) with the
-     darkest tone as text (7.6:1 or better). #4A5C6A is under 3:1 on the page, so it is used
-     only for decoration (gradient stops, hover, shadows), never for text or outlines. */
-  --ht-background: #06141b;
-  --ht-surface: #11212d;
-  --ht-divider: #253745;
-  --ht-slate: #4a5c6a;
-  --ht-muted: #9ba8ab;
-  --ht-muted-small: #9ba8ab;
-  --ht-primary: #4cc9f0;
-  --ht-primary-end: #1fa3d1;
-  --ht-on-primary: #06141b;
-  --ht-accent: #4cc9f0;
-  --ht-heading: #f4f6f5;
-  /* The bolt: near-white fading to steel, the brightest thing on the page. */
-  --ht-logo: #e8fbff;
-  --ht-logo-end: #4cc9f0;
-  --ht-logo-glow: rgb(76 201 240 / 0.6);
-  --ht-text: #ccd0cf;
+  --ht-background: #131a24;
+  --ht-surface: #18202b;
+  --ht-divider: #2a3444;
+  --ht-slate: #3a465a;
+  --ht-muted: #8c97a9;
+  --ht-muted-small: #8c97a9;
+  --ht-primary: #243044;
+  --ht-on-primary: #f0a35e;
+  --ht-accent: #f0a35e;
+  --ht-heading: #f1f3f7;
+  --ht-logo: #f0a35e;
+  --ht-text: #e3e7ee;
   --ht-success: #3fb950;
   --ht-warning: #d29922;
   --ht-danger: #f85149;
+  /* A soft, see-through rust: the tint under the pointer on a list row. */
+  --ht-hover-tint: rgb(156 79 55 / 0.25);
 
-  /* Top to bottom, kept darker than the cards so they lift off it (pageTop, background, pageEnd). */
-  --ht-gradient-page: linear-gradient(180deg, #08171f 0%, #06141b 45%, #02090d 100%);
-  --ht-gradient-surface: linear-gradient(160deg, #142836 0%, #11212d 55%, #0d1c27 100%);
-  --ht-gradient-primary: linear-gradient(135deg, #4cc9f0 0%, #1fa3d1 100%);
-
-  /* Shadows: panels lift off the page; primary actions glow faintly. */
-  --ht-shadow-panel: 0 0 0 1px rgb(74 92 106 / 0.5), 0 1px 0 rgb(76 201 240 / 0.28) inset,
-    0 18px 40px -14px rgb(0 0 0 / 0.85), 0 2px 8px rgb(0 0 0 / 0.45);
-  --ht-shadow-primary: 0 6px 18px -6px rgb(76 201 240 / 0.55), 0 1px 0 rgb(255 255 255 / 0.35) inset;
-  --ht-shadow-dialog: 0 24px 64px -16px rgb(0 0 0 / 0.8), 0 0 0 1px rgb(74 92 106 / 0.5);
+  /* Panels get a hairline border instead of a shadow. */
+  --ht-border-panel: 0 0 0 1px rgb(255 255 255 / 0.07);
+  --ht-shadow-dialog: 0 0 0 1px rgb(255 255 255 / 0.1);
 
   /* shadcn variables */
   --background: var(--ht-background);
@@ -69,9 +57,8 @@
 
 /* The colour utilities (text-success, text-danger, text-link, bg-divider, ...) are declared in
    index.css: Tailwind only reads @theme from the files it processes. */
-/* Gradients and shadows: page glow, panels and primary actions. Text keeps AA on every stop. */
+/* Flat colours: the page, panels and primary actions. */
 body {
-  background: var(--ht-gradient-page) fixed;
   background-color: var(--ht-background);
   min-height: 100vh;
 }
@@ -84,55 +71,50 @@ h3 {
   color: var(--ht-heading);
 }
 .bg-surface {
-  background-image: var(--ht-gradient-surface);
-  box-shadow: var(--ht-shadow-panel);
+  background-color: var(--ht-surface);
+  box-shadow: var(--ht-border-panel);
 }
 .bg-primary {
-  background-image: var(--ht-gradient-primary);
+  background-color: var(--ht-primary);
   color: var(--ht-on-primary);
-  box-shadow: var(--ht-shadow-primary);
 }
 .bg-primary:hover {
-  filter: brightness(1.06);
+  filter: brightness(1.25);
 }
 [role="dialog"] {
   box-shadow: var(--ht-shadow-dialog);
 }
 
-/* Progress bar: a slate track with a glowing green fill (amber when paused, red when failed).
-   Moving stripes mean work is happening, and stop under reduced motion. Each tone sets its
-   own gradient and glow. */
+/* Progress bar: a slate track with a flat green fill (amber when paused, red when failed).
+   Moving stripes mean work is happening, and stop under reduced motion. */
 .ht-progress {
-  --ht-progress-gradient: linear-gradient(135deg, #56d364 0%, #3fb950 55%, #2ea043 100%);
-  --ht-progress-glow: 0 0 12px rgb(63 185 80 / 0.55);
+  --ht-progress-fill: #3fb950;
   position: relative;
   height: 0.625rem;
   width: 100%;
   overflow: hidden;
   border-radius: 9999px;
   background: var(--ht-divider);
-  box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.55);
 }
 .ht-progress[data-tone="warning"] {
-  --ht-progress-gradient: linear-gradient(135deg, #d29922 0%, #a67717 100%);
-  --ht-progress-glow: 0 0 10px rgb(210 153 34 / 0.45);
+  --ht-progress-fill: #d29922;
 }
 .ht-progress[data-tone="danger"] {
-  --ht-progress-gradient: linear-gradient(135deg, #f85149 0%, #c93c35 100%);
-  --ht-progress-glow: 0 0 10px rgb(248 81 73 / 0.45);
+  --ht-progress-fill: #f85149;
 }
 .ht-progress-fill {
   height: 100%;
   border-radius: 9999px;
-  background-image: var(--ht-progress-gradient);
-  box-shadow: var(--ht-progress-glow);
+  background-color: var(--ht-progress-fill);
   transition: width 600ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 .ht-progress-fill[data-animated="true"] {
-  background-image:
-    repeating-linear-gradient(115deg, rgb(255 255 255 / 0.28) 0 10px, transparent 10px 20px),
-    var(--ht-progress-gradient);
-  background-size: 28px 100%, 100% 100%;
+  background-image: repeating-linear-gradient(
+    115deg,
+    rgb(255 255 255 / 0.28) 0 10px,
+    transparent 10px 20px
+  );
+  background-size: 28px 100%;
   animation: ht-progress-stripes 900ms linear infinite;
 }
 .ht-progress-fill[data-indeterminate="true"] {
@@ -141,7 +123,7 @@ h3 {
 }
 @keyframes ht-progress-stripes {
   to {
-    background-position: 28px 0, 0 0;
+    background-position: 28px 0;
   }
 }
 @keyframes ht-progress-sweep {
@@ -165,7 +147,7 @@ h3 {
   }
 }
 
-/* The delete-all zone: a red border that glows when the cursor (or keyboard focus) is inside. */
+/* The delete-all zone: a red border that thickens when the cursor (or keyboard focus) is inside. */
 .ht-danger-zone {
   border: 1px solid var(--ht-danger);
   transition:
@@ -174,10 +156,7 @@ h3 {
 }
 .ht-danger-zone:hover,
 .ht-danger-zone:focus-within {
-  box-shadow:
-    0 0 0 1px rgb(248 81 73 / 0.55),
-    0 0 20px 2px rgb(248 81 73 / 0.45),
-    0 0 46px 6px rgb(248 81 73 / 0.18);
+  box-shadow: 0 0 0 2px var(--ht-danger);
 }
 @media (prefers-reduced-motion: reduce) {
   .ht-danger-zone {
@@ -199,12 +178,8 @@ h3 {
 .ht-danger-button:hover:not(:disabled),
 .ht-danger-solid:not(:disabled) {
   background-color: #f85149;
-  background-image: linear-gradient(135deg, #ff6b63 0%, #f85149 100%);
-  color: var(--ht-on-primary);
-  border-color: #ff6b63;
-  box-shadow:
-    0 6px 18px -6px rgb(248 81 73 / 0.65),
-    0 1px 0 rgb(255 255 255 / 0.3) inset;
+  color: var(--ht-background);
+  border-color: #f85149;
 }
 @media (prefers-reduced-motion: reduce) {
   .ht-danger-button {
@@ -214,7 +189,7 @@ h3 {
 
 /* Button hover states. The unlayered `.bg-background` rule above beats Tailwind's hover
    utilities, so outline and secondary hovers are set here. Neutral buttons (Back, Up, Add)
-   light up with a cyan edge; `ht-success-button` (Confirm, Continue, Save) turns green and
+   light up with an orange edge; `ht-success-button` (Confirm, Continue, Save) turns green and
    `ht-danger-button` (Discard, Remove) turns red. */
 button[data-variant="outline"],
 button[data-variant="secondary"] {
@@ -233,19 +208,16 @@ button[data-variant="secondary"]:hover:not(:disabled) {
   color: var(--ht-heading);
 }
 .ht-success-button {
-  background-image: var(--ht-gradient-primary);
+  background-color: var(--ht-primary);
   color: var(--ht-on-primary);
-  box-shadow: var(--ht-shadow-primary);
   transition:
     background-color 160ms ease,
-    box-shadow 160ms ease;
+    color 160ms ease;
 }
 .ht-success-button:hover:not(:disabled) {
-  background-image: linear-gradient(135deg, #56d364 0%, #2ea043 100%);
-  border-color: #56d364;
-  box-shadow:
-    0 6px 18px -6px rgb(63 185 80 / 0.65),
-    0 1px 0 rgb(255 255 255 / 0.3) inset;
+  background-color: #3fb950;
+  color: var(--ht-background);
+  border-color: #3fb950;
 }
 @media (prefers-reduced-motion: reduce) {
   button[data-variant="outline"],
@@ -258,18 +230,18 @@ button[data-variant="secondary"]:hover:not(:disabled) {
 /* Applied table: a header that stands apart from the rows, coloured tags, icon buttons. */
 .ht-thead th {
   background: rgb(255 255 255 / 0.06);
-  color: var(--ht-muted, #9ba8ab);
+  color: var(--ht-muted);
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  border-bottom: 1px solid rgb(155 168 171 / 0.35);
+  border-bottom: 1px solid var(--ht-divider);
 }
 .ht-row {
   transition: background-color 140ms ease;
 }
 .ht-row:hover {
-  background: rgb(76 201 240 / 0.07);
+  background: var(--ht-hover-tint);
 }
 .ht-pill {
   display: inline-block;
@@ -296,7 +268,7 @@ button[data-variant="secondary"]:hover:not(:disabled) {
   height: 2rem;
   border-radius: 0.5rem;
   border: 1px solid transparent;
-  color: #9ba8ab;
+  color: var(--ht-muted);
   transition:
     background-color 140ms ease,
     color 140ms ease,
@@ -305,10 +277,9 @@ button[data-variant="secondary"]:hover:not(:disabled) {
 }
 .ht-icon-button:hover,
 .ht-icon-button:focus-visible {
-  color: #4cc9f0;
-  background: rgb(76 201 240 / 0.14);
-  border-color: rgb(76 201 240 / 0.55);
-  box-shadow: 0 4px 14px -6px rgb(76 201 240 / 0.6);
+  color: var(--ht-accent);
+  background: rgb(240 163 94 / 0.14);
+  border-color: rgb(240 163 94 / 0.55);
 }
 @media (prefers-reduced-motion: reduce) {
   .ht-row,

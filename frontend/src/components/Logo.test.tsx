@@ -18,29 +18,23 @@ describe('Logo', () => {
     expect(screen.getAllByText('HireTitan')).toHaveLength(1)
   })
 
-  it('two marks on one page do not share gradient ids', () => {
-    const { container } = render(
-      <>
-        <LogoMark />
-        <LogoMark />
-      </>,
-    )
-    const ids = [...container.querySelectorAll('linearGradient')].map((g) => g.id)
-    expect(new Set(ids).size).toBe(ids.length)
-    expect(ids.length).toBe(2)
+  it('the bolt is one flat colour, with no gradient or glow', () => {
+    const { container } = render(<LogoMark />)
+    expect(container.querySelectorAll('linearGradient')).toHaveLength(0)
+    expect(container.querySelector('svg')?.getAttribute('style') ?? '').not.toContain('drop-shadow')
+    expect(container.querySelector('path')).toHaveAttribute('fill', 'var(--ht-logo)')
   })
 
-  it('logo_colours_stand_out_from_the_background (graphics need 3:1, aim far higher)', () => {
+  it('logo_colour_stands_out_from_the_background (graphics need 3:1, aim far higher)', () => {
     expect(contrastRatio(tokens.logo, tokens.background)).toBeGreaterThanOrEqual(7)
-    expect(contrastRatio(tokens.logoEnd, tokens.background)).toBeGreaterThanOrEqual(7)
     expect(contrastRatio(tokens.logo, tokens.surface)).toBeGreaterThanOrEqual(7)
-    expect(contrastRatio(tokens.logoEnd, tokens.surface)).toBeGreaterThanOrEqual(4.5)
   })
 
   it('the tab icon uses the same theme colours as the in-app logo', () => {
     const favicon = readFileSync(resolve(process.cwd(), 'public/favicon.svg'), 'utf8').toLowerCase()
     expect(favicon).toContain(tokens.logo)
-    expect(favicon).toContain(tokens.logoEnd)
+    expect(favicon).toContain(tokens.surface)
+    expect(favicon).not.toContain('gradient')
     expect(favicon).not.toContain('#863bff') // the stock purple is gone
   })
 })
