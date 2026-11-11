@@ -13,6 +13,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Response
 from pydantic import BaseModel
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from hiretitan.platform.web.problems import ProblemError, problem
@@ -113,6 +114,9 @@ def _no_contact() -> ProblemError:
     return ProblemError(404, "That contact does not exist.")
 
 
+DUPLICATE = "That name is already a contact at this company."
+
+
 def _exists(error: ContactExistsError) -> ProblemError:
     return ProblemError(409, str(error), code="contact_exists")
 
@@ -148,6 +152,8 @@ def create_contacts_router(deps: SearchContactsApiDeps) -> APIRouter:
                 return _invalid(error)
             except ContactExistsError as error:
                 raise _exists(error) from error
+            except IntegrityError as error:  # two requests with one name at the same moment
+                raise _exists(ContactExistsError(DUPLICATE)) from error
         return _contact_out(view)
 
     @router.patch("/{company_id}/contacts/{contact_id}", response_model=ContactOut)
@@ -170,6 +176,8 @@ def create_contacts_router(deps: SearchContactsApiDeps) -> APIRouter:
                 return _invalid(error)
             except ContactExistsError as error:
                 raise _exists(error) from error
+            except IntegrityError as error:  # two requests with one name at the same moment
+                raise _exists(ContactExistsError(DUPLICATE)) from error
         return _contact_out(view)
 
     @router.delete("/{company_id}/contacts/{contact_id}", status_code=204)

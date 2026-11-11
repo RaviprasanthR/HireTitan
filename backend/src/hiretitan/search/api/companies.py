@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import secrets
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
@@ -72,10 +73,19 @@ class ImportPreviews:
         self._held[token] = (now + PREVIEW_LIFETIME, plan)
         return token
 
-    def take(self, token: str, now: datetime) -> object | None:
-        """The held plan (a company CSV's rows or a sheet), once; callers check which kind."""
-        held = self._held.pop(token, None)
-        return held[1] if held is not None and held[0] > now else None
+    def peek(self, token: str, now: datetime, kind: type) -> Any:
+        """The held plan if it is of ``kind`` and still fresh; a token of the other kind stays."""
+        held = self._held.get(token)
+        if held is None:
+            return None
+        if held[0] <= now:
+            del self._held[token]
+            return None
+        return held[1] if isinstance(held[1], kind) else None
+
+    def drop(self, token: str) -> None:
+        """Use the token up, after the import it stood for has been saved."""
+        self._held.pop(token, None)
 
 
 @dataclass(frozen=True, slots=True)
@@ -337,6 +347,12 @@ def _preview_of(plan: ImportPlan, token: str) -> ImportPreview:
     )
 
 
+def _expired() -> ProblemError:
+    return ProblemError(
+        404, "That import has expired. Upload the file again.", code="preview_expired"
+    )
+
+
 async def _read_csv(file: UploadFile) -> bytes:
     parts: list[bytes] = []
     total = 0
@@ -424,12 +440,13 @@ def create_companies_router(deps: SearchCompaniesApiDeps) -> APIRouter:
 
     @router.post("/import/{token}/confirm", response_model=ImportResult)
     async def import_confirm(token: str) -> ImportResult:
-        rows = deps.previews.take(token, deps.clock.now())
-        if not isinstance(rows, list):
-            raise ProblemError(404, "That import has expired. Upload the file again.")
+        rows = deps.previews.peek(token, deps.clock.now(), list)
+        if rows is None:
+            raise _expired()
         async with deps.sessions() as session:
             added, updated = await apply_import(CompaniesRepo(session), rows)
             await session.commit()
+        deps.previews.drop(token)
         return ImportResult(added=added, updated=updated)
 
     @router.post("/sheet-import", response_model=SheetPreview)
@@ -440,6 +457,8 @@ def create_companies_router(deps: SearchCompaniesApiDeps) -> APIRouter:
             layout, rows = read(source)
         except SheetError as error:
             raise ProblemError(422, str(error), headers=list(error.headers)) from error
+        except csv.Error as error:
+            raise ProblemError(422, "A cell in this file is too large to read.") from error
         if len(rows) > MAX_ROWS:
             raise ProblemError(422, "The file has more than 2,000 rows.")
         async with deps.sessions() as session:
@@ -451,9 +470,9 @@ def create_companies_router(deps: SearchCompaniesApiDeps) -> APIRouter:
 
     @router.post("/sheet-import/{token}/confirm", response_model=SheetResult)
     async def sheet_confirm(token: str) -> SheetResult:
-        held = deps.previews.take(token, deps.clock.now())
-        if not isinstance(held, HeldSheet):
-            raise ProblemError(404, "That import has expired. Upload the file again.")
+        held = deps.previews.peek(token, deps.clock.now(), HeldSheet)
+        if held is None:
+            raise _expired()
         async with deps.sessions() as session:
             outcome = await apply_sheet(
                 CompaniesRepo(session),
@@ -463,6 +482,7 @@ def create_companies_router(deps: SearchCompaniesApiDeps) -> APIRouter:
                 held.rows,
             )
             await session.commit()
+        deps.previews.drop(token)
         return _sheet_result_of(outcome)
 
     @router.get("/{company_id}/discovery", response_model=DiscoveryOut)

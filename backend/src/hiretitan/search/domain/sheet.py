@@ -41,7 +41,7 @@ OPENINGS_HEADERS: Final = (
 )
 _LOOKUP: Final = {alias: column for column, names in ALIASES.items() for alias in names}
 _KNOWN: Final = frozenset(_LOOKUP) | frozenset(OPENINGS_HEADERS)
-_FORMULA_START: Final = ("=", "+", "-", "@")
+_FORMULA_START: Final = ("=", "+", "-", "@", "\t", "\r")
 _NON_WORD: Final = re.compile(r"[^a-z0-9]+")
 
 

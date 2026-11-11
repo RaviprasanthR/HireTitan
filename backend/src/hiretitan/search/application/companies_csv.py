@@ -34,7 +34,7 @@ MAX_BYTES: Final = 1_048_576
 MAX_ROWS: Final = 2000
 BOARD_ID_MAX: Final = 200
 _VENDOR: Final = re.compile(r"[a-z][a-z0-9_]{0,39}")
-_FORMULA_START: Final = ("=", "+", "-", "@")
+_FORMULA_START: Final = ("=", "+", "-", "@", "\t", "\r")
 _TRUE: Final = frozenset({"true", "yes", "1", "y"})
 _FALSE: Final = frozenset({"false", "no", "0", "n"})
 _COMPARED: Final = ("name", "city", "website", "careers_url", "ats_vendor", "board_id", "hidden")
@@ -194,19 +194,22 @@ def parse_csv(data: bytes) -> tuple[list[ImportRow], list[InvalidRow]]:
     rows: list[ImportRow] = []
     invalid: list[InvalidRow] = []
     seen = 0
-    for cells in reader:
-        line = reader.line_num
-        if not any((v or "").strip() for v in cells.values() if isinstance(v, str)):
-            continue  # a blank line
-        seen += 1
-        if seen > MAX_ROWS:
-            raise CsvFileError(422, "The file has more than 2,000 rows.")
-        try:
-            rows.append(_row_of(line, {k: v for k, v in cells.items() if isinstance(v, str)}))
-        except CompanyError as error:
-            invalid.append(InvalidRow(line, " ".join(e.message for e in error.errors)))
-        except ValueError as error:
-            invalid.append(InvalidRow(line, str(error)))
+    try:
+        for cells in reader:
+            line = reader.line_num
+            if not any((v or "").strip() for v in cells.values() if isinstance(v, str)):
+                continue  # a blank line
+            seen += 1
+            if seen > MAX_ROWS:
+                raise CsvFileError(422, "The file has more than 2,000 rows.")
+            try:
+                rows.append(_row_of(line, {k: v for k, v in cells.items() if isinstance(v, str)}))
+            except CompanyError as error:
+                invalid.append(InvalidRow(line, " ".join(e.message for e in error.errors)))
+            except ValueError as error:
+                invalid.append(InvalidRow(line, str(error)))
+    except csv.Error as error:
+        raise CsvFileError(422, "A cell in this file is too large to read.") from error
     return rows, invalid
 
 
