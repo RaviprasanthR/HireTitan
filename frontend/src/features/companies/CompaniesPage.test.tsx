@@ -65,9 +65,63 @@ describe('CompaniesPage', () => {
     const list = await screen.findByRole('list', { name: 'Companies' })
     const [acme, keka] = within(list).getAllByRole('listitem')
     expect(acme).toHaveTextContent('Acme')
-    expect(acme).toHaveTextContent('Job board')
-    expect(acme).toHaveTextContent('Pune')
-    expect(keka).toHaveTextContent('Check manually')
+    expect(acme).toHaveTextContent('Pune') // its own Location column
+    expect(acme).not.toHaveTextContent('Job board') // the board status is in the details
+    expect(keka).not.toHaveTextContent('Check manually')
+  })
+
+  it('the board status and every other detail show when a row is expanded', async () => {
+    const user = userEvent.setup()
+    renderPage((call) =>
+      call.path.startsWith('/companies')
+        ? {
+            items: [
+              {
+                ...ACME,
+                website: 'https://acme.example.com',
+                last_checked_at: '2026-11-05T09:00:00Z',
+                last_check_result: 'ok',
+              },
+            ],
+          }
+        : undefined,
+    )
+    const row = await screen.findByRole('listitem', { name: 'Acme' })
+    const toggle = within(row).getByRole('button', { name: 'Details for Acme' })
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    expect(within(row).queryByRole('region', { name: 'Details for Acme' })).toBeNull()
+
+    await user.click(toggle)
+
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    const details = within(row).getByRole('region', { name: 'Details for Acme' })
+    expect(details).toHaveTextContent('Job board')
+    expect(details).toHaveTextContent('lever')
+    expect(details).toHaveTextContent('Pune')
+    expect(details).toHaveTextContent('Built-in list')
+    expect(details).toHaveTextContent('Last checked 5 Nov 2026')
+    expect(within(details).getByRole('link', { name: /acme\.example\.com$/ })).toHaveAttribute(
+      'href',
+      'https://acme.example.com',
+    )
+    expect(within(details).getByRole('link', { name: /acme\.example\.com\/careers/ })).toBeTruthy()
+  })
+
+  it('an icon opens the careers page in a new tab, and a company without one has none', async () => {
+    renderPage((call) =>
+      call.path.startsWith('/companies')
+        ? { items: [ACME, company('n', 'Nolink', { careers_url: null })] }
+        : undefined,
+    )
+    const acme = await screen.findByRole('listitem', { name: 'Acme' })
+
+    const link = within(acme).getByRole('link', { name: 'Open Acme careers page' })
+    expect(link).toHaveAttribute('href', 'https://acme.example.com/careers')
+    expect(link).toHaveAttribute('target', '_blank')
+    expect(link).toHaveAttribute('rel', 'noreferrer noopener')
+    expect(link).toHaveAttribute('title', 'Careers page')
+    const nolink = screen.getByRole('listitem', { name: 'Nolink' })
+    expect(within(nolink).queryByRole('link', { name: /careers page/i })).toBeNull()
   })
 
   it('US3_AS4_hide_company', async () => {
@@ -162,7 +216,7 @@ describe('CompaniesPage', () => {
 
     expect(within(row).getByTitle('Call back Friday')).toBeInTheDocument() // the note, in full
     for (const [name, title] of [
-      ['Contacts and note for Busy', 'Contacts and note'],
+      ['Details for Busy', 'Details'],
       ['Hide Busy', 'Hide'],
       ['Edit Busy', 'Edit'],
       ['Delete Busy', 'Delete'],
@@ -200,7 +254,7 @@ describe('CompaniesPage', () => {
       return call.path.startsWith('/companies') ? { items: [busy], next_cursor: null } : undefined
     })
 
-    await user.click(await screen.findByRole('button', { name: 'Contacts and note for Busy' }))
+    await user.click(await screen.findByRole('button', { name: 'Details for Busy' }))
 
     expect(await screen.findByText('Jane Example')).toBeInTheDocument()
   })
@@ -321,16 +375,101 @@ describe('CompaniesPage', () => {
       expect(names()).toEqual(['Talked'])
     })
 
-    it('FR020_sort_by_front_end_openings', async () => {
+    it('FR020_sort_by_front_end_openings_from_the_header', async () => {
       const user = userEvent.setup()
       renderPage(all)
       await screen.findByRole('list', { name: 'Companies' })
 
-      await user.selectOptions(screen.getByLabelText('Sort by'), 'frontend')
+      await user.click(screen.getByRole('button', { name: /Sort by front end openings/ }))
 
       // Most first; a company never searched goes last.
       expect(names()[0]).toBe('Busy')
       expect(names().slice(-2)).toEqual(expect.arrayContaining(['Never', 'Talked']))
+
+      await user.click(screen.getByRole('button', { name: /Sort by front end openings/ }))
+
+      expect(names()[0]).toBe('Quiet') // fewest first; never searched is still last
+      expect(names().slice(-2)).toEqual(expect.arrayContaining(['Never', 'Talked']))
+    })
+
+    it('sorting_by_contacts_puts_the_most_contacts_first', async () => {
+      const user = userEvent.setup()
+      renderPage(all)
+      await screen.findByRole('list', { name: 'Companies' })
+
+      await user.click(screen.getByRole('button', { name: /Sort by contacts/ }))
+
+      expect(names()[0]).toBe('Talked')
+    })
+  })
+
+  describe('the table header', () => {
+    const rows = (call: Call) =>
+      call.path.startsWith('/companies')
+        ? {
+            items: [
+              company('1', 'Bravo', { city: 'Pune', note_preview: 'zeta', has_note: true }),
+              company('2', 'Alpha', { city: 'Mumbai' }),
+              company('3', 'Charlie', { city: 'Chennai', note_preview: 'alpha', has_note: true }),
+            ],
+          }
+        : undefined
+    const names = () =>
+      within(screen.getByRole('list', { name: 'Companies' }))
+        .getAllByRole('heading', { level: 2 })
+        .map((h) => h.textContent)
+
+    it('starts by company name, and a second click on it reverses the order', async () => {
+      const user = userEvent.setup()
+      renderPage(rows)
+      await screen.findByRole('list', { name: 'Companies' })
+      expect(names()).toEqual(['Alpha', 'Bravo', 'Charlie'])
+
+      await user.click(screen.getByRole('button', { name: /Sort by company/ }))
+
+      expect(names()).toEqual(['Charlie', 'Bravo', 'Alpha'])
+    })
+
+    it('sorts by location, and by note text, with empty values last', async () => {
+      const user = userEvent.setup()
+      renderPage(rows)
+      await screen.findByRole('list', { name: 'Companies' })
+
+      await user.click(screen.getByRole('button', { name: /Sort by location/ }))
+      expect(names()).toEqual(['Charlie', 'Alpha', 'Bravo']) // Chennai, Mumbai, Pune
+
+      await user.click(screen.getByRole('button', { name: /Sort by note/ }))
+      expect(names()).toEqual(['Charlie', 'Bravo', 'Alpha']) // alpha, zeta, then no note
+    })
+
+    it('says which column is sorted and which way', async () => {
+      const user = userEvent.setup()
+      renderPage(rows)
+      await screen.findByRole('list', { name: 'Companies' })
+
+      expect(screen.getByRole('button', { name: 'Sort by company, now A to Z' })).toBeTruthy()
+      await user.click(screen.getByRole('button', { name: /Sort by location/ }))
+
+      expect(screen.getByRole('button', { name: 'Sort by location, now A to Z' })).toBeTruthy()
+      expect(screen.getByRole('button', { name: 'Sort by company' })).toBeTruthy()
+    })
+
+    it('keeps the import and export controls out of the way until asked for', async () => {
+      const user = userEvent.setup()
+      renderPage(rows)
+      await screen.findByRole('list', { name: 'Companies' })
+      expect(screen.queryByRole('link', { name: 'Export CSV' })).toBeNull()
+      expect(screen.queryByRole('checkbox', { name: /include contacts/i })).toBeNull()
+      expect(screen.queryByLabelText('Sort by')).toBeNull() // the old drop-down is gone
+
+      const toggle = screen.getByRole('button', { name: 'Import / export' })
+      expect(toggle).toHaveAttribute('aria-expanded', 'false')
+      await user.click(toggle)
+
+      expect(toggle).toHaveAttribute('aria-expanded', 'true')
+      expect(screen.getByRole('link', { name: 'Export CSV' })).toBeInTheDocument()
+      expect(screen.getByRole('checkbox', { name: /include contacts/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Import a company sheet' })).toBeInTheDocument()
     })
   })
 })

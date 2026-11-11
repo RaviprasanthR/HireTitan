@@ -52,6 +52,14 @@ describe('Shell', () => {
     ])
   })
 
+  it('the window does not scroll: the menu stays put and the page area scrolls on its own', async () => {
+    renderAt('/')
+    await screen.findByRole('navigation', { name: 'Main' })
+
+    expect(screen.getByTestId('app-root')).toHaveClass('h-screen', 'overflow-hidden')
+    expect(screen.getByRole('main')).toHaveClass('overflow-y-auto')
+  })
+
   it('marks_the_current_section', async () => {
     renderAt('/profile')
     expect(await screen.findByRole('link', { name: 'Profile' })).toHaveAttribute(
