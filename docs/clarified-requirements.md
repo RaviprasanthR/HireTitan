@@ -119,7 +119,8 @@ This replaces the assumptions in `docs/archive/specs-v0/01`–`05` wherever they
 |---|---|---|
 | 001 | `setup-and-profile`: install, first-run wizard (key check from `.env` + budget), resume upload + AI extraction, job profile, manual edit, resume diff on re-upload, career-ops import, first-level dark-theme UI. **Built first: preferences, resume parsing + extraction, first-level UI** | R1 |
 | 002 | `job-search`: AI-proposed search rules + approval, manual runs, built-in company list (Postgres table, editable, CSV import/export) → career-ops (bundled) + manual paste, dedup, rule filter (match / maybe / hidden with reasons), newest-first Explore list on the home page, **"I applied" + Applied list**, optional AI relevance check, optional scoring. (AI web-search discovery moved to a later feature, 2026-11-05.) | R1 |
-| 002b | `more-sources`: Gmail job-alert parsing, Adzuna/Jooble/Careerjet adapters | R1 or R1.1 |
+| 002b | `company-contacts`: the person's own contacts and notes per company (company sheet import as CSV, typed contacts, opt-in export, never sent to AI), an Applied flag per company, Companies page as a sortable table (open-role counts built then dropped, 2026-11-11) | R1 |
+| 002c | `more-sources` (renumbered from 002b): Gmail job-alert parsing, Adzuna/Jooble/Careerjet adapters | R1 or R1.1 |
 | 003 | `applications`: tracking, **applied jobs read from Gmail confirmation emails into the Applied list**, channel/referral/recruiter/offer fields, no-response, follow-up reminders, inbound opportunities, **"Export all my data"** (zip of everything, for backup and moving machines) | R1 |
 | 004 | `outreach`: four draft types, style guide, approval | R1 |
 | 005 | `tailored-resume`: AI tailoring, preview/edit, one ATS-friendly template, PDF + DOCX, versions, optional content suggestions | R1 |
