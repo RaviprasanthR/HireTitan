@@ -26,12 +26,14 @@ from hiretitan.search.application.applied import (
     mark_applied,
     undo_applied,
 )
+from hiretitan.search.application.openings import jobs_for_area
 from hiretitan.search.application.paste import PasteError, PasteInput, paste_job
 from hiretitan.search.application.search import RunQueue
+from hiretitan.search.domain.job_area import Area
 from hiretitan.search.domain.job_state import IllegalJobTransitionError, JobState, transition
 from hiretitan.search.infra.models import JobRow, JobSourceRow
 from hiretitan.search.infra.paste_store import SqlPasteStore
-from hiretitan.search.infra.repos import Cursor, DecisionsRepo, JobFilters, JobsRepo
+from hiretitan.search.infra.repos import Cursor, DecisionsRepo, JobFilters, JobsRepo, OpeningsRepo
 from hiretitan.search.workflow.recheck import RECHECK_WORKFLOW
 
 DEFAULT_LIMIT = 25
@@ -156,12 +158,20 @@ def create_search_jobs_router(deps: SearchJobsApiDeps) -> APIRouter:
         list: Literal["explore", "applied"] = "explore",
         source: str | None = None,
         company_id: UUID | None = None,
+        area: Area | None = None,
         work_mode: str | None = None,
         city: str | None = None,
         sort: Literal["newest", "company"] = "newest",
         limit: int = DEFAULT_LIMIT,
         cursor: str | None = None,
     ) -> JobCardPage:
+        if area is not None:
+            # The rows behind one count on the Companies page: the whole set, no paging.
+            if company_id is None:
+                raise ProblemError(422, "An area needs a company.", reason="area_needs_company")
+            async with deps.sessions() as session:
+                rows = await jobs_for_area(OpeningsRepo(session), company_id, area)
+                return JobCardPage(items=await job_cards(session, rows), next_cursor=None)
         filters = JobFilters(
             state=list,
             source_kind=source,
