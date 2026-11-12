@@ -22,6 +22,8 @@ from hiretitan.search.infra.models import JobRow, JobSourceRow, PossibleDuplicat
 
 DEFAULT_LIMIT = 25
 MAX_LIMIT = 100
+# The kept job takes the stronger pipeline state of the two (research R9): applied, then inquired.
+STRENGTH = {JobState.applied.value: 2, JobState.inquired.value: 1}
 
 
 @dataclass(frozen=True)
@@ -98,7 +100,9 @@ def create_duplicates_router(deps: SearchDuplicatesApiDeps) -> APIRouter:
 
     @router.post("/{pair_id}/merge")
     async def merge(pair_id: UUID) -> DuplicatePairOut:
-        """Keep the older job (A) and move the other's sources onto it; the other is deleted."""
+        """Keep the older job (A) and move the other's sources onto it; the other is deleted.
+
+        The kept job takes the stronger of the two pipeline states, with that job's date."""
         async with deps.sessions() as session:
             pair = await open_pair(session, pair_id)
             keep, loser = pair.job_a_id, pair.job_b_id
@@ -113,8 +117,17 @@ def create_duplicates_router(deps: SearchDuplicatesApiDeps) -> APIRouter:
                     source.job_id = keep
                 # a source the kept job already has goes away with the other job's row
             loser_row = await session.get(JobRow, loser)
+            keep_row = await session.get(JobRow, keep)
             assert loser_row is not None
+            assert keep_row is not None
+            if STRENGTH.get(loser_row.state, 0) > STRENGTH.get(keep_row.state, 0):
+                keep_row.state = loser_row.state
+                keep_row.applied_on = loser_row.applied_on
+                keep_row.inquired_on = loser_row.inquired_on
+            # a deleted job carries no date (the table allows one only on applied or inquired)
             loser_row.state = JobState.deleted.value
+            loser_row.applied_on = None
+            loser_row.inquired_on = None
             pair.status = "merged"
             pair.decided_at = deps.clock.now()
             await session.commit()

@@ -82,34 +82,6 @@
         "title": "AppliedIn",
         "type": "object"
       },
-      "Body_import_preview_api_v1_companies_import_post": {
-        "properties": {
-          "file": {
-            "contentMediaType": "application/octet-stream",
-            "title": "File",
-            "type": "string"
-          }
-        },
-        "required": [
-          "file"
-        ],
-        "title": "Body_import_preview_api_v1_companies_import_post",
-        "type": "object"
-      },
-      "Body_sheet_preview_api_v1_companies_sheet_import_post": {
-        "properties": {
-          "file": {
-            "contentMediaType": "application/octet-stream",
-            "title": "File",
-            "type": "string"
-          }
-        },
-        "required": [
-          "file"
-        ],
-        "title": "Body_sheet_preview_api_v1_companies_sheet_import_post",
-        "type": "object"
-      },
       "Body_upload_resume_api_v1_resumes_post": {
         "properties": {
           "file": {
@@ -122,29 +94,6 @@
           "file"
         ],
         "title": "Body_upload_resume_api_v1_resumes_post",
-        "type": "object"
-      },
-      "BudgetOut": {
-        "properties": {
-          "cap_usd": {
-            "title": "Cap Usd",
-            "type": "string"
-          },
-          "period": {
-            "title": "Period",
-            "type": "string"
-          },
-          "spent_usd": {
-            "title": "Spent Usd",
-            "type": "string"
-          }
-        },
-        "required": [
-          "cap_usd",
-          "spent_usd",
-          "period"
-        ],
-        "title": "BudgetOut",
         "type": "object"
       },
       "CertificationModel": {
@@ -332,11 +281,6 @@
             "title": "Contact Count",
             "type": "integer"
           },
-          "has_application": {
-            "default": false,
-            "title": "Has Application",
-            "type": "boolean"
-          },
           "has_note": {
             "default": false,
             "title": "Has Note",
@@ -403,6 +347,21 @@
           "origin": {
             "title": "Origin",
             "type": "string"
+          },
+          "pipeline": {
+            "anyOf": [
+              {
+                "enum": [
+                  "applied",
+                  "inquired"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pipeline"
           },
           "resolution": {
             "title": "Resolution",
@@ -1377,200 +1336,22 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
-      "ImportPreview": {
+      "InquiredIn": {
         "properties": {
-          "add": {
-            "items": {
-              "$ref": "#/components/schemas/ImportRowOut"
-            },
-            "title": "Add",
-            "type": "array"
-          },
-          "invalid": {
-            "items": {
-              "$ref": "#/components/schemas/InvalidRowOut"
-            },
-            "title": "Invalid",
-            "type": "array"
-          },
-          "token": {
-            "title": "Token",
-            "type": "string"
-          },
-          "update": {
-            "items": {
-              "$ref": "#/components/schemas/ImportUpdateOut"
-            },
-            "title": "Update",
-            "type": "array"
-          }
-        },
-        "required": [
-          "add",
-          "update",
-          "invalid",
-          "token"
-        ],
-        "title": "ImportPreview",
-        "type": "object"
-      },
-      "ImportResult": {
-        "properties": {
-          "added": {
-            "title": "Added",
-            "type": "integer"
-          },
-          "updated": {
-            "title": "Updated",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "added",
-          "updated"
-        ],
-        "title": "ImportResult",
-        "type": "object"
-      },
-      "ImportRowOut": {
-        "properties": {
-          "ats_vendor": {
+          "inquired_on": {
             "anyOf": [
               {
+                "format": "date",
                 "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Ats Vendor"
-          },
-          "board_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Board Id"
-          },
-          "careers_url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Careers Url"
-          },
-          "city": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "City"
-          },
-          "hidden": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Hidden"
-          },
-          "name": {
-            "title": "Name",
-            "type": "string"
-          },
-          "row": {
-            "title": "Row",
-            "type": "integer"
-          },
-          "website": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Website"
+            "title": "Inquired On"
           }
         },
-        "required": [
-          "row",
-          "name",
-          "city",
-          "website",
-          "careers_url",
-          "ats_vendor",
-          "board_id",
-          "hidden"
-        ],
-        "title": "ImportRowOut",
-        "type": "object"
-      },
-      "ImportUpdateOut": {
-        "properties": {
-          "changes": {
-            "additionalProperties": {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            "title": "Changes",
-            "type": "object"
-          },
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
-          },
-          "name": {
-            "title": "Name",
-            "type": "string"
-          },
-          "row": {
-            "title": "Row",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "row",
-          "id",
-          "name",
-          "changes"
-        ],
-        "title": "ImportUpdateOut",
-        "type": "object"
-      },
-      "InvalidRowOut": {
-        "properties": {
-          "reason": {
-            "title": "Reason",
-            "type": "string"
-          },
-          "row": {
-            "title": "Row",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "row",
-          "reason"
-        ],
-        "title": "InvalidRowOut",
+        "title": "InquiredIn",
         "type": "object"
       },
       "JobCardOut": {
@@ -1622,6 +1403,18 @@
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "inquired_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inquired On"
           },
           "listed": {
             "title": "Listed",
@@ -1699,7 +1492,8 @@
           "sources",
           "decision",
           "listed",
-          "applied_on"
+          "applied_on",
+          "inquired_on"
         ],
         "title": "JobCardOut",
         "type": "object"
@@ -1845,6 +1639,18 @@
             "title": "Injection Flags",
             "type": "array"
           },
+          "inquired_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inquired On"
+          },
           "listed": {
             "title": "Listed",
             "type": "boolean"
@@ -1940,6 +1746,7 @@
           "decision",
           "listed",
           "applied_on",
+          "inquired_on",
           "description",
           "city",
           "country",
@@ -2281,6 +2088,18 @@
             "title": "Injection Flags",
             "type": "array"
           },
+          "inquired_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inquired On"
+          },
           "listed": {
             "title": "Listed",
             "type": "boolean"
@@ -2388,6 +2207,7 @@
           "decision",
           "listed",
           "applied_on",
+          "inquired_on",
           "description",
           "city",
           "country",
@@ -3646,10 +3466,6 @@
             "title": "Added",
             "type": "integer"
           },
-          "ai_cost_usd": {
-            "title": "Ai Cost Usd",
-            "type": "string"
-          },
           "ai_note": {
             "anyOf": [
               {
@@ -3786,7 +3602,6 @@
           "added",
           "merged",
           "not_checked_by_ai",
-          "ai_cost_usd",
           "ai_note",
           "started_at",
           "finished_at",
@@ -3827,10 +3642,6 @@
           "added": {
             "title": "Added",
             "type": "integer"
-          },
-          "ai_cost_usd": {
-            "title": "Ai Cost Usd",
-            "type": "string"
           },
           "ai_note": {
             "anyOf": [
@@ -3961,333 +3772,11 @@
           "added",
           "merged",
           "not_checked_by_ai",
-          "ai_cost_usd",
           "ai_note",
           "started_at",
           "finished_at"
         ],
         "title": "SearchRunSummary",
-        "type": "object"
-      },
-      "SettingsIn": {
-        "additionalProperties": false,
-        "properties": {
-          "budget_cap_usd": {
-            "anyOf": [
-              {
-                "maximum": 10000.0,
-                "minimum": 0.0,
-                "type": "number"
-              },
-              {
-                "type": "string"
-              }
-            ],
-            "title": "Budget Cap Usd"
-          }
-        },
-        "required": [
-          "budget_cap_usd"
-        ],
-        "title": "SettingsIn",
-        "type": "object"
-      },
-      "SettingsOut": {
-        "properties": {
-          "budget_cap_usd": {
-            "title": "Budget Cap Usd",
-            "type": "string"
-          },
-          "key_status": {
-            "title": "Key Status",
-            "type": "string"
-          },
-          "spent_this_month_usd": {
-            "title": "Spent This Month Usd",
-            "type": "string"
-          },
-          "tiers": {
-            "items": {
-              "$ref": "#/components/schemas/TierOut"
-            },
-            "title": "Tiers",
-            "type": "array"
-          }
-        },
-        "required": [
-          "budget_cap_usd",
-          "spent_this_month_usd",
-          "tiers",
-          "key_status"
-        ],
-        "title": "SettingsOut",
-        "type": "object"
-      },
-      "SheetColumnsOut": {
-        "properties": {
-          "ignored": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Ignored",
-            "type": "array"
-          },
-          "used": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Used",
-            "type": "array"
-          }
-        },
-        "required": [
-          "used",
-          "ignored"
-        ],
-        "title": "SheetColumnsOut",
-        "type": "object"
-      },
-      "SheetCompaniesOut": {
-        "properties": {
-          "matched": {
-            "title": "Matched",
-            "type": "integer"
-          },
-          "to_add": {
-            "title": "To Add",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "matched",
-          "to_add"
-        ],
-        "title": "SheetCompaniesOut",
-        "type": "object"
-      },
-      "SheetContactsOut": {
-        "properties": {
-          "to_add": {
-            "title": "To Add",
-            "type": "integer"
-          },
-          "to_update": {
-            "title": "To Update",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "to_add",
-          "to_update"
-        ],
-        "title": "SheetContactsOut",
-        "type": "object"
-      },
-      "SheetIssueOut": {
-        "properties": {
-          "line": {
-            "title": "Line",
-            "type": "integer"
-          },
-          "reason": {
-            "title": "Reason",
-            "type": "string"
-          }
-        },
-        "required": [
-          "line",
-          "reason"
-        ],
-        "title": "SheetIssueOut",
-        "type": "object"
-      },
-      "SheetNotesOut": {
-        "properties": {
-          "kept_yours": {
-            "title": "Kept Yours",
-            "type": "integer"
-          },
-          "to_change": {
-            "title": "To Change",
-            "type": "integer"
-          },
-          "to_set": {
-            "title": "To Set",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "to_set",
-          "to_change",
-          "kept_yours"
-        ],
-        "title": "SheetNotesOut",
-        "type": "object"
-      },
-      "SheetPreview": {
-        "properties": {
-          "columns": {
-            "$ref": "#/components/schemas/SheetColumnsOut"
-          },
-          "companies": {
-            "$ref": "#/components/schemas/SheetCompaniesOut"
-          },
-          "contacts": {
-            "$ref": "#/components/schemas/SheetContactsOut"
-          },
-          "notes": {
-            "$ref": "#/components/schemas/SheetNotesOut"
-          },
-          "rows": {
-            "items": {
-              "$ref": "#/components/schemas/SheetRowOut"
-            },
-            "title": "Rows",
-            "type": "array"
-          },
-          "shortened": {
-            "items": {
-              "$ref": "#/components/schemas/SheetIssueOut"
-            },
-            "title": "Shortened",
-            "type": "array"
-          },
-          "skipped": {
-            "items": {
-              "$ref": "#/components/schemas/SheetIssueOut"
-            },
-            "title": "Skipped",
-            "type": "array"
-          },
-          "token": {
-            "title": "Token",
-            "type": "string"
-          }
-        },
-        "required": [
-          "token",
-          "columns",
-          "companies",
-          "contacts",
-          "notes",
-          "rows",
-          "skipped",
-          "shortened"
-        ],
-        "title": "SheetPreview",
-        "type": "object"
-      },
-      "SheetResult": {
-        "properties": {
-          "companies_added": {
-            "title": "Companies Added",
-            "type": "integer"
-          },
-          "contacts_added": {
-            "title": "Contacts Added",
-            "type": "integer"
-          },
-          "contacts_updated": {
-            "title": "Contacts Updated",
-            "type": "integer"
-          },
-          "matched": {
-            "title": "Matched",
-            "type": "integer"
-          },
-          "notes_changed": {
-            "title": "Notes Changed",
-            "type": "integer"
-          },
-          "notes_kept": {
-            "title": "Notes Kept",
-            "type": "integer"
-          },
-          "notes_set": {
-            "title": "Notes Set",
-            "type": "integer"
-          },
-          "shortened": {
-            "items": {
-              "$ref": "#/components/schemas/SheetIssueOut"
-            },
-            "title": "Shortened",
-            "type": "array"
-          },
-          "skipped": {
-            "items": {
-              "$ref": "#/components/schemas/SheetIssueOut"
-            },
-            "title": "Skipped",
-            "type": "array"
-          }
-        },
-        "required": [
-          "matched",
-          "companies_added",
-          "contacts_added",
-          "contacts_updated",
-          "notes_set",
-          "notes_changed",
-          "notes_kept",
-          "skipped",
-          "shortened"
-        ],
-        "title": "SheetResult",
-        "type": "object"
-      },
-      "SheetRowOut": {
-        "properties": {
-          "action": {
-            "enum": [
-              "matched",
-              "add",
-              "skip"
-            ],
-            "title": "Action",
-            "type": "string"
-          },
-          "company": {
-            "title": "Company",
-            "type": "string"
-          },
-          "contacts_add": {
-            "title": "Contacts Add",
-            "type": "integer"
-          },
-          "contacts_update": {
-            "title": "Contacts Update",
-            "type": "integer"
-          },
-          "line": {
-            "title": "Line",
-            "type": "integer"
-          },
-          "notes": {
-            "enum": [
-              "set",
-              "changed",
-              "kept",
-              "none"
-            ],
-            "title": "Notes",
-            "type": "string"
-          },
-          "shortened": {
-            "title": "Shortened",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "line",
-          "company",
-          "action",
-          "contacts_add",
-          "contacts_update",
-          "notes",
-          "shortened"
-        ],
-        "title": "SheetRowOut",
         "type": "object"
       },
       "SourceOut": {
@@ -4348,17 +3837,13 @@
           "ai": {
             "$ref": "#/components/schemas/AiOut"
           },
-          "budget": {
-            "$ref": "#/components/schemas/BudgetOut"
-          },
           "checklist": {
             "$ref": "#/components/schemas/ChecklistOut"
           }
         },
         "required": [
           "ai",
-          "checklist",
-          "budget"
+          "checklist"
         ],
         "title": "StatusOut",
         "type": "object"
@@ -4416,29 +3901,6 @@
           }
         },
         "title": "SuggestionsOut",
-        "type": "object"
-      },
-      "TierOut": {
-        "properties": {
-          "model": {
-            "title": "Model",
-            "type": "string"
-          },
-          "provider": {
-            "title": "Provider",
-            "type": "string"
-          },
-          "tier": {
-            "title": "Tier",
-            "type": "string"
-          }
-        },
-        "required": [
-          "tier",
-          "provider",
-          "model"
-        ],
-        "title": "TierOut",
         "type": "object"
       },
       "ValidationError": {
@@ -4708,213 +4170,6 @@
           }
         },
         "summary": "Create",
-        "tags": [
-          "companies"
-        ]
-      }
-    },
-    "/api/v1/companies/export": {
-      "get": {
-        "operationId": "export_api_v1_companies_export_get",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "include_contacts",
-            "required": false,
-            "schema": {
-              "default": false,
-              "title": "Include Contacts",
-              "type": "boolean"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Export",
-        "tags": [
-          "companies"
-        ]
-      }
-    },
-    "/api/v1/companies/import": {
-      "post": {
-        "operationId": "import_preview_api_v1_companies_import_post",
-        "requestBody": {
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/Body_import_preview_api_v1_companies_import_post"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ImportPreview"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Import Preview",
-        "tags": [
-          "companies"
-        ]
-      }
-    },
-    "/api/v1/companies/import/{token}/confirm": {
-      "post": {
-        "operationId": "import_confirm_api_v1_companies_import__token__confirm_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "token",
-            "required": true,
-            "schema": {
-              "title": "Token",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ImportResult"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Import Confirm",
-        "tags": [
-          "companies"
-        ]
-      }
-    },
-    "/api/v1/companies/sheet-import": {
-      "post": {
-        "operationId": "sheet_preview_api_v1_companies_sheet_import_post",
-        "requestBody": {
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/Body_sheet_preview_api_v1_companies_sheet_import_post"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SheetPreview"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Sheet Preview",
-        "tags": [
-          "companies"
-        ]
-      }
-    },
-    "/api/v1/companies/sheet-import/{token}/confirm": {
-      "post": {
-        "operationId": "sheet_confirm_api_v1_companies_sheet_import__token__confirm_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "token",
-            "required": true,
-            "schema": {
-              "title": "Token",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SheetResult"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Sheet Confirm",
         "tags": [
           "companies"
         ]
@@ -5474,7 +4729,7 @@
               "default": "explore",
               "enum": [
                 "explore",
-                "applied"
+                "pipeline"
               ],
               "title": "List",
               "type": "string"
@@ -5733,7 +4988,7 @@
     },
     "/api/v1/jobs/duplicates/{pair_id}/merge": {
       "post": {
-        "description": "Keep the older job (A) and move the other's sources onto it; the other is deleted.",
+        "description": "Keep the older job (A) and move the other's sources onto it; the other is deleted.\n\nThe kept job takes the stronger of the two pipeline states, with that job's date.",
         "operationId": "merge_api_v1_jobs_duplicates__pair_id__merge_post",
         "parameters": [
           {
@@ -5989,6 +5244,107 @@
           }
         },
         "summary": "Applied",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/api/v1/jobs/{job_id}/inquired": {
+      "delete": {
+        "operationId": "undo_inquiry_api_v1_jobs__job_id__inquired_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobDetailOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Undo Inquiry",
+        "tags": [
+          "jobs"
+        ]
+      },
+      "post": {
+        "operationId": "inquired_api_v1_jobs__job_id__inquired_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/InquiredIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobDetailOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Inquired",
         "tags": [
           "jobs"
         ]
@@ -7269,70 +6625,6 @@
         "summary": "Stop",
         "tags": [
           "search"
-        ]
-      }
-    },
-    "/api/v1/settings": {
-      "get": {
-        "operationId": "read_settings_api_v1_settings_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SettingsOut"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "Read Settings",
-        "tags": [
-          "settings"
-        ]
-      },
-      "put": {
-        "operationId": "write_settings_api_v1_settings_put",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SettingsIn"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "title": "Response Write Settings Api V1 Settings Put",
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Write Settings",
-        "tags": [
-          "settings"
         ]
       }
     },

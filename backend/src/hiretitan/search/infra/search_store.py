@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
@@ -137,7 +136,7 @@ class SearchStore:
         await self._session.flush()
 
     async def advance_run(
-        self, run_id: UUID, counts: BatchCounts, next_index: int, ai_cost_delta: Decimal
+        self, run_id: UUID, counts: BatchCounts, next_index: int
     ) -> dict[str, Any]:
         await self._session.execute(
             update(SearchRunRow)
@@ -152,7 +151,6 @@ class SearchStore:
                 added=SearchRunRow.added + counts.added,
                 merged=SearchRunRow.merged + counts.merged,
                 not_checked_by_ai=SearchRunRow.not_checked_by_ai + counts.not_checked_by_ai,
-                ai_cost_usd=SearchRunRow.ai_cost_usd + ai_cost_delta,
             )
         )
         await self._session.flush()
@@ -167,7 +165,6 @@ class SearchStore:
             "batches_done": run.batches_done,
             "companies_read": read or 0,
             "added": run.added,
-            "ai_cost_usd": str(run.ai_cost_usd),
         }
 
     async def commit(self) -> None:

@@ -126,4 +126,78 @@ describe('AddCompanyDialog', () => {
 
     expect(await screen.findByText(/must start with http/)).toBeInTheDocument()
   })
+
+  it('FR026 the form has a website field and sends it', async () => {
+    const user = userEvent.setup()
+    const { calls } = renderDialog((call) =>
+      call.method === 'POST' && call.path === '/companies' ? CREATED : undefined,
+    )
+
+    await user.type(screen.getByLabelText('Website (optional)'), 'https://newco.example.com')
+    await fillAndSubmit(user)
+
+    await waitFor(() =>
+      expect(calls.find((c) => c.method === 'POST' && c.path === '/companies')?.body).toMatchObject(
+        { name: 'Newco', website: 'https://newco.example.com' },
+      ),
+    )
+  })
+
+  it('FR026 it is a square card over a blurred backdrop, and Escape closes it', async () => {
+    const user = userEvent.setup()
+    const { onClose } = renderDialog(() => undefined)
+    const dialog = screen.getByRole('dialog', { name: 'Add a company' })
+
+    expect(dialog).toHaveAttribute('aria-modal', 'true')
+    expect(dialog).toHaveClass('aspect-square')
+    expect(dialog.parentElement).toHaveClass('backdrop-blur-sm')
+
+    await user.keyboard('{Escape}')
+
+    expect(onClose).toHaveBeenCalled()
+  })
+
+  it('FR026 a click on the blurred backdrop closes it, a click on the card does not', async () => {
+    const user = userEvent.setup()
+    const { onClose } = renderDialog(() => undefined)
+    const dialog = screen.getByRole('dialog', { name: 'Add a company' })
+
+    await user.click(screen.getByLabelText('Company name'))
+    expect(onClose).not.toHaveBeenCalled()
+    await user.click(dialog.parentElement as HTMLElement)
+
+    expect(onClose).toHaveBeenCalled()
+  })
+
+  it('review: focus moves into the card on open and Tab stays inside it', async () => {
+    const user = userEvent.setup()
+    renderDialog(() => undefined)
+    const dialog = screen.getByRole('dialog', { name: 'Add a company' })
+
+    expect(screen.getByLabelText('Company name')).toHaveFocus()
+    for (let i = 0; i < 12; i++) {
+      await user.tab()
+      expect(dialog).toContainElement(document.activeElement as HTMLElement)
+    }
+    await user.tab({ shift: true })
+    expect(dialog).toContainElement(document.activeElement as HTMLElement)
+  })
+
+  it('review: focus goes back to the button that opened it', () => {
+    const opener = document.createElement('button')
+    document.body.append(opener)
+    opener.focus()
+    const calls = stubApi(() => undefined)
+    expect(calls).toBeDefined()
+    const { unmount } = render(
+      <QueryClientProvider client={new QueryClient()}>
+        <AddCompanyDialog onClose={() => undefined} />
+      </QueryClientProvider>,
+    )
+
+    unmount()
+
+    expect(opener).toHaveFocus()
+    opener.remove()
+  })
 })

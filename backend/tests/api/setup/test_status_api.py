@@ -1,4 +1,4 @@
-"""T057: AI status, checklist and budget (FR-028 to FR-030, US3)."""
+"""T057: AI status and checklist (FR-028 to FR-030, US3)."""
 
 from __future__ import annotations
 
@@ -97,9 +97,7 @@ async def test_status_is_unknown_before_the_first_check(env: Env) -> None:
         "rules_approved": False,
         "searched_once": False,
     }
-    assert data["budget"]["period"] == "2026-11"
-    assert data["budget"]["cap_usd"] == "25.00"
-    assert float(data["budget"]["spent_usd"]) == 0
+    assert "budget" not in data
 
 
 async def test_FR028_checklist_reflects_state(env: Env, fake_clock: FakeClock) -> None:

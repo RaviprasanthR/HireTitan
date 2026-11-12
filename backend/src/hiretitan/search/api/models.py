@@ -41,6 +41,7 @@ class JobCardOut(BaseModel):
     decision: DecisionOut | None
     listed: bool
     applied_on: date | None
+    inquired_on: date | None
 
 
 class JobCardPage(BaseModel):
@@ -87,6 +88,7 @@ async def job_cards(session: AsyncSession, rows: Sequence[JobRow]) -> list[JobCa
             decision=decisions.get(row.id),
             listed=row.listed,
             applied_on=row.applied_on,
+            inquired_on=row.inquired_on,
         )
         for row in rows
     ]

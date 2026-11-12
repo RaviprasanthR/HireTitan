@@ -5,7 +5,6 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import datetime
-from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
@@ -87,7 +86,6 @@ class SearchRunSummary(BaseModel):
     added: int
     merged: int
     not_checked_by_ai: int
-    ai_cost_usd: Decimal
     ai_note: str | None
     started_at: datetime | None
     finished_at: datetime | None
@@ -129,7 +127,6 @@ def summary(row: SearchRunRow) -> SearchRunSummary:
         added=row.added,
         merged=row.merged,
         not_checked_by_ai=row.not_checked_by_ai,
-        ai_cost_usd=row.ai_cost_usd,
         ai_note=ai_note(row),
         started_at=row.started_at,
         finished_at=row.finished_at,

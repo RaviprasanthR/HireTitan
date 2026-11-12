@@ -3,8 +3,8 @@
 Run it from the repository root with ``PYTHONPATH=backend`` so it finds ``.env`` and the key.
 
 Runs the real pipeline pieces (parse, sanitize, mask, render prompt, validate and ground) on
-the synthetic cases and scores the answer against ``expected/*.yaml`` (SC-003). Real models cost
-money, so the runner prints an estimate first and does nothing without ``--yes``.
+the synthetic cases and scores the answer against ``expected/*.yaml`` (SC-003). Real models use
+your AI credit, so the runner says so first and does nothing without ``--yes``.
 """
 
 from __future__ import annotations
@@ -15,7 +15,6 @@ import math
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
-from decimal import Decimal
 from pathlib import Path
 from typing import Any, Final
 
@@ -40,9 +39,6 @@ REPORTS_DIR: Final = Path(__file__).resolve().parent / "reports"
 FIELDS: Final = ("employers", "titles", "dates", "skills", "education")
 PROVIDER: Final = "openai"
 SC003_TARGET: Final = 0.90
-SC007_MAX_USD: Final = Decimal("0.05")
-CHARS_PER_TOKEN: Final = 3  # a deliberately pessimistic estimate; the real count is lower
-_PER_MILLION: Final = Decimal(1_000_000)
 
 
 # ---- cases and scoring --------------------------------------------------------------------
@@ -127,7 +123,7 @@ class ModelReport:
     fields: dict[str, FieldScore]
     overall: FieldScore
     cases: list[CaseResult]
-    cost_usd: Decimal
+    tokens: int  # input and output tokens of every call
     p95_ms: int
     failed_cases: int
     prompt_version: int
@@ -205,7 +201,7 @@ async def evaluate(llm: LlmPort, cases: Sequence[Case], *, tier: str, model: str
             outcome = await chain.run(
                 prepared.request, extraction_task_spec(prepared.schema, prepared.clean_text)
             )
-        except AiUnavailable:  # no key, a rejected key or no budget: every case would fail
+        except AiUnavailable:  # no key, a rejected key or no credit: every case would fail
             raise
         except Exception:  # a provider error must not lose the other cases' results
             results.append(
@@ -234,25 +230,11 @@ async def evaluate(llm: LlmPort, cases: Sequence[Case], *, tier: str, model: str
         fields=fields,
         overall=overall,
         cases=results,
-        cost_usd=sum((c.cost_usd for c in calls), Decimal(0)),
+        tokens=sum(c.input_tokens + c.output_tokens for c in calls),
         p95_ms=p95([c.latency_ms for c in calls]),
         failed_cases=sum(1 for r in results if r.outcome in ("fallback", "error")),
         prompt_version=_registry().load(PROMPT_NAME).version.version,
     )
-
-
-# ---- cost estimate ------------------------------------------------------------------------
-def estimate_cost(
-    cases: Sequence[Case], model: str, catalog: ModelCatalog | None = None
-) -> Decimal:
-    """Upper-bound USD for one run over ``cases``: pessimistic input tokens plus full output."""
-    price = (catalog or ModelCatalog.load()).price(model)
-    total = Decimal(0)
-    for case in cases:
-        request = prepare(case).request
-        tokens = (len(request.prompt.system) + len(request.prompt.user)) // CHARS_PER_TOKEN + 1
-        total += (tokens * price.input + request.max_output_tokens * price.output) / _PER_MILLION
-    return total
 
 
 # ---- report -------------------------------------------------------------------------------
@@ -276,17 +258,17 @@ def render_report(reports: Sequence[ModelReport], *, day: str, case_count: int) 
         "",
         "## Summary",
         "",
-        "| model | tier | precision | recall | SC-003 (>= 90%) | cost / resume | SC-007 (< $0.05) "
+        "| model | tier | precision | recall | SC-003 (>= 90%) | tokens / resume "
         "| p95 latency (ms) | unusable | non-resumes rejected | resumes rejected by mistake |",
-        "|---|---|---|---|---|---|---|---|---|---|---|",
+        "|---|---|---|---|---|---|---|---|---|---|",
     ]
     for r in reports:
-        per_resume = r.cost_usd / case_count if case_count else Decimal(0)
+        per_resume = r.tokens // case_count if case_count else 0
         (rejected, others), (wrong, resumes) = rejection_counts(r)
         lines.append(
             f"| {r.model} | {r.tier} | {r.overall.precision:.1%} | {r.overall.recall:.1%} "
             f"| {'pass' if r.overall.recall >= SC003_TARGET else 'FAIL'} "
-            f"| ${per_resume:.4f} | {'pass' if per_resume < SC007_MAX_USD else 'FAIL'} "
+            f"| {per_resume} "
             f"| {r.p95_ms} | {r.failed_cases} | {rejected} / {others} | {wrong} / {resumes} |"
         )
     lines += ["", "## Precision / recall by field", ""]
@@ -317,11 +299,11 @@ def resolve_model(spec: str, catalog: ModelCatalog) -> tuple[str, str]:
     """``fast`` / ``strong`` -> that tier's model; otherwise a model name in ``models.yaml``."""
     if spec in ("fast", "strong"):
         return spec, catalog.model_for(PROVIDER, spec)  # type: ignore[arg-type]
-    if spec in catalog.prices:
+    if spec in {m for models in catalog.tiers.values() for m in models.values()}:
         return "fast", spec
     raise UnknownModelError(
-        f"{spec!r} is not a tier or a model in models.yaml. Add it there with a price checked "
-        "against the provider's pricing page, then run again."
+        f"{spec!r} is not a tier or a model in models.yaml. Add it there "
+        "as a tier's model, then run again."
     )
 
 
@@ -352,16 +334,11 @@ def _main_judge(
         PROMPT_NAME as JUDGE_PROMPT,
     )
     from evals.judge_relevance.runner import (
-        estimate_judge_cost,
         evaluate_judge,
         render_judge_report,
     )
 
-    estimates = [estimate_judge_cost(model, args.repeat, catalog) for _, model in specs]
-    print(f"Estimated cost (upper bound, {args.repeat} run(s) of 120 decisions per model):")
-    for (label, model), estimate in zip(specs, estimates, strict=True):
-        print(f"  {label} ({model}): up to ${estimate:.2f}")
-    print(f"  total: up to ${sum(estimates, Decimal(0)):.2f}")
+    print(f"This run uses your AI credit ({args.repeat} run(s) of 120 decisions per model).")
     if not args.yes:
         print("Nothing was sent. Re-run with --yes to run the eval.")
         return 2
@@ -394,16 +371,11 @@ def _main_pages(
         PROMPT_NAME as PAGES_PROMPT,
     )
     from evals.extract_jobs_from_page.runner import (
-        estimate_pages_cost,
         evaluate_pages,
         render_pages_report,
     )
 
-    estimates = [estimate_pages_cost(model, args.repeat, catalog) for _, model in specs]
-    print(f"Estimated cost (upper bound, {args.repeat} run(s) of {len(CASES)} pages per model):")
-    for (label, model), estimate in zip(specs, estimates, strict=True):
-        print(f"  {label} ({model}): up to ${estimate:.2f}")
-    print(f"  total: up to ${sum(estimates, Decimal(0)):.2f}")
+    print(f"This run uses your AI credit ({args.repeat} run(s) of {len(CASES)} pages per model).")
     if not args.yes:
         print("Nothing was sent. Re-run with --yes to run the eval.")
         return 2
@@ -435,7 +407,9 @@ def main(
         "eval", choices=["extract_profile", "judge_relevance", "extract_jobs_from_page"]
     )
     parser.add_argument("--models", default="fast", help="comma list of tiers or model names")
-    parser.add_argument("--yes", action="store_true", help="confirm the estimated cost")
+    parser.add_argument(
+        "--yes", action="store_true", help="confirm that this run uses your AI credit"
+    )
     parser.add_argument("--repeat", type=int, default=1, help="judge_relevance: runs per model")
     parser.add_argument("--reports-dir", type=Path, default=REPORTS_DIR)
     args = parser.parse_args(argv)
@@ -453,11 +427,7 @@ def main(
     if args.eval == "extract_jobs_from_page":
         return _main_pages(args, specs, catalog, llm_for, today)
 
-    estimates = [estimate_cost(cases, model, catalog) for _, model in specs]
-    print(f"Estimated cost (upper bound, {len(cases)} resumes per model):")
-    for (label, model), estimate in zip(specs, estimates, strict=True):
-        print(f"  {label} ({model}): up to ${estimate:.2f}")
-    print(f"  total: up to ${sum(estimates, Decimal(0)):.2f}")
+    print(f"This run uses your AI credit ({len(cases)} resumes per model).")
     if not args.yes:
         print("Nothing was sent. Re-run with --yes to run the eval.")
         return 2

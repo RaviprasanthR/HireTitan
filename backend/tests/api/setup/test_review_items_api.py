@@ -80,7 +80,7 @@ async def test_FR033_paused_and_decision_runs_listed(
             decision.id, RunStatus.awaiting_review, waiting_for=WaitingFor.injection_decision
         )
         await session.commit()  # a later transaction, so "paused" is the newer item
-        await repo.transition(paused.id, RunStatus.paused, pause_reason=PauseReason.budget_reached)
+        await repo.transition(paused.id, RunStatus.paused, pause_reason=PauseReason.out_of_credit)
         await repo.transition(done.id, RunStatus.done)
         await session.commit()
 
@@ -88,7 +88,7 @@ async def test_FR033_paused_and_decision_runs_listed(
 
     by_kind = {item["kind"]: item for item in items}
     assert set(by_kind) == {"injection_decision", "paused"}
-    assert by_kind["paused"]["title"] == "Paused: monthly AI budget reached"
-    assert by_kind["paused"]["target"] == "/settings"
+    assert by_kind["paused"]["title"] == "Paused: your AI account is out of credit"
+    assert by_kind["paused"]["target"] == "/"
     assert by_kind["injection_decision"]["target"] == "/profile"
     assert [i["kind"] for i in items] == ["paused", "injection_decision"]  # newest first

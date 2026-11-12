@@ -5,8 +5,7 @@ import { expect, test } from '@playwright/test'
 
 // One ordered journey through quickstart A (setup cards, key pause and recovery, profile
 // review, preferences, re-upload, file deletion, delete-all) against the compose stack with
-// HIRETITAN_LLM=fake. The budget step (A12) is covered by the backend tests: the fake
-// provider has zero prices, so its calls can never reach a cap.
+// HIRETITAN_LLM=fake. HireTitan has no AI budget, so there is no budget step.
 
 const resumes = (name: string) =>
   fileURLToPath(new URL(`../../backend/tests/fixtures/resumes/${name}`, import.meta.url))
@@ -62,7 +61,10 @@ test('SC001_journey_completes', async ({ page, request }) => {
   await page.getByLabel('Target roles').press('Enter')
   await page.getByRole('button', { name: 'Finish setup' }).click()
   await expect(page.getByRole('heading', { name: 'Jobs', level: 1 })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Preferences' })).toBeVisible()
+  const menu = page.getByRole('navigation', { name: 'Main' })
+  await expect(menu.getByRole('link')).toHaveText(['Home', 'Companies', 'Profile', 'Settings'])
+  await page.goto('/preferences') // the old address opens the Profile tab
+  await expect(page).toHaveURL(/\/profile\/preferences$/)
 
   // A9/A10: a newer resume opens a review with its changes.
   await page.goto('/profile')

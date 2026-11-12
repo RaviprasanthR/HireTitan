@@ -8,10 +8,10 @@ so the loader does not bring it back; a company the person added is removed outr
 
 from __future__ import annotations
 
-from collections.abc import Collection, Mapping
+from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from datetime import datetime
-from typing import Any, Final, Protocol
+from typing import Any, Final, Literal, Protocol
 from urllib.parse import urlsplit
 from uuid import UUID
 
@@ -88,7 +88,7 @@ class CompanyView:
     contact_count: int = 0
     has_note: bool = False
     note_preview: str | None = None  # the note on one line, shortened for the list row
-    has_application: bool = False  # a job at this company is in the applied state
+    pipeline: Literal["applied", "inquired"] | None = None  # the furthest a job here has got
 
 
 NOTE_PREVIEW_MAX = 120
@@ -137,16 +137,17 @@ async def list_companies(
     store: CompaniesStore,
     filter: str = "all",
     counts: Mapping[UUID, tuple[int, bool]] | None = None,
-    applied: Collection[UUID] | None = None,
+    pipeline: Mapping[UUID, Literal["applied", "inquired"]] | None = None,
     note_heads: Mapping[UUID, str] | None = None,
 ) -> list[CompanyView]:
     """The company list.
 
-    ``counts`` maps a company id to (contact count, has a note); ``applied`` holds the ids of the
-    companies where the person has applied to a job.
+    ``counts`` maps a company id to (contact count, has a note); ``pipeline`` maps a company id to
+    ``applied`` (a job there is applied) or ``inquired`` (the person asked about one); companies
+    with neither are left out.
     """
     known = counts or {}
-    applied_ids = applied or ()
+    in_pipeline = pipeline or {}
     heads = note_heads or {}
     views = []
     for row in await store.list_filtered(filter):
@@ -157,7 +158,7 @@ async def list_companies(
                 contact_count=contact_count,
                 has_note=has_note,
                 note_preview=note_preview(heads.get(row.id)),
-                has_application=row.id in applied_ids,
+                pipeline=in_pipeline.get(row.id),
             )
         )
     return views

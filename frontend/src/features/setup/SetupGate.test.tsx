@@ -30,7 +30,6 @@ function aiStatus(status = 'working') {
       profile_confirmed: false,
       preferences_saved: false,
     },
-    budget: { cap_usd: '25.00', spent_usd: '0', period: '2026-11' },
   }
 }
 
@@ -40,14 +39,6 @@ function renderAt(path: string, step: Step, status = 'working') {
     vi.fn(async (url: string) => {
       if (url.endsWith('/onboarding')) return json(onboarding(step, step === 1 ? null : 'Jane'))
       if (url.endsWith('/status')) return json(aiStatus(status))
-      if (url.endsWith('/settings')) {
-        return json({
-          budget_cap_usd: '25.00',
-          spent_this_month_usd: '0',
-          key_status: status,
-          tiers: [],
-        })
-      }
       if (url.endsWith('/profile')) return json({ current: null })
       return json([])
     }),
@@ -66,7 +57,7 @@ function renderAt(path: string, step: Step, status = 'working') {
 describe('SetupGate', () => {
   afterEach(() => vi.unstubAllGlobals())
 
-  it.each(['/', '/profile', '/preferences', '/review', '/nope'])(
+  it.each(['/', '/profile', '/profile/preferences', '/review', '/nope'])(
     'US5_AS1_any_url_shows_setup_card_without_sidebar %s',
     async (path) => {
       renderAt(path, 1)
@@ -123,7 +114,7 @@ describe('SetupGate', () => {
 
   it('FR041_setup_cards_link_to_settings', async () => {
     renderAt('/', 2)
-    expect(await screen.findByRole('link', { name: 'AI budget and key settings' })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: 'AI key settings' })).toHaveAttribute(
       'href',
       '/settings',
     )

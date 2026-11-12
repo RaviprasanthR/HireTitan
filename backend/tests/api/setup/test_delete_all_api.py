@@ -4,8 +4,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field, replace
-from datetime import UTC, datetime
-from decimal import Decimal
+from datetime import UTC, date, datetime
 from functools import partial
 from pathlib import Path
 from uuid import UUID
@@ -135,8 +134,6 @@ async def populate(env: Env, clock: FakeClock) -> UUID:
                 10,
                 0,
                 5,
-                Decimal("0.01"),
-                Decimal("0.01"),
                 120,
                 "ok",
             )
@@ -145,7 +142,6 @@ async def populate(env: Env, clock: FakeClock) -> UUID:
         settings_repo = SettingsRepo(session)
         await settings_repo.write_display_name("Jane")
         await settings_repo.write_setup_completed(clock.now())
-        await settings_repo.write_budget_cap(Decimal("40.00"))
         await session.execute(
             text(
                 "INSERT INTO lg.checkpoints (thread_id, checkpoint_ns, checkpoint_id, checkpoint,"
@@ -197,11 +193,9 @@ async def test_US4_AS2_returns_to_first_run_state(env: Env, fake_clock: FakeCloc
     async with env.sessions() as session:
         record = await SettingsRepo(session).read_onboarding()
         status = await ProviderStatusRepo(session).get("openai")
-        cap = await SettingsRepo(session).read_budget_cap()
     assert (record.display_name, record.setup_completed_at) == (None, None)
     assert status is not None
     assert status.status == "unknown"
-    assert cap == Decimal("25.00")
     assert env.key_checks == [1]
 
 
@@ -338,3 +332,23 @@ async def test_SC013_shipped_list_restored_after_delete_all(
     )
     assert (acme.hidden, acme.user_modified) == (False, False)
     assert beta.deleted_at is None
+
+
+async def test_delete_all_removes_inquired_jobs(env: Env) -> None:
+    async with env.sessions() as session:
+        await JobsRepo(session).add(
+            company_id=None,
+            company_name="Acme",
+            title="Asked About",
+            first_seen_at=datetime(2026, 11, 7, tzinfo=UTC),
+            last_seen_at=datetime(2026, 11, 7, tzinfo=UTC),
+            description="d",
+            state="inquired",
+            inquired_on=date(2026, 11, 7),
+        )
+        await session.commit()
+
+    assert (await env.client.post(URL, json={"confirm": "DELETE"})).status_code == 204
+
+    async with env.sessions() as session:
+        assert (await session.scalars(select(JobRow))).all() == []

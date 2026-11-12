@@ -88,10 +88,7 @@ def test_FR022_workflows_cannot_import_contacts() -> None:
     ai_paths = ("hiretitan.search.workflow", "hiretitan.prompts", "hiretitan.platform.llm")
     contacts_code = (
         "hiretitan.search.domain.contacts",
-        "hiretitan.search.domain.contacts_cell",
-        "hiretitan.search.domain.sheet",
         "hiretitan.search.application.contacts",
-        "hiretitan.search.application.sheet_import",
     )
     found = [
         (importer, imported)

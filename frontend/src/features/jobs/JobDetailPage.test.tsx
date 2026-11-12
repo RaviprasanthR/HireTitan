@@ -1,9 +1,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { stubApi } from '@/test/api'
+import { problem, stubApi } from '@/test/api'
 import { JobDetailPage } from './JobDetailPage'
 import { UndoToast } from './UndoToast'
 
@@ -26,6 +26,7 @@ function detail(over: Record<string, unknown> = {}) {
     decision: { outcome: 'shown', decided_by: 'ai', reason: 'Matches your Python skills' },
     listed: true,
     applied_on: null,
+    inquired_on: null,
     description: 'Build APIs.\n\nUse Python.',
     city: 'Pune',
     country: 'IN',
@@ -75,8 +76,18 @@ function renderPage(job = detail()) {
         : {
             ...job,
             state: 'applied',
-            applied_on: (call.body as { applied_on?: string } | undefined)?.applied_on ?? '2026-11-06',
+            applied_on:
+              (call.body as { applied_on?: string } | undefined)?.applied_on ?? '2026-11-06',
           }
+    if (call.path === '/jobs/j1/inquired') {
+      if (call.method === 'DELETE') return { ...job, state: 'explore', inquired_on: null }
+      const day = (call.body as { inquired_on?: string } | undefined)?.inquired_on
+      if (day === '2999-01-01')
+        return problem(422, 'The date cannot be in the future.', {
+          errors: [{ field: 'inquired_on', message: 'The date cannot be in the future.' }],
+        })
+      return { ...job, state: 'inquired', inquired_on: day ?? '2026-11-06' }
+    }
     if (call.path === '/jobs/j1') return job
     if (call.path === '/companies/c1/contacts')
       return {
@@ -208,7 +219,6 @@ describe('JobDetailPage', () => {
     const calls = renderPage()
 
     await user.click(await screen.findByRole('button', { name: 'I applied' }))
-    await user.click(screen.getByRole('button', { name: 'Save' }))
 
     await waitFor(() =>
       expect(calls.some((c) => c.method === 'POST' && c.path === '/jobs/j1/applied')).toBe(true),
@@ -222,16 +232,16 @@ describe('JobDetailPage', () => {
     const user = userEvent.setup()
     const calls = renderPage()
 
-    await user.click(await screen.findByRole('button', { name: 'I applied' }))
-    const date = screen.getByLabelText('Date applied')
+    await user.click(await screen.findByRole('button', { name: 'Other date' }))
+    const date = screen.getByLabelText('Date')
     await user.clear(date)
     await user.type(date, '2026-11-03')
-    await user.click(screen.getByRole('button', { name: 'Save' }))
+    await user.click(screen.getByRole('button', { name: 'I applied' }))
 
     await waitFor(() =>
-      expect(
-        calls.find((c) => c.method === 'POST' && c.path === '/jobs/j1/applied')?.body,
-      ).toEqual({ applied_on: '2026-11-03' }),
+      expect(calls.find((c) => c.method === 'POST' && c.path === '/jobs/j1/applied')?.body).toEqual(
+        { applied_on: '2026-11-03' },
+      ),
     )
   })
 
@@ -239,7 +249,6 @@ describe('JobDetailPage', () => {
     const user = userEvent.setup()
     const calls = renderPage()
     await user.click(await screen.findByRole('button', { name: 'I applied' }))
-    await user.click(screen.getByRole('button', { name: 'Save' }))
 
     const notice = await screen.findByRole('status')
     await user.click(within(notice).getByRole('button', { name: 'Undo' }))
@@ -272,5 +281,82 @@ describe('JobDetailPage', () => {
     expect(await screen.findByText('Applied on 3 Nov 2026')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Undo' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'I applied' })).not.toBeInTheDocument()
+  })
+
+  it('US2 AS1 I inquired moves the job to the pipeline', async () => {
+    const user = userEvent.setup()
+    const calls = renderPage()
+
+    await user.click(await screen.findByRole('button', { name: 'I inquired' }))
+
+    await waitFor(() =>
+      expect(calls.some((c) => c.method === 'POST' && c.path === '/jobs/j1/inquired')).toBe(true),
+    )
+    expect(calls.find((c) => c.path === '/jobs/j1/inquired')?.body).toBeUndefined() // today
+    expect(await screen.findByRole('status')).toHaveTextContent(/marked as inquired/i)
+  })
+
+  it('US2 AS2 inquired job can be marked applied', async () => {
+    const user = userEvent.setup()
+    const calls = renderPage(detail({ state: 'inquired', inquired_on: '2026-11-03' }))
+
+    expect(await screen.findByText('Inquired on 3 Nov 2026')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'I inquired' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'I applied' }))
+
+    await waitFor(() =>
+      expect(calls.some((c) => c.method === 'POST' && c.path === '/jobs/j1/applied')).toBe(true),
+    )
+  })
+
+  it('US2 AS3 undo inquired', async () => {
+    const user = userEvent.setup()
+    const calls = renderPage()
+    await user.click(await screen.findByRole('button', { name: 'I inquired' }))
+
+    const notice = await screen.findByRole('status')
+    await user.click(within(notice).getByRole('button', { name: 'Undo' }))
+
+    await waitFor(() =>
+      expect(calls.some((c) => c.method === 'DELETE' && c.path === '/jobs/j1/inquired')).toBe(true),
+    )
+    expect(calls.some((c) => c.method === 'DELETE' && c.path === '/jobs/j1/applied')).toBe(false)
+  })
+
+  it('an inquired job can be undone from its page', async () => {
+    const user = userEvent.setup()
+    const calls = renderPage(detail({ state: 'inquired', inquired_on: '2026-11-03' }))
+
+    await user.click(await screen.findByRole('button', { name: 'Undo' }))
+
+    await waitFor(() =>
+      expect(calls.some((c) => c.method === 'DELETE' && c.path === '/jobs/j1/inquired')).toBe(true),
+    )
+  })
+
+  it('FR007 no I inquired on an applied job', async () => {
+    renderPage(detail({ state: 'applied', applied_on: '2026-11-03' }))
+
+    await screen.findByText('Applied on 3 Nov 2026')
+
+    expect(screen.queryByRole('button', { name: 'I inquired' })).not.toBeInTheDocument()
+  })
+
+  it('a skipped job can be marked inquired', async () => {
+    renderPage(detail({ state: 'skipped' }))
+
+    expect(await screen.findByRole('button', { name: 'I inquired' })).toBeInTheDocument()
+  })
+
+  it('US2 AS5 date error shown', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(await screen.findByRole('button', { name: 'Other date' }))
+    const date = screen.getByLabelText('Date')
+    fireEvent.change(date, { target: { value: '2999-01-01' } })
+    await user.click(screen.getByRole('button', { name: 'I inquired' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('The date cannot be in the future.')
   })
 })

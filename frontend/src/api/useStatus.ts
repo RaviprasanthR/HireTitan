@@ -4,7 +4,7 @@ import type { components } from '@/api/schema'
 
 export type Status = components['schemas']['StatusOut']
 
-/** The AI status, setup checklist and budget; refetched on every `status.updated` event. */
+/** The AI status and setup checklist; refetched on every `status.updated` event. */
 export function useStatus() {
   return useQuery({
     queryKey: ['status'],

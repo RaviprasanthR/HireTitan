@@ -36,9 +36,9 @@ On a new install four cards guide you: your name, your resume, a review of the p
 
 Your confirmed profile is the only source of facts about you. The AI never adds experience you did not confirm.
 
-## 4. Budget
+## 4. Cost
 
-Settings has a **monthly AI budget cap** (25 USD by default; 0 to 10000). Before every AI call HireTitan checks that this month's spend plus the call's estimated cost stays under the cap. If it would not, the work pauses and says why. Raise the cap and paused work resumes by itself. The spend shown is the sum of the costs recorded for your own calls.
+HireTitan shows no AI cost and has no budget. It uses your own AI key, so the provider bills you directly. If your provider account runs out of credit, work pauses and says so; add credit, press **Check again** and it carries on.
 
 ## 5. What is sent to OpenAI, and what is masked
 

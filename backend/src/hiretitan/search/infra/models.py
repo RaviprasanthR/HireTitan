@@ -44,8 +44,9 @@ def _in(column: str, values: tuple[str, ...]) -> str:
 
 RULE_SET_STATUSES = ("proposed", "approved", "superseded")
 RUN_MODES = ("rules_and_ai", "rules_only")
+# "budget_reached" is an outcome of searches from before HireTitan dropped its AI budget
 RUN_OUTCOMES = ("finished", "stopped_by_user", "budget_reached", "out_of_credit", "failed")
-JOB_STATES = ("explore", "skipped", "applied", "deleted")
+JOB_STATES = ("explore", "skipped", "inquired", "applied", "deleted")
 WORK_MODES = ("onsite", "hybrid", "remote")
 SOURCE_KINDS = ("company_board", "careers_page", "paste")
 DECISION_OUTCOMES = ("shown", "skipped")
@@ -138,7 +139,6 @@ class SearchRunRow(IdTimestampMixin, Base):
     added: Mapped[int] = mapped_column(Integer, server_default=text("0"))
     merged: Mapped[int] = mapped_column(Integer, server_default=text("0"))
     not_checked_by_ai: Mapped[int] = mapped_column(Integer, server_default=text("0"))
-    ai_cost_usd: Mapped[Decimal] = mapped_column(Numeric(10, 4), server_default=text("0"))
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
@@ -183,6 +183,9 @@ class JobRow(IdTimestampMixin, Base):
         CheckConstraint(
             "(state = 'applied') = (applied_on IS NOT NULL)", name="applied_on_iff_applied"
         ),
+        CheckConstraint(
+            "(state = 'inquired') = (inquired_on IS NOT NULL)", name="inquired_on_iff_inquired"
+        ),
         Index("ix_jobs_state_sort", "state", text("sort_key DESC"), "id"),
         Index("ix_jobs_company", "company_id"),
     )
@@ -216,6 +219,7 @@ class JobRow(IdTimestampMixin, Base):
     state: Mapped[str] = mapped_column(Text)
     restored: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
     applied_on: Mapped[date | None] = mapped_column(Date)
+    inquired_on: Mapped[date | None] = mapped_column(Date)
     listed: Mapped[bool] = mapped_column(Boolean, server_default=text("true"))
     injection_flags: Mapped[list[JsonDict]] = mapped_column(
         JSONB, server_default=text("'[]'::jsonb")

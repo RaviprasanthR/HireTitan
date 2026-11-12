@@ -123,7 +123,7 @@ async def test_list_by_status(repo: RunsRepo) -> None:
     a = await repo.create("profile_ingest")
     b = await repo.create("profile_ingest")
     await repo.transition(b.id, RunStatus.running)
-    await repo.transition(b.id, RunStatus.paused, pause_reason=PauseReason.budget_reached)
+    await repo.transition(b.id, RunStatus.paused, pause_reason=PauseReason.out_of_credit)
 
     paused = await repo.list_by_status(RunStatus.paused)
     assert [r.id for r in paused] == [b.id]

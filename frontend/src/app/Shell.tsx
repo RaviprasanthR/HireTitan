@@ -1,39 +1,40 @@
+import { Building2, House, Settings, User } from 'lucide-react'
 import { Outlet, NavLink } from 'react-router'
 import { AiBanner } from './AiBanner'
 import { UndoToast } from '@/features/jobs/UndoToast'
-import { Wordmark } from '@/components/Logo'
+import { AppName } from '@/components/AppName'
 import { cn } from '@/lib/utils'
 
 const sections = [
-  { to: '/', label: 'Home', end: true },
-  { to: '/applied', label: 'Applied', end: false },
-  { to: '/profile', label: 'Profile', end: false },
-  { to: '/preferences', label: 'Preferences', end: false },
-  { to: '/search/rules', label: 'Search rules', end: false },
-  { to: '/companies', label: 'Companies', end: false },
-  { to: '/review', label: 'Review', end: false },
-  { to: '/settings', label: 'Settings', end: false },
+  { to: '/', label: 'Home', end: true, Icon: House },
+  { to: '/companies', label: 'Companies', end: false, Icon: Building2 },
+  { to: '/profile', label: 'Profile', end: false, Icon: User },
+  { to: '/settings', label: 'Settings', end: false, Icon: Settings },
 ] as const
 
 export function Shell() {
   return (
-    <div data-testid="app-root" className="flex h-screen overflow-hidden bg-background text-foreground">
-      <aside className="flex w-56 shrink-0 flex-col gap-6 bg-surface p-4">
-        <Wordmark className="px-3" />
+    <div
+      data-testid="app-root"
+      className="flex h-screen overflow-hidden bg-background text-foreground"
+    >
+      <aside className="flex w-56 shrink-0 flex-col gap-6 border-r border-white/[0.07] bg-[var(--ht-surface)] p-4">
+        <AppName className="px-3" />
         <nav aria-label="Main" className="flex flex-col gap-1">
-          {sections.map(({ to, label, end }) => (
+          {sections.map(({ to, label, end, Icon }) => (
             <NavLink
               key={to}
               to={to}
               end={end}
               className={({ isActive }) =>
                 cn(
-                  'rounded-md px-3 py-2 text-sm font-medium outline-none',
+                  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium outline-none',
                   'focus-visible:ring-2 focus-visible:ring-ring',
                   isActive ? 'bg-primary text-primary-foreground' : 'hover:bg-divider',
                 )
               }
             >
+              <Icon aria-hidden className="size-4" />
               {label}
             </NavLink>
           ))}

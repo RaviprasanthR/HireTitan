@@ -119,7 +119,7 @@ async def test_FR010_start_returns_202_without_confirmation(env: Env) -> None:
         None,
         0,
     )
-    assert detail["ai_cost_usd"] == "0.0000"
+    assert "ai_cost_usd" not in detail
 
 
 async def test_start_needs_approved_rules_and_finished_setup(env: Env) -> None:

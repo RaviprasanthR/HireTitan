@@ -60,8 +60,8 @@ backend/
   src/hiretitan/
     profile/         resume upload, parsing, profile versions          (001)
     preferences/     job preferences                                    (001)
-    companies/       company list, seed loader, CSV import/export       (002)
-                     + contacts, notes, company sheet import            (002b)
+    companies/       company list, seed loader                          (002)
+                     + contacts, notes                                  (002b)
     jobs/            search rules, search runs, rule filter, AI check, scoring (002)
     applications/    tracking, follow-ups, data export                  (003)
     outreach/        drafts                                             (004)
@@ -69,7 +69,7 @@ backend/
     interviews/      (006, R2)
       └─ each module: domain/ · application/ · infra/ · api/ (+ adapters/ only where it owns a boundary)
     platform/        shared building blocks
-      llm/           LlmPort, OpenAI adapter (others later), budget guard, validation chain, prompt registry
+      llm/           LlmPort, OpenAI adapter (others later), validation chain, prompt registry
       runtime/       Procrastinate app + task definitions, workflow runs, LangGraph checkpointer, events/SSE
       untrusted/     sanitize · screen · delimit · hidden-text detection
       storage/ clock/ config/ db/ security/ careerops/
@@ -142,17 +142,16 @@ class LlmRequest(Generic[T]):
 @dataclass
 class LlmResult(Generic[T]):
     value: T | None
-    outcome: Literal["ok", "repaired", "fallback", "refused", "budget_blocked", "error"]
-    usage: Usage              # tokens in/out, cost_usd, latency_ms
+    outcome: Literal["ok", "repaired", "fallback", "refused", "error"]
+    usage: Usage              # tokens in/out, latency_ms
     provider: str
     model: str
 ```
 
 - One adapter per provider family: **OpenAI**, **Anthropic**, **Google Gemini**, and **OpenAI-compatible** (base URL + key; covers Ollama, OpenRouter, Groq, Azure OpenAI and others). Each adapter uses the provider's own SDK and its native structured-output feature when the model supports it. Otherwise it falls back to JSON in the prompt plus strict parsing (constitution IV, "degrade gracefully").
 - **OpenAI first** (ADR-02): feature 001 builds only the OpenAI adapter; the others land before the first public release. The port, the fake LLM and all tests are provider-neutral from day one.
-- **Model tiers**: workflows ask for `fast` or `strong`, never a model name. Settings map each tier to a model per provider. **Profile extraction uses `fast` for now** (cost); the 001 cost/quality test decides whether to change it.
-- **Budget guard** (wraps every adapter): estimates the cost before the call and blocks it with `budget_blocked` if the month's spend plus the estimate would pass the cap. Logs every call to `app.llm_calls` (provider, model, task, prompt version, tokens, cost, latency, outcome). Batch actions (e.g. relevance check on 80 jobs) show an estimate before the user confirms.
-- Prices come from a versioned price table shipped with the app and editable in settings, since OpenAI-compatible endpoints vary.
+- **Model tiers**: workflows ask for `fast` or `strong`, never a model name. Settings map each tier to a model per provider. **Profile extraction uses `fast` for now**; the 001 quality test decides whether to change it.
+- **No budget, no cost shown** (feature 002d). HireTitan has no budget guard, no price table and no cost column: the user brings their own key and the provider bills them. Every call is logged to `app.llm_calls` (provider, model, task, prompt version, tokens, latency, outcome). An out-of-credit answer pauses the run and **Check again** resumes it.
 
 ### 5.2 Validation chain
 
@@ -228,7 +227,7 @@ Trigger: user asks for suggestions, or the profile or preferences change. The us
 | 5 | `save_rules` | D | approved rule set stored with version; used by W3 |
 
 ### W3 `search_run` (features 002 / 002b)
-Trigger: user clicks "Search now". **Rules first, then the `fast` model judges the rest** (ADR-12): jobs that pass the rules are judged for relevance in groups of 10; a "rules only" run makes no LLM calls. The run works in **batches of 8 companies**, stores each batch in one transaction, publishes `search.batch_done` and shows the cost so far; Stop, the budget cap and an out-of-credit answer end the run after the batch is stored. As built (002), the graph is `plan_run → fetch_batch → normalize/dedup → rules → judge_relevance → store`, looping over batches. The diagram below is the earlier design and the table is still a fair guide to each step. W3b became the one-node `recheck_job` workflow ("Check again" on one job).
+Trigger: user clicks "Search now". **Rules first, then the `fast` model judges the rest** (ADR-12): jobs that pass the rules are judged for relevance in groups of 10; a "rules only" run makes no LLM calls. The run works in **batches of 8 companies**, stores each batch in one transaction, publishes `search.batch_done` and shows progress; Stop and an out-of-credit answer end the run after the batch is stored. As built (002), the graph is `plan_run → fetch_batch → normalize/dedup → rules → judge_relevance → store`, looping over batches. The diagram below is the earlier design and the table is still a fair guide to each step. W3b became the one-node `recheck_job` workflow ("Check again" on one job).
 
 ```mermaid
 flowchart LR
@@ -259,7 +258,7 @@ flowchart LR
 No interrupt here: results go straight to the jobs list, where every rule decision is visible and reversible.
 
 ### W3b `ai_relevance_check` (feature 002, optional, on demand)
-Trigger: the user clicks "Check with AI" on the **maybe** bucket or on selected jobs; the cost estimate is shown first.
+Trigger: the user clicks "Check with AI" on the **maybe** bucket or on selected jobs.
 `extract_job_facts` L fast (quarantined: raw JD → `JobFacts`, cached per JD hash) → `relevance_check` L fast (facts + profile summary + preferences → `relevant / not_relevant / unsure` + visible reason; batched ~10 jobs per call) → `store_decisions` D (moves jobs between buckets with an "AI:" reason; undoable).
 
 ### W4 `score_job` (feature 002, optional, on demand)
@@ -288,7 +287,7 @@ Trigger: user picks a job/application and a draft type (referral request, Linked
 | 6 | `save_version` | D | stored and linked to the application |
 
 ### W9 `content_suggestions` (feature 005, optional, on button press)
-Trigger: the user asks for suggestions on the **base profile** (general) or on a **tailored resume** (job-aware). The cost estimate is shown first. Never runs automatically.
+Trigger: the user asks for suggestions on the **base profile** (general) or on a **tailored resume** (job-aware). Never runs automatically.
 
 | # | Node | Type | Notes |
 |---|---|---|---|
@@ -312,7 +311,7 @@ Exact schemas are designed per feature. Ownership by area:
 
 | Area | Main tables (indicative) | Owner feature |
 |---|---|---|
-| Setup | `settings` (budget cap, tier → model mapping; **no API keys**, those live in `.env`) | 001 |
+| Setup | `settings` (app state; **no API keys**, those live in `.env`; the tier → model mapping is a shipped file) | 001 |
 | Profile | `resume_files`, `profiles`, `profile_versions` (each linked to its source resume file), `preferences`, `style_guides` | 001 (style guide: 004) |
 | Runtime | `workflow_runs`, `llm_calls`, `events`, plus Procrastinate's own queue tables | 001 (foundation) |
 | Search | `companies` (built-in seed + user), `company_contacts` and `company_notes` (002b, the person's own), `sources`, `search_rules`, `source_runs`, `jobs`, `job_sources`, `job_facts`, `filter_decisions` (rule and AI), `job_scores` | 002 |
@@ -349,25 +348,24 @@ React (current stable; exact version pinned in the 001 plan) + Vite + TypeScript
 
 | Token | Colour | Use |
 |---|---|---|
-| `background` | `#06141b` | page |
-| `surface` | `#11212d` | sidebar, cards, inputs, dialogs |
-| `divider` / hover | `#253745` | dividers, hover, muted fills (decorative; text on it 7.9:1) |
-| `slate` | `#4a5c6a` | gradient stops, glows and shadows only (2.7:1 on the page, never text or outlines) |
-| `muted` / `muted-small` | `#9ba8ab` | hint and label text, icons, outlines (6.7:1 or better) |
-| `accent` | `#4cc9f0` (ice cyan) | links, focus ring, highlights (8:1 or better on the page and cards) |
-| `heading` | `#f4f6f5` | headings, brighter than body text for hierarchy (7:1 or better) |
-| `primary` | `#4cc9f0` to `#1fa3d1` gradient | button, active-nav and progress fill, with `#06141b` text (6:1 or better) |
-| `text` | `#ccd0cf` | body text (10.5:1 or better) |
-| `logo` / `logoEnd` | `#e8fbff` to `#4cc9f0` gradient | the bolt logo (sidebar, setup header, tab icon) with a cyan glow: the brightest element on the page |
-| `success` / `warning` / `danger` | `#3fb950` / `#d29922` / `#f85149` | status badges (kept from the earlier palette) |
+| `background` | `#131a24` | page |
+| `surface` | `#18202b` | sidebar, panels, inputs, dialogs (one step lighter than the page, with a hairline border) |
+| `divider` | `#2a3444` | dividers, hover fills (decorative; text on it 9:1 or better) |
+| `slate` | `#3a465a` | decorative fills and outlines only, never text |
+| `muted` / `muted-small` | `#8c97a9` | hint and label text, icons, outlines (5.5:1 or better) |
+| `accent` | `#f0a35e` (orange) | the one accent: active menu item, links, focus ring, selected states (8:1 or better on the page and panels) |
+| `heading` | `#f1f3f7` | headings, brighter than body text for hierarchy (7:1 or better) |
+| `primary` | `#243044` (slate chip) | button, chip and active-nav fill, with `#f0a35e` text (6:1 or better) |
+| `text` | `#e3e7ee` | body text (12:1 or better) |
+| `success` / `warning` / `danger` | `#3fb950` / `#d29922` / `#f85149` | status badges and progress fills (kept from the earlier palettes) |
 
-Palette changed 2026-11-04 to Ravi's slate scale `#06141B #11212D #253745 #4A5C6A #9BA8AB #CCD0CF`. The slate scale has no saturated colour, so on 2026-11-05 one accent was added: ice cyan `#4cc9f0`. The page background is a top-to-bottom gradient (`#253745` to `#11212d` to `#06141b`, 2026-11-05). Gradients (panels, primary actions, the bolt) and shadows (panels, primary actions, dialogs) are CSS variables in `theme.css`.
+Palette changed 2026-11-12 (feature 002d, user story 6) to a **flat** theme from Ravi's mockup: dark navy, one orange accent, no gradients and no glows (a test fails if `theme.css` gains either; the only exception is the moving stripes of the progress bar). Panels have a hairline border instead of a shadow. A list row under the pointer gets a soft see-through rust tint (`rgb(156 79 55 / 0.25)`). Earlier palettes: Deep Obsidian and Titan Blue (2026-11-04), the slate scale with ice cyan (2026-11-04/05).
 
 **First-run setup (001, US5):** until setup is finished, every page shows one centred card instead of the app: (1) name, (2) resume (upload, paste or "Type it in myself"), (3) check the profile, (4) preferences, ending in "Finish setup". The card comes from saved data (`GET /onboarding`), so closing the tab returns the user to the same card; a stored `setup_completed_at` keeps the cards from coming back, and "Delete all my data" clears it. Design: `docs/superpowers/specs/2026-11-04-first-run-onboarding-design.md`.
 
-**Companies page (002, 002b):** a sortable table, one compact row per company (name linking to the company site, city, an Applied chip when a job there is in the applied state, contact count, the start of the note, icon actions for details, company site, careers page, hide, edit and delete), a search box, a "Show" filter, and import and export behind one Import / export button. A row expands to every detail of the company, then its contacts and note. The company sheet import reads **CSV only** (a spreadsheet saved as CSV; no Excel reader, so no extra dependency). Open-role counts were built and then dropped on 2026-11-11 because they go stale. Only the list scrolls; the menu and the page header stay in place.
+**Companies page (002, 002b):** a sortable table, one compact row per company (name linking to the company site, city, an Applied chip when a job there is in the applied state, contact count, the start of the note, icon actions for details, company site, careers page, hide, edit and delete), a search box, a "Show" filter. A row expands to every detail of the company, then its contacts and note. Open-role counts were built and then dropped on 2026-11-11 because they go stale. Only the list scrolls; the menu and the page header stay in place.
 
-**First-level UI (001), after setup:** a sidebar shell with **Home** (setup checklist: key found and working, resume uploaded, profile confirmed, preferences set) · **Profile** (upload, extraction progress, review/edit/confirm, hidden-text and injection flags) · **Preferences** (form) · **Review** (items waiting for approval) · **Settings** (budget cap, key status, tier → model mapping, usage and spend).
+**First-level UI (001), after setup:** a sidebar shell with **Home** (setup checklist: key found and working, resume uploaded, profile confirmed, preferences set) · **Profile** with three tabs (Profile: upload, extraction progress, review/edit/confirm, hidden-text and injection flags; Preferences; Search rules) · **Settings** (AI key status, Check again, Delete all my data). **Home** has two tabs, Explore and In pipeline (applied or inquired jobs), and a "N items need your review" notice that opens the Review page. The menu is exactly Home, Companies, Profile, Settings (002d).
 
 Later screens, each added by its feature: Search rules · Companies · Jobs (match / maybe / hidden with reasons, job detail) · Applications · Drafts · Tailored resumes · Export.
 
@@ -385,7 +383,7 @@ Later screens, each added by its feature: Search rules · Companies · Jobs (mat
 | Frontend | components and hooks; e2e journeys against a seeded backend with the fake LLM | Vitest, Playwright |
 | Evals | prompt quality against real providers; run manually and in PRs that change prompts | `evals/` runner |
 
-Test names reference requirement/scenario IDs. Coverage gates: ≥ 90% domain + application, ≥ 80% overall. Normal test runs never call OpenAI; only evals do (small, on demand, counted against the budget cap). All test data is synthetic.
+Test names reference requirement/scenario IDs. Coverage gates: ≥ 90% domain + application, ≥ 80% overall. Normal test runs never call OpenAI; only evals do (small, on demand, behind `--yes`). All test data is synthetic.
 
 ## 12. Architecture decisions (ADRs)
 
@@ -413,7 +411,9 @@ Each ADR: decision · why · alternatives. **Approved by Ravi 2026-11-03.**
 
 **ADR-11 Default models per provider (OpenAI decided 2026-11-05).** Profile extraction uses the `fast` tier (`gpt-5.4-mini`). Eval on 15 synthetic English documents (11 resumes and 4 that are not; `backend/evals/reports/extract_profile-2026-11-05.md`, prompt v2): `fast` (`gpt-5.4-mini`) precision 100%, recall 100%, $0.0019 per document, p95 3.2 s, all 4 non-resumes rejected and no resume rejected by mistake; `strong` (`gpt-6-astra`) the same scores at $0.0193 per document, p95 6.4 s. An earlier run on prompt v1 (11 resumes) gave `fast` 97.9% recall (3 skills missed in a table layout) and `strong` 100%, so run-to-run variation is real. Both pass SC-003 and SC-007; `strong` costs about 10 to 16 times more for no measured gain. Other providers get their defaults from the same eval when their adapters are added. Rule: change the default only with a newer report that supports it (`test_defaults_match_latest_eval_report`). HireTitan is English-only, so the eval set is English. How to run and read an eval: `docs/how-we-choose-a-model.md`.
 
-**ADR-12 Relevance judging in the default search (decided 2026-11-06, feature 002).** The default search judges relevance with the `fast` model after the rules, instead of leaving AI to an on-demand step. Reason: the person wants only relevant jobs in the list. Eval of prompt `judge_relevance` v1 on 60 labelled postings, `gpt-5.4-mini`: precision 98.3%, recall 94.3%, no unusable answers, no injection-affected decisions, $0.00024 per job (`backend/evals/reports/`). To keep cost and waiting visible, W3 runs in batches with live cost and a Stop button instead of an upfront estimate (deviation D3, approved). Job text is untrusted input: it goes to the model inside quarantined blocks and the answer is validated. Without a key, in rules-only mode or after an unusable answer, jobs stay in Explore as "not checked by AI".
+**ADR-12 Relevance judging in the default search (decided 2026-11-06, feature 002).** The default search judges relevance with the `fast` model after the rules, instead of leaving AI to an on-demand step. Reason: the person wants only relevant jobs in the list. Eval of prompt `judge_relevance` v1 on 60 labelled postings, `gpt-5.4-mini`: precision 98.3%, recall 94.3%, no unusable answers, no injection-affected decisions, $0.00024 per job (`backend/evals/reports/`). To keep waiting visible, W3 runs in batches with progress and a Stop button (deviation D3, approved; the live cost was removed in 002d). Job text is untrusted input: it goes to the model inside quarantined blocks and the answer is validated. Without a key, in rules-only mode or after an unusable answer, jobs stay in Explore as "not checked by AI".
+
+**ADR-13 No AI cost or budget in the app (decided 2026-11-12, feature 002d).** HireTitan shows no AI cost and has no budget cap, guard or price table. The user brings their own key and sees spend with the provider. Out-of-credit still pauses and resumes. Removing the prices also closed the `tiktoken` open item (the guard was its only user).
 
 ## 13. Open questions for Ravi
 
@@ -424,4 +424,4 @@ Each ADR: decision · why · alternatives. **Approved by Ravi 2026-11-03.**
 6. ~~Queue~~ decided: Procrastinate. ~~Key storage~~ decided: `.env` only. ~~Theme~~ decided: dark, Ravi's palette. ~~Export~~ decided: "Export all my data" in feature 003.
 
 No open questions remain.
-5. ~~Company list storage~~ decided: Postgres `companies` table seeded from the repo, editable in the app, CSV import/export (§8).
+5. ~~Company list storage~~ decided: Postgres `companies` table seeded from the repo, editable in the app (§8; the CSV import/export was removed in 002d).

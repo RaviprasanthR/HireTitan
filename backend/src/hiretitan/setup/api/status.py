@@ -1,4 +1,4 @@
-"""Status endpoints (contracts/rest-api.md, "Setup: status, settings, data").
+"""Status endpoints (contracts/rest-api.md, "Setup: status, data").
 
 One call powers the banner and Home. The key never appears: only its status.
 """
@@ -8,17 +8,14 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import datetime
-from decimal import Decimal
 
 from fastapi import APIRouter
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from hiretitan.platform.clock import ClockPort
-from hiretitan.platform.llm.infra.calls_repo import CallsRepo
 from hiretitan.platform.llm.infra.provider_status_repo import ProviderStatusRepo
 from hiretitan.setup.application.status import SetupFacts, get_status
-from hiretitan.setup.infra.settings_repo import SettingsRepo
 
 
 @dataclass(frozen=True)
@@ -46,16 +43,9 @@ class ChecklistOut(BaseModel):
     searched_once: bool
 
 
-class BudgetOut(BaseModel):
-    cap_usd: Decimal
-    spent_usd: Decimal
-    period: str
-
-
 class StatusOut(BaseModel):
     ai: AiOut
     checklist: ChecklistOut
-    budget: BudgetOut
 
 
 def create_status_router(deps: StatusApiDeps) -> APIRouter:
@@ -67,12 +57,10 @@ def create_status_router(deps: StatusApiDeps) -> APIRouter:
             status = await get_status(
                 provider=deps.provider,
                 providers=ProviderStatusRepo(session),
-                settings=SettingsRepo(session),
-                spend=CallsRepo(session),
                 facts=deps.facts(session),
                 now=deps.clock.now(),
             )
-        ai, checklist, budget = status.ai, status.checklist, status.budget
+        ai, checklist = status.ai, status.checklist
         return StatusOut(
             ai=AiOut(
                 provider=ai.provider,
@@ -87,9 +75,6 @@ def create_status_router(deps: StatusApiDeps) -> APIRouter:
                 preferences_saved=checklist.preferences_saved,
                 rules_approved=checklist.rules_approved,
                 searched_once=checklist.searched_once,
-            ),
-            budget=BudgetOut(
-                cap_usd=budget.cap_usd, spent_usd=budget.spent_usd, period=budget.period
             ),
         )
 

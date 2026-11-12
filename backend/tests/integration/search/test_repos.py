@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from uuid import UUID
 
 import pytest
@@ -10,6 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from hiretitan.platform.runtime.infra.runs_repo import RunsRepo
+from hiretitan.search.domain.job_state import JobState
 from hiretitan.search.domain.vendors import ENABLED_VENDORS
 from hiretitan.search.infra.repos import (
     CompaniesRepo,
@@ -371,3 +372,22 @@ async def test_possible_duplicate_pairs_are_stored_in_id_order(db_session: Async
     assert pair.job_a_id < pair.job_b_id
     await repo.set_status(pair.id, "dismissed", decided_at=T0)
     assert await repo.list_open() == []
+
+
+async def test_set_status_inquired_then_applied_clears_inquired_on(
+    db_session: AsyncSession,
+) -> None:
+    from hiretitan.search.infra.models import JobRow
+
+    job_id = await add_job(db_session)
+    repo = JobsRepo(db_session)
+
+    await repo.set_status(job_id, JobState.inquired, None, inquired_on=date(2026, 11, 12))
+    row = await db_session.get(JobRow, job_id, populate_existing=True)
+    assert row is not None
+    assert (row.state, row.inquired_on, row.applied_on) == ("inquired", date(2026, 11, 12), None)
+
+    await repo.set_status(job_id, JobState.applied, date(2026, 11, 13))
+    row = await db_session.get(JobRow, job_id, populate_existing=True)
+    assert row is not None
+    assert (row.state, row.inquired_on, row.applied_on) == ("applied", None, date(2026, 11, 13))

@@ -50,7 +50,6 @@ beforeEach(() => {
             profile_confirmed: false,
             preferences_saved: false,
           },
-          budget: { cap_usd: '25.00', spent_usd: '0', period: '2026-11' },
         })
       }
       if (url.includes('/profile/reviews/manual')) return manualReply()

@@ -1,6 +1,6 @@
 # Preference defaults
 
-A fresh HireTitan install starts with the neutral values below. Nothing here is specific to any person, and every value can be changed on the Preferences page (or in the setup card's last step). A test (`backend/tests/unit/test_docs.py`) keeps this table in step with the code in `backend/src/hiretitan/preferences/domain/defaults.py`.
+A fresh HireTitan install starts with the neutral values below. Nothing here is specific to any person, and every value can be changed on the Preferences tab of Profile (or in the setup card's last step). A test (`backend/tests/unit/test_docs.py`) keeps this table in step with the code in `backend/src/hiretitan/preferences/domain/defaults.py`.
 
 | Setting | Default | Why |
 |---|---|---|

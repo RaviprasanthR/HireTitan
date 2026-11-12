@@ -350,12 +350,19 @@ class JobsRepo:
         value = await self._session.scalar(select(JobRow.state).where(JobRow.id == job_id))
         return JobState(value) if value is not None else None
 
-    async def set_status(self, job_id: UUID, state: JobState, applied_on: date | None) -> None:
-        """State and applied date change together (the table requires it)."""
+    async def set_status(
+        self,
+        job_id: UUID,
+        state: JobState,
+        applied_on: date | None,
+        inquired_on: date | None = None,
+    ) -> None:
+        """State and its date change together (the table requires it): the date that does not
+        belong to the new state is cleared."""
         await self._session.execute(
             update(JobRow)
             .where(JobRow.id == job_id)
-            .values(state=state.value, applied_on=applied_on)
+            .values(state=state.value, applied_on=applied_on, inquired_on=inquired_on)
         )
         await self._session.flush()
 
@@ -381,15 +388,20 @@ class JobsRepo:
         """Keyset paging, so rows added while the person scrolls never shift a page (SC-010)."""
         limit = max(1, min(limit, MAX_PAGE_SIZE))
         by_company = filters.sort == "company"
-        by_applied = filters.state == "applied"  # the Applied list is newest application first
+        # The pipeline (applied and inquired jobs) is newest date first.
+        by_pipeline = filters.state == "pipeline"
         key: Any = (
             func.lower(JobRow.company_name)
             if by_company
-            else JobRow.applied_on
-            if by_applied
+            else func.coalesce(JobRow.applied_on, JobRow.inquired_on)
+            if by_pipeline
             else JobRow.sort_key
         )
-        query = select(JobRow).where(JobRow.state == filters.state)
+        query = select(JobRow).where(
+            JobRow.state.in_((JobState.applied.value, JobState.inquired.value))
+            if by_pipeline
+            else JobRow.state == filters.state
+        )
         if filters.company_id is not None:
             query = query.where(JobRow.company_id == filters.company_id)
         if filters.work_mode is not None:
@@ -404,7 +416,7 @@ class JobsRepo:
             )
         if cursor is not None:
             value: Any = cursor.sort_value
-            if by_applied and not by_company and isinstance(value, str):
+            if by_pipeline and not by_company and isinstance(value, str):
                 value = date.fromisoformat(value)
             if by_company:
                 after = or_(key > value, and_(key == value, JobRow.id > cursor.id))
@@ -421,8 +433,8 @@ class JobsRepo:
             token: datetime | str
             if by_company:
                 token = last.company_name.lower()
-            elif by_applied and last.applied_on is not None:
-                token = last.applied_on.isoformat()
+            elif by_pipeline and (day := last.applied_on or last.inquired_on) is not None:
+                token = day.isoformat()
             else:
                 token = last.sort_key
             next_cursor = Cursor(token, last.id)
@@ -582,13 +594,6 @@ class ContactsRepo:
         )
         return result.scalar_one_or_none()
 
-    async def list_all(self) -> list[ContactRow]:
-        """Every contact, for the opt-in export (FR-021)."""
-        result = await self._session.execute(
-            select(ContactRow).order_by(ContactRow.company_id, ContactRow.name_key, ContactRow.id)
-        )
-        return list(result.scalars())
-
     async def counts_by_company(self) -> dict[UUID, tuple[int, bool]]:
         """``{company_id: (contact_count, has_note)}`` for every company, in one statement."""
         contact_count = (
@@ -601,19 +606,28 @@ class ContactsRepo:
         return {company_id: (int(n), bool(noted)) for company_id, n, noted in result.all()}
 
 
-class AppliedCompaniesRepo:
-    """Which companies have a job the person applied to (feature 002b). Nothing is stored."""
+class PipelineCompaniesRepo:
+    """How far the person's jobs at each company have got (feature 002d). Nothing is stored."""
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def company_ids(self) -> set[UUID]:
+    async def states(self) -> dict[UUID, Literal["applied", "inquired"]]:
+        """``applied`` if any job at the company is applied, else ``inquired`` if any is inquired.
+        Companies with neither are left out. One query."""
         result = await self._session.execute(
-            select(JobRow.company_id)
-            .where(JobRow.state == JobState.applied.value, JobRow.company_id.is_not(None))
-            .distinct()
+            select(JobRow.company_id, func.bool_or(JobRow.state == JobState.applied.value))
+            .where(
+                JobRow.state.in_((JobState.applied.value, JobState.inquired.value)),
+                JobRow.company_id.is_not(None),
+            )
+            .group_by(JobRow.company_id)
         )
-        return {company_id for company_id in result.scalars() if company_id is not None}
+        return {
+            company_id: "applied" if any_applied else "inquired"
+            for company_id, any_applied in result.all()
+            if company_id is not None
+        }
 
 
 def _apply_contact_fields(row: ContactRow, fields: ContactFields) -> None:
@@ -643,11 +657,6 @@ class NotesRepo:
             select(CompanyNoteRow.company_id, func.left(CompanyNoteRow.body, limit))
         )
         return {company_id: head for company_id, head in result.all()}
-
-    async def list_all(self) -> list[CompanyNoteRow]:
-        """Every note, for the opt-in export (FR-021)."""
-        result = await self._session.execute(select(CompanyNoteRow))
-        return list(result.scalars())
 
     async def set(self, company_id: UUID, body: str | None, *, source: str) -> None:
         if body is None:

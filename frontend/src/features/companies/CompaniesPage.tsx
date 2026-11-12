@@ -7,8 +7,9 @@ import {
   ChevronUp,
   Eye,
   EyeOff,
-  Globe,
+  MessageCircleQuestion,
   Pencil,
+  Plus,
   Search,
   StickyNote,
   Trash2,
@@ -19,33 +20,36 @@ import { ApiError } from '@/api/client'
 import { Button } from '@/components/ui/button'
 import { formatDay } from '@/features/explore/api'
 import { AddCompanyDialog } from './AddCompanyDialog'
-import {
-  BOARD_STATUS,
-  useCompanies,
-  useDeleteCompany,
-  useEditCompany,
-  type Company,
-  type CompanyFilter,
-} from './api'
+import { BOARD_STATUS, useCompanies, useDeleteCompany, useEditCompany, type Company } from './api'
 import { CompanyPanel } from './CompanyPanel'
 import { Field, inputClass } from './Field'
-import { ImportExport } from './ImportExport'
 
-type Show = 'all' | 'contacts' | 'applied'
-type SortKey = 'name' | 'city' | 'applied' | 'contacts' | 'note'
+type SortKey = 'name' | 'city' | 'pipeline' | 'contacts' | 'note'
 type Sort = { key: SortKey; dir: 'asc' | 'desc' }
+
+/** The filled slate chip used by the toolbar buttons. */
+const TOOL_CHIP =
+  'border-transparent bg-[#243044] text-[#f0a35e] hover:bg-[#2d3b52] hover:text-[#f0a35e] aria-selected:ring-1 aria-selected:ring-[#f0a35e]/60'
 
 const CHIP = 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs whitespace-nowrap'
 
-/** Whether the person has applied to a job at this company. Kept simple: yes or nothing. */
-function AppliedChip({ company }: { company: Company }) {
-  if (!company.has_application) return <span className="text-xs text-muted-small">—</span>
-  return (
-    <span className={`${CHIP} w-fit bg-emerald-500/15 text-emerald-300`}>
-      <BadgeCheck aria-hidden className="size-3" />
-      Applied
-    </span>
-  )
+/** How far the person's jobs at this company have got: Applied, Inquired, or nothing. */
+function PipelineChip({ company }: { company: Company }) {
+  if (company.pipeline === 'applied')
+    return (
+      <span className={`${CHIP} w-fit bg-emerald-500/15 text-emerald-300`}>
+        <BadgeCheck aria-hidden className="size-3" />
+        Applied
+      </span>
+    )
+  if (company.pipeline === 'inquired')
+    return (
+      <span className={`${CHIP} w-fit bg-sky-500/15 text-sky-300`}>
+        <MessageCircleQuestion aria-hidden className="size-3" />
+        Inquired
+      </span>
+    )
+  return <span className="text-xs text-muted-small">—</span>
 }
 
 /** A small round icon button; each action has its own colour and a tooltip. */
@@ -75,11 +79,6 @@ function IconButton({
     </Button>
   )
 }
-
-const TABS: { filter: CompanyFilter; label: string }[] = [
-  { filter: 'all', label: 'All companies' },
-  { filter: 'check_manually', label: 'Check manually' },
-]
 
 function EditForm({ company, onDone }: { company: Company; onDone: () => void }) {
   const edit = useEditCompany()
@@ -145,6 +144,12 @@ function ExternalLink({ url }: { url: string }) {
   )
 }
 
+const PIPELINE_TEXT = {
+  applied: 'You have applied to a job here',
+  inquired: 'You have asked about a job here',
+  none: 'Nothing in your pipeline here',
+}
+
 /** Everything the list knows about a company, shown when its row is expanded. */
 function Details({ company, checked }: { company: Company; checked: string | null }) {
   const board = [BOARD_STATUS[company.board_status], company.ats_vendor, company.board_id]
@@ -155,7 +160,7 @@ function Details({ company, checked }: { company: Company; checked: string | nul
     : 'Not checked yet'
   const rows: [string, React.ReactNode][] = [
     ['Location', company.city ?? '—'],
-    ['Application', company.has_application ? 'You have applied to a job here' : 'No application'],
+    ['Pipeline', PIPELINE_TEXT[company.pipeline ?? 'none']],
     ['Website', company.website ? <ExternalLink url={company.website} /> : '—'],
     ['Careers page', company.careers_url ? <ExternalLink url={company.careers_url} /> : '—'],
     ['Job board', board],
@@ -183,7 +188,7 @@ function Details({ company, checked }: { company: Company; checked: string | nul
   )
 }
 
-function CompanyRow({ company, manual }: { company: Company; manual: boolean }) {
+function CompanyRow({ company }: { company: Company }) {
   const [editing, setEditing] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [showPanel, setShowPanel] = useState(false)
@@ -201,26 +206,33 @@ function CompanyRow({ company, manual }: { company: Company; manual: boolean }) 
   return (
     <li
       aria-label={company.name}
-      className="space-y-2 rounded-lg bg-surface px-3 py-1 ring-1 ring-transparent transition duration-200 ease-out hover:-translate-y-px hover:bg-white/[0.04] hover:shadow-[0_8px_24px_-12px_rgba(167,139,250,0.5)] hover:ring-violet-400/30 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+      className="relative space-y-2 rounded-lg px-3 py-1.5 transition-colors duration-200 after:absolute after:inset-x-3 after:bottom-0 after:h-px after:bg-border hover:bg-[#9c4f37]/25 motion-reduce:transition-none"
     >
       <div className={`flex min-h-8 flex-wrap items-center gap-x-4 gap-y-1 ${COLUMNS}`}>
-        <h2 className="min-w-0 truncate font-semibold">
-          {company.website ? (
-            <a
-              href={company.website}
-              target="_blank"
-              rel="noreferrer noopener"
-              className="hover:text-orange-300 hover:underline"
-            >
-              {company.name}
-            </a>
-          ) : (
-            company.name
+        <div className="min-w-0">
+          <h2 className="min-w-0 truncate font-semibold">
+            {company.website ? (
+              <a
+                href={company.website}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="hover:text-orange-300 hover:underline"
+              >
+                {company.name}
+              </a>
+            ) : (
+              company.name
+            )}
+            {company.hidden && <span className="ml-2 text-sm text-muted-small">(hidden)</span>}
+          </h2>
+          {company.website && (
+            <p data-testid="company-host" className="truncate text-xs text-muted-small">
+              {shortUrl(company.website)}
+            </p>
           )}
-          {company.hidden && <span className="ml-2 text-sm text-muted-small">(hidden)</span>}
-        </h2>
+        </div>
         <span className="min-w-0 truncate text-sm text-muted-small">{company.city ?? ''}</span>
-        <AppliedChip company={company} />
+        <PipelineChip company={company} />
         <span
           className={`${CHIP} w-fit ${
             company.contact_count > 0
@@ -254,26 +266,6 @@ function CompanyRow({ company, manual }: { company: Company; manual: boolean }) 
               >
                 {showPanel ? <ChevronUp aria-hidden /> : <ChevronDown aria-hidden />}
               </IconButton>
-              {company.website ? (
-                <Button
-                  asChild
-                  variant="ghost"
-                  size="icon-sm"
-                  className="text-orange-300 hover:bg-orange-500/20 hover:text-orange-200"
-                >
-                  <a
-                    href={company.website}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                    title="Company website"
-                    aria-label={`Open ${company.name} website`}
-                  >
-                    <Globe aria-hidden />
-                  </a>
-                </Button>
-              ) : (
-                <span className="size-7" aria-hidden />
-              )}
               {company.careers_url ? (
                 <Button
                   asChild
@@ -328,14 +320,6 @@ function CompanyRow({ company, manual }: { company: Company; manual: boolean }) 
           )}
         </div>
       </div>
-      {manual && (
-        <p className="pb-1 text-sm">
-          {checked ? `Last checked ${checked}` : 'Not checked yet'}
-          {company.last_check_error && (
-            <span className="ml-3 text-muted-small">{company.last_check_error}</span>
-          )}
-        </p>
-      )}
       {edit.isError && !editing && (
         <p role="alert" className="text-sm text-danger">
           {edit.error.message}
@@ -385,7 +369,7 @@ const TEXT_SORTS: SortKey[] = ['name', 'city', 'note']
 const SORT_NAMES: Record<SortKey, string> = {
   name: 'company',
   city: 'location',
-  applied: 'applied',
+  pipeline: 'pipeline',
   contacts: 'contacts',
   note: 'note',
 }
@@ -398,7 +382,7 @@ function compareBy(sort: Sort) {
     if (sort.key === 'city') return c.city ? c.city.toLowerCase() : null
     if (sort.key === 'note') return c.note_preview ? c.note_preview.toLowerCase() : null
     if (sort.key === 'contacts') return c.contact_count
-    return c.has_application ? 1 : 0
+    return c.pipeline === 'applied' ? 2 : c.pipeline === 'inquired' ? 1 : 0
   }
   const sign = sort.dir === 'asc' ? 1 : -1
   return (a: Company, b: Company) => {
@@ -418,10 +402,10 @@ function sortLabel(key: SortKey, sort: Sort): string {
     ? sort.dir === 'asc'
       ? 'A to Z'
       : 'Z to A'
-    : key === 'applied'
+    : key === 'pipeline'
       ? sort.dir === 'desc'
-        ? 'applied first'
-        : 'applied last'
+        ? 'applied, then inquired, first'
+        : 'applied, then inquired, last'
       : sort.dir === 'asc'
         ? 'fewest first'
         : 'most first'
@@ -438,7 +422,7 @@ function HeaderRow({ sort, onSort }: { sort: Sort; onSort: (key: SortKey) => voi
         aria-label={sortLabel(key, sort)}
         title={SORT_NAMES[key]}
         onClick={() => onSort(key)}
-        className={`-ml-1 inline-flex items-center gap-1 rounded px-1 uppercase hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring ${
+        className={`-ml-1 inline-flex items-center gap-1 rounded px-1 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring ${
           active ? 'text-foreground' : ''
         } ${extra}`}
       >
@@ -454,11 +438,11 @@ function HeaderRow({ sort, onSort }: { sort: Sort; onSort: (key: SortKey) => voi
   }
   return (
     <div
-      className={`hidden overflow-hidden rounded-lg border border-slate-200/15 bg-slate-200/10 px-3 py-2 text-xs font-semibold tracking-wider text-slate-200 shadow-sm [scrollbar-gutter:stable] ${COLUMNS}`}
+      className={`hidden border-b border-border px-3 py-2 text-sm font-semibold text-muted-small [scrollbar-gutter:stable] ${COLUMNS}`}
     >
       {button('name', 'Company')}
       {button('city', 'Location')}
-      {button('applied', 'Applied')}
+      {button('pipeline', 'Pipeline')}
       {button('contacts', 'Contacts')}
       {button('note', 'Note')}
       <span />
@@ -468,22 +452,17 @@ function HeaderRow({ sort, onSort }: { sort: Sort; onSort: (key: SortKey) => voi
 
 /** The company list: a sortable table with an expandable row for each company. */
 export function CompaniesPage() {
-  const [filter, setFilter] = useState<CompanyFilter>('all')
   const [adding, setAdding] = useState(false)
-  const [tools, setTools] = useState(false)
-  const companies = useCompanies(filter)
-  const [show, setShow] = useState<Show>('all')
+  const companies = useCompanies('all')
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState<Sort>({ key: 'name', dir: 'asc' })
   const all = companies.data?.items ?? []
   const needle = query.trim().toLowerCase()
-  const shown = all
-    .filter((c) =>
-      show === 'all' ? true : show === 'contacts' ? c.contact_count > 0 : c.has_application,
-    )
-    .filter((c) => !needle || `${c.name} ${c.city ?? ''}`.toLowerCase().includes(needle))
+  const shown = all.filter(
+    (c) => !needle || `${c.name} ${c.city ?? ''}`.toLowerCase().includes(needle),
+  )
   const items = [...shown].sort(compareBy(sort))
-  // A new column starts with its natural order: A to Z for text, most first for counts and applied.
+  // A new column starts with its natural order: A to Z for text, most first for counts and the pipeline.
   const sortBy = (key: SortKey) =>
     setSort((now) =>
       now.key === key
@@ -499,17 +478,15 @@ export function CompaniesPage() {
     body = (
       <p>
         {all.length > 0
-          ? 'No companies match this filter.'
-          : filter === 'check_manually'
-            ? 'Nothing to check by hand right now.'
-            : 'No companies yet. Add one by its careers page link.'}
+          ? 'No companies match this search.'
+          : 'No companies yet. Add one by its careers page link.'}
       </p>
     )
   else
     body = (
-      <ul aria-label="Companies" className="space-y-1.5">
+      <ul aria-label="Companies">
         {items.map((company) => (
-          <CompanyRow key={company.id} company={company} manual={filter === 'check_manually'} />
+          <CompanyRow key={company.id} company={company} />
         ))}
       </ul>
     )
@@ -533,61 +510,17 @@ export function CompaniesPage() {
               className={`${inputClass} w-full pl-8`}
             />
           </label>
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              aria-expanded={tools}
-              onClick={() => setTools(!tools)}
-            >
-              Import / export
+          {!adding && (
+            <Button type="button" size="sm" className={TOOL_CHIP} onClick={() => setAdding(true)}>
+              <Plus aria-hidden />
+              Add a company
             </Button>
-            {!adding && (
-              <Button type="button" size="sm" onClick={() => setAdding(true)}>
-                Add a company
-              </Button>
-            )}
-          </div>
-        </div>
-        {adding && <AddCompanyDialog onClose={() => setAdding(false)} />}
-        <div hidden={!tools} className="rounded-lg bg-surface p-3">
-          <ImportExport />
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <div role="tablist" aria-label="Company lists" className="flex gap-2">
-            {TABS.map((tab) => (
-              <Button
-                key={tab.filter}
-                type="button"
-                role="tab"
-                aria-selected={filter === tab.filter}
-                variant={filter === tab.filter ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setFilter(tab.filter)}
-              >
-                {tab.label}
-              </Button>
-            ))}
-          </div>
-          <form aria-label="Company filters" onSubmit={(e) => e.preventDefault()}>
-            <label className="flex items-center gap-2 text-sm">
-              Show
-              <select
-                className={inputClass}
-                value={show}
-                onChange={(e) => setShow(e.target.value as Show)}
-              >
-                <option value="all">All companies</option>
-                <option value="contacts">Has contacts</option>
-                <option value="applied">Has an application</option>
-              </select>
-            </label>
-          </form>
+          )}
         </div>
         {loaded && <HeaderRow sort={sort} onSort={sortBy} />}
       </div>
       <div className="min-h-48 flex-1 overflow-y-auto [scrollbar-gutter:stable]">{body}</div>
+      {adding && <AddCompanyDialog onClose={() => setAdding(false)} />}
     </section>
   )
 }

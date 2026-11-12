@@ -165,13 +165,12 @@ async def make_search_run(
     mode: str = "rules_and_ai",
     outcome: str | None = None,
     stop_message: str | None = None,
-    cost: str = "0",
 ) -> str:
     workflow_id, rule_set_id, run_id = uid(), uid(), uid()
     await run(
         session,
         "INSERT INTO app.workflow_runs (id, workflow, status, pause_reason) "
-        "VALUES (:id, 'job_search', :s, CASE WHEN :s = 'paused' THEN 'budget_reached' END)",
+        "VALUES (:id, 'job_search', :s, CASE WHEN :s = 'paused' THEN 'out_of_credit' END)",
         id=workflow_id,
         s=workflow_status,
     )
@@ -181,23 +180,20 @@ async def make_search_run(
     await run(
         session,
         "INSERT INTO app.search_runs (id, workflow_run_id, rule_set_id, mode, outcome, "
-        "stop_message, ai_cost_usd, company_order) VALUES (:id, :wf, :rs, :mode, :outcome, "
-        ":msg, :cost, '{}')",
+        "stop_message, company_order) VALUES (:id, :wf, :rs, :mode, :outcome, "
+        ":msg, '{}')",
         id=run_id,
         wf=workflow_id,
         rs=rule_set_id,
         mode=mode,
         outcome=outcome,
         msg=stop_message,
-        cost=cost,
     )
     return run_id
 
 
 async def test_db_accepts_a_search_run(db_session: AsyncSession) -> None:
-    await make_search_run(
-        db_session, outcome="out_of_credit", stop_message="No credit.", cost="0.1234"
-    )
+    await make_search_run(db_session, outcome="out_of_credit", stop_message="No credit.")
 
 
 @pytest.mark.parametrize(
@@ -246,6 +242,13 @@ async def test_db_rejects_applied_without_date_and_date_without_applied(
     await bad_job(db_session, state="applied")
     await bad_job(db_session, "applied_on", "current_date", state="explore")
     await job(db_session, "applied_on", "current_date", state="applied")
+
+
+async def test_inquired_on_iff_inquired(db_session: AsyncSession) -> None:
+    await bad_job(db_session, state="inquired")
+    await bad_job(db_session, "inquired_on", "current_date", state="explore")
+    await bad_job(db_session, "inquired_on", "current_date", state="applied")
+    await job(db_session, "inquired_on", "current_date", state="inquired")
 
 
 async def test_db_rejects_bad_job_values(db_session: AsyncSession) -> None:

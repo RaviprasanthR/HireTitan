@@ -25,6 +25,7 @@ function card(id: string, title: string, over: Record<string, unknown> = {}) {
     },
     listed: true,
     applied_on: null,
+    inquired_on: null,
     ...over,
   }
 }
@@ -75,6 +76,20 @@ describe('ExplorePage', () => {
 
     await user.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(screen.queryByLabelText('Link to the job')).not.toBeInTheDocument()
+  })
+
+  it('US1 AS1 explore is the default tab', async () => {
+    renderPage()
+
+    const tabs = await screen.findByRole('navigation', { name: 'Home tabs' })
+
+    expect(within(tabs).getByRole('link', { name: 'Explore' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+    expect(within(tabs).getByRole('link', { name: 'In pipeline' })).not.toHaveAttribute(
+      'aria-current',
+    )
   })
 
   it('US1_AS1_lists_newest_first_with_reason', async () => {

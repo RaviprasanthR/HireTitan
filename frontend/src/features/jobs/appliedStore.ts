@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react'
 
-export type UndoNotice = { id: string; title: string } | null
+export type PipelineKind = 'applied' | 'inquired'
+export type UndoNotice = { id: string; title: string; kind: PipelineKind } | null
 
 let current: UndoNotice = null
 const listeners = new Set<() => void>()

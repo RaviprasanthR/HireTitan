@@ -2,7 +2,7 @@ import { Link } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { OUTCOME_LABELS, formatDate, useRuns } from './api'
 
-/** Every search with its date, outcome, counts and cost (FR-042). */
+/** Every search with its date, outcome and counts (FR-042). */
 export function SearchHistoryPage() {
   const runs = useRuns()
   const items = runs.data?.pages.flatMap((page) => page.items) ?? []
@@ -23,8 +23,7 @@ export function SearchHistoryPage() {
               </p>
               <p className="text-sm text-muted-small">
                 {run.jobs_found} jobs found · {run.added} jobs added · {run.companies_read} of{' '}
-                {run.companies_total} companies read · AI cost: $
-                {Number(run.ai_cost_usd).toFixed(4)}
+                {run.companies_total} companies read
               </p>
               {run.ai_note && <p className="text-sm text-warning">{run.ai_note}</p>}
               <Link to={`/search/runs/${run.id}`} className="text-sm text-link underline">

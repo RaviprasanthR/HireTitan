@@ -37,8 +37,8 @@ def test_running_to_awaiting_review() -> None:
 
 
 def test_running_to_paused() -> None:
-    new = transition(RUNNING, S.paused, pause_reason=PauseReason.budget_reached)
-    assert new == RunState(S.paused, pause_reason=PauseReason.budget_reached)
+    new = transition(RUNNING, S.paused, pause_reason=PauseReason.key_missing)
+    assert new == RunState(S.paused, pause_reason=PauseReason.key_missing)
 
 
 def test_running_to_done() -> None:
@@ -156,7 +156,6 @@ def test_values_match_database_strings() -> None:
     assert {r.value for r in PauseReason} == {
         "key_missing",
         "key_rejected",
-        "budget_reached",
         "out_of_credit",
     }
     assert {w.value for w in WaitingFor} == {"profile_review", "injection_decision"}

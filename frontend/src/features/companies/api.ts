@@ -5,8 +5,6 @@ import type { components } from '@/api/schema'
 export type Company = components['schemas']['CompanyOut']
 export type CompanyPage = components['schemas']['CompanyPage']
 export type Discovery = components['schemas']['DiscoveryOut']
-export type ImportPreview = components['schemas']['ImportPreview']
-export type ImportResult = components['schemas']['ImportResult']
 
 export type CompanyFilter = 'all' | 'check_manually'
 export type CompanyFields = { name: string; careers_url: string; city?: string; website?: string }
@@ -25,8 +23,6 @@ export const BOARD_STATUS: Record<Company['board_status'], string> = {
   unsupported: 'Board not supported',
   unresolved: 'Not set up',
 }
-
-export const EXPORT_URL = '/api/v1/companies/export'
 
 function useRefreshCompanies() {
   const client = useQueryClient()
@@ -81,52 +77,6 @@ export function useDecideBoard(id: string) {
     mutationFn: (decision: 'confirm' | 'reject') =>
       apiFetch<Company>(`/companies/${id}/discovery/${decision}`, { method: 'POST' }),
     onSuccess: refresh,
-  })
-}
-
-export function usePreviewImport() {
-  return useMutation({
-    mutationFn: (file: File) => {
-      const body = new FormData()
-      body.append('file', file)
-      return apiFetch<ImportPreview>('/companies/import', { method: 'POST', body })
-    },
-  })
-}
-
-export function useConfirmImport() {
-  const refresh = useRefreshCompanies()
-  return useMutation({
-    mutationFn: (token: string) =>
-      apiFetch<ImportResult>(`/companies/import/${token}/confirm`, { method: 'POST' }),
-    onSuccess: refresh,
-  })
-}
-
-export type SheetPreview = components['schemas']['SheetPreview']
-export type SheetResult = components['schemas']['SheetResult']
-
-export function useSheetPreview() {
-  return useMutation({
-    mutationFn: (file: File) => {
-      const body = new FormData()
-      body.append('file', file)
-      return apiFetch<SheetPreview>('/companies/sheet-import', { method: 'POST', body })
-    },
-  })
-}
-
-export function useSheetConfirm() {
-  const client = useQueryClient()
-  return useMutation({
-    mutationFn: (token: string) =>
-      apiFetch<SheetResult>(`/companies/sheet-import/${token}/confirm`, { method: 'POST' }),
-    // contacts and notes show on the Companies page, so refresh it with the list
-    onSuccess: () =>
-      Promise.all([
-        client.invalidateQueries({ queryKey: ['companies'] }),
-        client.invalidateQueries({ queryKey: ['contacts'] }), // open panels and note editors
-      ]),
   })
 }
 

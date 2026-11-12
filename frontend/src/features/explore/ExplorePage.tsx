@@ -2,11 +2,13 @@ import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { useStatus } from '@/api/useStatus'
 import { Button } from '@/components/ui/button'
-import { AppliedControl } from '@/features/jobs/AppliedControl'
+import { PipelineControl } from '@/features/jobs/PipelineControl'
 import { PasteJobDialog } from '@/features/jobs/PasteJobDialog'
 import { SetupChecklist } from '@/features/home/HomePage'
 import { setupIsDone } from '@/features/home/setup'
 import { DuplicatesPanel } from './DuplicatesPanel'
+import { ReviewNotice } from '@/features/home/ReviewNotice'
+import { HomeTabs } from './HomeTabs'
 import { SearchPanel } from './SearchPanel'
 import {
   type JobCard,
@@ -39,7 +41,7 @@ export function JobCardItem({ job, showCheck = true }: { job: JobCard; showCheck
       </Link>
       <p className="text-sm text-muted-small">{facts.join(' · ')}</p>
       {reasonOf(job) && <p className="text-sm">{reasonOf(job)}</p>}
-      <AppliedControl id={job.id} />
+      <PipelineControl id={job.id} state={job.state} />
       {showCheck && isNotChecked(job) && (
         <div className="flex items-center gap-3">
           <Button
@@ -135,10 +137,7 @@ export function ExplorePage() {
   const setupDone = setupIsDone(status.data?.checklist)
   const items = jobs.data?.pages.flatMap((page) => page.items) ?? []
   const filtered =
-    filters.source !== '' ||
-    filters.work_mode !== '' ||
-    filters.city !== '' ||
-    company_id !== ''
+    filters.source !== '' || filters.work_mode !== '' || filters.city !== '' || company_id !== ''
 
   let list
   if (jobs.isPending || status.isPending) {
@@ -185,6 +184,8 @@ export function ExplorePage() {
           </Button>
         )}
       </div>
+      <ReviewNotice />
+      <HomeTabs />
       {adding && <PasteJobDialog onClose={() => setAdding(false)} />}
       {status.data && !setupDone && <SetupChecklist showAllSet={false} />}
       {setupDone && <SearchPanel />}

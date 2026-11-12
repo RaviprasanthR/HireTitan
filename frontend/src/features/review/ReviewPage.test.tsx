@@ -27,7 +27,7 @@ describe('ReviewPage', () => {
       {
         id: 'r1',
         kind: 'paused',
-        title: 'Paused: monthly AI budget reached',
+        title: 'Paused: AI account out of credit',
         target: '/settings',
         updated_at: '2026-11-04T10:00:00Z',
       },
@@ -53,7 +53,7 @@ describe('ReviewPage', () => {
       '/profile/review/abc',
       '/profile',
     ])
-    expect(links[0]).toHaveTextContent('Paused: monthly AI budget reached')
+    expect(links[0]).toHaveTextContent('Paused: AI account out of credit')
   })
 
   it('empty_list_says_nothing_is_waiting', async () => {

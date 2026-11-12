@@ -11,15 +11,20 @@ function renderAt(path: string, profile = true) {
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string) =>
-      url.endsWith('/onboarding')
-        ? reply({ step: 'done', display_name: 'Jane', open_review_id: null, active_run_id: null })
-        : url.endsWith('/profile')
-          ? reply({ current: profile ? { id: 'v1' } : null })
-          : url.includes('/jobs')
-            ? reply({ items: [], next_cursor: null })
-            : url.endsWith('/search/latest')
-              ? reply(null)
-              : reply([]),
+      url.endsWith('/status')
+        ? reply({
+            ai: { provider: 'openai', status: 'working', message: null, checked_at: null },
+            checklist: { key_ok: true },
+          })
+        : url.endsWith('/onboarding')
+          ? reply({ step: 'done', display_name: 'Jane', open_review_id: null, active_run_id: null })
+          : url.endsWith('/profile')
+            ? reply({ current: profile ? { id: 'v1' } : null })
+            : url.includes('/jobs')
+              ? reply({ items: [], next_cursor: null })
+              : url.endsWith('/search/latest')
+                ? reply(null)
+                : reply([]),
     ),
   )
   const router = createMemoryRouter(routes, { initialEntries: [path] })
@@ -36,20 +41,27 @@ describe('Shell', () => {
     vi.unstubAllGlobals()
   })
 
-  it('FR027_sidebar_has_eight_sections', async () => {
+  it('US4 the menu has no Preferences or Search rules entry (they are Profile tabs)', async () => {
     renderAt('/')
     const nav = await screen.findByRole('navigation', { name: 'Main' })
     const links = within(nav).getAllByRole('link')
     expect(links.map((link) => link.textContent)).toEqual([
       'Home',
-      'Applied',
-      'Profile',
-      'Preferences',
-      'Search rules',
       'Companies',
-      'Review',
+      'Profile',
       'Settings',
     ])
+  })
+
+  it('US1 AS4 an old applied link opens the pipeline tab', async () => {
+    renderAt('/applied')
+
+    const tabs = await screen.findByRole('navigation', { name: 'Home tabs' })
+
+    expect(within(tabs).getByRole('link', { name: 'In pipeline' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
   })
 
   it('the window does not scroll: the menu stays put and the page area scrolls on its own', async () => {
@@ -60,19 +72,50 @@ describe('Shell', () => {
     expect(screen.getByRole('main')).toHaveClass('overflow-y-auto')
   })
 
+  it('FR022 every menu item has an outline icon', async () => {
+    renderAt('/')
+    const nav = await screen.findByRole('navigation', { name: 'Main' })
+
+    for (const link of within(nav).getAllByRole('link')) {
+      const icon = link.querySelector('svg')
+      expect(icon, link.textContent ?? '').not.toBeNull()
+      expect(icon).toHaveAttribute('aria-hidden', 'true')
+    }
+  })
+
+  it('FR022 the app name is plain text at the top of the sidebar, with no logo', async () => {
+    renderAt('/')
+    const nav = await screen.findByRole('navigation', { name: 'Main' })
+    const sidebar = nav.closest('aside') as HTMLElement
+
+    expect(within(sidebar).getAllByText('HireTitan')).toHaveLength(1)
+    expect(sidebar.firstElementChild).toHaveTextContent('HireTitan')
+    // the only graphics in the sidebar are the eight menu icons
+    expect(sidebar.querySelectorAll('svg')).toHaveLength(within(nav).getAllByRole('link').length)
+    expect(sidebar.querySelector('img')).toBeNull()
+  })
+
+  it('FR022 the sidebar has a thin divider on its right edge', async () => {
+    renderAt('/')
+    const nav = await screen.findByRole('navigation', { name: 'Main' })
+
+    expect(nav.closest('aside')).toHaveClass('border-r')
+  })
+
   it('marks_the_current_section', async () => {
     renderAt('/profile')
-    expect(await screen.findByRole('link', { name: 'Profile' })).toHaveAttribute(
+    const nav = await screen.findByRole('navigation', { name: 'Main' })
+    expect(within(nav).getByRole('link', { name: 'Profile' })).toHaveAttribute(
       'aria-current',
       'page',
     )
-    expect(screen.getByRole('link', { name: 'Home' })).not.toHaveAttribute('aria-current')
+    expect(within(nav).getByRole('link', { name: 'Home' })).not.toHaveAttribute('aria-current')
   })
 
   it.each([
     ['/', 'Jobs'],
     ['/profile', 'Profile'],
-    ['/preferences', 'Preferences'],
+    ['/profile/preferences', 'Preferences'],
     ['/review', 'Review'],
     ['/settings', 'Settings'],
   ])('route_%s_renders_%s', async (path, heading) => {

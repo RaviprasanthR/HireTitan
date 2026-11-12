@@ -10,7 +10,6 @@ import math
 from collections import defaultdict
 from collections.abc import Sequence
 from dataclasses import dataclass
-from decimal import Decimal
 from pathlib import Path
 from typing import Final
 
@@ -19,7 +18,6 @@ from pydantic import BaseModel
 import hiretitan.prompts as hiretitan_prompts
 from evals.judge_relevance.cases import POSTINGS, PROFILES, Posting
 from hiretitan.platform.llm.infra.calls_repo import LlmCallRecord
-from hiretitan.platform.llm.models import ModelCatalog
 from hiretitan.platform.llm.port import LlmPort, LlmRequest
 from hiretitan.platform.llm.prompts import LoadedPrompt, PromptRegistry
 from hiretitan.platform.llm.validation import TaskSpec, ValidatedLlm
@@ -33,8 +31,6 @@ PROVIDER: Final = "openai"
 BATCH: Final = 10
 PRECISION_MIN: Final = 0.90
 RECALL_MIN: Final = 0.90
-CHARS_PER_TOKEN: Final = 3
-_PER_MILLION: Final = Decimal(1_000_000)
 
 
 @dataclass(frozen=True, slots=True)
@@ -51,13 +47,13 @@ class JudgeReport:
     consistency: float
     roles_given: int
     roles_in_title: int
-    cost_usd: Decimal
+    tokens: int  # input and output tokens of every call
     p95_ms: int
     wrong: list[str]  # "profile/posting-id: said X, label Y"
 
     @property
-    def cost_per_job(self) -> Decimal:
-        return self.cost_usd / self.decisions if self.decisions else Decimal(0)
+    def tokens_per_job(self) -> int:
+        return self.tokens // self.decisions if self.decisions else 0
 
     @property
     def passes(self) -> bool:
@@ -192,25 +188,10 @@ async def evaluate_judge(llm: LlmPort, *, tier: str, model: str, repeat: int = 1
         consistency=consistent / len(answers),
         roles_given=roles_given,
         roles_in_title=roles_in_title,
-        cost_usd=sum((c.cost_usd for c in calls), Decimal(0)),
+        tokens=sum(c.input_tokens + c.output_tokens for c in calls),
         p95_ms=p95([c.latency_ms for c in calls]),
         wrong=sorted(set(wrong)),
     )
-
-
-def estimate_judge_cost(model: str, repeat: int, catalog: ModelCatalog | None = None) -> Decimal:
-    """Upper-bound USD for one run: pessimistic input tokens plus the full output allowance."""
-    price = (catalog or ModelCatalog.load()).price(model)
-    prompt = _registry().load(PROMPT_NAME)
-    total = Decimal(0)
-    for profile in PROFILES:
-        for batch in _batches():
-            request, _ = _request(prompt, profile, batch, "fast")
-            tokens = (len(request.prompt.system) + len(request.prompt.user)) // CHARS_PER_TOKEN + 1
-            total += (
-                tokens * price.input + request.max_output_tokens * price.output
-            ) / _PER_MILLION
-    return total * repeat
 
 
 def _gate(ok: bool) -> str:
@@ -232,14 +213,14 @@ def render_judge_report(reports: Sequence[JudgeReport], *, day: str) -> str:
         "## Summary",
         "",
         "| model | tier | precision | recall | unusable | injection-affected | consistency "
-        "| roles in title | cost / job | p95 latency (ms) | gate |",
+        "| roles in title | tokens / job | p95 latency (ms) | gate |",
         "|---|---|---|---|---|---|---|---|---|---|---|",
     ]
     for r in reports:
         lines.append(
             f"| {r.model} | {r.tier} | {r.precision:.1%} | {r.recall:.1%} | {r.unusable} "
             f"| {r.injection_affected} | {r.consistency:.1%} | {r.roles_in_title}/{r.roles_given} "
-            f"| ${r.cost_per_job:.5f} "
+            f"| {r.tokens_per_job} "
             f"| {r.p95_ms} | {_gate(r.passes)} |"
         )
     lines += ["", "## Wrong decisions", ""]

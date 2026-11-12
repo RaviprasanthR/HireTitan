@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ApiError } from '@/api/client'
 import { Button } from '@/components/ui/button'
 import { useAddCompany, useDecideBoard, useDiscovery, type Company } from './api'
@@ -97,68 +97,138 @@ export function AddCompanyDialog({ onClose }: { onClose: () => void }) {
   const [name, setName] = useState('')
   const [careersUrl, setCareersUrl] = useState('')
   const [city, setCity] = useState('')
+  const [website, setWebsite] = useState('')
   const add = useAddCompany()
   const error = add.error instanceof ApiError ? add.error : null
 
+  const card = useRef<HTMLElement>(null)
+  const closeRef = useRef(onClose)
+  useEffect(() => {
+    closeRef.current = onClose
+  }, [onClose])
+  const busy = add.isPending
+
+  // Focus moves into the card on open and back to the button that opened it on close; Tab stays
+  // inside the card; Escape closes it unless the company is being saved.
+  useEffect(() => {
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    card.current?.querySelector<HTMLElement>('input, button')?.focus()
+    return () => opener?.focus()
+  }, [])
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !busy) closeRef.current()
+      if (event.key !== 'Tab' || !card.current) return
+      const items = Array.from(
+        card.current.querySelectorAll<HTMLElement>('input, button, a[href]'),
+      ).filter((el) => !el.hasAttribute('disabled'))
+      const first = items[0]
+      const last = items[items.length - 1]
+      if (!first || !last) return
+      if (!card.current.contains(document.activeElement)) {
+        event.preventDefault()
+        first.focus()
+      } else if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [busy])
+
+  // A square card over the page; the page behind it is blurred and a click on it closes the card.
   return (
-    <section role="dialog" aria-label="Add a company" className="space-y-3 rounded-lg bg-surface p-4">
-      <h2 className="text-lg font-semibold">Add a company</h2>
-      {add.isSuccess ? (
-        <Suggestion company={add.data} onClose={onClose} />
-      ) : (
-        <form
-          className="space-y-3"
-          onSubmit={(event) => {
-            event.preventDefault()
-            add.mutate({ name, careers_url: careersUrl, ...(city.trim() ? { city } : {}) })
-          }}
-        >
-          <Field label="Company name" error={error?.fieldError('name')}>
-            {(props) => (
-              <input
-                {...props}
-                className={inputClass}
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-              />
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+      onMouseDown={(event) => event.target === event.currentTarget && onClose()}
+    >
+      <section
+        ref={card}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="add-company-title"
+        className="aspect-square w-[min(32rem,100%)] space-y-3 overflow-y-auto rounded-xl bg-surface p-6 shadow-[var(--ht-border-panel)]"
+      >
+        <h2 id="add-company-title" className="text-lg font-semibold">
+          Add a company
+        </h2>
+        {add.isSuccess ? (
+          <Suggestion company={add.data} onClose={onClose} />
+        ) : (
+          <form
+            className="space-y-3"
+            onSubmit={(event) => {
+              event.preventDefault()
+              add.mutate({
+                name,
+                careers_url: careersUrl,
+                ...(city.trim() ? { city } : {}),
+                ...(website.trim() ? { website } : {}),
+              })
+            }}
+          >
+            <Field label="Company name" error={error?.fieldError('name')}>
+              {(props) => (
+                <input
+                  {...props}
+                  className={inputClass}
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                />
+              )}
+            </Field>
+            <Field label="Careers page link" error={error?.fieldError('careers_url')}>
+              {(props) => (
+                <input
+                  {...props}
+                  className={inputClass}
+                  inputMode="url"
+                  value={careersUrl}
+                  onChange={(event) => setCareersUrl(event.target.value)}
+                />
+              )}
+            </Field>
+            <Field label="City (optional)" error={error?.fieldError('city')}>
+              {(props) => (
+                <input
+                  {...props}
+                  className={inputClass}
+                  value={city}
+                  onChange={(event) => setCity(event.target.value)}
+                />
+              )}
+            </Field>
+            <Field label="Website (optional)" error={error?.fieldError('website')}>
+              {(props) => (
+                <input
+                  {...props}
+                  className={inputClass}
+                  inputMode="url"
+                  value={website}
+                  onChange={(event) => setWebsite(event.target.value)}
+                />
+              )}
+            </Field>
+            {add.isError && error?.fieldErrors.length === 0 && (
+              <p role="alert" className="text-sm text-danger">
+                {add.error.message}
+              </p>
             )}
-          </Field>
-          <Field label="Careers page link" error={error?.fieldError('careers_url')}>
-            {(props) => (
-              <input
-                {...props}
-                className={inputClass}
-                inputMode="url"
-                value={careersUrl}
-                onChange={(event) => setCareersUrl(event.target.value)}
-              />
-            )}
-          </Field>
-          <Field label="City (optional)" error={error?.fieldError('city')}>
-            {(props) => (
-              <input
-                {...props}
-                className={inputClass}
-                value={city}
-                onChange={(event) => setCity(event.target.value)}
-              />
-            )}
-          </Field>
-          {add.isError && error?.fieldErrors.length === 0 && (
-            <p role="alert" className="text-sm text-danger">
-              {add.error.message}
-            </p>
-          )}
-          <div className="flex gap-2">
-            <Button type="submit" size="sm" disabled={add.isPending}>
-              Find job board
-            </Button>
-            <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-              Cancel
-            </Button>
-          </div>
-        </form>
-      )}
-    </section>
+            <div className="flex gap-2">
+              <Button type="submit" size="sm" disabled={add.isPending}>
+                Find job board
+              </Button>
+              <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+                Cancel
+              </Button>
+            </div>
+          </form>
+        )}
+      </section>
+    </div>
   )
 }

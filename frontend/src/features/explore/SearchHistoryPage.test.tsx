@@ -23,7 +23,6 @@ function run(id: string, over: Record<string, unknown> = {}) {
     added: 14,
     merged: 2,
     not_checked_by_ai: 2,
-    ai_cost_usd: '0.0412',
     ai_note: null,
     started_at: '2026-11-06T09:00:00Z',
     finished_at: '2026-11-06T09:10:00Z',
@@ -34,14 +33,11 @@ function run(id: string, over: Record<string, unknown> = {}) {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('SearchHistoryPage', () => {
-  it('FR042_lists_runs_newest_first_with_cost', async () => {
+  it('FR042_lists_runs_newest_first_without_cost', async () => {
     stubApi((call) =>
       call.path.startsWith('/search/runs')
         ? {
-            items: [
-              run('new', { outcome: 'out_of_credit', ai_cost_usd: '0.5000', added: 3 }),
-              run('old'),
-            ],
+            items: [run('new', { outcome: 'out_of_credit', added: 3 }), run('old')],
             next_cursor: null,
           }
         : undefined,
@@ -60,10 +56,10 @@ describe('SearchHistoryPage', () => {
     const items = within(list).getAllByRole('listitem')
     expect(items).toHaveLength(2)
     expect(items[0]).toHaveTextContent('Out of credit')
-    expect(items[0]).toHaveTextContent('$0.5000')
+    expect(items[0]).not.toHaveTextContent(/cost|\$/i) // SC003
     expect(items[0]).toHaveTextContent('3 jobs added')
     expect(items[1]).toHaveTextContent('Finished')
-    expect(items[1]).toHaveTextContent('$0.0412')
+    expect(items[1]).not.toHaveTextContent(/cost|\$/i)
     expect(within(items[0] as HTMLElement).getByRole('link', { name: /summary/i })).toHaveAttribute(
       'href',
       '/search/runs/new',

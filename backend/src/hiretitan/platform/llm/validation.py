@@ -12,7 +12,6 @@ from __future__ import annotations
 import re
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field, replace
-from decimal import Decimal
 from typing import Any, Final
 
 from pydantic import BaseModel, ValidationError
@@ -163,8 +162,6 @@ class ValidatedLlm:
                 input_tokens=usage.input_tokens,
                 cached_input_tokens=usage.cached_input_tokens,
                 output_tokens=usage.output_tokens,
-                cost_usd=usage.cost_usd,
-                estimated_cost_usd=usage.cost_usd if usage.cost_usd else Decimal(0),
                 latency_ms=usage.latency_ms,
                 outcome=outcome,
                 run_id=run_id,

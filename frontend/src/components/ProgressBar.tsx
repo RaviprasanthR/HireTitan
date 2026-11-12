@@ -13,7 +13,7 @@ type Props = {
   className?: string
 }
 
-/** The themed progress bar: a slate track, a glowing green fill, amber when paused, red when failed. */
+/** The themed progress bar: a slate track, a flat green fill, amber when paused, red when failed. */
 export function ProgressBar({ label, value, tone = 'success', animated = false, className }: Props) {
   const known = value !== null
   const percent = known ? Math.min(100, Math.max(0, Math.round(value))) : 0

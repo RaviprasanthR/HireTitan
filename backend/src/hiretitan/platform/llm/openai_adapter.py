@@ -106,7 +106,7 @@ class OpenAiAdapter:
             raise RetryableLlmError(type(error).__name__) from None
         except ValidationError as error:
             return self._failure(model, started, str(error))
-        usage = self._usage(response, model, started)
+        usage = self._usage(response, started)
         if value is None:
             return LlmResult(
                 None, "error", usage, PROVIDER, model, error="The model returned no usable output"
@@ -142,21 +142,14 @@ class OpenAiAdapter:
         )
         return req.output_schema.model_validate_json(response.output_text), response
 
-    def _usage(self, response: Any, model: str, started: float) -> Usage:
+    def _usage(self, response: Any, started: float) -> Usage:
         raw = response.usage
         cached = getattr(getattr(raw, "input_tokens_details", None), "cached_tokens", 0) or 0
-        base = Usage(
+        return Usage(
             input_tokens=raw.input_tokens if raw else 0,
             cached_input_tokens=cached if raw else 0,
             output_tokens=raw.output_tokens if raw else 0,
             latency_ms=round((time.perf_counter() - started) * 1000),
-        )
-        return Usage(
-            base.input_tokens,
-            base.cached_input_tokens,
-            base.output_tokens,
-            self._catalog.cost(model, base),
-            base.latency_ms,
         )
 
     def _failure[T: BaseModel](self, model: str, started: float, message: str) -> LlmResult[T]:

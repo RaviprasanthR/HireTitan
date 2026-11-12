@@ -11,7 +11,6 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from decimal import Decimal
 from functools import partial
 from typing import Any, Final, TypedDict, cast
 from uuid import UUID
@@ -61,6 +60,7 @@ BATCH_SIZE: Final = 8
 TITLE_MAX: Final = 200
 LOCATION_MAX: Final = 200
 DESCRIPTION_MAX: Final = 30_000
+# "budget_reached" is an outcome of searches from before HireTitan dropped its AI budget
 CONTINUABLE: Final = ("stopped_by_user", "budget_reached", "out_of_credit", "failed")
 FALLBACK_REASON: Final = "not checked by AI"
 RECURSION_LIMIT: Final = 100_000
@@ -93,7 +93,6 @@ class SearchState(TypedDict, total=False):
     prepared: list[dict[str, Any]]
     new: list[dict[str, Any]]
     seen: list[dict[str, Any]]
-    ai_cost: str
     stop_outcome: str | None
     stop_message: str | None
 
@@ -182,7 +181,7 @@ async def plan_run(deps: SearchDeps, state: State) -> State:
             order = [c for c in leftover if c in known] + [c.id for c in rest]
             await runs.set_company_order(run.id, order)
             await session.commit()
-        return {"search_run_id": str(run.id), "index": run.next_index, "ai_cost": "0"}
+        return {"search_run_id": str(run.id), "index": run.next_index}
 
 
 async def next_batch(deps: SearchDeps, state: State) -> State:
@@ -251,14 +250,12 @@ async def fetch_batch(deps: SearchDeps, state: State) -> State:
             for p in result.postings
         ]
     update: State = {}
-    cost = Decimal(state.get("ai_cost", "0"))
     stop: Stop | None = None
     for company_id, name, url in pages:
         use_ai = mode == "rules_and_ai" and deps.page_ai and stop is None
         read = await read_careers_page(
             deps.pages, deps.judge, url, use_ai=use_ai, run_id=UUID(state["run_id"])
         )
-        cost += read.cost
         stop = stop or read.stop
         outcomes.append(CompanyOutcome(company_id, read.result, len(read.postings), read.error))
         fetched += [
@@ -281,7 +278,6 @@ async def fetch_batch(deps: SearchDeps, state: State) -> State:
     return update | {
         "fetched": _dump(_FETCHED, fetched),
         "outcomes": _dump(_OUTCOMES, outcomes),
-        "ai_cost": str(cost),
     }
 
 
@@ -450,9 +446,8 @@ async def judge_relevance(deps: SearchDeps, state: State) -> State:
         _NEW.validate_python(state["new"]),
         mode=mode,
         run_id=UUID(state["run_id"]),
-        already_cost=Decimal(state.get("ai_cost", "0")),
     )
-    update: State = {"new": _dump(_NEW, judged.jobs), "ai_cost": str(judged.cost)}
+    update: State = {"new": _dump(_NEW, judged.jobs)}
     if judged.stop is not None:
         update |= {"stop_outcome": judged.stop.outcome, "stop_message": judged.stop.message}
     return update
@@ -480,13 +475,12 @@ async def store_batch_node(deps: SearchDeps, state: State) -> State:
                 seen=_SEEN.validate_python(state["seen"]),
                 companies=outcomes,
                 next_index=index,
-                ai_cost_delta=Decimal(state.get("ai_cost", "0")),
                 now=now,
             ),
         )
     if deps.publish is not None:
         await deps.publish("search.batch_done", counts.progress)
-    update: State = {"index": index, "ai_cost": "0"}
+    update: State = {"index": index}
     if not state.get("stop_outcome"):
         async with deps.sessions() as session:
             if (await _run(session, state)).stop_requested:  # the person pressed Stop (FR-010)

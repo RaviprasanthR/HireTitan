@@ -5,7 +5,7 @@ from __future__ import annotations
 import time
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 from uuid import UUID
@@ -286,3 +286,16 @@ async def test_US2_AS5_a_job_without_a_company_has_a_null_company_id(env: Env) -
     detail = (await env.client.get(f"/api/v1/jobs/{job_id}")).json()
 
     assert detail["company_id"] is None
+
+
+async def test_job_card_has_inquired_on(env: Env) -> None:
+    inquired = await add_job(env, "Asked About", state="inquired", inquired_on=date(2026, 11, 10))
+    await add_job(env, "Browsing")
+
+    detail = (await env.client.get(f"/api/v1/jobs/{inquired}")).json()
+    card = (await env.client.get("/api/v1/jobs")).json()["items"][0]
+
+    assert (detail["state"], detail["inquired_on"]) == ("inquired", "2026-11-10")
+    assert detail["applied_on"] is None
+    assert card["title"] == "Browsing"
+    assert card["inquired_on"] is None

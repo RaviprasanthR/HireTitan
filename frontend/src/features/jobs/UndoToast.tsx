@@ -1,14 +1,16 @@
 import { useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { showUndo, useUndoNotice } from './appliedStore'
-import { useUndoApplied } from './appliedApi'
+import { useUndoPipeline } from './pipelineApi'
 
 const SHOW_FOR_MS = 10_000
 
 /** The "marked as applied" notice with an Undo button; it goes away by itself. */
 export function UndoToast() {
   const notice = useUndoNotice()
-  const undo = useUndoApplied()
+  const undoApplied = useUndoPipeline('applied')
+  const undoInquired = useUndoPipeline('inquired')
+  const undo = notice?.kind === 'inquired' ? undoInquired : undoApplied
   useEffect(() => {
     if (!notice) return
     const timer = setTimeout(() => showUndo(null), SHOW_FOR_MS)
@@ -20,7 +22,9 @@ export function UndoToast() {
       role="status"
       className="fixed bottom-4 right-4 z-50 flex items-center gap-3 rounded-lg border border-divider bg-surface p-3 text-sm shadow-lg"
     >
-      <span>“{notice.title}” marked as applied.</span>
+      <span>
+        “{notice.title}” marked as {notice.kind}.
+      </span>
       <Button
         type="button"
         variant="outline"

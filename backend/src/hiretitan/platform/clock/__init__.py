@@ -1,7 +1,7 @@
 """Clock port: the only way application code reads the current time.
 
 All instants are timezone-aware UTC. Tests use ``FakeClock`` so time-based rules
-(budget months, autosave, run timestamps) are deterministic.
+(autosave, run timestamps) are deterministic.
 """
 
 from __future__ import annotations

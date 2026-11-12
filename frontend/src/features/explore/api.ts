@@ -60,12 +60,12 @@ export function useJobs(filters: JobFilters) {
   })
 }
 
-export function useAppliedJobs() {
+export function usePipelineJobs() {
   return useInfiniteQuery({
-    queryKey: ['jobs', 'applied'],
+    queryKey: ['jobs', 'pipeline'],
     initialPageParam: '',
     queryFn: ({ pageParam }) =>
-      apiFetch<JobPage>(`/jobs${query({ list: 'applied', cursor: pageParam })}`),
+      apiFetch<JobPage>(`/jobs${query({ list: 'pipeline', cursor: pageParam })}`),
     getNextPageParam: (last) => last.next_cursor ?? undefined,
     refetchOnWindowFocus: false,
   })
@@ -116,9 +116,14 @@ export function useRefreshing() {
   const client = useQueryClient()
   return () =>
     Promise.all(
-      [['jobs'], ['search-latest'], ['search-run'], ['search-runs'], ['duplicates']].map(
-        (queryKey) => client.invalidateQueries({ queryKey }),
-      ),
+      [
+        ['jobs'],
+        ['companies'],
+        ['search-latest'],
+        ['search-run'],
+        ['search-runs'],
+        ['duplicates'],
+      ].map((queryKey) => client.invalidateQueries({ queryKey })),
     )
 }
 
@@ -227,7 +232,7 @@ export function formatDate(value: string | null | undefined): string {
 export const OUTCOME_LABELS: Record<string, string> = {
   finished: 'Finished',
   stopped_by_user: 'Stopped by you',
-  budget_reached: 'Budget reached',
+  budget_reached: 'Stopped', // a search that ended under the old AI budget
   out_of_credit: 'Out of credit',
   failed: 'Failed',
 }

@@ -22,91 +22,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/companies/export": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Export */
-        get: operations["export_api_v1_companies_export_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/companies/import": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Import Preview */
-        post: operations["import_preview_api_v1_companies_import_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/companies/import/{token}/confirm": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Import Confirm */
-        post: operations["import_confirm_api_v1_companies_import__token__confirm_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/companies/sheet-import": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Sheet Preview */
-        post: operations["sheet_preview_api_v1_companies_sheet_import_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/companies/sheet-import/{token}/confirm": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Sheet Confirm */
-        post: operations["sheet_confirm_api_v1_companies_sheet_import__token__confirm_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/companies/{company_id}": {
         parameters: {
             query?: never;
@@ -343,6 +258,8 @@ export interface paths {
         /**
          * Merge
          * @description Keep the older job (A) and move the other's sources onto it; the other is deleted.
+         *
+         *     The kept job takes the stronger of the two pipeline states, with that job's date.
          */
         post: operations["merge_api_v1_jobs_duplicates__pair_id__merge_post"];
         delete?: never;
@@ -399,6 +316,24 @@ export interface paths {
         post: operations["applied_api_v1_jobs__job_id__applied_post"];
         /** Undo */
         delete: operations["undo_api_v1_jobs__job_id__applied_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{job_id}/inquired": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Inquired */
+        post: operations["inquired_api_v1_jobs__job_id__inquired_post"];
+        /** Undo Inquiry */
+        delete: operations["undo_inquiry_api_v1_jobs__job_id__inquired_delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -886,24 +821,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/settings": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read Settings */
-        get: operations["read_settings_api_v1_settings_get"];
-        /** Write Settings */
-        put: operations["write_settings_api_v1_settings_put"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/status": {
         parameters: {
             query?: never;
@@ -971,29 +888,10 @@ export interface components {
             /** Applied On */
             applied_on?: string | null;
         };
-        /** Body_import_preview_api_v1_companies_import_post */
-        Body_import_preview_api_v1_companies_import_post: {
-            /** File */
-            file: string;
-        };
-        /** Body_sheet_preview_api_v1_companies_sheet_import_post */
-        Body_sheet_preview_api_v1_companies_sheet_import_post: {
-            /** File */
-            file: string;
-        };
         /** Body_upload_resume_api_v1_resumes_post */
         Body_upload_resume_api_v1_resumes_post: {
             /** File */
             file: string;
-        };
-        /** BudgetOut */
-        BudgetOut: {
-            /** Cap Usd */
-            cap_usd: string;
-            /** Period */
-            period: string;
-            /** Spent Usd */
-            spent_usd: string;
         };
         /** CertificationModel */
         CertificationModel: {
@@ -1061,11 +959,6 @@ export interface components {
              */
             contact_count: number;
             /**
-             * Has Application
-             * @default false
-             */
-            has_application: boolean;
-            /**
              * Has Note
              * @default false
              */
@@ -1089,6 +982,8 @@ export interface components {
             note_preview?: string | null;
             /** Origin */
             origin: string;
+            /** Pipeline */
+            pipeline?: ("applied" | "inquired") | null;
             /** Resolution */
             resolution: string;
             /** User Modified */
@@ -1382,67 +1277,10 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
-        /** ImportPreview */
-        ImportPreview: {
-            /** Add */
-            add: components["schemas"]["ImportRowOut"][];
-            /** Invalid */
-            invalid: components["schemas"]["InvalidRowOut"][];
-            /** Token */
-            token: string;
-            /** Update */
-            update: components["schemas"]["ImportUpdateOut"][];
-        };
-        /** ImportResult */
-        ImportResult: {
-            /** Added */
-            added: number;
-            /** Updated */
-            updated: number;
-        };
-        /** ImportRowOut */
-        ImportRowOut: {
-            /** Ats Vendor */
-            ats_vendor: string | null;
-            /** Board Id */
-            board_id: string | null;
-            /** Careers Url */
-            careers_url: string | null;
-            /** City */
-            city: string | null;
-            /** Hidden */
-            hidden: boolean | null;
-            /** Name */
-            name: string;
-            /** Row */
-            row: number;
-            /** Website */
-            website: string | null;
-        };
-        /** ImportUpdateOut */
-        ImportUpdateOut: {
-            /** Changes */
-            changes: {
-                [key: string]: {
-                    [key: string]: unknown;
-                };
-            };
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /** Name */
-            name: string;
-            /** Row */
-            row: number;
-        };
-        /** InvalidRowOut */
-        InvalidRowOut: {
-            /** Reason */
-            reason: string;
-            /** Row */
-            row: number;
+        /** InquiredIn */
+        InquiredIn: {
+            /** Inquired On */
+            inquired_on?: string | null;
         };
         /** JobCardOut */
         JobCardOut: {
@@ -1463,6 +1301,8 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Inquired On */
+            inquired_on: string | null;
             /** Listed */
             listed: boolean;
             /** Location Text */
@@ -1524,6 +1364,8 @@ export interface components {
             injection_flags: {
                 [key: string]: unknown;
             }[];
+            /** Inquired On */
+            inquired_on: string | null;
             /** Listed */
             listed: boolean;
             /** Location Text */
@@ -1644,6 +1486,8 @@ export interface components {
             injection_flags: {
                 [key: string]: unknown;
             }[];
+            /** Inquired On */
+            inquired_on: string | null;
             /** Listed */
             listed: boolean;
             /** Location Text */
@@ -2040,8 +1884,6 @@ export interface components {
         SearchRunOut: {
             /** Added */
             added: number;
-            /** Ai Cost Usd */
-            ai_cost_usd: string;
             /** Ai Note */
             ai_note: string | null;
             /** Batches Done */
@@ -2098,8 +1940,6 @@ export interface components {
         SearchRunSummary: {
             /** Added */
             added: number;
-            /** Ai Cost Usd */
-            ai_cost_usd: string;
             /** Ai Note */
             ai_note: string | null;
             /** Batches Done */
@@ -2143,118 +1983,6 @@ export interface components {
             /** Stop Requested */
             stop_requested: boolean;
         };
-        /** SettingsIn */
-        SettingsIn: {
-            /** Budget Cap Usd */
-            budget_cap_usd: number | string;
-        };
-        /** SettingsOut */
-        SettingsOut: {
-            /** Budget Cap Usd */
-            budget_cap_usd: string;
-            /** Key Status */
-            key_status: string;
-            /** Spent This Month Usd */
-            spent_this_month_usd: string;
-            /** Tiers */
-            tiers: components["schemas"]["TierOut"][];
-        };
-        /** SheetColumnsOut */
-        SheetColumnsOut: {
-            /** Ignored */
-            ignored: string[];
-            /** Used */
-            used: string[];
-        };
-        /** SheetCompaniesOut */
-        SheetCompaniesOut: {
-            /** Matched */
-            matched: number;
-            /** To Add */
-            to_add: number;
-        };
-        /** SheetContactsOut */
-        SheetContactsOut: {
-            /** To Add */
-            to_add: number;
-            /** To Update */
-            to_update: number;
-        };
-        /** SheetIssueOut */
-        SheetIssueOut: {
-            /** Line */
-            line: number;
-            /** Reason */
-            reason: string;
-        };
-        /** SheetNotesOut */
-        SheetNotesOut: {
-            /** Kept Yours */
-            kept_yours: number;
-            /** To Change */
-            to_change: number;
-            /** To Set */
-            to_set: number;
-        };
-        /** SheetPreview */
-        SheetPreview: {
-            columns: components["schemas"]["SheetColumnsOut"];
-            companies: components["schemas"]["SheetCompaniesOut"];
-            contacts: components["schemas"]["SheetContactsOut"];
-            notes: components["schemas"]["SheetNotesOut"];
-            /** Rows */
-            rows: components["schemas"]["SheetRowOut"][];
-            /** Shortened */
-            shortened: components["schemas"]["SheetIssueOut"][];
-            /** Skipped */
-            skipped: components["schemas"]["SheetIssueOut"][];
-            /** Token */
-            token: string;
-        };
-        /** SheetResult */
-        SheetResult: {
-            /** Companies Added */
-            companies_added: number;
-            /** Contacts Added */
-            contacts_added: number;
-            /** Contacts Updated */
-            contacts_updated: number;
-            /** Matched */
-            matched: number;
-            /** Notes Changed */
-            notes_changed: number;
-            /** Notes Kept */
-            notes_kept: number;
-            /** Notes Set */
-            notes_set: number;
-            /** Shortened */
-            shortened: components["schemas"]["SheetIssueOut"][];
-            /** Skipped */
-            skipped: components["schemas"]["SheetIssueOut"][];
-        };
-        /** SheetRowOut */
-        SheetRowOut: {
-            /**
-             * Action
-             * @enum {string}
-             */
-            action: "matched" | "add" | "skip";
-            /** Company */
-            company: string;
-            /** Contacts Add */
-            contacts_add: number;
-            /** Contacts Update */
-            contacts_update: number;
-            /** Line */
-            line: number;
-            /**
-             * Notes
-             * @enum {string}
-             */
-            notes: "set" | "changed" | "kept" | "none";
-            /** Shortened */
-            shortened: boolean;
-        };
         /** SourceOut */
         SourceOut: {
             /** Kind */
@@ -2287,7 +2015,6 @@ export interface components {
         /** StatusOut */
         StatusOut: {
             ai: components["schemas"]["AiOut"];
-            budget: components["schemas"]["BudgetOut"];
             checklist: components["schemas"]["ChecklistOut"];
         };
         /** SuggestionOut */
@@ -2307,15 +2034,6 @@ export interface components {
             key_skills?: string[];
             /** Target Roles */
             target_roles?: string[];
-        };
-        /** TierOut */
-        TierOut: {
-            /** Model */
-            model: string;
-            /** Provider */
-            provider: string;
-            /** Tier */
-            tier: string;
         };
         /** ValidationError */
         ValidationError: {
@@ -2444,165 +2162,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CompanyOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    export_api_v1_companies_export_get: {
-        parameters: {
-            query?: {
-                include_contacts?: boolean;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    import_preview_api_v1_companies_import_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "multipart/form-data": components["schemas"]["Body_import_preview_api_v1_companies_import_post"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ImportPreview"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    import_confirm_api_v1_companies_import__token__confirm_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                token: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ImportResult"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    sheet_preview_api_v1_companies_sheet_import_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "multipart/form-data": components["schemas"]["Body_sheet_preview_api_v1_companies_sheet_import_post"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SheetPreview"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    sheet_confirm_api_v1_companies_sheet_import__token__confirm_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                token: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SheetResult"];
                 };
             };
             /** @description Validation Error */
@@ -3016,7 +2575,7 @@ export interface operations {
     list_jobs_api_v1_jobs_get: {
         parameters: {
             query?: {
-                list?: "explore" | "applied";
+                list?: "explore" | "pipeline";
                 source?: string | null;
                 company_id?: string | null;
                 work_mode?: string | null;
@@ -3275,6 +2834,72 @@ export interface operations {
         };
     };
     undo_api_v1_jobs__job_id__applied_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    inquired_api_v1_jobs__job_id__inquired_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["InquiredIn"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    undo_inquiry_api_v1_jobs__job_id__inquired_delete: {
         parameters: {
             query?: never;
             header?: never;
@@ -4247,61 +3872,6 @@ export interface operations {
                 content: {
                     "application/json": {
                         [key: string]: boolean;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_settings_api_v1_settings_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SettingsOut"];
-                };
-            };
-        };
-    };
-    write_settings_api_v1_settings_put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SettingsIn"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: string;
                     };
                 };
             };

@@ -2,7 +2,7 @@ import { useId, useState } from 'react'
 import { Link } from 'react-router'
 import { ApiError } from '@/api/client'
 import { Button } from '@/components/ui/button'
-import { AppliedControl } from './AppliedControl'
+import { PipelineControl } from './PipelineControl'
 import { InjectionWarning, type InjectionFlag } from './InjectionWarning'
 import { type PastedJob, usePasteJob } from './pasteApi'
 
@@ -66,7 +66,7 @@ function Saved({
         <span className="text-sm text-muted-small"> · {job.company_name}</span>
       </p>
       <InjectionWarning flags={job.injection_flags as InjectionFlag[]} />
-      {job.state === 'explore' && <AppliedControl id={job.id} />}
+      {job.state === 'explore' && <PipelineControl id={job.id} state={job.state} />}
       <div className="flex gap-2">
         <Button type="button" variant="outline" size="sm" onClick={onAnother}>
           Add another
