@@ -120,6 +120,50 @@ describe('PipelinePage', () => {
     expect(screen.queryByText('Build services with Python.')).toBeNull()
   })
 
+  it('US1 AS1 row expands to the detail panel', async () => {
+    const user = userEvent.setup()
+    stubApi((call) => {
+      if (call.path === '/jobs/a/interview')
+        return {
+          job_id: 'a',
+          can_edit: true,
+          can_add_round: true,
+          contact: { name: 'Asha Rao', role: null, email: null, phone: null, linkedin_url: null },
+          source: { kind: 'hiring_firm', firm_name: 'TalentBridge' },
+          rounds: [],
+          status: { state: 'applied', round: null },
+        }
+      if (call.path === '/jobs/a')
+        return {
+          ...applied('a', 'Newest', '2026-11-05'),
+          description: 'Build services with Python.',
+          city: 'Pune',
+          country: 'IN',
+          skills_found: [],
+          sources: [{ kind: 'company_board', url: 'https://jobs.example.com/1', label: null }],
+          decision_history: [],
+          injection_flags: [],
+        }
+      if (call.path.startsWith('/jobs?'))
+        return { items: [applied('a', 'Newest', '2026-11-05')], next_cursor: null }
+      return undefined
+    })
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter>
+          <PipelinePage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+    await user.click(
+      await screen.findByRole('button', { name: 'Details for Newest (Python) - Pune' }),
+    )
+
+    expect(await screen.findByLabelText('Contact name')).toHaveValue('Asha Rao')
+    expect(screen.getByLabelText('Firm name')).toHaveValue('TalentBridge')
+    expect(screen.getByRole('radio', { name: 'Through a hiring firm' })).toBeChecked()
+  })
+
   it('the_edit_icon_opens_the_job_where_the_date_can_be_changed_or_undone', async () => {
     renderPage()
     const table = await screen.findByRole('table', { name: 'Pipeline jobs' })

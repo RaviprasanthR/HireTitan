@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import { ChevronRight, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ReviewNotice } from '@/features/home/ReviewNotice'
+import { InterviewPanel } from '@/features/jobs/interview/InterviewPanel'
 import { HomeTabs } from './HomeTabs'
 import { formatDay, sourceLabel, usePipelineJobs, useJob, type JobCard } from './api'
 
@@ -61,6 +62,7 @@ function Details({ id, colSpan }: { id: string; colSpan: number }) {
         <Link to={`/jobs/${id}`} className="text-link underline">
           Open the full job page
         </Link>
+        <InterviewPanel jobId={id} />
       </div>
     )
   }
