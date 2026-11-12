@@ -24,7 +24,6 @@ function run(over: Record<string, unknown> = {}) {
     added: 6,
     merged: 0,
     not_checked_by_ai: 0,
-    ai_cost_usd: '0.0123',
     ai_note: null,
     started_at: '2026-11-06T09:00:00Z',
     finished_at: null,
@@ -102,13 +101,13 @@ describe('SearchPanel', () => {
     expect(await screen.findByText(/AI step skipped: the AI was not available/)).toBeInTheDocument()
   })
 
-  it('FR008_progress_per_batch_with_cost', async () => {
+  it('FR008_progress_per_batch', async () => {
     renderPanel(run())
 
     expect(await screen.findByText('Batch 2 of 3')).toBeInTheDocument()
     expect(screen.getByText(/8 of 20 companies read/)).toBeInTheDocument()
     expect(screen.getByText(/6 jobs added/)).toBeInTheDocument()
-    expect(screen.getByText(/AI cost so far: \$0\.0123/)).toBeInTheDocument()
+    expect(screen.queryByText(/cost/i)).not.toBeInTheDocument() // SC003
     expect(screen.queryByRole('button', { name: 'Search now' })).not.toBeInTheDocument()
   })
 
@@ -145,11 +144,12 @@ describe('SearchPanel', () => {
     expect(screen.getByRole('button', { name: 'Continue searching' })).toBeInTheDocument()
   })
 
-  it('US1_AS8_budget_reached_offers_continue', async () => {
+  it('an old budget_reached search shows Stopped and offers continue', async () => {
     const user = userEvent.setup()
     const calls = renderPanel(run({ outcome: 'budget_reached' }))
 
-    expect(await screen.findByText(/monthly AI budget/i)).toBeInTheDocument()
+    expect(await screen.findByText(/Search stopped/)).toBeInTheDocument()
+    expect(screen.queryByText(/budget/i)).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Continue searching' }))
 
     await waitFor(() =>

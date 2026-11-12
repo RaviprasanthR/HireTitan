@@ -60,7 +60,7 @@ export function SetupLayout({
       </main>
       <footer className="px-4 pb-6 text-center text-sm">
         <Link to="/settings" className="text-link underline">
-          AI budget and key settings
+          AI key settings
         </Link>
       </footer>
     </div>

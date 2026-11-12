@@ -227,7 +227,7 @@ export function formatDate(value: string | null | undefined): string {
 export const OUTCOME_LABELS: Record<string, string> = {
   finished: 'Finished',
   stopped_by_user: 'Stopped by you',
-  budget_reached: 'Budget reached',
+  budget_reached: 'Stopped', // a search that ended under the old AI budget
   out_of_credit: 'Out of credit',
   failed: 'Failed',
 }

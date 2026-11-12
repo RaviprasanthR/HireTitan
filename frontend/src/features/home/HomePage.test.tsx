@@ -28,7 +28,6 @@ function renderHome(checklist: Record<string, boolean>, displayName: string | nu
               checked_at: null,
             },
             checklist,
-            budget: { cap_usd: '25.00', spent_usd: '0', period: '2026-11' },
           }),
     ),
   )

@@ -88,8 +88,7 @@ export function RunSummaryPage() {
           {data.not_checked_by_ai} not checked by AI
         </p>
         <p>
-          {data.companies_read} of {data.companies_total} companies read · AI cost: $
-          {Number(data.ai_cost_usd).toFixed(4)}
+          {data.companies_read} of {data.companies_total} companies read
         </p>
         {data.ai_note && <p className="text-warning">{data.ai_note}</p>}
         {data.stop_message && <p>{data.stop_message}</p>}

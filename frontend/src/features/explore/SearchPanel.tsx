@@ -3,16 +3,11 @@ import { Link } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { BATCH_SIZE, type RunSummary, useLatestRun, useStartSearch, useStopSearch } from './api'
 
-function usd(value: string): string {
-  return `$${Number(value).toFixed(4)}`
-}
-
 function Counts({ run }: { run: RunSummary }) {
   return (
     <p className="text-sm text-muted-small">
       {run.companies_read} of {run.companies_total} companies read · {run.added} jobs added ·{' '}
-      {run.skipped_by_rules + (run.judged_by_ai - run.kept)} left out · AI cost so far:{' '}
-      {usd(run.ai_cost_usd)}
+      {run.skipped_by_rules + (run.judged_by_ai - run.kept)} left out
     </p>
   )
 }
@@ -47,8 +42,8 @@ function Ended({ run }: { run: RunSummary }) {
   const reasons: Record<string, string> = {
     finished: 'Search finished.',
     stopped_by_user: 'Search stopped. Finished batches are kept.',
-    budget_reached:
-      'Your monthly AI budget was reached, so the search stopped. Finished batches are kept.',
+    // a search that ended under the old AI budget (no longer in HireTitan)
+    budget_reached: 'Search stopped. Finished batches are kept.',
     out_of_credit:
       'Your AI account is out of credit, so the search stopped. Finished batches are kept.',
     failed: 'The search stopped because of an error. Finished batches are kept.',

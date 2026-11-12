@@ -19,7 +19,6 @@ function status(aiStatus: string, message: string | null = null) {
       rules_approved: false,
       searched_once: false,
     },
-    budget: { cap_usd: '25.00', spent_usd: '0', period: '2026-11' },
   }
 }
 

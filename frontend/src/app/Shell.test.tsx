@@ -11,15 +11,20 @@ function renderAt(path: string, profile = true) {
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string) =>
-      url.endsWith('/onboarding')
-        ? reply({ step: 'done', display_name: 'Jane', open_review_id: null, active_run_id: null })
-        : url.endsWith('/profile')
-          ? reply({ current: profile ? { id: 'v1' } : null })
-          : url.includes('/jobs')
-            ? reply({ items: [], next_cursor: null })
-            : url.endsWith('/search/latest')
-              ? reply(null)
-              : reply([]),
+      url.endsWith('/status')
+        ? reply({
+            ai: { provider: 'openai', status: 'working', message: null, checked_at: null },
+            checklist: { key_ok: true },
+          })
+        : url.endsWith('/onboarding')
+          ? reply({ step: 'done', display_name: 'Jane', open_review_id: null, active_run_id: null })
+          : url.endsWith('/profile')
+            ? reply({ current: profile ? { id: 'v1' } : null })
+            : url.includes('/jobs')
+              ? reply({ items: [], next_cursor: null })
+              : url.endsWith('/search/latest')
+                ? reply(null)
+                : reply([]),
     ),
   )
   const router = createMemoryRouter(routes, { initialEntries: [path] })

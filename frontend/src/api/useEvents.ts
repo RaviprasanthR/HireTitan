@@ -67,7 +67,7 @@ export function useEvents(): { connected: boolean } {
     })
     source.addEventListener('status.updated', () => invalidate(['status'], ['settings']))
     source.addEventListener('profile.updated', () => invalidate(['profile'], ['onboarding']))
-    // A search batch is stored: the new jobs, the progress and the cost appear now (FR-008).
+    // A search batch is stored: the new jobs and the progress appear now (FR-008).
     const searchChanged = () =>
       invalidate(['jobs'], ['search-latest'], ['search-run'], ['search-runs'], ['status'])
     source.addEventListener('search.batch_done', searchChanged)

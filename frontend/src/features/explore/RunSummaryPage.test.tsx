@@ -23,7 +23,6 @@ const RUN = {
   added: 10,
   merged: 3,
   not_checked_by_ai: 2,
-  ai_cost_usd: '0.0412',
   ai_note: null,
   started_at: '2026-11-06T09:00:00Z',
   finished_at: '2026-11-06T09:10:00Z',
@@ -117,7 +116,7 @@ describe('RunSummaryPage', () => {
     expect(screen.getByText(/10 added/)).toBeInTheDocument()
     expect(screen.getByText(/25 left out by your rules/)).toBeInTheDocument()
     expect(screen.getByText(/3 already known/)).toBeInTheDocument()
-    expect(screen.getByText(/AI cost: \$0\.0412/)).toBeInTheDocument()
+    expect(screen.queryByText(/cost/i)).not.toBeInTheDocument() // SC003
   })
 
   it('shows_each_company_result_with_a_plain_label', async () => {

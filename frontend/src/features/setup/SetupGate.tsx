@@ -7,7 +7,7 @@ import { useOnboarding } from './useOnboarding'
 
 /**
  * Wraps the whole app. While setup is not finished every page is replaced by the setup card
- * for the saved step; Settings stays reachable for the budget cap (FR-041). Once setup is
+ * for the saved step; Settings stays reachable for the AI key status (FR-041). Once setup is
  * done the normal app shows (FR-040).
  */
 export function SetupGate() {
