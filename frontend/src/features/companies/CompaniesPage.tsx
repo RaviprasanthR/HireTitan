@@ -8,6 +8,7 @@ import {
   Eye,
   EyeOff,
   Globe,
+  MessageCircleQuestion,
   Pencil,
   Plus,
   Search,
@@ -24,7 +25,7 @@ import { BOARD_STATUS, useCompanies, useDeleteCompany, useEditCompany, type Comp
 import { CompanyPanel } from './CompanyPanel'
 import { Field, inputClass } from './Field'
 
-type SortKey = 'name' | 'city' | 'applied' | 'contacts' | 'note'
+type SortKey = 'name' | 'city' | 'pipeline' | 'contacts' | 'note'
 type Sort = { key: SortKey; dir: 'asc' | 'desc' }
 
 /** The filled slate chip used by the toolbar buttons. */
@@ -33,15 +34,23 @@ const TOOL_CHIP =
 
 const CHIP = 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs whitespace-nowrap'
 
-/** Whether the person has applied to a job at this company. Kept simple: yes or nothing. */
-function AppliedChip({ company }: { company: Company }) {
-  if (!company.has_application) return <span className="text-xs text-muted-small">—</span>
-  return (
-    <span className={`${CHIP} w-fit bg-emerald-500/15 text-emerald-300`}>
-      <BadgeCheck aria-hidden className="size-3" />
-      Applied
-    </span>
-  )
+/** How far the person's jobs at this company have got: Applied, Inquired, or nothing. */
+function PipelineChip({ company }: { company: Company }) {
+  if (company.pipeline === 'applied')
+    return (
+      <span className={`${CHIP} w-fit bg-emerald-500/15 text-emerald-300`}>
+        <BadgeCheck aria-hidden className="size-3" />
+        Applied
+      </span>
+    )
+  if (company.pipeline === 'inquired')
+    return (
+      <span className={`${CHIP} w-fit bg-sky-500/15 text-sky-300`}>
+        <MessageCircleQuestion aria-hidden className="size-3" />
+        Inquired
+      </span>
+    )
+  return <span className="text-xs text-muted-small">—</span>
 }
 
 /** A small round icon button; each action has its own colour and a tooltip. */
@@ -136,6 +145,12 @@ function ExternalLink({ url }: { url: string }) {
   )
 }
 
+const PIPELINE_TEXT = {
+  applied: 'You have applied to a job here',
+  inquired: 'You have asked about a job here',
+  none: 'Nothing in your pipeline here',
+}
+
 /** Everything the list knows about a company, shown when its row is expanded. */
 function Details({ company, checked }: { company: Company; checked: string | null }) {
   const board = [BOARD_STATUS[company.board_status], company.ats_vendor, company.board_id]
@@ -146,7 +161,7 @@ function Details({ company, checked }: { company: Company; checked: string | nul
     : 'Not checked yet'
   const rows: [string, React.ReactNode][] = [
     ['Location', company.city ?? '—'],
-    ['Application', company.has_application ? 'You have applied to a job here' : 'No application'],
+    ['Pipeline', PIPELINE_TEXT[company.pipeline ?? 'none']],
     ['Website', company.website ? <ExternalLink url={company.website} /> : '—'],
     ['Careers page', company.careers_url ? <ExternalLink url={company.careers_url} /> : '—'],
     ['Job board', board],
@@ -218,7 +233,7 @@ function CompanyRow({ company }: { company: Company }) {
           )}
         </div>
         <span className="min-w-0 truncate text-sm text-muted-small">{company.city ?? ''}</span>
-        <AppliedChip company={company} />
+        <PipelineChip company={company} />
         <span
           className={`${CHIP} w-fit ${
             company.contact_count > 0
@@ -375,7 +390,7 @@ const TEXT_SORTS: SortKey[] = ['name', 'city', 'note']
 const SORT_NAMES: Record<SortKey, string> = {
   name: 'company',
   city: 'location',
-  applied: 'applied',
+  pipeline: 'pipeline',
   contacts: 'contacts',
   note: 'note',
 }
@@ -388,7 +403,7 @@ function compareBy(sort: Sort) {
     if (sort.key === 'city') return c.city ? c.city.toLowerCase() : null
     if (sort.key === 'note') return c.note_preview ? c.note_preview.toLowerCase() : null
     if (sort.key === 'contacts') return c.contact_count
-    return c.has_application ? 1 : 0
+    return c.pipeline === 'applied' ? 2 : c.pipeline === 'inquired' ? 1 : 0
   }
   const sign = sort.dir === 'asc' ? 1 : -1
   return (a: Company, b: Company) => {
@@ -408,10 +423,10 @@ function sortLabel(key: SortKey, sort: Sort): string {
     ? sort.dir === 'asc'
       ? 'A to Z'
       : 'Z to A'
-    : key === 'applied'
+    : key === 'pipeline'
       ? sort.dir === 'desc'
-        ? 'applied first'
-        : 'applied last'
+        ? 'applied, then inquired, first'
+        : 'applied, then inquired, last'
       : sort.dir === 'asc'
         ? 'fewest first'
         : 'most first'
@@ -448,7 +463,7 @@ function HeaderRow({ sort, onSort }: { sort: Sort; onSort: (key: SortKey) => voi
     >
       {button('name', 'Company')}
       {button('city', 'Location')}
-      {button('applied', 'Applied')}
+      {button('pipeline', 'Pipeline')}
       {button('contacts', 'Contacts')}
       {button('note', 'Note')}
       <span />
@@ -468,7 +483,7 @@ export function CompaniesPage() {
     (c) => !needle || `${c.name} ${c.city ?? ''}`.toLowerCase().includes(needle),
   )
   const items = [...shown].sort(compareBy(sort))
-  // A new column starts with its natural order: A to Z for text, most first for counts and applied.
+  // A new column starts with its natural order: A to Z for text, most first for counts and the pipeline.
   const sortBy = (key: SortKey) =>
     setSort((now) =>
       now.key === key

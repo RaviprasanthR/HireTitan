@@ -25,7 +25,7 @@ function company(id: string, name: string, extra: Record<string, unknown> = {}) 
     last_check_error: null,
     contact_count: 0,
     has_note: false,
-    has_application: false,
+    pipeline: null,
     ...extra,
   }
 }
@@ -295,11 +295,12 @@ describe('CompaniesPage', () => {
   })
 
   describe('applications', () => {
-    const busy = company('b', 'Busy', { has_application: true })
+    const busy = company('b', 'Busy', { pipeline: 'applied' })
+    const asked = company('i', 'Asked', { pipeline: 'inquired' })
     const quiet = company('q', 'Quiet')
     const talked = company('t', 'Talked', { contact_count: 2 })
     const all = (call: Call) =>
-      call.path.startsWith('/companies') ? { items: [quiet, busy, talked] } : undefined
+      call.path.startsWith('/companies') ? { items: [quiet, asked, busy, talked] } : undefined
     const rowOf = (name: string) => screen.getByRole('listitem', { name })
     const names = () =>
       within(screen.getByRole('list', { name: 'Companies' }))
@@ -314,6 +315,31 @@ describe('CompaniesPage', () => {
       expect(within(rowOf('Quiet')).queryByText('Applied')).toBeNull()
     })
 
+    it('FR009 inquired chip', async () => {
+      renderPage(all)
+      await screen.findByRole('list', { name: 'Companies' })
+
+      const chip = within(rowOf('Asked')).getByText('Inquired')
+
+      expect(chip).toBeInTheDocument()
+      expect(within(rowOf('Asked')).queryByText('Applied')).toBeNull()
+      const applied = within(rowOf('Busy')).getByText('Applied')
+      expect(chip.className).not.toEqual(applied.className) // distinct colours
+    })
+
+    it('FR009 applied wins over inquired', async () => {
+      // the server sends one value per company: applied if any job there is applied
+      renderPage((call) =>
+        call.path.startsWith('/companies')
+          ? { items: [company('x', 'Both', { pipeline: 'applied' })] }
+          : undefined,
+      )
+      await screen.findByRole('list', { name: 'Companies' })
+
+      expect(within(rowOf('Both')).getByText('Applied')).toBeInTheDocument()
+      expect(within(rowOf('Both')).queryByText('Inquired')).toBeNull()
+    })
+
     it('open roles are not shown anywhere', async () => {
       const user = userEvent.setup()
       renderPage(all)
@@ -325,12 +351,13 @@ describe('CompaniesPage', () => {
       expect(screen.queryByRole('option', { name: /openings/i })).toBeNull()
     })
 
-    it('the expanded details say whether there is an application', async () => {
+    it('the expanded details say how far the pipeline has got', async () => {
       const user = userEvent.setup()
       renderPage(all)
       await screen.findByRole('list', { name: 'Companies' })
 
       await user.click(within(rowOf('Busy')).getByRole('button', { name: 'Details for Busy' }))
+      await user.click(within(rowOf('Asked')).getByRole('button', { name: 'Details for Asked' }))
       await user.click(
         within(rowOf('Quiet')).getByRole('button', {
           name: 'Details for Quiet',
@@ -343,22 +370,27 @@ describe('CompaniesPage', () => {
         ),
       ).toBeInTheDocument()
       expect(
+        within(screen.getByRole('region', { name: 'Details for Asked' })).getByText(
+          'You have asked about a job here',
+        ),
+      ).toBeInTheDocument()
+      expect(
         within(screen.getByRole('region', { name: 'Details for Quiet' })).getByText(
-          'No application',
+          'Nothing in your pipeline here',
         ),
       ).toBeInTheDocument()
     })
 
-    it('sort_by_applied_from_the_header_puts_applied_companies_first_then_reverses', async () => {
+    it('FR009 sort applied then inquired, then the rest, and reverses', async () => {
       const user = userEvent.setup()
       renderPage(all)
       await screen.findByRole('list', { name: 'Companies' })
 
-      await user.click(screen.getByRole('button', { name: /Sort by applied/ }))
-      expect(names()[0]).toBe('Busy')
+      await user.click(screen.getByRole('button', { name: /Sort by pipeline/ }))
+      expect(names().slice(0, 2)).toEqual(['Busy', 'Asked'])
 
-      await user.click(screen.getByRole('button', { name: /Sort by applied/ }))
-      expect(names().at(-1)).toBe('Busy')
+      await user.click(screen.getByRole('button', { name: /Sort by pipeline/ }))
+      expect(names().slice(-2)).toEqual(['Asked', 'Busy'])
     })
 
     it('sorting_by_contacts_puts_the_most_contacts_first', async () => {
