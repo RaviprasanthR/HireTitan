@@ -134,6 +134,7 @@ def upgrade() -> None:
             name="fk_interview_questions_round_id_interview_rounds",
             ondelete="CASCADE",
         ),
+        sa.UniqueConstraint("round_id", "position", name="uq_interview_questions_round_position"),
         sa.CheckConstraint("position >= 1", name="ck_interview_questions_position_positive"),
         sa.CheckConstraint(
             "char_length(question) BETWEEN 1 AND 2000",

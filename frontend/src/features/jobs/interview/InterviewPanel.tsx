@@ -16,10 +16,19 @@ function errorOf(error: unknown): ApiError | null {
   return error instanceof ApiError ? error : null
 }
 
-function Message({ error, saved }: { error: unknown; saved: string | null }) {
+function Message({
+  error,
+  saved,
+  fields,
+}: {
+  error: unknown
+  saved: string | null
+  /** The fields this form shows an error for; an error about any other field is shown here. */
+  fields: string[]
+}) {
   const api = errorOf(error)
   // field errors are shown on their fields; anything else is shown here
-  if (error && (!api || api.fieldErrors.length === 0)) {
+  if (error && (!api || !api.fieldErrors.some((e) => fields.includes(e.field)))) {
     return (
       <p role="alert" className="text-sm text-danger">
         {error instanceof Error ? error.message : 'Could not save.'}
@@ -47,7 +56,19 @@ function ContactSection({
   const [email, setEmail] = useState(contact?.email ?? '')
   const [phone, setPhone] = useState(contact?.phone ?? '')
   const [link, setLink] = useState(contact?.linkedin_url ?? '')
-  const error = errorOf(save.error)
+  // after an edit the last result (saved, or a field error) no longer describes the form
+  const [dirty, setDirty] = useState(false)
+  const result = dirty ? null : save
+  const error = errorOf(result?.error)
+  const typed = (setter: (value: string) => void) => (value: string) => {
+    setter(value)
+    setDirty(true)
+  }
+  const onName = typed(setName)
+  const onRole = typed(setRole)
+  const onEmail = typed(setEmail)
+  const onPhone = typed(setPhone)
+  const onLink = typed(setLink)
 
   return (
     <form
@@ -55,6 +76,7 @@ function ContactSection({
       className="space-y-2"
       onSubmit={(event) => {
         event.preventDefault()
+        setDirty(false)
         save.mutate({ name, role, email, phone, linkedin_url: link })
       }}
     >
@@ -68,7 +90,7 @@ function ContactSection({
               maxLength={120}
               value={name}
               disabled={!editable}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => onName(e.target.value)}
             />
           )}
         </Field>
@@ -80,7 +102,7 @@ function ContactSection({
               maxLength={120}
               value={role}
               disabled={!editable}
-              onChange={(e) => setRole(e.target.value)}
+              onChange={(e) => onRole(e.target.value)}
             />
           )}
         </Field>
@@ -92,7 +114,7 @@ function ContactSection({
               maxLength={254}
               value={email}
               disabled={!editable}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => onEmail(e.target.value)}
             />
           )}
         </Field>
@@ -104,7 +126,7 @@ function ContactSection({
               maxLength={30}
               value={phone}
               disabled={!editable}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={(e) => onPhone(e.target.value)}
             />
           )}
         </Field>
@@ -116,7 +138,7 @@ function ContactSection({
               maxLength={500}
               value={link}
               disabled={!editable}
-              onChange={(e) => setLink(e.target.value)}
+              onChange={(e) => onLink(e.target.value)}
             />
           )}
         </Field>
@@ -126,7 +148,11 @@ function ContactSection({
           <Button type="submit" size="sm" disabled={save.isPending}>
             Save contact
           </Button>
-          <Message error={save.error} saved={save.isSuccess ? 'Contact saved.' : null} />
+          <Message
+            error={result?.error}
+            saved={result?.isSuccess ? 'Contact saved.' : null}
+            fields={['name', 'role', 'email', 'phone', 'linkedin_url']}
+          />
         </div>
       )}
     </form>
@@ -145,7 +171,9 @@ function SourceSection({
   const [kind, setKind] = useState<'direct' | 'hiring_firm' | null>(source?.kind ?? null)
   const [firm, setFirm] = useState(source?.firm_name ?? '')
   const group = useId()
-  const error = errorOf(save.error)
+  const [dirty, setDirty] = useState(false)
+  const result = dirty ? null : save
+  const error = errorOf(result?.error)
   const choices: { value: 'direct' | 'hiring_firm' | null; label: string }[] = [
     { value: 'direct', label: 'Direct' },
     { value: 'hiring_firm', label: 'Through a hiring firm' },
@@ -158,6 +186,7 @@ function SourceSection({
       className="space-y-2"
       onSubmit={(event) => {
         event.preventDefault()
+        setDirty(false)
         save.mutate(kind === 'hiring_firm' ? { kind, firm_name: firm } : { kind })
       }}
     >
@@ -170,7 +199,10 @@ function SourceSection({
               name={group}
               checked={kind === choice.value}
               disabled={!editable}
-              onChange={() => setKind(choice.value)}
+              onChange={() => {
+                setKind(choice.value)
+                setDirty(true)
+              }}
             />
             {choice.label}
           </label>
@@ -185,20 +217,29 @@ function SourceSection({
               maxLength={120}
               value={firm}
               disabled={!editable}
-              onChange={(e) => setFirm(e.target.value)}
+              onChange={(e) => {
+                setFirm(e.target.value)
+                setDirty(true)
+              }}
             />
           )}
         </Field>
       )}
       {error?.fieldError('kind') && (
-        <p className="text-sm text-danger">{error.fieldError('kind')}</p>
+        <p role="alert" className="text-sm text-danger">
+          {error.fieldError('kind')}
+        </p>
       )}
       {editable && (
         <div className="flex items-center gap-3">
           <Button type="submit" size="sm" disabled={save.isPending}>
             Save source
           </Button>
-          <Message error={save.error} saved={save.isSuccess ? 'Source saved.' : null} />
+          <Message
+            error={result?.error}
+            saved={result?.isSuccess ? 'Source saved.' : null}
+            fields={kind === 'hiring_firm' ? ['kind', 'firm_name'] : ['kind']}
+          />
         </div>
       )}
     </form>
@@ -242,13 +283,13 @@ export function InterviewPanel({
           </p>
         )}
         <ContactSection
-          key={`contact-${JSON.stringify(data.contact)}`}
+          key={`contact-${JSON.stringify(data.contact)}-${saveContact.isSuccess ? saveContact.submittedAt : 0}`}
           contact={data.contact}
           save={saveContact}
           editable={data.can_edit}
         />
         <SourceSection
-          key={`source-${JSON.stringify(data.source)}`}
+          key={`source-${JSON.stringify(data.source)}-${saveSource.isSuccess ? saveSource.submittedAt : 0}`}
           source={data.source}
           save={saveSource}
           editable={data.can_edit}

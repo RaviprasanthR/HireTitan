@@ -243,3 +243,51 @@ async def test_US1_writes_to_an_unknown_job_are_404(env: Env) -> None:
 
     assert (await env.client.put(url(missing, "/contact"), json={"name": "A"})).status_code == 404
     assert (await env.client.put(url(missing, "/source"), json={"kind": None})).status_code == 404
+
+
+# --- review fixes -----------------------------------------------------------------------------
+
+
+async def test_review_a_null_name_is_a_field_error(env: Env) -> None:
+    job_id = await add_job(env)
+
+    response = await env.client.put(url(job_id, "/contact"), json={"name": None})
+
+    assert response.status_code == 422
+    assert [e["field"] for e in response.json()["errors"]] == ["name"]
+
+
+async def test_review_an_empty_kind_clears_the_source(env: Env) -> None:
+    job_id = await add_job(env)
+    await env.client.put(url(job_id, "/source"), json={"kind": "direct"})
+
+    response = await env.client.put(url(job_id, "/source"), json={"kind": ""})
+
+    assert response.status_code == 200
+    assert response.json()["source"] is None
+
+
+async def test_review_a_huge_field_is_refused_at_the_boundary(env: Env) -> None:
+    job_id = await add_job(env)
+
+    response = await env.client.put(url(job_id, "/contact"), json={"name": "x" * 5000})
+
+    assert response.status_code == 422
+
+
+async def test_review_saving_contact_and_source_at_once_both_work(env: Env) -> None:
+    import asyncio
+
+    job_id = await add_job(env)
+
+    contact, source = await asyncio.gather(
+        env.client.put(url(job_id, "/contact"), json={"name": "Asha Rao"}),
+        env.client.put(
+            url(job_id, "/source"), json={"kind": "hiring_firm", "firm_name": "TalentBridge"}
+        ),
+    )
+
+    assert (contact.status_code, source.status_code) == (200, 200)
+    body = (await env.client.get(url(job_id))).json()
+    assert body["contact"]["name"] == "Asha Rao"
+    assert body["source"] == {"kind": "hiring_firm", "firm_name": "TalentBridge"}

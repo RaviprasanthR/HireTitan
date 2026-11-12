@@ -118,6 +118,7 @@ export function useRefreshing() {
     Promise.all(
       [
         ['jobs'],
+        ['job-interview'], // whether the details can be edited follows the mark
         ['companies'],
         ['search-latest'],
         ['search-run'],

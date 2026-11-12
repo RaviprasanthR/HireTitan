@@ -145,6 +145,75 @@ describe('InterviewPanel contact and source', () => {
     expect(screen.queryByLabelText('Firm name')).not.toBeInTheDocument()
   })
 
+  it('review: after a save the fields show what the server kept (trimmed)', async () => {
+    const user = userEvent.setup()
+    renderPanel((call) => {
+      if (call.method === 'PUT') {
+        return interview({
+          contact: { name: 'Asha', role: null, email: null, phone: null, linkedin_url: null },
+        })
+      }
+      return interview()
+    })
+    await user.type(await screen.findByLabelText('Contact name'), 'Asha  ')
+
+    await user.click(screen.getByRole('button', { name: 'Save contact' }))
+
+    expect(await screen.findByText('Contact saved.')).toBeInTheDocument()
+    expect(screen.getByLabelText('Contact name')).toHaveValue('Asha')
+  })
+
+  it('review: the saved message and a field error go away when the person edits again', async () => {
+    const user = userEvent.setup()
+    let fail = true
+    renderPanel((call) => {
+      if (call.method === 'PUT') {
+        if (fail) {
+          return problem(422, 'Unprocessable Entity', {
+            errors: [{ field: 'email', message: 'That does not look like an email address.' }],
+          })
+        }
+        return interview({
+          contact: { name: 'Asha', role: null, email: null, phone: null, linkedin_url: null },
+        })
+      }
+      return interview()
+    })
+    await user.type(await screen.findByLabelText('Contact name'), 'Asha')
+    await user.type(screen.getByLabelText('Email'), 'x')
+    await user.click(screen.getByRole('button', { name: 'Save contact' }))
+    expect(await screen.findByText('That does not look like an email address.')).toBeVisible()
+
+    await user.type(screen.getByLabelText('Email'), 'y')
+    expect(screen.queryByText('That does not look like an email address.')).toBeNull()
+    expect(screen.getByLabelText('Email')).not.toHaveAttribute('aria-invalid')
+
+    fail = false
+    await user.clear(screen.getByLabelText('Email'))
+    await user.click(screen.getByRole('button', { name: 'Save contact' }))
+    expect(await screen.findByText('Contact saved.')).toBeInTheDocument()
+    await user.type(screen.getByLabelText('Role'), 'R')
+    expect(screen.queryByText('Contact saved.')).toBeNull()
+  })
+
+  it('review: an error about a field the form does not show is still shown', async () => {
+    const user = userEvent.setup()
+    renderPanel((call) => {
+      if (call.method === 'PUT') {
+        return problem(422, 'Unprocessable Entity', {
+          detail: 'A hiring firm needs a name.',
+          errors: [{ field: 'firm_name', message: 'A hiring firm needs a name.' }],
+        })
+      }
+      return interview()
+    })
+    await user.click(await screen.findByRole('radio', { name: 'Direct' }))
+
+    await user.click(screen.getByRole('button', { name: 'Save source' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('A hiring firm needs a name.')
+  })
+
   it('the panel is read-only when the job is not in the pipeline', async () => {
     renderPanel(() =>
       interview({

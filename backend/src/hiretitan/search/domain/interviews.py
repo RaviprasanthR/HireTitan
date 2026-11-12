@@ -48,6 +48,7 @@ def check_source(
     kind: str | None, firm_name: str | None
 ) -> tuple[tuple[str | None, str | None] | None, list[FieldIssue]]:
     """How the job came: ``(kind, firm)``; a firm name is kept only for a hiring firm (FR-003)."""
+    kind = clean(kind)  # an empty choice means "not set"
     if kind is None:
         return (None, None), []
     if kind not in SOURCES:

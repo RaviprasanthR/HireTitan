@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { problem, stubApi } from '@/test/api'
+import { problem, stubApi, type Call } from '@/test/api'
 import { JobDetailPage } from './JobDetailPage'
 import { UndoToast } from './UndoToast'
 
@@ -65,7 +65,8 @@ function detail(over: Record<string, unknown> = {}) {
 
 function renderPage(job = detail(), interview: unknown = undefined) {
   const calls = stubApi((call) => {
-    if (call.path === '/jobs/j1/interview') return interview
+    if (call.path === '/jobs/j1/interview')
+      return typeof interview === 'function' ? interview() : interview
     if (call.path === '/jobs/j1/recheck')
       return new Response('{"run_id":"r1"}', {
         status: 202,
@@ -299,6 +300,29 @@ describe('JobDetailPage', () => {
     expect(await screen.findByLabelText('Contact name')).toHaveValue('Asha Rao')
     expect(screen.getByLabelText('Contact name')).toBeEnabled()
     expect(screen.getByRole('radio', { name: 'Direct' })).toBeChecked()
+  })
+
+  it('review: marking the job applied refreshes the panel so it becomes editable', async () => {
+    const user = userEvent.setup()
+    let calls: Call[] = []
+    const answer = () => {
+      const marked = calls.some((c) => c.method === 'POST' && c.path === '/jobs/j1/applied')
+      return {
+        job_id: 'j1',
+        can_edit: marked,
+        can_add_round: marked,
+        contact: { name: 'Asha Rao', role: null, email: null, phone: null, linkedin_url: null },
+        source: null,
+        rounds: [],
+        status: { state: marked ? 'applied' : 'explore', round: null },
+      }
+    }
+    calls = renderPage(detail({ state: 'explore' }), answer)
+    expect(await screen.findByLabelText('Contact name')).toBeDisabled()
+
+    await user.click(await screen.findByRole('button', { name: 'I applied' }))
+
+    await waitFor(() => expect(screen.getByLabelText('Contact name')).toBeEnabled())
   })
 
   it('US4 AS4 the panel is read-only outside the pipeline', async () => {

@@ -297,9 +297,13 @@ def test_allowed_search_http_usage_passes(source: str, is_fetcher: bool) -> None
 
 # Feature 002b (FR-015): the contacts code only stores and shows other people's details. It has no
 # way to send anything and no HTTP client at all (LinkedIn links are stored, never fetched).
+# Feature 002e: the interview notes (a contact, rounds, questions) are the same kind of data.
 CONTACTS_GLOBS = (
     "search/domain/contacts*.py",
     "search/application/contacts.py",
+    "search/domain/interviews.py",
+    "search/application/interviews.py",
+    "search/api/interviews.py",
 )
 CONTACTS_FORBIDDEN_CLIENT_MODULES = ("httpx", "requests", "aiohttp", "urllib.request")
 

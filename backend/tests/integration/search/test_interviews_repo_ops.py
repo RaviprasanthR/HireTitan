@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import UTC, datetime
 from uuid import UUID
 
+import pytest
 from sqlalchemy import event, text
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from tests.integration.search.test_interviews_repo import a_job
 
 from hiretitan.search.domain.contacts import ContactFields
@@ -191,3 +194,56 @@ async def test_SC005_rounds_matching_by_field(db_session: AsyncSession) -> None:
     assert [r.id for r in await repo.rounds_matching(source="hiring_firm")] == [a.id]
     assert len(await repo.rounds_matching(source="direct")) == 2
     assert len(await repo.rounds_matching()) == 3
+
+
+async def test_review_concurrent_rounds_get_distinct_numbers(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    async with sessions() as session:
+        job_id = UUID(await a_job(session))
+        await session.commit()
+
+    async def add() -> int:
+        async with sessions() as session:
+            row = await InterviewsRepo(session).add_round(job_id, kind="technical")
+            await session.commit()
+            return row.number
+
+    numbers = await asyncio.gather(*(add() for _ in range(4)))
+
+    assert sorted(numbers) == [1, 2, 3, 4]
+
+
+async def test_review_concurrent_questions_get_distinct_positions(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    async with sessions() as session:
+        job_id = UUID(await a_job(session))
+        round_id = (await InterviewsRepo(session).add_round(job_id, kind="hr")).id
+        await session.commit()
+
+    async def add(n: int) -> int:
+        async with sessions() as session:
+            row = await InterviewsRepo(session).add_question(round_id, f"Q{n}", None)
+            await session.commit()
+            return row.position
+
+    positions = await asyncio.gather(*(add(n) for n in range(4)))
+
+    assert sorted(positions) == [1, 2, 3, 4]
+
+
+async def test_review_a_question_position_is_unique_per_round(db_session: AsyncSession) -> None:
+    repo, job_id = await repo_and_job(db_session)
+    round_row = await repo.add_round(job_id, kind="hr")
+    await repo.add_question(round_row.id, "Why?", None)
+
+    with pytest.raises(IntegrityError):
+        async with db_session.begin_nested():
+            await db_session.execute(
+                text(
+                    "INSERT INTO app.interview_questions (id, round_id, position, question)"
+                    " VALUES (gen_random_uuid(), :r, 1, 'Again')"
+                ),
+                {"r": round_row.id},
+            )

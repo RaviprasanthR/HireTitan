@@ -707,11 +707,14 @@ class InterviewsRepo:
     # contact and source (one row per job, dropped when it holds nothing)
 
     async def _details_row(self, job_id: UUID) -> PipelineDetailsRow:
-        row = await self._session.get(PipelineDetailsRow, job_id)
-        if row is None:
-            row = PipelineDetailsRow(job_id=job_id)
-            self._session.add(row)
-        return row
+        # Two saves of a fresh job (contact and source) can arrive together: the insert must not
+        # fail for the one that comes second.
+        await self._session.execute(
+            pg_insert(PipelineDetailsRow)
+            .values(job_id=job_id)
+            .on_conflict_do_nothing(index_elements=[PipelineDetailsRow.job_id])
+        )
+        return await self._session.get_one(PipelineDetailsRow, job_id, populate_existing=True)
 
     async def _prune(self, job_id: UUID) -> None:
         row = await self._session.get(PipelineDetailsRow, job_id)
@@ -787,6 +790,8 @@ class InterviewsRepo:
         interviewers: str | None = None,
     ) -> InterviewRoundRow:
         """The next number of the job (the highest plus one) and the state ``scheduled``."""
+        # the job row is locked so two adds at once are numbered one after the other
+        await self._session.execute(select(JobRow.id).where(JobRow.id == job_id).with_for_update())
         top = (
             await self._session.execute(
                 select(func.max(InterviewRoundRow.number)).where(InterviewRoundRow.job_id == job_id)
@@ -825,6 +830,9 @@ class InterviewsRepo:
     async def add_question(
         self, round_id: UUID, question: str, answer: str | None
     ) -> InterviewQuestionRow:
+        await self._session.execute(
+            select(InterviewRoundRow.id).where(InterviewRoundRow.id == round_id).with_for_update()
+        )
         top = (
             await self._session.execute(
                 select(func.max(InterviewQuestionRow.position)).where(

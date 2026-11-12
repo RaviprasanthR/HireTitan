@@ -432,6 +432,7 @@ class InterviewQuestionRow(IdTimestampMixin, Base):
 
     __tablename__ = "interview_questions"
     __table_args__ = (
+        UniqueConstraint("round_id", "position", name="uq_interview_questions_round_position"),
         CheckConstraint("position >= 1", name="position_positive"),
         CheckConstraint("char_length(question) BETWEEN 1 AND 2000", name="question_length"),
         CheckConstraint("char_length(answer) <= 10000", name="answer_length"),
