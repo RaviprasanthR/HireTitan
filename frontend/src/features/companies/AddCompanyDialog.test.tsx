@@ -126,4 +126,46 @@ describe('AddCompanyDialog', () => {
 
     expect(await screen.findByText(/must start with http/)).toBeInTheDocument()
   })
+
+  it('FR026 the form has a website field and sends it', async () => {
+    const user = userEvent.setup()
+    const { calls } = renderDialog((call) =>
+      call.method === 'POST' && call.path === '/companies' ? CREATED : undefined,
+    )
+
+    await user.type(screen.getByLabelText('Website (optional)'), 'https://newco.example.com')
+    await fillAndSubmit(user)
+
+    await waitFor(() =>
+      expect(calls.find((c) => c.method === 'POST' && c.path === '/companies')?.body).toMatchObject(
+        { name: 'Newco', website: 'https://newco.example.com' },
+      ),
+    )
+  })
+
+  it('FR026 it is a square card over a blurred backdrop, and Escape closes it', async () => {
+    const user = userEvent.setup()
+    const { onClose } = renderDialog(() => undefined)
+    const dialog = screen.getByRole('dialog', { name: 'Add a company' })
+
+    expect(dialog).toHaveAttribute('aria-modal', 'true')
+    expect(dialog).toHaveClass('aspect-square')
+    expect(dialog.parentElement).toHaveClass('backdrop-blur-sm')
+
+    await user.keyboard('{Escape}')
+
+    expect(onClose).toHaveBeenCalled()
+  })
+
+  it('FR026 a click on the blurred backdrop closes it, a click on the card does not', async () => {
+    const user = userEvent.setup()
+    const { onClose } = renderDialog(() => undefined)
+    const dialog = screen.getByRole('dialog', { name: 'Add a company' })
+
+    await user.click(screen.getByLabelText('Company name'))
+    expect(onClose).not.toHaveBeenCalled()
+    await user.click(dialog.parentElement as HTMLElement)
+
+    expect(onClose).toHaveBeenCalled()
+  })
 })

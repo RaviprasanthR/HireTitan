@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ApiError } from '@/api/client'
 import { Button } from '@/components/ui/button'
 import { useAddCompany, useDecideBoard, useDiscovery, type Company } from './api'
@@ -97,68 +97,102 @@ export function AddCompanyDialog({ onClose }: { onClose: () => void }) {
   const [name, setName] = useState('')
   const [careersUrl, setCareersUrl] = useState('')
   const [city, setCity] = useState('')
+  const [website, setWebsite] = useState('')
   const add = useAddCompany()
   const error = add.error instanceof ApiError ? add.error : null
 
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => event.key === 'Escape' && onClose()
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  // A square card over the page; the page behind it is blurred and a click on it closes the card.
   return (
-    <section role="dialog" aria-label="Add a company" className="space-y-3 rounded-lg bg-surface p-4">
-      <h2 className="text-lg font-semibold">Add a company</h2>
-      {add.isSuccess ? (
-        <Suggestion company={add.data} onClose={onClose} />
-      ) : (
-        <form
-          className="space-y-3"
-          onSubmit={(event) => {
-            event.preventDefault()
-            add.mutate({ name, careers_url: careersUrl, ...(city.trim() ? { city } : {}) })
-          }}
-        >
-          <Field label="Company name" error={error?.fieldError('name')}>
-            {(props) => (
-              <input
-                {...props}
-                className={inputClass}
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-              />
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+      onMouseDown={(event) => event.target === event.currentTarget && onClose()}
+    >
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-label="Add a company"
+        className="aspect-square w-[min(32rem,100%)] space-y-3 overflow-y-auto rounded-xl bg-surface p-6 shadow-[var(--ht-border-panel)]"
+      >
+        <h2 className="text-lg font-semibold">Add a company</h2>
+        {add.isSuccess ? (
+          <Suggestion company={add.data} onClose={onClose} />
+        ) : (
+          <form
+            className="space-y-3"
+            onSubmit={(event) => {
+              event.preventDefault()
+              add.mutate({
+                name,
+                careers_url: careersUrl,
+                ...(city.trim() ? { city } : {}),
+                ...(website.trim() ? { website } : {}),
+              })
+            }}
+          >
+            <Field label="Company name" error={error?.fieldError('name')}>
+              {(props) => (
+                <input
+                  {...props}
+                  className={inputClass}
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                />
+              )}
+            </Field>
+            <Field label="Careers page link" error={error?.fieldError('careers_url')}>
+              {(props) => (
+                <input
+                  {...props}
+                  className={inputClass}
+                  inputMode="url"
+                  value={careersUrl}
+                  onChange={(event) => setCareersUrl(event.target.value)}
+                />
+              )}
+            </Field>
+            <Field label="City (optional)" error={error?.fieldError('city')}>
+              {(props) => (
+                <input
+                  {...props}
+                  className={inputClass}
+                  value={city}
+                  onChange={(event) => setCity(event.target.value)}
+                />
+              )}
+            </Field>
+            <Field label="Website (optional)" error={error?.fieldError('website')}>
+              {(props) => (
+                <input
+                  {...props}
+                  className={inputClass}
+                  inputMode="url"
+                  value={website}
+                  onChange={(event) => setWebsite(event.target.value)}
+                />
+              )}
+            </Field>
+            {add.isError && error?.fieldErrors.length === 0 && (
+              <p role="alert" className="text-sm text-danger">
+                {add.error.message}
+              </p>
             )}
-          </Field>
-          <Field label="Careers page link" error={error?.fieldError('careers_url')}>
-            {(props) => (
-              <input
-                {...props}
-                className={inputClass}
-                inputMode="url"
-                value={careersUrl}
-                onChange={(event) => setCareersUrl(event.target.value)}
-              />
-            )}
-          </Field>
-          <Field label="City (optional)" error={error?.fieldError('city')}>
-            {(props) => (
-              <input
-                {...props}
-                className={inputClass}
-                value={city}
-                onChange={(event) => setCity(event.target.value)}
-              />
-            )}
-          </Field>
-          {add.isError && error?.fieldErrors.length === 0 && (
-            <p role="alert" className="text-sm text-danger">
-              {add.error.message}
-            </p>
-          )}
-          <div className="flex gap-2">
-            <Button type="submit" size="sm" disabled={add.isPending}>
-              Find job board
-            </Button>
-            <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-              Cancel
-            </Button>
-          </div>
-        </form>
-      )}
-    </section>
+            <div className="flex gap-2">
+              <Button type="submit" size="sm" disabled={add.isPending}>
+                Find job board
+              </Button>
+              <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+                Cancel
+              </Button>
+            </div>
+          </form>
+        )}
+      </section>
+    </div>
   )
 }

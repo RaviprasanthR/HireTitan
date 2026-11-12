@@ -606,7 +606,7 @@ describe('CompaniesPage', () => {
       expect(button).toHaveClass('text-[#f0a35e]')
     })
 
-    it('FR026 Add a company replaces the table, and Cancel brings it back', async () => {
+    it('FR026 Add a company opens a dialog over the list, and Cancel closes it', async () => {
       const user = userEvent.setup()
       renderPage(list)
       await screen.findByRole('listitem', { name: 'Acme' })
@@ -615,11 +615,11 @@ describe('CompaniesPage', () => {
       await user.click(screen.getByRole('button', { name: 'Add a company' }))
 
       expect(screen.getByRole('dialog', { name: 'Add a company' })).toBeInTheDocument()
-      expect(screen.queryByRole('list', { name: 'Companies' })).toBeNull()
+      expect(screen.getByRole('list', { name: 'Companies' })).toBeInTheDocument() // still behind it
 
       await user.click(screen.getByRole('button', { name: 'Cancel' }))
 
-      expect(await screen.findByRole('list', { name: 'Companies' })).toBeInTheDocument()
+      expect(screen.queryByRole('dialog', { name: 'Add a company' })).toBeNull()
     })
   })
 })

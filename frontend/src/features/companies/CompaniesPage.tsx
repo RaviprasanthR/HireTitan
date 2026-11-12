@@ -523,13 +523,10 @@ export function CompaniesPage() {
             </Button>
           )}
         </div>
-        {!adding && loaded && <HeaderRow sort={sort} onSort={sortBy} />}
+        {loaded && <HeaderRow sort={sort} onSort={sortBy} />}
       </div>
-      {adding ? (
-        <AddCompanyDialog onClose={() => setAdding(false)} />
-      ) : (
-        <div className="min-h-48 flex-1 overflow-y-auto [scrollbar-gutter:stable]">{body}</div>
-      )}
+      <div className="min-h-48 flex-1 overflow-y-auto [scrollbar-gutter:stable]">{body}</div>
+      {adding && <AddCompanyDialog onClose={() => setAdding(false)} />}
     </section>
   )
 }
