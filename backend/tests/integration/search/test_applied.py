@@ -10,9 +10,9 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from tests.fakes.search_env import Env, add_company, go, make_env, new_search, posting
 
-from hiretitan.search.application.applied import (
-    AppliedDateError,
+from hiretitan.search.application.pipeline import (
     JobNotFoundError,
+    PipelineDateError,
     mark_applied,
     undo_applied,
 )
@@ -104,7 +104,7 @@ async def test_applied_date_bounds(
             row = await mark_applied(JobsRepo(session), job_id, applied_on=applied_on, today=TODAY)
             assert row.state.value == "applied"
         else:
-            with pytest.raises(AppliedDateError):
+            with pytest.raises(PipelineDateError):
                 await mark_applied(JobsRepo(session), job_id, applied_on=applied_on, today=TODAY)
 
 

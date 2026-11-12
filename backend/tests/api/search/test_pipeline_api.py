@@ -104,3 +104,109 @@ async def test_the_applied_list_is_gone(env: Env) -> None:
     response = await env.client.get("/api/v1/jobs", params={"list": "applied"})
 
     assert response.status_code == 422
+
+
+async def _state(env: Env, job_id: UUID) -> dict:  # type: ignore[type-arg]
+    return (await env.client.get(f"/api/v1/jobs/{job_id}")).json()  # type: ignore[no-any-return]
+
+
+async def test_US2_AS1_mark_inquired_defaults_to_today(env: Env) -> None:
+    job_id = await add_job(env, "Backend Engineer")
+
+    marked = await env.client.post(f"/api/v1/jobs/{job_id}/inquired")
+
+    assert marked.status_code == 200
+    body = marked.json()
+    assert (body["state"], body["inquired_on"], body["applied_on"]) == (
+        "inquired",
+        "2026-11-06",
+        None,
+    )
+    assert len((await _pipeline(env))["items"]) == 1
+
+
+async def test_US2_AS5_inquired_date_rules(env: Env) -> None:
+    job_id = await add_job(env, "Backend Engineer")
+    url = f"/api/v1/jobs/{job_id}/inquired"
+
+    future = await env.client.post(url, json={"inquired_on": "2026-11-07"})
+    old = await env.client.post(url, json={"inquired_on": "2024-11-05"})
+    edge = await env.client.post(url, json={"inquired_on": "2024-11-06"})
+
+    for response in (future, old):
+        assert response.status_code == 422
+        assert response.json()["errors"][0]["field"] == "inquired_on"
+    assert edge.status_code == 200  # exactly two years ago is still allowed
+
+
+async def test_US2_AS3_undo_inquired(env: Env) -> None:
+    job_id = await add_job(env, "Backend Engineer")
+    await env.client.post(f"/api/v1/jobs/{job_id}/inquired")
+
+    undone = await env.client.delete(f"/api/v1/jobs/{job_id}/inquired")
+
+    assert undone.status_code == 200
+    assert (undone.json()["state"], undone.json()["inquired_on"]) == ("explore", None)
+    assert (await _pipeline(env))["items"] == []
+
+
+async def test_undo_inquired_needs_an_inquired_job(env: Env) -> None:
+    job_id = await add_job(env, "Backend Engineer")
+
+    response = await env.client.delete(f"/api/v1/jobs/{job_id}/inquired")
+
+    assert response.status_code == 409
+    assert response.json()["reason"] == "not_inquired"
+
+
+async def test_marking_inquired_twice_is_a_conflict(env: Env) -> None:
+    job_id = await add_job(env, "Backend Engineer", state="inquired")
+
+    response = await env.client.post(f"/api/v1/jobs/{job_id}/inquired")
+
+    assert response.status_code == 409
+    assert response.json()["reason"] == "already_inquired"
+
+
+async def test_FR007_applied_job_cannot_be_inquired_409(env: Env) -> None:
+    job_id = await add_job(env, "Backend Engineer", state="applied")
+
+    response = await env.client.post(f"/api/v1/jobs/{job_id}/inquired")
+
+    assert response.status_code == 409
+    assert response.json()["reason"] == "already_applied"
+
+
+async def test_US2_AS2_inquired_then_applied(env: Env) -> None:
+    job_id = await add_job(env, "Backend Engineer", state="inquired", on=date(2026, 11, 1))
+
+    marked = await env.client.post(
+        f"/api/v1/jobs/{job_id}/applied", json={"applied_on": "2026-11-05"}
+    )
+
+    body = marked.json()
+    assert marked.status_code == 200
+    assert (body["state"], body["applied_on"], body["inquired_on"]) == (
+        "applied",
+        "2026-11-05",
+        None,
+    )
+
+
+async def test_skipped_job_can_be_inquired(env: Env) -> None:
+    job_id = await add_job(env, "Backend Engineer", state="skipped")
+
+    response = await env.client.post(f"/api/v1/jobs/{job_id}/inquired")
+
+    assert response.status_code == 200
+    assert response.json()["state"] == "inquired"
+
+
+async def test_undo_applied_after_inquired_returns_to_explore(env: Env) -> None:
+    job_id = await add_job(env, "Backend Engineer", state="inquired", on=date(2026, 11, 1))
+    await env.client.post(f"/api/v1/jobs/{job_id}/applied")
+
+    undone = await env.client.delete(f"/api/v1/jobs/{job_id}/applied")
+
+    body = undone.json()  # the inquiry is not restored
+    assert (body["state"], body["applied_on"], body["inquired_on"]) == ("explore", None, None)

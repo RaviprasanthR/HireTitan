@@ -20,13 +20,15 @@ from hiretitan.platform.clock import ClockPort
 from hiretitan.platform.runtime.infra.runs_repo import RunsRepo
 from hiretitan.platform.web.problems import ProblemError, problem
 from hiretitan.search.api.models import DecisionOut, JobCardOut, JobCardPage, job_cards
-from hiretitan.search.application.applied import (
-    AppliedDateError,
-    JobNotFoundError,
-    mark_applied,
-    undo_applied,
-)
 from hiretitan.search.application.paste import PasteError, PasteInput, paste_job
+from hiretitan.search.application.pipeline import (
+    JobNotFoundError,
+    PipelineDateError,
+    mark_applied,
+    mark_inquired,
+    undo_applied,
+    undo_inquired,
+)
 from hiretitan.search.application.search import RunQueue
 from hiretitan.search.domain.job_state import IllegalJobTransitionError, JobState, transition
 from hiretitan.search.infra.models import JobRow, JobSourceRow
@@ -56,6 +58,10 @@ class DecisionHistoryOut(DecisionOut):
 
 class AppliedIn(BaseModel):
     applied_on: date | None = None
+
+
+class InquiredIn(BaseModel):
+    inquired_on: date | None = None
 
 
 class PasteIn(BaseModel):
@@ -252,7 +258,7 @@ def create_search_jobs_router(deps: SearchJobsApiDeps) -> APIRouter:
                     today=today,
                     applied_on=body.applied_on if body else None,
                 )
-            except AppliedDateError as error:
+            except PipelineDateError as error:
                 return problem(
                     422,
                     str(error),
@@ -272,6 +278,53 @@ def create_search_jobs_router(deps: SearchJobsApiDeps) -> APIRouter:
             if row.state != JobState.applied:
                 raise ProblemError(409, "This job is not marked as applied.", reason="not_applied")
             await undo_applied(JobsRepo(session), job_id)
+            await session.commit()
+            return await detail(session, await load(session, job_id))
+
+    @router.post("/{job_id}/inquired", response_model=JobDetailOut)
+    async def inquired(job_id: UUID, body: InquiredIn | None = None) -> Any:
+        today = deps.clock.now().date()
+        async with deps.sessions() as session:
+            row = await load(session, job_id)
+            if row.state == JobState.inquired:
+                raise ProblemError(
+                    409, "You already marked this job as inquired.", reason="already_inquired"
+                )
+            if row.state == JobState.applied:
+                raise ProblemError(
+                    409,
+                    "You already applied to this job, so it cannot be marked as inquired.",
+                    reason="already_applied",
+                )
+            try:
+                await mark_inquired(
+                    JobsRepo(session),
+                    job_id,
+                    today=today,
+                    inquired_on=body.inquired_on if body else None,
+                )
+            except PipelineDateError as error:
+                return problem(
+                    422,
+                    str(error),
+                    errors=[{"field": "inquired_on", "message": str(error)}],
+                )
+            except JobNotFoundError as error:
+                raise _not_found() from error
+            except IllegalJobTransitionError as error:
+                raise ProblemError(409, str(error)) from error
+            await session.commit()
+            return await detail(session, await load(session, job_id))
+
+    @router.delete("/{job_id}/inquired", response_model=JobDetailOut)
+    async def undo_inquiry(job_id: UUID) -> JobDetailOut:
+        async with deps.sessions() as session:
+            row = await load(session, job_id)
+            if row.state != JobState.inquired:
+                raise ProblemError(
+                    409, "This job is not marked as inquired.", reason="not_inquired"
+                )
+            await undo_inquired(JobsRepo(session), job_id)
             await session.commit()
             return await detail(session, await load(session, job_id))
 
