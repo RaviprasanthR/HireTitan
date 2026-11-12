@@ -26,7 +26,7 @@ description: "Task list for 002e-interview-tracking"
 
 **Purpose**: a known-green baseline.
 
-- [ ] T001 Before anything else, once 002d's PR has merged: rebase `002e-interview-tracking` onto `master` (constitution: each feature branch is cut from `master`) and check `0018_interview_tracking`'s parent is still `0017_no_cost`. Then record the baseline: backend suite, `ruff`, `mypy --strict`, `lint-imports`; frontend `tsc`, `eslint`, `npm test`. Write the counts under a 002e entry in `docs/CONTEXT.md`. No code change.
+- [x] T001 Before anything else, once 002d's PR has merged: rebase `002e-interview-tracking` onto `master` (constitution: each feature branch is cut from `master`) and check `0018_interview_tracking`'s parent is still `0017_no_cost`. Then record the baseline: backend suite, `ruff`, `mypy --strict`, `lint-imports`; frontend `tsc`, `eslint`, `npm test`. Write the counts under a 002e entry in `docs/CONTEXT.md`. No code change.
 
 ---
 
