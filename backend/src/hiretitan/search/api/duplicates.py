@@ -100,8 +100,9 @@ def create_duplicates_router(deps: SearchDuplicatesApiDeps) -> APIRouter:
 
     @router.post("/{pair_id}/merge")
     async def merge(pair_id: UUID) -> DuplicatePairOut:
-        """Keep the older job (A) and move the other's sources onto it; the other is deleted. The kept
-        job takes the stronger of the two pipeline states, with that job's date."""
+        """Keep the older job (A) and move the other's sources onto it; the other is deleted.
+
+        The kept job takes the stronger of the two pipeline states, with that job's date."""
         async with deps.sessions() as session:
             pair = await open_pair(session, pair_id)
             keep, loser = pair.job_a_id, pair.job_b_id
@@ -117,7 +118,8 @@ def create_duplicates_router(deps: SearchDuplicatesApiDeps) -> APIRouter:
                 # a source the kept job already has goes away with the other job's row
             loser_row = await session.get(JobRow, loser)
             keep_row = await session.get(JobRow, keep)
-            assert loser_row is not None and keep_row is not None
+            assert loser_row is not None
+            assert keep_row is not None
             if STRENGTH.get(loser_row.state, 0) > STRENGTH.get(keep_row.state, 0):
                 keep_row.state = loser_row.state
                 keep_row.applied_on = loser_row.applied_on
