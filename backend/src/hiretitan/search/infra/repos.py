@@ -18,14 +18,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from hiretitan.platform.runtime.infra.models import WorkflowRunRow
 from hiretitan.search.domain.contacts import ContactFields, link_key, name_key
+from hiretitan.search.domain.interviews import RoundSummary, status_summary
 from hiretitan.search.domain.job_state import JobState
 from hiretitan.search.domain.vendors import ENABLED_VENDORS
 from hiretitan.search.infra.models import (
     CompanyNoteRow,
     CompanyRow,
     ContactRow,
+    InterviewQuestionRow,
+    InterviewRoundRow,
     JobRow,
     JobSourceRow,
+    PipelineDetailsRow,
     PossibleDuplicateRow,
     RelevanceDecisionRow,
     SearchRuleSetRow,
@@ -672,3 +676,230 @@ class NotesRepo:
                 )
             )
         await self._session.flush()
+
+
+# --- interview tracking (feature 002e) --------------------------------------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class RoundData:
+    round: InterviewRoundRow
+    questions: list[InterviewQuestionRow]
+
+
+@dataclass(frozen=True, slots=True)
+class InterviewData:
+    details: PipelineDetailsRow | None
+    rounds: list[RoundData]
+
+
+ROUND_FIELDS = ("kind", "scheduled_at", "interviewers", "state", "feedback")
+QUESTION_FIELDS = ("question", "answer")
+
+
+class InterviewsRepo:
+    """The contact, source, rounds and questions of pipeline jobs. The person's own data, never
+    read by a workflow or a prompt (feature 002e, FR-010)."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    # contact and source (one row per job, dropped when it holds nothing)
+
+    async def _details_row(self, job_id: UUID) -> PipelineDetailsRow:
+        row = await self._session.get(PipelineDetailsRow, job_id)
+        if row is None:
+            row = PipelineDetailsRow(job_id=job_id)
+            self._session.add(row)
+        return row
+
+    async def _prune(self, job_id: UUID) -> None:
+        row = await self._session.get(PipelineDetailsRow, job_id)
+        if row is not None and row.contact_name is None and row.source is None:
+            await self._session.delete(row)
+        await self._session.flush()
+
+    async def upsert_contact(self, job_id: UUID, fields: ContactFields) -> None:
+        """Replace every contact field (an empty optional field clears it)."""
+        row = await self._details_row(job_id)
+        row.contact_name = fields.name
+        row.contact_role = fields.role
+        row.contact_email = fields.email
+        row.contact_phone = fields.phone
+        row.contact_linkedin = fields.linkedin_url
+        await self._session.flush()
+
+    async def clear_contact(self, job_id: UUID) -> None:
+        row = await self._session.get(PipelineDetailsRow, job_id)
+        if row is None:
+            return
+        row.contact_name = row.contact_role = row.contact_email = None
+        row.contact_phone = row.contact_linkedin = None
+        await self._prune(job_id)
+
+    async def set_source(self, job_id: UUID, kind: str | None, firm_name: str | None) -> None:
+        row = await self._details_row(job_id)
+        row.source = kind
+        row.firm_name = firm_name
+        await self._session.flush()
+        await self._prune(job_id)
+
+    # reading
+
+    async def details(self, job_id: UUID) -> InterviewData:
+        row = await self._session.get(PipelineDetailsRow, job_id)
+        rounds = (
+            await self._session.execute(
+                select(InterviewRoundRow)
+                .where(InterviewRoundRow.job_id == job_id)
+                .order_by(InterviewRoundRow.number)
+            )
+        ).scalars()
+        round_rows = list(rounds)
+        by_round: dict[UUID, list[InterviewQuestionRow]] = {r.id: [] for r in round_rows}
+        if round_rows:
+            questions = await self._session.execute(
+                select(InterviewQuestionRow)
+                .where(InterviewQuestionRow.round_id.in_(list(by_round)))
+                .order_by(InterviewQuestionRow.position, InterviewQuestionRow.id)
+            )
+            for question in questions.scalars():
+                by_round[question.round_id].append(question)
+        return InterviewData(row, [RoundData(r, by_round[r.id]) for r in round_rows])
+
+    async def get_round(self, round_id: UUID) -> InterviewRoundRow | None:
+        return await self._session.get(InterviewRoundRow, round_id)
+
+    async def get_question(self, question_id: UUID) -> InterviewQuestionRow | None:
+        return await self._session.get(InterviewQuestionRow, question_id)
+
+    # rounds
+
+    async def add_round(
+        self,
+        job_id: UUID,
+        *,
+        kind: str,
+        scheduled_at: datetime | None = None,
+        interviewers: str | None = None,
+    ) -> InterviewRoundRow:
+        """The next number of the job (the highest plus one) and the state ``scheduled``."""
+        top = (
+            await self._session.execute(
+                select(func.max(InterviewRoundRow.number)).where(InterviewRoundRow.job_id == job_id)
+            )
+        ).scalar()
+        row = InterviewRoundRow(
+            job_id=job_id,
+            number=(top or 0) + 1,
+            kind=kind,
+            scheduled_at=scheduled_at,
+            interviewers=interviewers,
+        )
+        self._session.add(row)
+        await self._session.flush()
+        await self._session.refresh(row)
+        return row
+
+    async def update_round(self, round_id: UUID, changes: dict[str, Any]) -> InterviewRoundRow:
+        row = await self._session.get_one(InterviewRoundRow, round_id)
+        for name, value in changes.items():
+            if name not in ROUND_FIELDS:
+                raise ValueError(f"A round has no field {name!r}.")
+            setattr(row, name, value)
+        await self._session.flush()
+        await self._session.refresh(row)
+        return row
+
+    async def delete_round(self, round_id: UUID) -> None:
+        await self._session.execute(
+            delete(InterviewRoundRow).where(InterviewRoundRow.id == round_id)
+        )
+        await self._session.flush()
+
+    # questions
+
+    async def add_question(
+        self, round_id: UUID, question: str, answer: str | None
+    ) -> InterviewQuestionRow:
+        top = (
+            await self._session.execute(
+                select(func.max(InterviewQuestionRow.position)).where(
+                    InterviewQuestionRow.round_id == round_id
+                )
+            )
+        ).scalar()
+        row = InterviewQuestionRow(
+            round_id=round_id, position=(top or 0) + 1, question=question, answer=answer
+        )
+        self._session.add(row)
+        await self._session.flush()
+        await self._session.refresh(row)
+        return row
+
+    async def update_question(
+        self, question_id: UUID, changes: dict[str, Any]
+    ) -> InterviewQuestionRow:
+        row = await self._session.get_one(InterviewQuestionRow, question_id)
+        for name, value in changes.items():
+            if name not in QUESTION_FIELDS:
+                raise ValueError(f"A question has no field {name!r}.")
+            setattr(row, name, value)
+        await self._session.flush()
+        await self._session.refresh(row)
+        return row
+
+    async def delete_question(self, question_id: UUID) -> None:
+        await self._session.execute(
+            delete(InterviewQuestionRow).where(InterviewQuestionRow.id == question_id)
+        )
+        await self._session.flush()
+
+    # the job as a whole
+
+    async def delete_for_job(self, job_id: UUID) -> None:
+        """Everything recorded for the job (a deleted job keeps its row, so no cascade fires)."""
+        await self._session.execute(
+            delete(InterviewRoundRow).where(InterviewRoundRow.job_id == job_id)
+        )
+        await self._session.execute(
+            delete(PipelineDetailsRow).where(PipelineDetailsRow.job_id == job_id)
+        )
+        await self._session.flush()
+
+    async def summaries(self, job_ids: list[UUID]) -> dict[UUID, tuple[str, int]]:
+        """``{job_id: (state, round)}`` for the jobs that have rounds, in one statement; the
+        rule is the domain's ``status_summary`` (a failed round wins)."""
+        if not job_ids:
+            return {}
+        result = await self._session.execute(
+            select(
+                InterviewRoundRow.job_id, InterviewRoundRow.number, InterviewRoundRow.state
+            ).where(InterviewRoundRow.job_id.in_(job_ids))
+        )
+        grouped: dict[UUID, list[RoundSummary]] = {}
+        for job_id, number, state in result.all():
+            grouped.setdefault(job_id, []).append(RoundSummary(number, state))
+        summary: dict[UUID, tuple[str, int]] = {}
+        for grouped_job, rounds in grouped.items():
+            latest_state, latest_number = status_summary("", rounds)
+            if latest_number is not None:
+                summary[grouped_job] = (latest_state, latest_number)
+        return summary
+
+    async def rounds_matching(
+        self, *, kind: str | None = None, state: str | None = None, source: str | None = None
+    ) -> list[InterviewRoundRow]:
+        """Rounds by field, for the analytics later (SC-005): no free text is read."""
+        stmt = select(InterviewRoundRow).order_by(
+            InterviewRoundRow.job_id, InterviewRoundRow.number
+        )
+        if kind is not None:
+            stmt = stmt.where(InterviewRoundRow.kind == kind)
+        if state is not None:
+            stmt = stmt.where(InterviewRoundRow.state == state)
+        if source is not None:
+            stmt = stmt.join(
+                PipelineDetailsRow, PipelineDetailsRow.job_id == InterviewRoundRow.job_id
+            ).where(PipelineDetailsRow.source == source)
+        return list((await self._session.execute(stmt)).scalars())
