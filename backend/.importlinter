@@ -131,7 +131,7 @@ forbidden_modules =
 
 # 5. Feature 002b (FR-022, research R9): contacts and notes are the person's own data and never
 #    reach an AI prompt. The search workflow, the prompts and the LLM platform may not import the
-#    contacts, notes or sheet-import code (checked on direct imports; the workflow may still use
+#    contacts or notes code (checked on direct imports; the workflow may still use
 #    the companies use cases that count contacts).
 [importlinter:contract:contacts-stay-out-of-ai-paths]
 name = workflows, prompts and the LLM platform never import contacts code
@@ -143,7 +143,4 @@ source_modules =
     hiretitan.platform.llm
 forbidden_modules =
     hiretitan.search.domain.contacts
-    hiretitan.search.domain.contacts_cell
-    hiretitan.search.domain.sheet
     hiretitan.search.application.contacts
-    hiretitan.search.application.sheet_import

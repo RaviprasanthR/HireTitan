@@ -60,8 +60,8 @@ backend/
   src/hiretitan/
     profile/         resume upload, parsing, profile versions          (001)
     preferences/     job preferences                                    (001)
-    companies/       company list, seed loader, CSV import/export       (002)
-                     + contacts, notes, company sheet import            (002b)
+    companies/       company list, seed loader                          (002)
+                     + contacts, notes                                  (002b)
     jobs/            search rules, search runs, rule filter, AI check, scoring (002)
     applications/    tracking, follow-ups, data export                  (003)
     outreach/        drafts                                             (004)
@@ -364,7 +364,7 @@ Palette changed 2026-11-12 (feature 002d, user story 6) to a **flat** theme from
 
 **First-run setup (001, US5):** until setup is finished, every page shows one centred card instead of the app: (1) name, (2) resume (upload, paste or "Type it in myself"), (3) check the profile, (4) preferences, ending in "Finish setup". The card comes from saved data (`GET /onboarding`), so closing the tab returns the user to the same card; a stored `setup_completed_at` keeps the cards from coming back, and "Delete all my data" clears it. Design: `docs/superpowers/specs/2026-11-04-first-run-onboarding-design.md`.
 
-**Companies page (002, 002b):** a sortable table, one compact row per company (name linking to the company site, city, an Applied chip when a job there is in the applied state, contact count, the start of the note, icon actions for details, company site, careers page, hide, edit and delete), a search box, a "Show" filter, and import and export behind one Import / export button. A row expands to every detail of the company, then its contacts and note. The company sheet import reads **CSV only** (a spreadsheet saved as CSV; no Excel reader, so no extra dependency). Open-role counts were built and then dropped on 2026-11-11 because they go stale. Only the list scrolls; the menu and the page header stay in place.
+**Companies page (002, 002b):** a sortable table, one compact row per company (name linking to the company site, city, an Applied chip when a job there is in the applied state, contact count, the start of the note, icon actions for details, company site, careers page, hide, edit and delete), a search box, a "Show" filter. A row expands to every detail of the company, then its contacts and note. Open-role counts were built and then dropped on 2026-11-11 because they go stale. Only the list scrolls; the menu and the page header stay in place.
 
 **First-level UI (001), after setup:** a sidebar shell with **Home** (setup checklist: key found and working, resume uploaded, profile confirmed, preferences set) · **Profile** (upload, extraction progress, review/edit/confirm, hidden-text and injection flags) · **Preferences** (form) · **Review** (items waiting for approval) · **Settings** (budget cap, key status, tier → model mapping, usage and spend).
 
@@ -423,4 +423,4 @@ Each ADR: decision · why · alternatives. **Approved by Ravi 2026-11-03.**
 6. ~~Queue~~ decided: Procrastinate. ~~Key storage~~ decided: `.env` only. ~~Theme~~ decided: dark, Ravi's palette. ~~Export~~ decided: "Export all my data" in feature 003.
 
 No open questions remain.
-5. ~~Company list storage~~ decided: Postgres `companies` table seeded from the repo, editable in the app, CSV import/export (§8).
+5. ~~Company list storage~~ decided: Postgres `companies` table seeded from the repo, editable in the app (§8; the CSV import/export was removed in 002d).

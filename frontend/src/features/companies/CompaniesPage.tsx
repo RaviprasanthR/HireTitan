@@ -14,7 +14,6 @@ import {
   Search,
   StickyNote,
   Trash2,
-  Upload,
   Users,
 } from 'lucide-react'
 import { useState } from 'react'
@@ -32,7 +31,6 @@ import {
 } from './api'
 import { CompanyPanel } from './CompanyPanel'
 import { Field, inputClass } from './Field'
-import { ImportExport } from './ImportExport'
 
 type Show = 'all' | 'contacts' | 'applied'
 type SortKey = 'name' | 'city' | 'applied' | 'contacts' | 'note'
@@ -484,7 +482,6 @@ function HeaderRow({ sort, onSort }: { sort: Sort; onSort: (key: SortKey) => voi
 export function CompaniesPage() {
   const [filter, setFilter] = useState<CompanyFilter>('all')
   const [adding, setAdding] = useState(false)
-  const [tools, setTools] = useState(false)
   const companies = useCompanies(filter)
   const [show, setShow] = useState<Show>('all')
   const [query, setQuery] = useState('')
@@ -548,17 +545,6 @@ export function CompaniesPage() {
             />
           </label>
           <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className={TOOL_CHIP}
-              aria-expanded={tools}
-              onClick={() => setTools(!tools)}
-            >
-              <Upload aria-hidden />
-              Import / export
-            </Button>
             {!adding && (
               <Button
                 type="button"
@@ -573,9 +559,6 @@ export function CompaniesPage() {
           </div>
         </div>
         {adding && <AddCompanyDialog onClose={() => setAdding(false)} />}
-        <div hidden={!tools} className="rounded-lg bg-surface p-3">
-          <ImportExport />
-        </div>
         <div className="flex flex-wrap items-center gap-3">
           <div role="tablist" aria-label="Company lists" className="flex gap-2">
             {TABS.map((tab) => (

@@ -299,10 +299,7 @@ def test_allowed_search_http_usage_passes(source: str, is_fetcher: bool) -> None
 # way to send anything and no HTTP client at all (LinkedIn links are stored, never fetched).
 CONTACTS_GLOBS = (
     "search/domain/contacts*.py",
-    "search/domain/sheet.py",
-    "search/domain/company_match.py",
     "search/application/contacts.py",
-    "search/application/sheet_import.py",
 )
 CONTACTS_FORBIDDEN_CLIENT_MODULES = ("httpx", "requests", "aiohttp", "urllib.request")
 

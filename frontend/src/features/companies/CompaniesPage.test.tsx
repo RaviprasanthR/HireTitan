@@ -607,24 +607,6 @@ describe('CompaniesPage', () => {
       expect(screen.getByRole('button', { name: 'Sort by location, now A to Z' })).toBeTruthy()
       expect(screen.getByRole('button', { name: 'Sort by company' })).toBeTruthy()
     })
-
-    it('keeps the import and export controls out of the way until asked for', async () => {
-      const user = userEvent.setup()
-      renderPage(rows)
-      await screen.findByRole('list', { name: 'Companies' })
-      expect(screen.queryByRole('link', { name: 'Export CSV' })).toBeNull()
-      expect(screen.queryByRole('checkbox', { name: /include contacts/i })).toBeNull()
-      expect(screen.queryByLabelText('Sort by')).toBeNull() // the old drop-down is gone
-
-      const toggle = screen.getByRole('button', { name: 'Import / export' })
-      expect(toggle).toHaveAttribute('aria-expanded', 'false')
-      await user.click(toggle)
-
-      expect(toggle).toHaveAttribute('aria-expanded', 'true')
-      expect(screen.getByRole('link', { name: 'Export CSV' })).toBeInTheDocument()
-      expect(screen.getByRole('checkbox', { name: /include contacts/i })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: 'Import a company sheet' })).toBeInTheDocument()
-    })
   })
 
   describe('the toolbar', () => {
@@ -637,7 +619,7 @@ describe('CompaniesPage', () => {
 
       const filter = screen.getByRole('form', { name: 'Company filters' })
       expect(filter.querySelector('svg')).not.toBeNull() // Show: eye icon
-      for (const name of ['Import / export', 'Add a company', 'Check manually']) {
+      for (const name of ['Add a company', 'Check manually']) {
         const button = screen.getByRole(name === 'Check manually' ? 'tab' : 'button', { name })
         expect(button.querySelector('svg')).not.toBeNull()
         expect(button).toHaveClass('bg-[#243044]')
