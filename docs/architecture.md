@@ -69,7 +69,7 @@ backend/
     interviews/      (006, R2)
       └─ each module: domain/ · application/ · infra/ · api/ (+ adapters/ only where it owns a boundary)
     platform/        shared building blocks
-      llm/           LlmPort, OpenAI adapter (others later), budget guard, validation chain, prompt registry
+      llm/           LlmPort, OpenAI adapter (others later), validation chain, prompt registry
       runtime/       Procrastinate app + task definitions, workflow runs, LangGraph checkpointer, events/SSE
       untrusted/     sanitize · screen · delimit · hidden-text detection
       storage/ clock/ config/ db/ security/ careerops/
@@ -142,17 +142,16 @@ class LlmRequest(Generic[T]):
 @dataclass
 class LlmResult(Generic[T]):
     value: T | None
-    outcome: Literal["ok", "repaired", "fallback", "refused", "budget_blocked", "error"]
-    usage: Usage              # tokens in/out, cost_usd, latency_ms
+    outcome: Literal["ok", "repaired", "fallback", "refused", "error"]
+    usage: Usage              # tokens in/out, latency_ms
     provider: str
     model: str
 ```
 
 - One adapter per provider family: **OpenAI**, **Anthropic**, **Google Gemini**, and **OpenAI-compatible** (base URL + key; covers Ollama, OpenRouter, Groq, Azure OpenAI and others). Each adapter uses the provider's own SDK and its native structured-output feature when the model supports it. Otherwise it falls back to JSON in the prompt plus strict parsing (constitution IV, "degrade gracefully").
 - **OpenAI first** (ADR-02): feature 001 builds only the OpenAI adapter; the others land before the first public release. The port, the fake LLM and all tests are provider-neutral from day one.
-- **Model tiers**: workflows ask for `fast` or `strong`, never a model name. Settings map each tier to a model per provider. **Profile extraction uses `fast` for now** (cost); the 001 cost/quality test decides whether to change it.
-- **Budget guard** (wraps every adapter): estimates the cost before the call and blocks it with `budget_blocked` if the month's spend plus the estimate would pass the cap. Logs every call to `app.llm_calls` (provider, model, task, prompt version, tokens, cost, latency, outcome). Batch actions (e.g. relevance check on 80 jobs) show an estimate before the user confirms.
-- Prices come from a versioned price table shipped with the app and editable in settings, since OpenAI-compatible endpoints vary.
+- **Model tiers**: workflows ask for `fast` or `strong`, never a model name. Settings map each tier to a model per provider. **Profile extraction uses `fast` for now**; the 001 quality test decides whether to change it.
+- **No budget, no cost shown** (feature 002d). HireTitan has no budget guard, no price table and no cost column: the user brings their own key and the provider bills them. Every call is logged to `app.llm_calls` (provider, model, task, prompt version, tokens, latency, outcome). An out-of-credit answer pauses the run and **Check again** resumes it.
 
 ### 5.2 Validation chain
 
@@ -228,7 +227,7 @@ Trigger: user asks for suggestions, or the profile or preferences change. The us
 | 5 | `save_rules` | D | approved rule set stored with version; used by W3 |
 
 ### W3 `search_run` (features 002 / 002b)
-Trigger: user clicks "Search now". **Rules first, then the `fast` model judges the rest** (ADR-12): jobs that pass the rules are judged for relevance in groups of 10; a "rules only" run makes no LLM calls. The run works in **batches of 8 companies**, stores each batch in one transaction, publishes `search.batch_done` and shows the cost so far; Stop, the budget cap and an out-of-credit answer end the run after the batch is stored. As built (002), the graph is `plan_run → fetch_batch → normalize/dedup → rules → judge_relevance → store`, looping over batches. The diagram below is the earlier design and the table is still a fair guide to each step. W3b became the one-node `recheck_job` workflow ("Check again" on one job).
+Trigger: user clicks "Search now". **Rules first, then the `fast` model judges the rest** (ADR-12): jobs that pass the rules are judged for relevance in groups of 10; a "rules only" run makes no LLM calls. The run works in **batches of 8 companies**, stores each batch in one transaction, publishes `search.batch_done` and shows progress; Stop and an out-of-credit answer end the run after the batch is stored. As built (002), the graph is `plan_run → fetch_batch → normalize/dedup → rules → judge_relevance → store`, looping over batches. The diagram below is the earlier design and the table is still a fair guide to each step. W3b became the one-node `recheck_job` workflow ("Check again" on one job).
 
 ```mermaid
 flowchart LR
@@ -259,7 +258,7 @@ flowchart LR
 No interrupt here: results go straight to the jobs list, where every rule decision is visible and reversible.
 
 ### W3b `ai_relevance_check` (feature 002, optional, on demand)
-Trigger: the user clicks "Check with AI" on the **maybe** bucket or on selected jobs; the cost estimate is shown first.
+Trigger: the user clicks "Check with AI" on the **maybe** bucket or on selected jobs.
 `extract_job_facts` L fast (quarantined: raw JD → `JobFacts`, cached per JD hash) → `relevance_check` L fast (facts + profile summary + preferences → `relevant / not_relevant / unsure` + visible reason; batched ~10 jobs per call) → `store_decisions` D (moves jobs between buckets with an "AI:" reason; undoable).
 
 ### W4 `score_job` (feature 002, optional, on demand)
@@ -288,7 +287,7 @@ Trigger: user picks a job/application and a draft type (referral request, Linked
 | 6 | `save_version` | D | stored and linked to the application |
 
 ### W9 `content_suggestions` (feature 005, optional, on button press)
-Trigger: the user asks for suggestions on the **base profile** (general) or on a **tailored resume** (job-aware). The cost estimate is shown first. Never runs automatically.
+Trigger: the user asks for suggestions on the **base profile** (general) or on a **tailored resume** (job-aware). Never runs automatically.
 
 | # | Node | Type | Notes |
 |---|---|---|---|
@@ -312,7 +311,7 @@ Exact schemas are designed per feature. Ownership by area:
 
 | Area | Main tables (indicative) | Owner feature |
 |---|---|---|
-| Setup | `settings` (budget cap, tier → model mapping; **no API keys**, those live in `.env`) | 001 |
+| Setup | `settings` (app state; **no API keys**, those live in `.env`; the tier → model mapping is a shipped file) | 001 |
 | Profile | `resume_files`, `profiles`, `profile_versions` (each linked to its source resume file), `preferences`, `style_guides` | 001 (style guide: 004) |
 | Runtime | `workflow_runs`, `llm_calls`, `events`, plus Procrastinate's own queue tables | 001 (foundation) |
 | Search | `companies` (built-in seed + user), `company_contacts` and `company_notes` (002b, the person's own), `sources`, `search_rules`, `source_runs`, `jobs`, `job_sources`, `job_facts`, `filter_decisions` (rule and AI), `job_scores` | 002 |
@@ -366,7 +365,7 @@ Palette changed 2026-11-12 (feature 002d, user story 6) to a **flat** theme from
 
 **Companies page (002, 002b):** a sortable table, one compact row per company (name linking to the company site, city, an Applied chip when a job there is in the applied state, contact count, the start of the note, icon actions for details, company site, careers page, hide, edit and delete), a search box, a "Show" filter. A row expands to every detail of the company, then its contacts and note. Open-role counts were built and then dropped on 2026-11-11 because they go stale. Only the list scrolls; the menu and the page header stay in place.
 
-**First-level UI (001), after setup:** a sidebar shell with **Home** (setup checklist: key found and working, resume uploaded, profile confirmed, preferences set) · **Profile** (upload, extraction progress, review/edit/confirm, hidden-text and injection flags) · **Preferences** (form) · **Review** (items waiting for approval) · **Settings** (budget cap, key status, tier → model mapping, usage and spend).
+**First-level UI (001), after setup:** a sidebar shell with **Home** (setup checklist: key found and working, resume uploaded, profile confirmed, preferences set) · **Profile** with three tabs (Profile: upload, extraction progress, review/edit/confirm, hidden-text and injection flags; Preferences; Search rules) · **Settings** (AI key status, Check again, Delete all my data). **Home** has two tabs, Explore and In pipeline (applied or inquired jobs), and a "N items need your review" notice that opens the Review page. The menu is exactly Home, Companies, Profile, Settings (002d).
 
 Later screens, each added by its feature: Search rules · Companies · Jobs (match / maybe / hidden with reasons, job detail) · Applications · Drafts · Tailored resumes · Export.
 
@@ -384,7 +383,7 @@ Later screens, each added by its feature: Search rules · Companies · Jobs (mat
 | Frontend | components and hooks; e2e journeys against a seeded backend with the fake LLM | Vitest, Playwright |
 | Evals | prompt quality against real providers; run manually and in PRs that change prompts | `evals/` runner |
 
-Test names reference requirement/scenario IDs. Coverage gates: ≥ 90% domain + application, ≥ 80% overall. Normal test runs never call OpenAI; only evals do (small, on demand, counted against the budget cap). All test data is synthetic.
+Test names reference requirement/scenario IDs. Coverage gates: ≥ 90% domain + application, ≥ 80% overall. Normal test runs never call OpenAI; only evals do (small, on demand, behind `--yes`). All test data is synthetic.
 
 ## 12. Architecture decisions (ADRs)
 
@@ -412,7 +411,9 @@ Each ADR: decision · why · alternatives. **Approved by Ravi 2026-11-03.**
 
 **ADR-11 Default models per provider (OpenAI decided 2026-11-05).** Profile extraction uses the `fast` tier (`gpt-5.4-mini`). Eval on 15 synthetic English documents (11 resumes and 4 that are not; `backend/evals/reports/extract_profile-2026-11-05.md`, prompt v2): `fast` (`gpt-5.4-mini`) precision 100%, recall 100%, $0.0019 per document, p95 3.2 s, all 4 non-resumes rejected and no resume rejected by mistake; `strong` (`gpt-6-astra`) the same scores at $0.0193 per document, p95 6.4 s. An earlier run on prompt v1 (11 resumes) gave `fast` 97.9% recall (3 skills missed in a table layout) and `strong` 100%, so run-to-run variation is real. Both pass SC-003 and SC-007; `strong` costs about 10 to 16 times more for no measured gain. Other providers get their defaults from the same eval when their adapters are added. Rule: change the default only with a newer report that supports it (`test_defaults_match_latest_eval_report`). HireTitan is English-only, so the eval set is English. How to run and read an eval: `docs/how-we-choose-a-model.md`.
 
-**ADR-12 Relevance judging in the default search (decided 2026-11-06, feature 002).** The default search judges relevance with the `fast` model after the rules, instead of leaving AI to an on-demand step. Reason: the person wants only relevant jobs in the list. Eval of prompt `judge_relevance` v1 on 60 labelled postings, `gpt-5.4-mini`: precision 98.3%, recall 94.3%, no unusable answers, no injection-affected decisions, $0.00024 per job (`backend/evals/reports/`). To keep cost and waiting visible, W3 runs in batches with live cost and a Stop button instead of an upfront estimate (deviation D3, approved). Job text is untrusted input: it goes to the model inside quarantined blocks and the answer is validated. Without a key, in rules-only mode or after an unusable answer, jobs stay in Explore as "not checked by AI".
+**ADR-12 Relevance judging in the default search (decided 2026-11-06, feature 002).** The default search judges relevance with the `fast` model after the rules, instead of leaving AI to an on-demand step. Reason: the person wants only relevant jobs in the list. Eval of prompt `judge_relevance` v1 on 60 labelled postings, `gpt-5.4-mini`: precision 98.3%, recall 94.3%, no unusable answers, no injection-affected decisions, $0.00024 per job (`backend/evals/reports/`). To keep waiting visible, W3 runs in batches with progress and a Stop button (deviation D3, approved; the live cost was removed in 002d). Job text is untrusted input: it goes to the model inside quarantined blocks and the answer is validated. Without a key, in rules-only mode or after an unusable answer, jobs stay in Explore as "not checked by AI".
+
+**ADR-13 No AI cost or budget in the app (decided 2026-11-12, feature 002d).** HireTitan shows no AI cost and has no budget cap, guard or price table. The user brings their own key and sees spend with the provider. Out-of-credit still pauses and resumes. Removing the prices also closed the `tiktoken` open item (the guard was its only user).
 
 ## 13. Open questions for Ravi
 

@@ -1,13 +1,13 @@
 # Company contacts and notes
 
-The Companies page keeps, for each company, the people you know there and one private note. It also shows whether you have applied to a job at that company. Everything here is your own data: it stays in your own install and HireTitan never contacts anyone.
+The Companies page keeps, for each company, the people you know there and one private note. It also shows whether you have applied to, or asked about, a job at that company. Everything here is your own data: it stays in your own install and HireTitan never contacts anyone.
 
 ## 1. See and edit
 
-- Each row shows the company, its city, **Applied** when you have marked a job there as applied, the number of contacts, and the start of your note.
+- Each row shows the company, its city, an **Applied** or **Inquired** chip when you have marked a job there as applied or inquired (Applied wins), the number of contacts, and the start of your note.
 - The company name opens the company's website; the globe icon opens the website and the briefcase icon the careers page.
 - The arrow on the right opens the row: every detail HireTitan has about the company, then its contacts and the note. Add, edit or delete a contact there; only the name is required. LinkedIn links must be web addresses (`https://…`).
-- Click a column title to sort (click again to reverse it). Use **Show** to list only companies with contacts or with an application, and the search box to find a company by name or city.
+- Click a column title to sort (click again to reverse it). Sorting by **Pipeline** puts Applied first, then Inquired. Use the search box to find a company by name or city.
 - On a job's page, the people you know at that company are shown with the job.
 
 ## 2. What is never sent anywhere

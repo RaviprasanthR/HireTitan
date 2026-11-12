@@ -16,24 +16,24 @@ A company is listed there when HireTitan cannot read its jobs by the rules above
 
 ## 3. What the search rules do
 
-On **Search rules**, HireTitan proposes rules from your profile and preferences: the job titles you want (with close variants), places, how old a posting may be, and words that rule a job out. You edit them and press **Approve**. Rules come first: a job that breaks a rule is skipped before any AI is used. A skipped job is never deleted. Open the search summary, find it under **Skipped** and press **Restore**.
+On the **Search rules** tab of Profile, HireTitan proposes rules from your profile and preferences: the job titles you want (with close variants), places, how old a posting may be, and words that rule a job out. You edit them and press **Approve**. Rules come first: a job that breaks a rule is skipped before any AI is used. A skipped job is never deleted. Open the search summary, find it under **Skipped** and press **Restore**.
 
-## 4. What a search costs and how to stop it
+## 4. How a search runs and how to stop it
 
-Jobs that pass the rules are judged in groups of 10 by the efficient (`fast`) model, which keeps only the ones that are relevant for your profile and gives a short reason for each. A job already judged is not judged again, so a repeat search costs nothing for those.
+Jobs that pass the rules are judged in groups of 10 by the efficient (`fast`) model, which keeps only the ones that are relevant for your profile and gives a short reason for each. A job already judged is not judged again, so a repeat search only looks at what is new.
 
-- **Cost.** The page shows the cost so far while the search runs. On the reference test set the cost was about $0.00024 per job, so a full search of 40 companies and 160 jobs costs a few cents, under the $0.25 limit the project tests for.
 - **Stop.** Press **Stop** at any time. The batch being processed is stored, and **Continue searching** starts with the companies not yet read.
 - **Rules only.** Turn on **Rules only** to run with no AI at all. Jobs that pass the rules are then listed as "not checked by AI". **Check again** on a job asks the AI later.
-- **Monthly cap.** The search stops when your monthly AI budget (Settings, default $25) is reached.
 
 ## 5. "Out of credit"
 
 If the AI provider says your account has no credit left, the search stops after storing the batch it was on, and the page shows the provider's own message. Add credit on the provider's site, press **Check again** in the banner or in Settings, and start the search again. Nothing already found is lost.
 
-## 6. Applying
+## 6. Applied and inquired
 
-Press **I applied** on a job (the date can be changed) and it moves to the **Applied** page, a table of company, role, applied-on date, status and source. **Undo** is offered for 10 seconds. Later searches leave applied jobs alone.
+Home has two tabs. **Explore** lists new jobs to look at. **In pipeline** lists the jobs you have applied to or asked about, as a table of company, role, date, status (green **Applied**, blue **Inquired**) and source.
+
+Each job has two one-click buttons. **I inquired** is for when you asked about a job but have not applied. **I applied** is for when you applied, including after an earlier inquiry, and it turns the Inquired job into an Applied one. Both use today's date. For another date, open **Other date**, pick it and press the button. **Undo** is offered for 10 seconds, and on the job's own page. Later searches leave jobs in your pipeline alone, and the Companies page shows an **Applied** or **Inquired** chip for the company.
 
 ## 7. Your data
 
