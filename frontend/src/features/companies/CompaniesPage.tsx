@@ -201,24 +201,31 @@ function CompanyRow({ company, manual }: { company: Company; manual: boolean }) 
   return (
     <li
       aria-label={company.name}
-      className="space-y-2 rounded-lg bg-surface px-3 py-1 ring-1 ring-transparent transition duration-200 ease-out hover:-translate-y-px hover:bg-white/[0.04] hover:shadow-[0_8px_24px_-12px_rgba(167,139,250,0.5)] hover:ring-violet-400/30 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+      className="space-y-2 border-b border-border px-3 py-1.5 transition-colors duration-200 hover:bg-[#9c4f37]/25 motion-reduce:transition-none"
     >
       <div className={`flex min-h-8 flex-wrap items-center gap-x-4 gap-y-1 ${COLUMNS}`}>
-        <h2 className="min-w-0 truncate font-semibold">
-          {company.website ? (
-            <a
-              href={company.website}
-              target="_blank"
-              rel="noreferrer noopener"
-              className="hover:text-orange-300 hover:underline"
-            >
-              {company.name}
-            </a>
-          ) : (
-            company.name
+        <div className="min-w-0">
+          <h2 className="min-w-0 truncate font-semibold">
+            {company.website ? (
+              <a
+                href={company.website}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="hover:text-orange-300 hover:underline"
+              >
+                {company.name}
+              </a>
+            ) : (
+              company.name
+            )}
+            {company.hidden && <span className="ml-2 text-sm text-muted-small">(hidden)</span>}
+          </h2>
+          {company.website && (
+            <p data-testid="company-host" className="truncate text-xs text-muted-small">
+              {shortUrl(company.website)}
+            </p>
           )}
-          {company.hidden && <span className="ml-2 text-sm text-muted-small">(hidden)</span>}
-        </h2>
+        </div>
         <span className="min-w-0 truncate text-sm text-muted-small">{company.city ?? ''}</span>
         <AppliedChip company={company} />
         <span
@@ -438,7 +445,7 @@ function HeaderRow({ sort, onSort }: { sort: Sort; onSort: (key: SortKey) => voi
         aria-label={sortLabel(key, sort)}
         title={SORT_NAMES[key]}
         onClick={() => onSort(key)}
-        className={`-ml-1 inline-flex items-center gap-1 rounded px-1 uppercase hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring ${
+        className={`-ml-1 inline-flex items-center gap-1 rounded px-1 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring ${
           active ? 'text-foreground' : ''
         } ${extra}`}
       >
@@ -454,7 +461,7 @@ function HeaderRow({ sort, onSort }: { sort: Sort; onSort: (key: SortKey) => voi
   }
   return (
     <div
-      className={`hidden overflow-hidden rounded-lg border border-slate-200/15 bg-slate-200/10 px-3 py-2 text-xs font-semibold tracking-wider text-slate-200 shadow-sm [scrollbar-gutter:stable] ${COLUMNS}`}
+      className={`hidden border-b border-border px-3 py-2 text-sm font-semibold text-muted-small [scrollbar-gutter:stable] ${COLUMNS}`}
     >
       {button('name', 'Company')}
       {button('city', 'Location')}
@@ -507,7 +514,7 @@ export function CompaniesPage() {
     )
   else
     body = (
-      <ul aria-label="Companies" className="space-y-1.5">
+      <ul aria-label="Companies">
         {items.map((company) => (
           <CompanyRow key={company.id} company={company} manual={filter === 'check_manually'} />
         ))}

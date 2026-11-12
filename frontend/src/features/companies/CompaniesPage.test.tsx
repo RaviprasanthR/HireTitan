@@ -461,6 +461,68 @@ describe('CompaniesPage', () => {
       expect(within(row).queryByRole('link', { name: /website/i })).toBeNull()
       expect(within(row).queryByRole('link', { name: /careers page/i })).toBeNull()
     })
+
+    it('FR023 the website is a second line under the name', async () => {
+      renderPage(list)
+      const row = await screen.findByRole('listitem', { name: 'Acme' })
+
+      const host = within(row).getByText('acme.example.com')
+
+      expect(host).toHaveClass('text-xs')
+      expect(host).toHaveClass('text-muted-small')
+      expect(within(row).getByRole('heading', { level: 2 })).not.toContainElement(host)
+    })
+
+    it('FR023 no second line without a website', async () => {
+      renderPage(list)
+      const row = await screen.findByRole('listitem', { name: 'Nosite' })
+
+      expect(row.querySelector('[data-testid="company-host"]')).toBeNull()
+    })
+
+    it('FR023 a row is a plain line with a bottom divider, not a card', async () => {
+      renderPage(list)
+      const row = await screen.findByRole('listitem', { name: 'Acme' })
+
+      expect(row).toHaveClass('border-b')
+      expect(row).not.toHaveClass('rounded-lg')
+      expect(row).not.toHaveClass('bg-surface')
+    })
+
+    it('FR024 action icons keep their own colours', async () => {
+      renderPage(list)
+      const row = await screen.findByRole('listitem', { name: 'Acme' })
+
+      const tone = (name: string, colour: string) =>
+        expect(within(row).getByRole(name.startsWith('Open') ? 'link' : 'button', { name })).toHaveClass(
+          colour,
+        )
+      tone('Details for Acme', 'text-slate-300')
+      tone('Open Acme website', 'text-orange-300')
+      tone('Open Acme careers page', 'text-violet-300')
+      tone('Hide Acme', 'text-yellow-300')
+      tone('Edit Acme', 'text-emerald-300')
+      tone('Delete Acme', 'text-rose-300')
+    })
+
+    it('FR024 the row hover tint is see-through', async () => {
+      renderPage(list)
+      const row = await screen.findByRole('listitem', { name: 'Acme' })
+
+      expect(row).toHaveClass('hover:bg-[#9c4f37]/25')
+    })
+
+    it('FR023 the header is plain title case with a bottom divider', async () => {
+      renderPage(list)
+      await screen.findByRole('listitem', { name: 'Acme' })
+
+      const button = screen.getByRole('button', { name: /^Sort by company/ })
+      const header = button.parentElement as HTMLElement
+
+      expect(header).toHaveClass('border-b')
+      expect(header).not.toHaveClass('bg-slate-200/10')
+      expect(button).not.toHaveClass('uppercase')
+    })
   })
 
   describe('the table header', () => {
