@@ -210,3 +210,13 @@ async def test_undo_applied_after_inquired_returns_to_explore(env: Env) -> None:
 
     body = undone.json()  # the inquiry is not restored
     assert (body["state"], body["applied_on"], body["inquired_on"]) == ("explore", None, None)
+
+
+@pytest.mark.parametrize("state", ["inquired", "applied"])
+async def test_a_job_in_the_pipeline_can_be_deleted(env: Env, state: str) -> None:
+    job_id = await add_job(env, "Backend Engineer", state=state)
+
+    response = await env.client.delete(f"/api/v1/jobs/{job_id}")
+
+    assert response.status_code == 204
+    assert (await _pipeline(env))["items"] == []

@@ -116,9 +116,14 @@ export function useRefreshing() {
   const client = useQueryClient()
   return () =>
     Promise.all(
-      [['jobs'], ['search-latest'], ['search-run'], ['search-runs'], ['duplicates']].map(
-        (queryKey) => client.invalidateQueries({ queryKey }),
-      ),
+      [
+        ['jobs'],
+        ['companies'],
+        ['search-latest'],
+        ['search-run'],
+        ['search-runs'],
+        ['duplicates'],
+      ].map((queryKey) => client.invalidateQueries({ queryKey })),
     )
 }
 

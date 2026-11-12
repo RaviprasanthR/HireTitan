@@ -336,7 +336,10 @@ def create_search_jobs_router(deps: SearchJobsApiDeps) -> APIRouter:
                 transition(JobState(row.state), JobState.deleted)
             except IllegalJobTransitionError as error:
                 raise ProblemError(409, str(error)) from error
+            # The date of the old state goes with it (the table requires it).
             row.state = JobState.deleted.value
+            row.applied_on = None
+            row.inquired_on = None
             await session.commit()
         return Response(status_code=204)
 

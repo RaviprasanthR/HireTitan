@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ApiError } from '@/api/client'
 import { Button } from '@/components/ui/button'
 import { useAddCompany, useDecideBoard, useDiscovery, type Company } from './api'
@@ -101,11 +101,44 @@ export function AddCompanyDialog({ onClose }: { onClose: () => void }) {
   const add = useAddCompany()
   const error = add.error instanceof ApiError ? add.error : null
 
+  const card = useRef<HTMLElement>(null)
+  const closeRef = useRef(onClose)
   useEffect(() => {
-    const onKey = (event: KeyboardEvent) => event.key === 'Escape' && onClose()
+    closeRef.current = onClose
+  }, [onClose])
+  const busy = add.isPending
+
+  // Focus moves into the card on open and back to the button that opened it on close; Tab stays
+  // inside the card; Escape closes it unless the company is being saved.
+  useEffect(() => {
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    card.current?.querySelector<HTMLElement>('input, button')?.focus()
+    return () => opener?.focus()
+  }, [])
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !busy) closeRef.current()
+      if (event.key !== 'Tab' || !card.current) return
+      const items = Array.from(
+        card.current.querySelectorAll<HTMLElement>('input, button, a[href]'),
+      ).filter((el) => !el.hasAttribute('disabled'))
+      const first = items[0]
+      const last = items[items.length - 1]
+      if (!first || !last) return
+      if (!card.current.contains(document.activeElement)) {
+        event.preventDefault()
+        first.focus()
+      } else if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [onClose])
+  }, [busy])
 
   // A square card over the page; the page behind it is blurred and a click on it closes the card.
   return (
@@ -114,12 +147,15 @@ export function AddCompanyDialog({ onClose }: { onClose: () => void }) {
       onMouseDown={(event) => event.target === event.currentTarget && onClose()}
     >
       <section
+        ref={card}
         role="dialog"
         aria-modal="true"
-        aria-label="Add a company"
+        aria-labelledby="add-company-title"
         className="aspect-square w-[min(32rem,100%)] space-y-3 overflow-y-auto rounded-xl bg-surface p-6 shadow-[var(--ht-border-panel)]"
       >
-        <h2 className="text-lg font-semibold">Add a company</h2>
+        <h2 id="add-company-title" className="text-lg font-semibold">
+          Add a company
+        </h2>
         {add.isSuccess ? (
           <Suggestion company={add.data} onClose={onClose} />
         ) : (

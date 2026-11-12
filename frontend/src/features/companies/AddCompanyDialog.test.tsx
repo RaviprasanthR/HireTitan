@@ -168,4 +168,36 @@ describe('AddCompanyDialog', () => {
 
     expect(onClose).toHaveBeenCalled()
   })
+
+  it('review: focus moves into the card on open and Tab stays inside it', async () => {
+    const user = userEvent.setup()
+    renderDialog(() => undefined)
+    const dialog = screen.getByRole('dialog', { name: 'Add a company' })
+
+    expect(screen.getByLabelText('Company name')).toHaveFocus()
+    for (let i = 0; i < 12; i++) {
+      await user.tab()
+      expect(dialog).toContainElement(document.activeElement as HTMLElement)
+    }
+    await user.tab({ shift: true })
+    expect(dialog).toContainElement(document.activeElement as HTMLElement)
+  })
+
+  it('review: focus goes back to the button that opened it', () => {
+    const opener = document.createElement('button')
+    document.body.append(opener)
+    opener.focus()
+    const calls = stubApi(() => undefined)
+    expect(calls).toBeDefined()
+    const { unmount } = render(
+      <QueryClientProvider client={new QueryClient()}>
+        <AddCompanyDialog onClose={() => undefined} />
+      </QueryClientProvider>,
+    )
+
+    unmount()
+
+    expect(opener).toHaveFocus()
+    opener.remove()
+  })
 })
