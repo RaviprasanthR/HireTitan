@@ -72,12 +72,12 @@ async def test_SC006a_out_of_credit_call_is_not_retried(env: Env) -> None:
     assert len(env.llm.calls) == 1
 
 
-async def test_US1_AS8_budget_reached_stops_and_next_search_continues(env: Env) -> None:
+async def test_FR012_out_of_credit_still_pauses_and_resumes(env: Env) -> None:
     await nine_companies(env)
-    env.llm.add(AiUnavailable("budget_reached"))
+    env.llm.add(AiUnavailable("out_of_credit", MESSAGE))
     await go(env, await new_search(env, mode="rules_and_ai"))
     run = await latest(env)
-    assert (run.outcome, run.next_index) == ("budget_reached", 8)
+    assert (run.outcome, run.next_index) == ("out_of_credit", 8)
 
     unread = (await latest(env)).company_order[8]  # the company the stopped search never reached
 
@@ -88,6 +88,17 @@ async def test_US1_AS8_budget_reached_stops_and_next_search_continues(env: Env) 
     assert second[0].company_id == unread  # FR-010a: the leftover company is read first
     run = await latest(env)
     assert (run.outcome, run.next_index) == ("finished", 9)
+
+
+async def test_SC004_no_budget_stop_however_much_was_used(env: Env) -> None:
+    await nine_companies(env)
+    env.llm.add(all_yes(8), all_yes(1))
+
+    await go(env, await new_search(env, mode="rules_and_ai"))
+
+    run = await latest(env)
+    assert (run.outcome, run.batches_done, run.next_index) == ("finished", 2, 9)
+    assert len(env.career_ops.scan_calls) == 2  # both batches were read
 
 
 async def test_US1_AS9_stop_after_current_batch(env: Env) -> None:

@@ -1,14 +1,13 @@
 """Check one job with the AI (``POST /jobs/{id}/recheck``): the "Check again" on a job that was
 shown as "not checked by AI" (FR-028).
 
-A small workflow so the usual rules apply: an unavailable AI (no key, budget reached, out of
+A small workflow so the usual rules apply: an unavailable AI (no key, out of
 credit) pauses the run, and "Check again" in the banner puts it back in the queue. An answer
 that cannot be used leaves the job as it was.
 """
 
 from __future__ import annotations
 
-from decimal import Decimal
 from functools import partial
 from typing import Any, Final, TypedDict, cast
 from uuid import UUID
@@ -73,7 +72,6 @@ async def recheck(deps: SearchDeps, state: dict[str, Any]) -> dict[str, Any]:
         [job],
         mode="rules_and_ai",
         run_id=UUID(state["run_id"]),
-        already_cost=Decimal(0),
     )
     if judged.unavailable is not None:
         raise judged.unavailable  # the run pauses; "Check again" resumes it

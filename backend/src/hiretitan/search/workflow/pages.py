@@ -4,7 +4,7 @@ Order: fetch (robots, spacing, cache, limits) -> JobPosting data and job-shaped 
 only when the page has readable text but nothing the free steps could use, and only in
 ``rules_and_ai`` mode. The AI may give back only links the page itself contains. Any failure is a
 result for this one company (``blocked``, ``unreadable``, ``failed``); it never fails the search.
-A budget or credit stop is reported in ``PageRead.stop`` so the graph ends the search after the
+A credit stop is reported in ``PageRead.stop`` so the graph ends the search after the
 batch (like the judge).
 """
 
@@ -12,7 +12,6 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from decimal import Decimal
 from typing import Any, Final
 from urllib.parse import urlsplit
 from uuid import UUID
@@ -41,7 +40,6 @@ class PageRead:
     result: str  # ok | no_jobs | blocked | unreadable | failed
     postings: list[Posting] = field(default_factory=list)
     error: str | None = None
-    cost: Decimal = Decimal(0)
     stop: Stop | None = None
 
 
@@ -59,16 +57,13 @@ def _only_links_from(allowed: frozenset[str]) -> Callable[[Any], list[str]]:
 
 async def _ask_ai(
     deps: JudgeDeps, text: str, url: str, *, run_id: UUID
-) -> tuple[list[Posting] | None, Decimal, Stop | None, str | None]:
-    """The jobs the AI found (None: no usable answer), what it cost, a stop, and an error."""
-    cost = Decimal(0)
+) -> tuple[list[Posting] | None, Stop | None, str | None]:
+    """The jobs the AI found (None: no usable answer), a stop, and an error."""
 
     async def record(call: LlmCallRecord) -> None:
-        nonlocal cost
         async with deps.sessions() as session:
             await CallsRepo(session).record(call)
             await session.commit()
-        cost += call.cost_usd
 
     prompt = deps.prompts.load(PROMPT_NAME)
     schema: type[BaseModel] = prompt.output_schema
@@ -99,13 +94,13 @@ async def _ask_ai(
             run_id=run_id,
         )
     except AiUnavailable as exc:
-        return None, cost, stop_for(exc), (exc.provider_message or str(exc))[:ERROR_MAX]
+        return None, stop_for(exc), (exc.provider_message or str(exc))[:ERROR_MAX]
     except RetryableLlmError as exc:
-        return None, cost, None, str(exc)[:ERROR_MAX]
+        return None, None, str(exc)[:ERROR_MAX]
     if answered.outcome == "fallback":
-        return None, cost, None, None
+        return None, None, None
     found = [Posting(job.title, job.url, job.location) for job in answered.value.jobs]
-    return found, cost, None, None
+    return found, None, None
 
 
 async def read_careers_page(
@@ -133,8 +128,8 @@ async def read_careers_page(
     if not use_ai or ai is None:  # readable text, no jobs we can pick out without the AI
         return PageRead("no_jobs")
     text = page_text(fetched.body, base)
-    found, cost, stop, ai_error = await _ask_ai(ai, text, base, run_id=run_id)
+    found, stop, ai_error = await _ask_ai(ai, text, base, run_id=run_id)
     if found is None:
         outcome = "unreadable" if ai_error is None else "failed"
-        return PageRead(outcome, error=ai_error or NO_REPLY, cost=cost, stop=stop)
-    return PageRead("ok" if found else "no_jobs", found, cost=cost)
+        return PageRead(outcome, error=ai_error or NO_REPLY, stop=stop)
+    return PageRead("ok" if found else "no_jobs", found)

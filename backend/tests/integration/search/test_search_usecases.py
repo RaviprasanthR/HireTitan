@@ -214,7 +214,6 @@ async def test_batch_writes_jobs_decisions_sources_and_counts(db_session: AsyncS
             seen=[],
             companies=[CompanyOutcome(company, "ok", 3, None)],
             next_index=1,
-            ai_cost_delta=Decimal("0.0042"),
             now=NOW,
         ),
     )
@@ -241,7 +240,6 @@ async def test_batch_writes_jobs_decisions_sources_and_counts(db_session: AsyncS
     assert (run.batches_done, run.next_index) == (1, 1)
     assert (run.jobs_found, run.skipped_by_rules, run.judged_by_ai) == (3, 1, 1)
     assert (run.kept, run.added, run.merged, run.not_checked_by_ai) == (2, 2, 0, 1)
-    assert run.ai_cost_usd == Decimal("0.0042")
 
 
 async def test_seen_again_job_keeps_state_and_gets_a_source(db_session: AsyncSession) -> None:
@@ -249,7 +247,7 @@ async def test_seen_again_job_keeps_state_and_gets_a_source(db_session: AsyncSes
     store = SearchStore(db_session)
     await store_batch(
         store,
-        BatchWrite(run_id, 1, [new_job("Backend Engineer")], [], [], 0, Decimal(0), NOW),
+        BatchWrite(run_id, 1, [new_job("Backend Engineer")], [], [], 0, NOW),
     )
     job = (await db_session.scalars(select(JobRow))).one()
     await JobsRepo(db_session).set_state(job.id, "skipped")  # the person restored/skipped it
@@ -264,7 +262,6 @@ async def test_seen_again_job_keeps_state_and_gets_a_source(db_session: AsyncSes
             [SeenJob(job.id, "https://careers.example.com/backend-engineer", "careers_page")],
             [],
             1,
-            Decimal(0),
             later,
         ),
     )
@@ -281,9 +278,7 @@ async def test_seen_again_job_keeps_state_and_gets_a_source(db_session: AsyncSes
 async def test_candidate_pairs_are_stored_in_id_order(db_session: AsyncSession) -> None:
     run_id = await started_run(db_session)
     store = SearchStore(db_session)
-    await store_batch(
-        store, BatchWrite(run_id, 1, [new_job("Backend Engineer")], [], [], 0, Decimal(0), NOW)
-    )
+    await store_batch(store, BatchWrite(run_id, 1, [new_job("Backend Engineer")], [], [], 0, NOW))
     first = (await db_session.scalars(select(JobRow))).one()
 
     await store_batch(
@@ -295,7 +290,6 @@ async def test_candidate_pairs_are_stored_in_id_order(db_session: AsyncSession) 
             [],
             [],
             0,
-            Decimal(0),
             NOW,
         ),
     )
@@ -322,7 +316,6 @@ async def test_FR008_batch_commit_is_atomic(db_session: AsyncSession) -> None:
                     [],
                     [],
                     5,
-                    Decimal("1.5"),
                     NOW,
                 ),
             )
@@ -331,4 +324,4 @@ async def test_FR008_batch_commit_is_atomic(db_session: AsyncSession) -> None:
     assert await db_session.scalar(select(func.count()).select_from(RelevanceDecisionRow)) == 0
     run = await SearchRunsRepo(db_session).get(run_id)
     assert run is not None
-    assert (run.batches_done, run.next_index, run.ai_cost_usd) == (0, 0, Decimal(0))
+    assert (run.batches_done, run.next_index) == (0, 0)

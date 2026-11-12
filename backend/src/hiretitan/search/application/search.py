@@ -2,7 +2,7 @@
 
 ``start_search`` checks that setup is complete, that rules are approved and that no other
 search is active, then records the run and hands it to the queue. ``store_batch`` writes one
-batch (jobs, sources, decisions, company results, counts, cost and the progress event) in a
+batch (jobs, sources, decisions, company results, counts and the progress event) in a
 single transaction, so a stopped or crashed search never leaves a half-written batch. The
 caller announces the finished batch once it is committed.
 """
@@ -112,7 +112,6 @@ class BatchWrite:
     seen: list[SeenJob]
     companies: list[CompanyOutcome]
     next_index: int
-    ai_cost_delta: Decimal
     now: datetime
 
 
@@ -156,9 +155,9 @@ class SearchTransaction(Protocol):
     ) -> None: ...
 
     async def advance_run(
-        self, run_id: UUID, counts: BatchCounts, next_index: int, ai_cost_delta: Decimal
+        self, run_id: UUID, counts: BatchCounts, next_index: int
     ) -> dict[str, Any]:
-        """Add the counts and the cost, count the batch, set ``next_index``; return the
+        """Add the counts, count the batch, set ``next_index``; return the
         progress numbers for the event."""
         ...
 
@@ -221,6 +220,6 @@ async def store_batch(store: SearchTransaction, write: BatchWrite) -> BatchCount
         merged=len(write.seen),
         not_checked_by_ai=not_checked,
     )
-    progress = await store.advance_run(run_id, counts, write.next_index, write.ai_cost_delta)
+    progress = await store.advance_run(run_id, counts, write.next_index)
     await store.commit()
     return replace(counts, progress={"search_run_id": str(run_id), **progress})

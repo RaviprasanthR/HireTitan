@@ -3,7 +3,7 @@
 Jobs that passed the free rules go to the fast model 10 at a time. A usable answer decides each
 job ("shown" or "skipped", with the model's reason and where it came from). Anything else keeps
 the job in Explore as "not checked by AI": no key, rules-only mode, or an answer the validation
-chain could not use after its one repair (FR-028). A budget or credit stop is not swallowed here:
+chain could not use after its one repair (FR-028). A credit stop is not swallowed here:
 it is reported in ``Judged.stop`` so the graph ends the search after storing the batch (T032).
 """
 
@@ -11,7 +11,6 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from decimal import Decimal
 from typing import Final
 from uuid import UUID
 
@@ -48,8 +47,7 @@ class JudgeDeps:
 @dataclass
 class Judged:
     jobs: list[NewJob]
-    cost: Decimal = Decimal(0)
-    stop: Stop | None = None  # budget reached or out of credit: the search ends after this batch
+    stop: Stop | None = None  # out of credit: the search ends after this batch
     unavailable: AiUnavailable | None = None  # why the AI could not answer, for any reason
 
 
@@ -79,11 +77,9 @@ def _role(decision: object) -> str | None:
     return " ".join(sanitize(raw).text.split())[:ROLE_MAX] or None
 
 
-async def judge_jobs(
-    deps: JudgeDeps, jobs: list[NewJob], *, mode: str, run_id: UUID, already_cost: Decimal
-) -> Judged:
+async def judge_jobs(deps: JudgeDeps, jobs: list[NewJob], *, mode: str, run_id: UUID) -> Judged:
     """Judge the jobs that the rules kept; leave every other job as it is."""
-    result = Judged(list(jobs), already_cost)
+    result = Judged(list(jobs))
     pending = [i for i, j in enumerate(jobs) if j.decision.decided_by == "rules_only_fallback"]
     if not pending or mode != "rules_and_ai":
         return result
@@ -99,7 +95,6 @@ async def judge_jobs(
             call_id = await CallsRepo(session).record(call)
             await session.commit()
         calls.append((call_id, call))
-        result.cost += call.cost_usd
 
     chain = ValidatedLlm(deps.llm, record, provider=deps.provider)
     for start in range(0, len(pending), JOBS_PER_CALL_MAX):
