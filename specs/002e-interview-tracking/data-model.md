@@ -20,7 +20,7 @@ The spec's two entities **Pipeline contact** and **Job source** are the columns 
 
 Checks:
 - `ck_job_pipeline_details_source_values`: `source IS NULL OR source IN ('direct','hiring_firm')`.
-- `ck_job_pipeline_details_firm_iff_hiring_firm`: `(source = 'hiring_firm' AND firm_name IS NOT NULL) OR (source IS DISTINCT FROM 'hiring_firm' AND firm_name IS NULL)`: a firm name exists exactly when the source is a hiring firm (switching to Direct clears it).
+- `ck_job_pipeline_details_firm_iff_hiring_firm`: `(source IS NOT DISTINCT FROM 'hiring_firm') = (firm_name IS NOT NULL)` (null-safe, so a firm name with no source is refused): a firm name exists exactly when the source is a hiring firm (switching to Direct clears it).
 - `ck_job_pipeline_details_contact_has_name`: `contact_name IS NOT NULL OR (contact_role, contact_email, contact_phone, contact_linkedin) all NULL`.
 
 ## `interview_rounds`
