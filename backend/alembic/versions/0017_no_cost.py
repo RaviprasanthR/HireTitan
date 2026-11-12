@@ -50,7 +50,9 @@ def downgrade() -> None:
     )
     op.add_column(
         "llm_calls",
-        sa.Column("estimated_cost_usd", sa.Numeric(10, 6), server_default=sa.text("0"), nullable=False),
+        sa.Column(
+            "estimated_cost_usd", sa.Numeric(10, 6), server_default=sa.text("0"), nullable=False
+        ),
         schema=S,
     )
     op.add_column(
@@ -60,7 +62,9 @@ def downgrade() -> None:
     )
     op.add_column(
         "settings",
-        sa.Column("budget_cap_usd", sa.Numeric(8, 2), server_default=sa.text("25.00"), nullable=False),
+        sa.Column(
+            "budget_cap_usd", sa.Numeric(8, 2), server_default=sa.text("25.00"), nullable=False
+        ),
         schema=S,
     )
     op.create_check_constraint(
