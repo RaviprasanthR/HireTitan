@@ -4815,7 +4815,7 @@
               "default": "explore",
               "enum": [
                 "explore",
-                "applied"
+                "pipeline"
               ],
               "title": "List",
               "type": "string"

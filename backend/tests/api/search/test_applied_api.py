@@ -151,13 +151,13 @@ async def test_FR037_applied_list_ordered_by_date(env: Env) -> None:
     ):
         await env.client.post(f"/api/v1/jobs/{ids[title]}/applied", json={"applied_on": day})
 
-    page = (await env.client.get("/api/v1/jobs", params={"list": "applied", "limit": 2})).json()
+    page = (await env.client.get("/api/v1/jobs", params={"list": "pipeline", "limit": 2})).json()
     assert [j["title"] for j in page["items"]] == ["Newest", "Middle"]
     assert page["next_cursor"]
 
     rest = (
         await env.client.get(
-            "/api/v1/jobs", params={"list": "applied", "limit": 2, "cursor": page["next_cursor"]}
+            "/api/v1/jobs", params={"list": "pipeline", "limit": 2, "cursor": page["next_cursor"]}
         )
     ).json()
     assert [j["title"] for j in rest["items"]] == ["Oldest"]

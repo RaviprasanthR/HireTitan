@@ -2610,7 +2610,7 @@ export interface operations {
     list_jobs_api_v1_jobs_get: {
         parameters: {
             query?: {
-                list?: "explore" | "applied";
+                list?: "explore" | "pipeline";
                 source?: string | null;
                 company_id?: string | null;
                 work_mode?: string | null;

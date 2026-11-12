@@ -388,15 +388,20 @@ class JobsRepo:
         """Keyset paging, so rows added while the person scrolls never shift a page (SC-010)."""
         limit = max(1, min(limit, MAX_PAGE_SIZE))
         by_company = filters.sort == "company"
-        by_applied = filters.state == "applied"  # the Applied list is newest application first
+        # The pipeline (applied and inquired jobs) is newest date first.
+        by_pipeline = filters.state == "pipeline"
         key: Any = (
             func.lower(JobRow.company_name)
             if by_company
-            else JobRow.applied_on
-            if by_applied
+            else func.coalesce(JobRow.applied_on, JobRow.inquired_on)
+            if by_pipeline
             else JobRow.sort_key
         )
-        query = select(JobRow).where(JobRow.state == filters.state)
+        query = select(JobRow).where(
+            JobRow.state.in_((JobState.applied.value, JobState.inquired.value))
+            if by_pipeline
+            else JobRow.state == filters.state
+        )
         if filters.company_id is not None:
             query = query.where(JobRow.company_id == filters.company_id)
         if filters.work_mode is not None:
@@ -411,7 +416,7 @@ class JobsRepo:
             )
         if cursor is not None:
             value: Any = cursor.sort_value
-            if by_applied and not by_company and isinstance(value, str):
+            if by_pipeline and not by_company and isinstance(value, str):
                 value = date.fromisoformat(value)
             if by_company:
                 after = or_(key > value, and_(key == value, JobRow.id > cursor.id))
@@ -428,8 +433,8 @@ class JobsRepo:
             token: datetime | str
             if by_company:
                 token = last.company_name.lower()
-            elif by_applied and last.applied_on is not None:
-                token = last.applied_on.isoformat()
+            elif by_pipeline and (day := last.applied_on or last.inquired_on) is not None:
+                token = day.isoformat()
             else:
                 token = last.sort_key
             next_cursor = Cursor(token, last.id)

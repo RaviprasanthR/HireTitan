@@ -153,7 +153,7 @@ def create_search_jobs_router(deps: SearchJobsApiDeps) -> APIRouter:
 
     @router.get("")
     async def list_jobs(
-        list: Literal["explore", "applied"] = "explore",
+        list: Literal["explore", "pipeline"] = "explore",
         source: str | None = None,
         company_id: UUID | None = None,
         work_mode: str | None = None,
