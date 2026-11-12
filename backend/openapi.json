@@ -686,123 +686,6 @@
         "title": "ContactModel",
         "type": "object"
       },
-      "ContactOut": {
-        "properties": {
-          "company_id": {
-            "format": "uuid",
-            "title": "Company Id",
-            "type": "string"
-          },
-          "confidence": {
-            "anyOf": [
-              {
-                "enum": [
-                  "high",
-                  "medium",
-                  "low"
-                ],
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Confidence"
-          },
-          "email": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Email"
-          },
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
-          },
-          "linkedin_url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Linkedin Url"
-          },
-          "name": {
-            "title": "Name",
-            "type": "string"
-          },
-          "note": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Note"
-          },
-          "phone": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Phone"
-          },
-          "role": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Role"
-          },
-          "source": {
-            "enum": [
-              "import",
-              "typed"
-            ],
-            "title": "Source",
-            "type": "string"
-          },
-          "updated_at": {
-            "format": "date-time",
-            "title": "Updated At",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "company_id",
-          "name",
-          "role",
-          "linkedin_url",
-          "email",
-          "phone",
-          "confidence",
-          "note",
-          "source",
-          "updated_at"
-        ],
-        "title": "ContactOut",
-        "type": "object"
-      },
       "ContactPatch": {
         "description": "Only the fields that are sent change; an empty text clears an optional field.",
         "properties": {
@@ -891,7 +774,7 @@
         "properties": {
           "items": {
             "items": {
-              "$ref": "#/components/schemas/ContactOut"
+              "$ref": "#/components/schemas/hiretitan__search__api__contacts__ContactOut"
             },
             "title": "Items",
             "type": "array"
@@ -1354,6 +1237,98 @@
         "title": "InquiredIn",
         "type": "object"
       },
+      "InterviewOut": {
+        "properties": {
+          "can_add_round": {
+            "title": "Can Add Round",
+            "type": "boolean"
+          },
+          "can_edit": {
+            "title": "Can Edit",
+            "type": "boolean"
+          },
+          "contact": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/hiretitan__search__api__interviews__ContactOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "job_id": {
+            "format": "uuid",
+            "title": "Job Id",
+            "type": "string"
+          },
+          "rounds": {
+            "items": {
+              "$ref": "#/components/schemas/RoundOut"
+            },
+            "title": "Rounds",
+            "type": "array"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/hiretitan__search__api__interviews__SourceOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/InterviewStatusOut"
+          }
+        },
+        "required": [
+          "job_id",
+          "can_edit",
+          "can_add_round",
+          "contact",
+          "source",
+          "rounds",
+          "status"
+        ],
+        "title": "InterviewOut",
+        "type": "object"
+      },
+      "InterviewStatusOut": {
+        "properties": {
+          "round": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Round"
+          },
+          "state": {
+            "enum": [
+              "explore",
+              "skipped",
+              "applied",
+              "inquired",
+              "scheduled",
+              "cleared",
+              "failed"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state",
+          "round"
+        ],
+        "title": "InterviewStatusOut",
+        "type": "object"
+      },
       "JobCardOut": {
         "properties": {
           "applied_on": {
@@ -1453,7 +1428,7 @@
           },
           "sources": {
             "items": {
-              "$ref": "#/components/schemas/SourceOut"
+              "$ref": "#/components/schemas/hiretitan__search__api__models__SourceOut"
             },
             "title": "Sources",
             "type": "array"
@@ -1695,7 +1670,7 @@
           },
           "sources": {
             "items": {
-              "$ref": "#/components/schemas/SourceOut"
+              "$ref": "#/components/schemas/hiretitan__search__api__models__SourceOut"
             },
             "title": "Sources",
             "type": "array"
@@ -2156,7 +2131,7 @@
           },
           "sources": {
             "items": {
-              "$ref": "#/components/schemas/SourceOut"
+              "$ref": "#/components/schemas/hiretitan__search__api__models__SourceOut"
             },
             "title": "Sources",
             "type": "array"
@@ -2853,6 +2828,42 @@
         "title": "ProvenanceOut",
         "type": "object"
       },
+      "QuestionOut": {
+        "properties": {
+          "answer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "position": {
+            "title": "Position",
+            "type": "integer"
+          },
+          "question": {
+            "title": "Question",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "position",
+          "question",
+          "answer"
+        ],
+        "title": "QuestionOut",
+        "type": "object"
+      },
       "ResumeFileOut": {
         "properties": {
           "created_at": {
@@ -3073,6 +3084,92 @@
           "provenance"
         ],
         "title": "ReviewOut",
+        "type": "object"
+      },
+      "RoundOut": {
+        "properties": {
+          "feedback": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feedback"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "interviewers": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interviewers"
+          },
+          "kind": {
+            "enum": [
+              "screening",
+              "technical",
+              "hr",
+              "managerial",
+              "other"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "integer"
+          },
+          "questions": {
+            "items": {
+              "$ref": "#/components/schemas/QuestionOut"
+            },
+            "title": "Questions",
+            "type": "array"
+          },
+          "scheduled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled At"
+          },
+          "state": {
+            "enum": [
+              "scheduled",
+              "cleared",
+              "failed"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "kind",
+          "state",
+          "scheduled_at",
+          "interviewers",
+          "feedback",
+          "questions"
+        ],
+        "title": "RoundOut",
         "type": "object"
       },
       "RuleItemModel": {
@@ -3779,24 +3876,6 @@
         "title": "SearchRunSummary",
         "type": "object"
       },
-      "SourceOut": {
-        "properties": {
-          "kind": {
-            "title": "Kind",
-            "type": "string"
-          },
-          "url": {
-            "title": "Url",
-            "type": "string"
-          }
-        },
-        "required": [
-          "kind",
-          "url"
-        ],
-        "title": "SourceOut",
-        "type": "object"
-      },
       "StartIn": {
         "properties": {
           "mode": {
@@ -4079,6 +4158,231 @@
         ],
         "title": "YearMonthModel",
         "type": "object"
+      },
+      "hiretitan__search__api__contacts__ContactOut": {
+        "properties": {
+          "company_id": {
+            "format": "uuid",
+            "title": "Company Id",
+            "type": "string"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "enum": [
+                  "high",
+                  "medium",
+                  "low"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "linkedin_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Linkedin Url"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
+          "source": {
+            "enum": [
+              "import",
+              "typed"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "company_id",
+          "name",
+          "role",
+          "linkedin_url",
+          "email",
+          "phone",
+          "confidence",
+          "note",
+          "source",
+          "updated_at"
+        ],
+        "title": "ContactOut",
+        "type": "object"
+      },
+      "hiretitan__search__api__interviews__ContactOut": {
+        "properties": {
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "linkedin_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Linkedin Url"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          }
+        },
+        "required": [
+          "name",
+          "role",
+          "email",
+          "phone",
+          "linkedin_url"
+        ],
+        "title": "ContactOut",
+        "type": "object"
+      },
+      "hiretitan__search__api__interviews__SourceOut": {
+        "properties": {
+          "firm_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Firm Name"
+          },
+          "kind": {
+            "enum": [
+              "direct",
+              "hiring_firm"
+            ],
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "firm_name"
+        ],
+        "title": "SourceOut",
+        "type": "object"
+      },
+      "hiretitan__search__api__models__SourceOut": {
+        "properties": {
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "url"
+        ],
+        "title": "SourceOut",
+        "type": "object"
       }
     }
   },
@@ -4333,7 +4637,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ContactOut"
+                  "$ref": "#/components/schemas/hiretitan__search__api__contacts__ContactOut"
                 }
               }
             },
@@ -4440,7 +4744,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ContactOut"
+                  "$ref": "#/components/schemas/hiretitan__search__api__contacts__ContactOut"
                 }
               }
             },
@@ -5347,6 +5651,49 @@
         "summary": "Inquired",
         "tags": [
           "jobs"
+        ]
+      }
+    },
+    "/api/v1/jobs/{job_id}/interview": {
+      "get": {
+        "operationId": "read_api_v1_jobs__job_id__interview_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Read",
+        "tags": [
+          "interviews"
         ]
       }
     },

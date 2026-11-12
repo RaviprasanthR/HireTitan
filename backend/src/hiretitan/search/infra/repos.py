@@ -716,7 +716,10 @@ class InterviewsRepo:
     async def _prune(self, job_id: UUID) -> None:
         row = await self._session.get(PipelineDetailsRow, job_id)
         if row is not None and row.contact_name is None and row.source is None:
-            await self._session.delete(row)
+            await self._session.execute(
+                delete(PipelineDetailsRow).where(PipelineDetailsRow.job_id == job_id)
+            )
+            self._session.expunge(row)
         await self._session.flush()
 
     async def upsert_contact(self, job_id: UUID, fields: ContactFields) -> None:

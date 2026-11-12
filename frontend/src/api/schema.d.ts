@@ -339,6 +339,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/jobs/{job_id}/interview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read */
+        get: operations["read_api_v1_jobs__job_id__interview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/jobs/{job_id}/recheck": {
         parameters: {
             query?: never;
@@ -1076,43 +1093,6 @@ export interface components {
             /** Phone */
             phone?: string | null;
         };
-        /** ContactOut */
-        ContactOut: {
-            /**
-             * Company Id
-             * Format: uuid
-             */
-            company_id: string;
-            /** Confidence */
-            confidence: ("high" | "medium" | "low") | null;
-            /** Email */
-            email: string | null;
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /** Linkedin Url */
-            linkedin_url: string | null;
-            /** Name */
-            name: string;
-            /** Note */
-            note: string | null;
-            /** Phone */
-            phone: string | null;
-            /** Role */
-            role: string | null;
-            /**
-             * Source
-             * @enum {string}
-             */
-            source: "import" | "typed";
-            /**
-             * Updated At
-             * Format: date-time
-             */
-            updated_at: string;
-        };
         /**
          * ContactPatch
          * @description Only the fields that are sent change; an empty text clears an optional field.
@@ -1136,7 +1116,7 @@ export interface components {
         /** ContactsOut */
         ContactsOut: {
             /** Items */
-            items: components["schemas"]["ContactOut"][];
+            items: components["schemas"]["hiretitan__search__api__contacts__ContactOut"][];
             note: components["schemas"]["NoteOut"] | null;
         };
         /** DecisionHistoryOut */
@@ -1282,6 +1262,33 @@ export interface components {
             /** Inquired On */
             inquired_on?: string | null;
         };
+        /** InterviewOut */
+        InterviewOut: {
+            /** Can Add Round */
+            can_add_round: boolean;
+            /** Can Edit */
+            can_edit: boolean;
+            contact: components["schemas"]["hiretitan__search__api__interviews__ContactOut"] | null;
+            /**
+             * Job Id
+             * Format: uuid
+             */
+            job_id: string;
+            /** Rounds */
+            rounds: components["schemas"]["RoundOut"][];
+            source: components["schemas"]["hiretitan__search__api__interviews__SourceOut"] | null;
+            status: components["schemas"]["InterviewStatusOut"];
+        };
+        /** InterviewStatusOut */
+        InterviewStatusOut: {
+            /** Round */
+            round: number | null;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "explore" | "skipped" | "applied" | "inquired" | "scheduled" | "cleared" | "failed";
+        };
         /** JobCardOut */
         JobCardOut: {
             /** Applied On */
@@ -1314,7 +1321,7 @@ export interface components {
             /** Role */
             role: string;
             /** Sources */
-            sources: components["schemas"]["SourceOut"][];
+            sources: components["schemas"]["hiretitan__search__api__models__SourceOut"][];
             /** State */
             state: string;
             /** Title */
@@ -1379,7 +1386,7 @@ export interface components {
             /** Skills Found */
             skills_found: string[];
             /** Sources */
-            sources: components["schemas"]["SourceOut"][];
+            sources: components["schemas"]["hiretitan__search__api__models__SourceOut"][];
             /** State */
             state: string;
             /** Title */
@@ -1503,7 +1510,7 @@ export interface components {
             /** Skills Found */
             skills_found: string[];
             /** Sources */
-            sources: components["schemas"]["SourceOut"][];
+            sources: components["schemas"]["hiretitan__search__api__models__SourceOut"][];
             /** State */
             state: string;
             /** Title */
@@ -1676,6 +1683,20 @@ export interface components {
             /** Provider */
             provider: string;
         };
+        /** QuestionOut */
+        QuestionOut: {
+            /** Answer */
+            answer: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Position */
+            position: number;
+            /** Question */
+            question: string;
+        };
         /** ResumeFileOut */
         ResumeFileOut: {
             /**
@@ -1758,6 +1779,34 @@ export interface components {
             run_id: string;
             /** Status */
             status: string;
+        };
+        /** RoundOut */
+        RoundOut: {
+            /** Feedback */
+            feedback: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Interviewers */
+            interviewers: string | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "screening" | "technical" | "hr" | "managerial" | "other";
+            /** Number */
+            number: number;
+            /** Questions */
+            questions: components["schemas"]["QuestionOut"][];
+            /** Scheduled At */
+            scheduled_at: string | null;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "scheduled" | "cleared" | "failed";
         };
         /** RuleItemModel */
         RuleItemModel: {
@@ -1983,13 +2032,6 @@ export interface components {
             /** Stop Requested */
             stop_requested: boolean;
         };
-        /** SourceOut */
-        SourceOut: {
-            /** Kind */
-            kind: string;
-            /** Url */
-            url: string;
-        };
         /** StartIn */
         StartIn: {
             /**
@@ -2101,6 +2143,73 @@ export interface components {
             month?: number | null;
             /** Year */
             year: number;
+        };
+        /** ContactOut */
+        hiretitan__search__api__contacts__ContactOut: {
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            /** Confidence */
+            confidence: ("high" | "medium" | "low") | null;
+            /** Email */
+            email: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Linkedin Url */
+            linkedin_url: string | null;
+            /** Name */
+            name: string;
+            /** Note */
+            note: string | null;
+            /** Phone */
+            phone: string | null;
+            /** Role */
+            role: string | null;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "import" | "typed";
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** ContactOut */
+        hiretitan__search__api__interviews__ContactOut: {
+            /** Email */
+            email: string | null;
+            /** Linkedin Url */
+            linkedin_url: string | null;
+            /** Name */
+            name: string;
+            /** Phone */
+            phone: string | null;
+            /** Role */
+            role: string | null;
+        };
+        /** SourceOut */
+        hiretitan__search__api__interviews__SourceOut: {
+            /** Firm Name */
+            firm_name: string | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "direct" | "hiring_firm";
+        };
+        /** SourceOut */
+        hiretitan__search__api__models__SourceOut: {
+            /** Kind */
+            kind: string;
+            /** Url */
+            url: string;
         };
     };
     responses: never;
@@ -2291,7 +2400,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ContactOut"];
+                    "application/json": components["schemas"]["hiretitan__search__api__contacts__ContactOut"];
                 };
             };
             /** @description Validation Error */
@@ -2357,7 +2466,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ContactOut"];
+                    "application/json": components["schemas"]["hiretitan__search__api__contacts__ContactOut"];
                 };
             };
             /** @description Validation Error */
@@ -2917,6 +3026,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JobDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_api_v1_jobs__job_id__interview_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InterviewOut"];
                 };
             };
             /** @description Validation Error */
