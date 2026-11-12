@@ -7,6 +7,7 @@ import { PasteJobDialog } from '@/features/jobs/PasteJobDialog'
 import { SetupChecklist } from '@/features/home/HomePage'
 import { setupIsDone } from '@/features/home/setup'
 import { DuplicatesPanel } from './DuplicatesPanel'
+import { ReviewNotice } from '@/features/home/ReviewNotice'
 import { HomeTabs } from './HomeTabs'
 import { SearchPanel } from './SearchPanel'
 import {
@@ -183,6 +184,7 @@ export function ExplorePage() {
           </Button>
         )}
       </div>
+      <ReviewNotice />
       <HomeTabs />
       {adding && <PasteJobDialog onClose={() => setAdding(false)} />}
       {status.data && !setupDone && <SetupChecklist showAllSet={false} />}

@@ -1,4 +1,4 @@
-import { Building2, House, ListChecks, Settings, User } from 'lucide-react'
+import { Building2, House, Settings, User } from 'lucide-react'
 import { Outlet, NavLink } from 'react-router'
 import { AiBanner } from './AiBanner'
 import { UndoToast } from '@/features/jobs/UndoToast'
@@ -7,9 +7,8 @@ import { cn } from '@/lib/utils'
 
 const sections = [
   { to: '/', label: 'Home', end: true, Icon: House },
-  { to: '/profile', label: 'Profile', end: false, Icon: User },
   { to: '/companies', label: 'Companies', end: false, Icon: Building2 },
-  { to: '/review', label: 'Review', end: false, Icon: ListChecks },
+  { to: '/profile', label: 'Profile', end: false, Icon: User },
   { to: '/settings', label: 'Settings', end: false, Icon: Settings },
 ] as const
 

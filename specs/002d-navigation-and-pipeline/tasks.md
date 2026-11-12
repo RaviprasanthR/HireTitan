@@ -124,7 +124,7 @@ description: "Task list for 002d-navigation-and-pipeline"
 
 **Independent Test**: the menu is Home, Companies, Profile, Settings; one waiting item shows "1 item needs your review" on Home, none shows nothing; `/review` still opens.
 
-- [ ] T024 [US5] Frontend: `frontend/src/app/Shell.tsx` menu is exactly Home, Companies, Profile, Settings; `frontend/src/features/home/ReviewNotice.tsx` on both Home tabs uses the review-items query ("N item(s) need your review" linking to `/review`); `/review` stays a route; `frontend/src/app/AiBanner.tsx` links still valid. Test first: `SC001 menu has four entries`, `US5 AS2 review notice with count`, `US5 AS3 no notice when nothing waits`, `US5 AS4 review page still opens`.
+- [x] T024 [US5] Frontend: `frontend/src/app/Shell.tsx` menu is exactly Home, Companies, Profile, Settings; `frontend/src/features/home/ReviewNotice.tsx` on both Home tabs uses the review-items query ("N item(s) need your review" linking to `/review`); `/review` stays a route; `frontend/src/app/AiBanner.tsx` links still valid. Test first: `SC001 menu has four entries`, `US5 AS2 review notice with count`, `US5 AS3 no notice when nothing waits`, `US5 AS4 review page still opens`.
 
 **Checkpoint**: Ravi reviews.
 

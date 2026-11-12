@@ -47,9 +47,8 @@ describe('Shell', () => {
     const links = within(nav).getAllByRole('link')
     expect(links.map((link) => link.textContent)).toEqual([
       'Home',
-      'Profile',
       'Companies',
-      'Review',
+      'Profile',
       'Settings',
     ])
   })

@@ -2,6 +2,7 @@ import { Fragment, useState } from 'react'
 import { Link } from 'react-router'
 import { ChevronRight, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { ReviewNotice } from '@/features/home/ReviewNotice'
 import { HomeTabs } from './HomeTabs'
 import { formatDay, sourceLabel, usePipelineJobs, useJob, type JobCard } from './api'
 
@@ -181,6 +182,7 @@ export function PipelinePage() {
   return (
     <section className="space-y-4">
       <h1 className="text-2xl font-semibold">Jobs</h1>
+      <ReviewNotice />
       <HomeTabs />
       {body}
     </section>
