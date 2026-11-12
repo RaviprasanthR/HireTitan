@@ -3,7 +3,6 @@ import {
   ArrowUp,
   BadgeCheck,
   Briefcase,
-  Check,
   ChevronDown,
   ChevronUp,
   Eye,
@@ -21,18 +20,10 @@ import { ApiError } from '@/api/client'
 import { Button } from '@/components/ui/button'
 import { formatDay } from '@/features/explore/api'
 import { AddCompanyDialog } from './AddCompanyDialog'
-import {
-  BOARD_STATUS,
-  useCompanies,
-  useDeleteCompany,
-  useEditCompany,
-  type Company,
-  type CompanyFilter,
-} from './api'
+import { BOARD_STATUS, useCompanies, useDeleteCompany, useEditCompany, type Company } from './api'
 import { CompanyPanel } from './CompanyPanel'
 import { Field, inputClass } from './Field'
 
-type Show = 'all' | 'contacts' | 'applied'
 type SortKey = 'name' | 'city' | 'applied' | 'contacts' | 'note'
 type Sort = { key: SortKey; dir: 'asc' | 'desc' }
 
@@ -80,11 +71,6 @@ function IconButton({
     </Button>
   )
 }
-
-const TABS: { filter: CompanyFilter; label: string }[] = [
-  { filter: 'all', label: 'All companies' },
-  { filter: 'check_manually', label: 'Check manually' },
-]
 
 function EditForm({ company, onDone }: { company: Company; onDone: () => void }) {
   const edit = useEditCompany()
@@ -188,7 +174,7 @@ function Details({ company, checked }: { company: Company; checked: string | nul
   )
 }
 
-function CompanyRow({ company, manual }: { company: Company; manual: boolean }) {
+function CompanyRow({ company }: { company: Company }) {
   const [editing, setEditing] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [showPanel, setShowPanel] = useState(false)
@@ -206,7 +192,7 @@ function CompanyRow({ company, manual }: { company: Company; manual: boolean }) 
   return (
     <li
       aria-label={company.name}
-      className="space-y-2 border-b border-border px-3 py-1.5 transition-colors duration-200 hover:bg-[#9c4f37]/25 motion-reduce:transition-none"
+      className="relative space-y-2 rounded-lg px-3 py-1.5 transition-colors duration-200 after:absolute after:inset-x-3 after:bottom-0 after:h-px after:bg-border hover:bg-[#9c4f37]/25 motion-reduce:transition-none"
     >
       <div className={`flex min-h-8 flex-wrap items-center gap-x-4 gap-y-1 ${COLUMNS}`}>
         <div className="min-w-0">
@@ -340,14 +326,6 @@ function CompanyRow({ company, manual }: { company: Company; manual: boolean }) 
           )}
         </div>
       </div>
-      {manual && (
-        <p className="pb-1 text-sm">
-          {checked ? `Last checked ${checked}` : 'Not checked yet'}
-          {company.last_check_error && (
-            <span className="ml-3 text-muted-small">{company.last_check_error}</span>
-          )}
-        </p>
-      )}
       {edit.isError && !editing && (
         <p role="alert" className="text-sm text-danger">
           {edit.error.message}
@@ -480,19 +458,15 @@ function HeaderRow({ sort, onSort }: { sort: Sort; onSort: (key: SortKey) => voi
 
 /** The company list: a sortable table with an expandable row for each company. */
 export function CompaniesPage() {
-  const [filter, setFilter] = useState<CompanyFilter>('all')
   const [adding, setAdding] = useState(false)
-  const companies = useCompanies(filter)
-  const [show, setShow] = useState<Show>('all')
+  const companies = useCompanies('all')
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState<Sort>({ key: 'name', dir: 'asc' })
   const all = companies.data?.items ?? []
   const needle = query.trim().toLowerCase()
-  const shown = all
-    .filter((c) =>
-      show === 'all' ? true : show === 'contacts' ? c.contact_count > 0 : c.has_application,
-    )
-    .filter((c) => !needle || `${c.name} ${c.city ?? ''}`.toLowerCase().includes(needle))
+  const shown = all.filter(
+    (c) => !needle || `${c.name} ${c.city ?? ''}`.toLowerCase().includes(needle),
+  )
   const items = [...shown].sort(compareBy(sort))
   // A new column starts with its natural order: A to Z for text, most first for counts and applied.
   const sortBy = (key: SortKey) =>
@@ -510,17 +484,15 @@ export function CompaniesPage() {
     body = (
       <p>
         {all.length > 0
-          ? 'No companies match this filter.'
-          : filter === 'check_manually'
-            ? 'Nothing to check by hand right now.'
-            : 'No companies yet. Add one by its careers page link.'}
+          ? 'No companies match this search.'
+          : 'No companies yet. Add one by its careers page link.'}
       </p>
     )
   else
     body = (
       <ul aria-label="Companies">
         {items.map((company) => (
-          <CompanyRow key={company.id} company={company} manual={filter === 'check_manually'} />
+          <CompanyRow key={company.id} company={company} />
         ))}
       </ul>
     )
@@ -544,58 +516,20 @@ export function CompaniesPage() {
               className={`${inputClass} w-full pl-8`}
             />
           </label>
-          <div className="flex gap-2">
-            {!adding && (
-              <Button
-                type="button"
-                size="sm"
-                className={TOOL_CHIP}
-                onClick={() => setAdding(true)}
-              >
-                <Plus aria-hidden />
-                Add a company
-              </Button>
-            )}
-          </div>
+          {!adding && (
+            <Button type="button" size="sm" className={TOOL_CHIP} onClick={() => setAdding(true)}>
+              <Plus aria-hidden />
+              Add a company
+            </Button>
+          )}
         </div>
-        {adding && <AddCompanyDialog onClose={() => setAdding(false)} />}
-        <div className="flex flex-wrap items-center gap-3">
-          <div role="tablist" aria-label="Company lists" className="flex gap-2">
-            {TABS.map((tab) => (
-              <Button
-                key={tab.filter}
-                type="button"
-                role="tab"
-                aria-selected={filter === tab.filter}
-                variant="outline"
-                size="sm"
-                className={TOOL_CHIP}
-                onClick={() => setFilter(tab.filter)}
-              >
-                {tab.filter === 'check_manually' && <Check aria-hidden />}
-                {tab.label}
-              </Button>
-            ))}
-          </div>
-          <form aria-label="Company filters" onSubmit={(e) => e.preventDefault()}>
-            <label className="flex items-center gap-2 text-sm">
-              <Eye aria-hidden className="size-4 text-[#f0a35e]" />
-              Show
-              <select
-                className={inputClass}
-                value={show}
-                onChange={(e) => setShow(e.target.value as Show)}
-              >
-                <option value="all">All companies</option>
-                <option value="contacts">Has contacts</option>
-                <option value="applied">Has an application</option>
-              </select>
-            </label>
-          </form>
-        </div>
-        {loaded && <HeaderRow sort={sort} onSort={sortBy} />}
+        {!adding && loaded && <HeaderRow sort={sort} onSort={sortBy} />}
       </div>
-      <div className="min-h-48 flex-1 overflow-y-auto [scrollbar-gutter:stable]">{body}</div>
+      {adding ? (
+        <AddCompanyDialog onClose={() => setAdding(false)} />
+      ) : (
+        <div className="min-h-48 flex-1 overflow-y-auto [scrollbar-gutter:stable]">{body}</div>
+      )}
     </section>
   )
 }
