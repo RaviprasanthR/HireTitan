@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { useStatus } from '@/api/useStatus'
 import { Button } from '@/components/ui/button'
-import { AppliedControl } from '@/features/jobs/AppliedControl'
+import { PipelineControl } from '@/features/jobs/PipelineControl'
 import { PasteJobDialog } from '@/features/jobs/PasteJobDialog'
 import { SetupChecklist } from '@/features/home/HomePage'
 import { setupIsDone } from '@/features/home/setup'
@@ -40,7 +40,7 @@ export function JobCardItem({ job, showCheck = true }: { job: JobCard; showCheck
       </Link>
       <p className="text-sm text-muted-small">{facts.join(' · ')}</p>
       {reasonOf(job) && <p className="text-sm">{reasonOf(job)}</p>}
-      <AppliedControl id={job.id} />
+      <PipelineControl id={job.id} state={job.state} />
       {showCheck && isNotChecked(job) && (
         <div className="flex items-center gap-3">
           <Button

@@ -258,6 +258,8 @@ export interface paths {
         /**
          * Merge
          * @description Keep the older job (A) and move the other's sources onto it; the other is deleted.
+         *
+         *     The kept job takes the stronger of the two pipeline states, with that job's date.
          */
         post: operations["merge_api_v1_jobs_duplicates__pair_id__merge_post"];
         delete?: never;
@@ -984,11 +986,6 @@ export interface components {
              */
             contact_count: number;
             /**
-             * Has Application
-             * @default false
-             */
-            has_application: boolean;
-            /**
              * Has Note
              * @default false
              */
@@ -1012,6 +1009,8 @@ export interface components {
             note_preview?: string | null;
             /** Origin */
             origin: string;
+            /** Pipeline */
+            pipeline?: ("applied" | "inquired") | null;
             /** Resolution */
             resolution: string;
             /** User Modified */

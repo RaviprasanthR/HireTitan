@@ -9,8 +9,8 @@ import {
   useRecheck,
 } from '@/features/explore/api'
 import { CompanyPanel } from '@/features/companies/CompanyPanel'
-import { AppliedControl } from './AppliedControl'
-import { useUndoApplied } from './appliedApi'
+import { PipelineControl } from './PipelineControl'
+import { useUndoPipeline } from './pipelineApi'
 import { InjectionWarning, type InjectionFlag } from './InjectionWarning'
 
 function safeLink(url: string | null | undefined): string | null {
@@ -22,7 +22,8 @@ export function JobDetailPage() {
   const { id = '' } = useParams()
   const job = useJob(id)
   const recheck = useRecheck()
-  const undo = useUndoApplied()
+  const undoApplied = useUndoPipeline('applied')
+  const undoInquired = useUndoPipeline('inquired')
   if (job.isPending) return <p>Loading…</p>
   if (job.isError) return <p role="alert">Could not load this job.</p>
   const data = job.data
@@ -68,21 +69,26 @@ export function JobDetailPage() {
         </div>
       )}
 
-      {data.state === 'applied' ? (
-        <div className="flex items-center gap-3 text-sm">
-          <span>Applied on {formatDay(data.applied_on)}</span>
+      {data.state === 'applied' || data.state === 'inquired' ? (
+        <div className="flex flex-wrap items-center gap-3 text-sm">
+          <span>
+            {data.state === 'applied'
+              ? `Applied on ${formatDay(data.applied_on)}`
+              : `Inquired on ${formatDay(data.inquired_on)}`}
+          </span>
           <Button
             type="button"
             variant="outline"
             size="sm"
-            disabled={undo.isPending}
-            onClick={() => undo.mutate(data.id)}
+            disabled={undoApplied.isPending || undoInquired.isPending}
+            onClick={() => (data.state === 'applied' ? undoApplied : undoInquired).mutate(data.id)}
           >
             Undo
           </Button>
+          {data.state === 'inquired' && <PipelineControl id={data.id} state={data.state} />}
         </div>
       ) : (
-        data.state !== 'deleted' && <AppliedControl id={data.id} />
+        data.state !== 'deleted' && <PipelineControl id={data.id} state={data.state} />
       )}
 
       <div className="flex flex-wrap items-center gap-4 text-sm">

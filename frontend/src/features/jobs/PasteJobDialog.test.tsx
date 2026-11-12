@@ -168,7 +168,6 @@ describe('PasteJobDialog', () => {
     await user.click(screen.getByRole('button', { name: 'Save job' }))
 
     await user.click(await screen.findByRole('button', { name: 'I applied' }))
-    await user.click(screen.getByRole('button', { name: 'Save' }))
 
     await waitFor(() => expect(calls.some((c) => c.path === '/jobs/j9/applied')).toBe(true))
   })
