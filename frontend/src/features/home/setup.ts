@@ -35,7 +35,7 @@ export function stepsFor(checklist: Checklist): Step[] {
       label: 'Preferences saved',
       done: checklist.preferences_saved,
       action: 'Set your preferences',
-      to: '/preferences',
+      to: '/profile/preferences',
       blocked: checklist.profile_confirmed
         ? undefined
         : 'Available after you confirm your profile.',
@@ -44,7 +44,7 @@ export function stepsFor(checklist: Checklist): Step[] {
       label: 'Search rules approved',
       done: checklist.rules_approved,
       action: 'Review your search rules',
-      to: '/search/rules',
+      to: '/profile/search-rules',
       blocked: checklist.preferences_saved
         ? undefined
         : 'Available after you save your preferences.',

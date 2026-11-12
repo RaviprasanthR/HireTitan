@@ -17,6 +17,7 @@ import {
   SearchRulesPage,
   SettingsPage,
 } from './pages'
+import { ProfileTabsLayout } from '@/features/profile/ProfileTabs'
 import { SetupGate } from '@/features/setup/SetupGate'
 import { Shell } from './Shell'
 
@@ -30,7 +31,16 @@ export const routes: RouteObject[] = [
           { path: '/', element: <ExplorePage /> },
           { path: '/pipeline', element: <PipelinePage /> },
           { path: '/applied', element: <Navigate to="/pipeline" replace /> },
-          { path: '/profile', element: <ProfilePage /> },
+          {
+            element: <ProfileTabsLayout />,
+            children: [
+              { path: '/profile', element: <ProfilePage /> },
+              { path: '/profile/preferences', element: <PreferencesPage /> },
+              { path: '/profile/search-rules', element: <SearchRulesPage /> },
+            ],
+          },
+          { path: '/preferences', element: <Navigate to="/profile/preferences" replace /> },
+          { path: '/search/rules', element: <Navigate to="/profile/search-rules" replace /> },
           { path: '/profile/edit', element: <ProfileEditor /> },
           { path: '/profile/review/:reviewId', element: <ProfileReviewPage /> },
           { path: '/profile/versions', element: <ProfileVersionsPage /> },
@@ -38,9 +48,7 @@ export const routes: RouteObject[] = [
             path: '/profile/versions/:versionId',
             element: <ProfileVersionPage />,
           },
-          { path: '/preferences', element: <PreferencesPage /> },
           { path: '/companies', element: <CompaniesPage /> },
-          { path: '/search/rules', element: <SearchRulesPage /> },
           { path: '/search/history', element: <SearchHistoryPage /> },
           { path: '/search/runs/:id', element: <RunSummaryPage /> },
           { path: '/jobs/:id', element: <JobDetailPage /> },

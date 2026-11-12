@@ -1,12 +1,4 @@
-import {
-  Building2,
-  House,
-  ListChecks,
-  Search,
-  Settings,
-  SlidersHorizontal,
-  User,
-} from 'lucide-react'
+import { Building2, House, ListChecks, Settings, User } from 'lucide-react'
 import { Outlet, NavLink } from 'react-router'
 import { AiBanner } from './AiBanner'
 import { UndoToast } from '@/features/jobs/UndoToast'
@@ -16,8 +8,6 @@ import { cn } from '@/lib/utils'
 const sections = [
   { to: '/', label: 'Home', end: true, Icon: House },
   { to: '/profile', label: 'Profile', end: false, Icon: User },
-  { to: '/preferences', label: 'Preferences', end: false, Icon: SlidersHorizontal },
-  { to: '/search/rules', label: 'Search rules', end: false, Icon: Search },
   { to: '/companies', label: 'Companies', end: false, Icon: Building2 },
   { to: '/review', label: 'Review', end: false, Icon: ListChecks },
   { to: '/settings', label: 'Settings', end: false, Icon: Settings },

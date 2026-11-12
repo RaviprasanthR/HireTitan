@@ -41,15 +41,13 @@ describe('Shell', () => {
     vi.unstubAllGlobals()
   })
 
-  it('FR027_sidebar_has_seven_sections', async () => {
+  it('US4 the menu has no Preferences or Search rules entry (they are Profile tabs)', async () => {
     renderAt('/')
     const nav = await screen.findByRole('navigation', { name: 'Main' })
     const links = within(nav).getAllByRole('link')
     expect(links.map((link) => link.textContent)).toEqual([
       'Home',
       'Profile',
-      'Preferences',
-      'Search rules',
       'Companies',
       'Review',
       'Settings',
@@ -107,17 +105,18 @@ describe('Shell', () => {
 
   it('marks_the_current_section', async () => {
     renderAt('/profile')
-    expect(await screen.findByRole('link', { name: 'Profile' })).toHaveAttribute(
+    const nav = await screen.findByRole('navigation', { name: 'Main' })
+    expect(within(nav).getByRole('link', { name: 'Profile' })).toHaveAttribute(
       'aria-current',
       'page',
     )
-    expect(screen.getByRole('link', { name: 'Home' })).not.toHaveAttribute('aria-current')
+    expect(within(nav).getByRole('link', { name: 'Home' })).not.toHaveAttribute('aria-current')
   })
 
   it.each([
     ['/', 'Jobs'],
     ['/profile', 'Profile'],
-    ['/preferences', 'Preferences'],
+    ['/profile/preferences', 'Preferences'],
     ['/review', 'Review'],
     ['/settings', 'Settings'],
   ])('route_%s_renders_%s', async (path, heading) => {

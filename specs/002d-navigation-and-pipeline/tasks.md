@@ -112,7 +112,7 @@ description: "Task list for 002d-navigation-and-pipeline"
 
 **Independent Test**: `/profile/preferences` and `/profile/search-rules` work like the old pages; `/preferences` and `/search/rules` land on them.
 
-- [ ] T023 [US4] Frontend: `frontend/src/features/profile/ProfileTabs.tsx` (Profile, Preferences, Search rules; links to `/profile`, `/profile/preferences`, `/profile/search-rules`); `PreferencesPage` and `SearchRulesPage` rendered inside it; routes in `routes.tsx` with redirects `/preferences` → `/profile/preferences` and `/search/rules` → `/profile/search-rules` (replace); the setup checklist links in `features/home/setup.ts` and any other internal links point at the new addresses; remove the two menu entries. Test first: `US4 AS1 preferences tab saves`, `US4 AS2 search rules tab approves`, `US4 AS3 old addresses open the tabs`, `US4 AS4 checklist link opens the search rules tab`.
+- [x] T023 [US4] Frontend: `frontend/src/features/profile/ProfileTabs.tsx` (Profile, Preferences, Search rules; links to `/profile`, `/profile/preferences`, `/profile/search-rules`); `PreferencesPage` and `SearchRulesPage` rendered inside it; routes in `routes.tsx` with redirects `/preferences` → `/profile/preferences` and `/search/rules` → `/profile/search-rules` (replace); the setup checklist links in `features/home/setup.ts` and any other internal links point at the new addresses; remove the two menu entries. Test first: `US4 AS1 preferences tab saves`, `US4 AS2 search rules tab approves`, `US4 AS3 old addresses open the tabs`, `US4 AS4 checklist link opens the search rules tab`.
 
 **Checkpoint**: Ravi reviews.
 

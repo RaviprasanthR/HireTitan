@@ -57,7 +57,7 @@ function renderAt(path: string, step: Step, status = 'working') {
 describe('SetupGate', () => {
   afterEach(() => vi.unstubAllGlobals())
 
-  it.each(['/', '/profile', '/preferences', '/review', '/nope'])(
+  it.each(['/', '/profile', '/profile/preferences', '/review', '/nope'])(
     'US5_AS1_any_url_shows_setup_card_without_sidebar %s',
     async (path) => {
       renderAt(path, 1)

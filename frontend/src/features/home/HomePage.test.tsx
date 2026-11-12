@@ -99,7 +99,7 @@ describe('HomePage', () => {
     renderHome({ ...none, resume_uploaded: true, profile_confirmed: true })
     expect(await screen.findByRole('link', { name: 'Set your preferences' })).toHaveAttribute(
       'href',
-      '/preferences',
+      '/profile/preferences',
     )
   })
 
@@ -124,7 +124,7 @@ describe('HomePage', () => {
     expect(within(rules).queryByRole('link')).not.toBeInTheDocument()
   })
 
-  it('US2_search_rules_step_links_once_preferences_are_saved', async () => {
+  it('US4 AS4 US2_search_rules_step_links_once_preferences_are_saved', async () => {
     renderHome({
       ...none,
       resume_uploaded: true,
@@ -133,7 +133,7 @@ describe('HomePage', () => {
     })
     expect(await screen.findByRole('link', { name: 'Review your search rules' })).toHaveAttribute(
       'href',
-      '/search/rules',
+      '/profile/search-rules',
     )
   })
 
