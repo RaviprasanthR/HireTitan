@@ -52,7 +52,8 @@ test('SC002_job_search_journey', async ({ page, request }) => {
   await expect(page.getByRole('link', { name: 'Review your search rules' })).toBeVisible()
 
   // 2. Search rules: proposed from the profile, then approved.
-  await page.getByRole('link', { name: 'Search rules' }).first().click()
+  await page.getByRole('link', { name: 'Review your search rules' }).click()
+  await expect(page).toHaveURL(/\/profile\/search-rules$/)
   await page.getByRole('button', { name: 'Propose rules' }).click()
   await expect(page.getByRole('region', { name: /job titles/i })).toBeVisible()
   await page.getByRole('button', { name: /approve/i }).click()
@@ -72,11 +73,24 @@ test('SC002_job_search_journey', async ({ page, request }) => {
   await page.getByRole('button', { name: 'Restore' }).first().click()
   await expect.poll(async () => (await exploreJobs(request)).length).toBe(3)
 
-  // 5. I applied moves a job to Applied with today's date; Undo brings it back.
+  // 5. I inquired puts a job In pipeline as Inquired; I applied turns it into Applied; the
+  // company shows it. Every mark is one click (SC-002), and Undo is one click too.
   await page.goto('/')
-  await page.getByRole('button', { name: 'I applied' }).first().click()
-  await page.getByRole('button', { name: /^(save|confirm|mark)/i }).first().click()
+  await page.getByRole('button', { name: 'I inquired' }).first().click()
   await expect.poll(async () => (await exploreJobs(request)).length).toBe(2)
+  await page.getByRole('link', { name: 'In pipeline' }).click()
+  await expect(page.getByText('Inquired', { exact: true }).first()).toBeVisible()
+  await page.getByRole('link', { name: 'Explore' }).click()
+  await page.getByRole('button', { name: 'Undo' }).click()
+  await expect.poll(async () => (await exploreJobs(request)).length).toBe(3)
+
+  await page.getByRole('button', { name: 'I applied' }).first().click()
+  await expect.poll(async () => (await exploreJobs(request)).length).toBe(2)
+  await page.getByRole('link', { name: 'In pipeline' }).click()
+  await expect(page.getByText('Applied', { exact: true }).first()).toBeVisible()
+  await page.getByRole('link', { name: 'Companies' }).click()
+  await expect(page.getByText('Applied', { exact: true }).first()).toBeVisible()
+  await page.getByRole('link', { name: 'Home', exact: true }).click() // the toast stays
   await page.getByRole('button', { name: 'Undo' }).click()
   await expect.poll(async () => (await exploreJobs(request)).length).toBe(3)
 
@@ -99,6 +113,26 @@ test('SC002_job_search_journey', async ({ page, request }) => {
   // would fail the run.
   await page.goto('/')
   await page.getByRole('button', { name: 'Search now' }).click()
-  await expect(page.getByText('AI cost so far')).toBeVisible({ timeout: 120_000 })
+  await expect(page.getByRole('link', { name: 'See the summary' })).toBeVisible({
+    timeout: 120_000,
+  })
   await expect.poll(async () => (await exploreJobs(request)).length).toBe(3)
+
+  // 8. No page talks about AI cost or a budget (SC-005). "$" is not checked: pay can use it.
+  const cost = /AI cost|cost so far|budget|\bspend\b|\bspent\b/i
+  for (const path of [
+    '/',
+    '/pipeline',
+    '/companies',
+    '/profile',
+    '/profile/preferences',
+    '/profile/search-rules',
+    '/review',
+    '/settings',
+    '/search/history',
+  ]) {
+    await page.goto(path)
+    await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible()
+    expect(await page.locator('main').innerText(), path).not.toMatch(cost)
+  }
 })
