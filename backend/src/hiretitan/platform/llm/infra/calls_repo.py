@@ -3,11 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, datetime
-from decimal import Decimal
+from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from hiretitan.platform.llm.infra.models import LlmCallRow
@@ -23,8 +21,6 @@ class LlmCallRecord:
     input_tokens: int
     cached_input_tokens: int
     output_tokens: int
-    cost_usd: Decimal
-    estimated_cost_usd: Decimal
     latency_ms: int
     outcome: str
     run_id: UUID | None = None
@@ -45,8 +41,6 @@ class CallsRepo:
             input_tokens=call.input_tokens,
             cached_input_tokens=call.cached_input_tokens,
             output_tokens=call.output_tokens,
-            cost_usd=call.cost_usd,
-            estimated_cost_usd=call.estimated_cost_usd,
             latency_ms=call.latency_ms,
             outcome=call.outcome,
         )
@@ -55,14 +49,3 @@ class CallsRepo:
         self._session.add(row)
         await self._session.flush()
         return row.id
-
-    async def spent_in_month(self, year: int, month: int) -> Decimal:
-        """Total ``cost_usd`` in the UTC calendar month."""
-        start = datetime(year, month, 1, tzinfo=UTC)
-        end = datetime(year + (month == 12), month % 12 + 1, 1, tzinfo=UTC)
-        total = await self._session.scalar(
-            select(func.coalesce(func.sum(LlmCallRow.cost_usd), 0)).where(
-                LlmCallRow.created_at >= start, LlmCallRow.created_at < end
-            )
-        )
-        return Decimal(total or 0)

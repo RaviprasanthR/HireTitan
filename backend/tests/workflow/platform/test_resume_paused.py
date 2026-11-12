@@ -1,5 +1,5 @@
 """T025: runs paused for a missing or rejected key resume from their checkpoint once the key
-works; runs paused for the budget do not."""
+works; runs paused because the AI account is out of credit wait for Check again."""
 
 from __future__ import annotations
 
@@ -117,10 +117,10 @@ async def test_US3_AS3_paused_run_resumes_from_checkpoint_after_key_fixed(
     assert toy.calls["first"] == 1  # resumed from the checkpoint, not restarted
 
 
-async def test_budget_paused_runs_untouched_by_key_resume(
+async def test_out_of_credit_paused_runs_untouched_by_key_resume(
     sessions: async_sessionmaker[AsyncSession], saver: BaseCheckpointSaver[Any]
 ) -> None:
-    toy = Toy("budget_reached")
+    toy = Toy("out_of_credit")
     runner = WorkflowRunner(
         sessions, saver, {"toy": WorkflowDef(toy.build, lambda r: {"trace": []})}
     )

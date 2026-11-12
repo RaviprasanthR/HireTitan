@@ -1,8 +1,7 @@
 """Resume runs that paused because the AI was unavailable (FR-030, US3).
 
 A run paused for a missing or rejected key goes back on the queue once the key works and
-continues from its LangGraph checkpoint. Runs paused for the budget stay paused: the key
-being fixed does not change the budget.
+continues from its LangGraph checkpoint.
 """
 
 from __future__ import annotations

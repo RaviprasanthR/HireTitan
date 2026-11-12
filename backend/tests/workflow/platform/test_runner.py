@@ -178,7 +178,7 @@ async def test_FR030_ai_unavailable_pauses_not_fails(
     toy = Toy()
 
     async def second(state: State) -> State:
-        raise AiUnavailable("budget_reached")
+        raise AiUnavailable("out_of_credit")
 
     toy.second = second
     run = await new_run(sessions)
@@ -186,7 +186,7 @@ async def test_FR030_ai_unavailable_pauses_not_fails(
 
     state = (await current(sessions, run.id)).state
     assert state.status is RunStatus.paused
-    assert state.pause_reason is PauseReason.budget_reached
+    assert state.pause_reason is PauseReason.out_of_credit
 
 
 async def test_retries_then_failed(

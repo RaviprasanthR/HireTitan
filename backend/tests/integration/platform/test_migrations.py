@@ -174,3 +174,72 @@ def test_0016_inquired_up_down(
         assert "inquired_on" not in columns
     finally:
         engine.dispose()
+
+
+def test_FR014_0017_budget_paused_runs_become_failed(
+    fresh_database_url: str, make_alembic_config: Callable[[str], Config]
+) -> None:
+    """002d: a run the old AI budget had paused becomes a failed run with a plain message, and a
+    run paused for another reason is left alone."""
+    cfg = make_alembic_config(fresh_database_url)
+    command.upgrade(cfg, "0016")
+    engine = create_engine(fresh_database_url)
+    insert = text(
+        "INSERT INTO app.workflow_runs (id, workflow, status, pause_reason) "
+        "VALUES (:id, 'profile_ingest', 'paused', :reason)"
+    )
+    try:
+        with engine.begin() as conn:
+            conn.execute(insert, {"id": uuid7(), "reason": "budget_reached"})
+            conn.execute(insert, {"id": uuid7(), "reason": "out_of_credit"})
+
+        command.upgrade(cfg, "0017")
+
+        with engine.connect() as conn:
+            rows = conn.execute(
+                text("SELECT status, pause_reason, error FROM app.workflow_runs ORDER BY status")
+            ).all()
+        assert rows == [
+            (
+                "failed",
+                None,
+                "Paused by the old AI budget, which HireTitan no longer has. Start it again.",
+            ),
+            ("paused", "out_of_credit", None),
+        ]
+        with engine.begin() as conn, pytest.raises(DBAPIError):  # the reason is gone
+            conn.execute(insert, {"id": uuid7(), "reason": "budget_reached"})
+    finally:
+        engine.dispose()
+
+
+def test_0017_no_cost_up_down(
+    fresh_database_url: str, make_alembic_config: Callable[[str], Config]
+) -> None:
+    """002d: 0017 drops every cost and budget column; downgrading puts them back with defaults."""
+    cfg = make_alembic_config(fresh_database_url)
+    command.upgrade(cfg, "0017")
+    engine = create_engine(fresh_database_url)
+    wanted = {
+        "settings": "budget_cap_usd",
+        "llm_calls": "cost_usd",
+        "search_runs": "ai_cost_usd",
+    }
+    try:
+        for table, column in wanted.items():
+            names = {c["name"] for c in inspect(engine).get_columns(table, schema="app")}
+            assert column not in names, table
+        names = {c["name"] for c in inspect(engine).get_columns("llm_calls", schema="app")}
+        assert "estimated_cost_usd" not in names
+
+        command.downgrade(cfg, "0016")
+
+        for table, column in wanted.items():
+            names = {c["name"] for c in inspect(engine).get_columns(table, schema="app")}
+            assert column in names, table
+        with engine.connect() as conn:
+            cap = conn.execute(text("SELECT budget_cap_usd FROM app.settings")).scalar()
+        assert str(cap) == "25.00"
+        command.upgrade(cfg, "head")  # and can be applied again
+    finally:
+        engine.dispose()

@@ -1,21 +1,21 @@
-"""The LLM port (architecture §5.1): what every provider adapter, the fake and the budget
-guard implement. Workflows ask for a tier (``fast`` / ``strong``), never a model name.
+"""The LLM port (architecture §5.1): what every provider adapter and the fake implement.
+
+Workflows ask for a tier (``fast`` / ``strong``), never a model name.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from decimal import Decimal
 from typing import Final, Literal, Protocol
 
 from pydantic import BaseModel
 
-PAUSE_REASONS: Final = ("key_missing", "key_rejected", "budget_reached", "out_of_credit")
+PAUSE_REASONS: Final = ("key_missing", "key_rejected", "out_of_credit")
 
 PROVIDER_MESSAGE_MAX: Final = 300
 
 Tier = Literal["fast", "strong"]
-Outcome = Literal["ok", "repaired", "fallback", "refused", "budget_blocked", "error"]
+Outcome = Literal["ok", "repaired", "fallback", "refused", "error"]
 
 
 def _clean_message(message: str | None) -> str | None:
@@ -66,7 +66,6 @@ class Usage:
     input_tokens: int = 0
     cached_input_tokens: int = 0
     output_tokens: int = 0
-    cost_usd: Decimal = Decimal(0)
     latency_ms: int = 0
 
 

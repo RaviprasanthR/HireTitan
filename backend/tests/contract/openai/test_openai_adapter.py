@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable
-from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -104,8 +103,7 @@ async def test_usage_mapped() -> None:
     result = await Server((200, fixture("response_ok.json"))).adapter().generate(request())
     usage = result.usage
     assert (usage.input_tokens, usage.cached_input_tokens, usage.output_tokens) == (1200, 200, 30)
-    # (1000 fresh * 0.75 + 200 cached * 0.075 + 30 out * 4.50) / 1M = 900 / 1M
-    assert usage.cost_usd == Decimal("0.0009")
+    assert not hasattr(usage, "cost_usd")
     assert usage.latency_ms >= 0
 
 

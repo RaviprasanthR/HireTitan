@@ -1,4 +1,4 @@
-"""A scripted ``LlmPort`` for tests and ``HIRETITAN_LLM=fake`` (no network, no cost).
+"""A scripted ``LlmPort`` for tests and ``HIRETITAN_LLM=fake`` (no network).
 
 Each ``generate`` call consumes the next scripted step: a model instance, a dict (validated
 against the request's schema; an invalid one gives an ``error`` result, like a real model

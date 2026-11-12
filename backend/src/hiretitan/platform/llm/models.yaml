@@ -1,29 +1,11 @@
-# Model tiers and prices (research R3). Workflows ask for a tier, never a model name.
-# Prices are USD per 1M tokens, standard tier, short context (<= 272K input tokens).
-# Checked by hand against https://developers.openai.com/api/docs/pricing on the date below.
-# `input` includes the cached tokens; cached tokens are billed at `cached_input` instead.
-prices_checked_on: 2026-11-04
+# Model tiers (research R3). Workflows ask for a tier, never a model name.
 providers:
   openai:
     tiers:
       fast: gpt-5.4-mini
       strong: gpt-6-astra
-    models:
-      gpt-5.4-mini:
-        input: "0.75"
-        cached_input: "0.075"
-        output: "4.50"
-      gpt-6-astra:
-        input: "10.00"
-        cached_input: "1.00"
-        output: "50.00"
-  # Used with HIRETITAN_LLM=fake: scripted replies, no network, no cost.
+  # Used with HIRETITAN_LLM=fake: scripted replies, no network.
   fake:
     tiers:
       fast: fake-model
       strong: fake-model
-    models:
-      fake-model:
-        input: "0"
-        cached_input: "0"
-        output: "0"

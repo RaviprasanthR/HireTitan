@@ -1,25 +1,20 @@
 """T059: the profile import when the AI is unavailable (US3, FR-030, SC-006).
 
-The real budget guard and provider-status service sit in front of a scripted model, so these
-tests cover the same path a missing key or an empty budget takes in the running app.
+The real provider-status service sits in front of a scripted model, so these
+tests cover the same path a missing key or an empty account takes in the running app.
 """
 
 from __future__ import annotations
 
 import sys
-from decimal import Decimal
 from pathlib import Path
 from typing import Any
 from uuid import UUID
 
 import pytest
-from sqlalchemy import text
 
-from hiretitan.platform.clock import SystemClock
-from hiretitan.platform.llm.budget import BudgetGuard
 from hiretitan.platform.llm.fake import FakeLlm
 from hiretitan.platform.llm.infra.provider_status_repo import ProviderStatusRepo
-from hiretitan.platform.llm.models import ModelCatalog
 from hiretitan.platform.llm.port import AiUnavailable, LlmRequest, LlmResult
 from hiretitan.platform.llm.provider_status import ProviderStatusService
 from hiretitan.platform.runtime.domain.run_state import PauseReason, RunStatus, WaitingFor
@@ -92,18 +87,11 @@ def status_service(h: Harness) -> ProviderStatusService:
     )
 
 
-def budget_guard(h: Harness, inner: FakeLlm, cap: list[Decimal]) -> BudgetGuard:
-    async def cap_provider() -> Decimal:
-        return cap[0]
-
-    return BudgetGuard(
-        inner,
-        sessions=h.sessions,
-        cap_provider=cap_provider,
-        catalog=ModelCatalog.load(),
-        provider="openai",
-        clock=SystemClock(),
-    )
+def out_of_credit() -> FakeLlm:
+    """A model that answers every call with "the account is out of credit"."""
+    llm = FakeLlm()
+    llm.add(AiUnavailable("out_of_credit", "You exceeded your current quota."))
+    return llm
 
 
 async def test_US3_AS2_key_rejected_pauses_run(make_harness: Any) -> None:
@@ -147,32 +135,25 @@ async def test_US3_AS3_paused_run_resumes_from_checkpoint(
     assert len(fixed.calls) == 1
 
 
-async def test_US3_AS5_budget_blocked_pauses_run(make_harness: Any) -> None:
+async def test_FR012_out_of_credit_pauses_run_and_check_again_resumes_it(make_harness: Any) -> None:
     h = make_harness([])
-    provider_model = FakeLlm([jane_extraction()])
-    cap = [Decimal("0.000001")]  # far below the estimated cost of one extraction
-    use_llm(h, budget_guard(h, provider_model, cap))
+    use_llm(h, out_of_credit())
     run_id = await h.start(PDF)
 
     state = await h.run(run_id)
 
     assert state.status is RunStatus.paused
-    assert state.pause_reason is PauseReason.budget_reached
-    assert provider_model.calls == []  # the provider was never called
-    async with h.sessions() as session:
-        outcomes = (
-            await session.execute(text("SELECT outcome, cost_usd FROM app.llm_calls"))
-        ).all()
-    assert [(o, Decimal(c)) for o, c in outcomes] == [("budget_blocked", Decimal(0))]
+    assert state.pause_reason is PauseReason.out_of_credit
 
-    # The key being fine does not wake a budget pause ...
+    # The key being fine does not wake it ...
     assert await resume_paused_runs(h.sessions, _Queue(), PauseReason.key_rejected) == 0
-    # ... raising the cap does.
-    cap[0] = Decimal("25")
-    assert await resume_paused_runs(h.sessions, _Queue(), PauseReason.budget_reached) == 1
+    # ... Check again, once credit is back, does.
+    fixed = FakeLlm([jane_extraction()])
+    use_llm(h, fixed)
+    assert await resume_paused_runs(h.sessions, _Queue(), PauseReason.out_of_credit) == 1
     state = await h.run(run_id)
     assert state.waiting_for is WaitingFor.profile_review
-    assert len(provider_model.calls) == 1
+    assert len(fixed.calls) == 1
 
 
 async def test_SC006_no_upload_or_edit_lost(make_harness: Any) -> None:
@@ -186,7 +167,7 @@ async def test_SC006_no_upload_or_edit_lost(make_harness: Any) -> None:
 
     for llm in (
         RejectingLlm(status_service(h)),
-        budget_guard(h, FakeLlm([jane_extraction()]), [Decimal("0.000001")]),
+        out_of_credit(),
     ):
         use_llm(h, llm)
         run_id = await h.start(PDF)

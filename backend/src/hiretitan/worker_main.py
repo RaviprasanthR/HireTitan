@@ -36,7 +36,6 @@ from hiretitan.search.workflow.judge import JudgeDeps
 from hiretitan.search.workflow.recheck import RECHECK_WORKFLOW, recheck_workflow
 from hiretitan.search_wiring import build_career_ops, profile_card_source
 from hiretitan.seed_dir import resolve_seed_dir
-from hiretitan.setup.infra.settings_repo import budget_cap_provider
 
 SEED_DIR = resolve_seed_dir()
 
@@ -55,9 +54,7 @@ async def run_worker(settings: Settings, *, wait: bool = True) -> None:
     sessions = session_factory(engine)
     publisher = EventPublisher(engine)
     runtime: Runtime = create_runtime(settings.database_url)
-    built = build_llm(
-        settings, sessions, budget_cap_provider(sessions), SystemClock(), publisher.publish
-    )
+    built = build_llm(settings, sessions, publisher.publish)
     runtime.provider_status = built.provider_status
 
     async def requeue_out_of_credit() -> int:

@@ -1,19 +1,15 @@
-"""Build the LLM port from settings: the provider adapter (or the fake) inside the budget
-guard, plus the provider-status service. Both composition roots use this.
+"""Build the LLM port from settings: the provider adapter (or the fake), plus the
+provider-status service. Both composition roots use this.
 """
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from decimal import Decimal
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from hiretitan.platform.clock import ClockPort
 from hiretitan.platform.config.settings import Settings
-from hiretitan.platform.llm.budget import BudgetGuard
 from hiretitan.platform.llm.fake import FakeLlm
 from hiretitan.platform.llm.models import ModelCatalog
 from hiretitan.platform.llm.openai_adapter import PROVIDER, KeyCheck, OpenAiAdapter
@@ -45,8 +41,6 @@ class BuiltLlm:
 def build_llm(
     settings: Settings,
     sessions: async_sessionmaker[AsyncSession],
-    cap_provider: Callable[[], Awaitable[Decimal]],
-    clock: ClockPort,
     publish: Publish = _ignore,
 ) -> BuiltLlm:
     catalog = ModelCatalog.load()
@@ -60,7 +54,6 @@ def build_llm(
             provider="fake",
         )
         inner: LlmPort = fake
-        provider = fake.provider
     else:
         holder: list[ProviderStatusService] = []
 
@@ -84,13 +77,5 @@ def build_llm(
             provider=PROVIDER,
         )
         holder.append(status)
-        inner, provider = adapter, adapter.provider
-    guard = BudgetGuard(
-        inner,
-        sessions=sessions,
-        cap_provider=cap_provider,
-        catalog=catalog,
-        provider=provider,
-        clock=clock,
-    )
-    return BuiltLlm(guard, status)
+        inner = adapter
+    return BuiltLlm(inner, status)

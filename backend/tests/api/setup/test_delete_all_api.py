@@ -5,7 +5,6 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field, replace
 from datetime import UTC, date, datetime
-from decimal import Decimal
 from functools import partial
 from pathlib import Path
 from uuid import UUID
@@ -135,8 +134,6 @@ async def populate(env: Env, clock: FakeClock) -> UUID:
                 10,
                 0,
                 5,
-                Decimal("0.01"),
-                Decimal("0.01"),
                 120,
                 "ok",
             )

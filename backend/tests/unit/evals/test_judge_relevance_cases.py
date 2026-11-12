@@ -1,4 +1,4 @@
-"""T027: the relevance eval set and runner. Uses FakeLlm: no network, no cost."""
+"""T027: the relevance eval set and runner. Uses FakeLlm: no network."""
 
 from __future__ import annotations
 

@@ -10,7 +10,6 @@ from __future__ import annotations
 import math
 from collections.abc import Sequence
 from dataclasses import dataclass
-from decimal import Decimal
 from pathlib import Path
 from typing import Any, Final
 from urllib.parse import urlsplit
@@ -20,7 +19,6 @@ from pydantic import BaseModel
 import hiretitan.prompts as hiretitan_prompts
 from evals.extract_jobs_from_page.cases import CASES, EVIL, PageCase
 from hiretitan.platform.llm.infra.calls_repo import LlmCallRecord
-from hiretitan.platform.llm.models import ModelCatalog
 from hiretitan.platform.llm.port import LlmPort, LlmRequest
 from hiretitan.platform.llm.prompts import LoadedPrompt, PromptRegistry
 from hiretitan.platform.llm.validation import TaskSpec, ValidatedLlm
@@ -32,8 +30,6 @@ PROMPT_NAME: Final = "extract_jobs_from_page"
 PROVIDER: Final = "openai"
 PRECISION_MIN: Final = 0.90
 RECALL_MIN: Final = 0.90
-CHARS_PER_TOKEN: Final = 3
-_PER_MILLION: Final = Decimal(1_000_000)
 
 
 @dataclass(frozen=True, slots=True)
@@ -48,14 +44,14 @@ class PageReport:
     unusable: int
     off_site: int  # returned links that are not on the page's own site
     injection_affected: int
-    cost_usd: Decimal
+    tokens: int  # input and output tokens of every call
     p95_ms: int
     wrong: list[str]
 
     @property
-    def cost_per_page(self) -> Decimal:
+    def tokens_per_page(self) -> int:
         pages = len(CASES) * self.repeat
-        return self.cost_usd / pages if pages else Decimal(0)
+        return self.tokens // pages if pages else 0
 
     @property
     def passes(self) -> bool:
@@ -167,22 +163,10 @@ async def evaluate_pages(llm: LlmPort, *, tier: str, model: str, repeat: int = 1
         unusable=unusable,
         off_site=off_site,
         injection_affected=injected,
-        cost_usd=sum((c.cost_usd for c in calls), Decimal(0)),
+        tokens=sum(c.input_tokens + c.output_tokens for c in calls),
         p95_ms=p95([c.latency_ms for c in calls]),
         wrong=sorted(set(wrong)),
     )
-
-
-def estimate_pages_cost(model: str, repeat: int, catalog: ModelCatalog | None = None) -> Decimal:
-    """Upper-bound USD for one run: pessimistic input tokens plus the full output allowance."""
-    price = (catalog or ModelCatalog.load()).price(model)
-    prompt = _registry().load(PROMPT_NAME)
-    total = Decimal(0)
-    for case in CASES:
-        request = _request(prompt, case, "fast")
-        tokens = (len(request.prompt.system) + len(request.prompt.user)) // CHARS_PER_TOKEN + 1
-        total += (tokens * price.input + request.max_output_tokens * price.output) / _PER_MILLION
-    return total * repeat
 
 
 def _gate(ok: bool) -> str:
@@ -203,13 +187,13 @@ def render_pages_report(reports: Sequence[PageReport], *, day: str) -> str:
         "## Summary",
         "",
         "| model | tier | precision | recall | unusable | off-site | injection-affected "
-        "| cost / page | p95 latency (ms) | gate |",
+        "| tokens / page | p95 latency (ms) | gate |",
         "|---|---|---|---|---|---|---|---|---|---|",
     ]
     for r in reports:
         lines.append(
             f"| {r.model} | {r.tier} | {r.precision:.1%} | {r.recall:.1%} | {r.unusable} "
-            f"| {r.off_site} | {r.injection_affected} | ${r.cost_per_page:.5f} "
+            f"| {r.off_site} | {r.injection_affected} | {r.tokens_per_page} "
             f"| {r.p95_ms} | {_gate(r.passes)} |"
         )
     lines += ["", "## Wrong answers", ""]

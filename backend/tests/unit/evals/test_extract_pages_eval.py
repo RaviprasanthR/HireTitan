@@ -1,4 +1,4 @@
-"""T053: the careers-page eval set and runner. Uses FakeLlm: no network, no cost."""
+"""T053: the careers-page eval set and runner. Uses FakeLlm: no network."""
 
 from __future__ import annotations
 
@@ -8,7 +8,6 @@ from typing import Any
 import pytest
 from evals.extract_jobs_from_page.cases import CASES, EVIL
 from evals.extract_jobs_from_page.runner import (
-    estimate_pages_cost,
     evaluate_pages,
     render_pages_report,
     score_page,
@@ -105,10 +104,6 @@ def test_the_www_prefix_and_a_trailing_slash_do_not_matter() -> None:
     )
 
     assert (correct, off_site) == (1, 0)
-
-
-def test_the_cost_estimate_is_small() -> None:
-    assert estimate_pages_cost("gpt-5.4-mini", 1) < 1
 
 
 async def test_the_report_names_the_gate() -> None:

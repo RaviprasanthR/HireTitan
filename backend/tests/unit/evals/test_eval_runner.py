@@ -1,9 +1,8 @@
-"""T051: the extraction eval runner (SC-003). Uses FakeLlm: no network, no cost."""
+"""T051: the extraction eval runner (SC-003). Uses FakeLlm: no network."""
 
 from __future__ import annotations
 
 import asyncio
-from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -175,16 +174,15 @@ def run_main(argv: list[str], llm: FakeLlm, tmp_path: Path) -> int:
     )
 
 
-def test_estimate_printed_and_confirmation_required(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
+def test_run_still_needs_yes(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     llm = FakeLlm(by_task={"extract_profile": perfect_script()})
 
     code = run_main(["extract_profile", "--models", "fast,strong"], llm, tmp_path)
 
     out = capsys.readouterr().out
     assert code != 0
-    assert "Estimated cost" in out
+    assert "This run uses your AI credit" in out
+    assert "$" not in out  # no cost estimate
     assert "--yes" in out
     assert llm.calls == []  # nothing was sent
     assert list(tmp_path.iterdir()) == []  # and no report written
@@ -204,16 +202,18 @@ def test_yes_runs_and_writes_a_report(tmp_path: Path, capsys: pytest.CaptureFixt
     assert "p95" in text.lower()
     assert "employers" in text
     assert "skills" in text
-    assert capsys.readouterr().out.count("Estimated cost") == 1
+    assert capsys.readouterr().out.count("This run uses your AI credit") == 1
 
 
-def test_estimate_uses_catalog_prices() -> None:
-    cases = load_cases(CASES_DIR, EXPECTED_DIR)
+def test_FR015_report_has_tokens_and_no_cost(tmp_path: Path) -> None:
+    llm = FakeLlm(by_task={"extract_profile": perfect_script()})
 
-    cheap = eval_run.estimate_cost(cases, "gpt-5.4-mini")
-    dear = eval_run.estimate_cost(cases, "gpt-6-astra")
+    run_main(["extract_profile", "--models", "fast", "--yes"], llm, tmp_path)
 
-    assert Decimal(0) < cheap < dear
+    text = (tmp_path / "extract_profile-2026-11-04.md").read_text("utf-8")
+    assert "tokens / resume" in text
+    assert "cost" not in text.lower()
+    assert "$" not in text
 
 
 def test_unknown_model_is_rejected_with_a_clear_message(

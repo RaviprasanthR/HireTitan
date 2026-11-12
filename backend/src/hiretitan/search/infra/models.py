@@ -44,6 +44,7 @@ def _in(column: str, values: tuple[str, ...]) -> str:
 
 RULE_SET_STATUSES = ("proposed", "approved", "superseded")
 RUN_MODES = ("rules_and_ai", "rules_only")
+# "budget_reached" is an outcome of searches from before HireTitan dropped its AI budget
 RUN_OUTCOMES = ("finished", "stopped_by_user", "budget_reached", "out_of_credit", "failed")
 JOB_STATES = ("explore", "skipped", "inquired", "applied", "deleted")
 WORK_MODES = ("onsite", "hybrid", "remote")
@@ -138,7 +139,6 @@ class SearchRunRow(IdTimestampMixin, Base):
     added: Mapped[int] = mapped_column(Integer, server_default=text("0"))
     merged: Mapped[int] = mapped_column(Integer, server_default=text("0"))
     not_checked_by_ai: Mapped[int] = mapped_column(Integer, server_default=text("0"))
-    ai_cost_usd: Mapped[Decimal] = mapped_column(Numeric(10, 4), server_default=text("0"))
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 

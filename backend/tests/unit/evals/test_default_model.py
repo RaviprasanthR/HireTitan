@@ -6,7 +6,7 @@ from decimal import Decimal
 from pathlib import Path
 
 import yaml
-from evals.run import REPORTS_DIR, SC003_TARGET, SC007_MAX_USD
+from evals.run import REPORTS_DIR, SC003_TARGET
 
 from hiretitan.platform.llm.models import ModelCatalog
 
@@ -47,7 +47,6 @@ def test_defaults_match_latest_eval_report() -> None:
 
     assert row["model"] == ModelCatalog.load().model_for("openai", tier)
     assert Decimal(row["recall"].rstrip("%")) / 100 >= Decimal(str(SC003_TARGET))
-    assert Decimal(row["cost / resume"].lstrip("$")) < SC007_MAX_USD
     assert row["unusable"] == "0"
     # Documents that are not resumes must be rejected, and real resumes must not be.
     rejected, others = (int(n) for n in row["non-resumes rejected"].split(" / "))
