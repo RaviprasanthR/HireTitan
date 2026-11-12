@@ -87,7 +87,7 @@ def can_add_round(states: Iterable[str]) -> bool:
 
 
 def status_summary(job_state: str, rounds: Iterable[RoundSummary]) -> tuple[str, int | None]:
-    """The status column (FR-007): a failed round wins, else the latest round, else the job state."""
+    """The status column (FR-007): a failed round wins, else the latest, else the job state."""
     ordered = sorted(rounds, key=lambda r: r.number)
     failed = [r.number for r in ordered if r.state == "failed"]
     if failed:

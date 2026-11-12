@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from hiretitan.search.domain.interviews import (
     ANSWER_MAX,
     FEEDBACK_MAX,
@@ -91,7 +89,9 @@ def test_FR003_firm_name_limit() -> None:
 def test_FR002_contact_checks() -> None:
     fields, issues = check_contact(name="Asha Rao")
     assert issues == []
-    assert fields is not None and fields.name == "Asha Rao" and fields.email is None
+    assert fields is not None
+    assert fields.name == "Asha Rao"
+    assert fields.email is None
 
     _, issues = check_contact(name="", email="not-an-email", linkedin_url="nope", phone="x")
     assert {i.field for i in issues} == {"name", "email", "linkedin_url", "phone"}
