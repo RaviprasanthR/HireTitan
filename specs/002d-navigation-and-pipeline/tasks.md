@@ -136,7 +136,7 @@ description: "Task list for 002d-navigation-and-pipeline"
 - [x] T026 [P] Docs: `docs/user-guide/job-search.md` (remove "What a search costs", describe Explore and In pipeline and I inquired), `getting-started.md` (no budget), `docs/user-guide/company-contacts.md` (Applied or Inquired chip, In pipeline filter), `docs/architecture.md` (§5.1 budget guard removed, §8 settings table, §10 first-level UI, the budget ADR text, the `tiktoken` open item closed), `README.md` if it mentions a budget.
 - [x] T027 Success-criteria map `specs/002d-navigation-and-pipeline/success-criteria-map.md` (SC-001 to SC-006 → tests); full gates: backend suite with the coverage gate, `ruff`, `mypy --strict`, `lint-imports`, frontend `tsc`, `eslint`, `npm test -- --coverage`, all Playwright journeys against the e2e stack.
 - [x] T028 Reviewer agents over the branch diff (python/FastAPI, security, database, React); fix findings; record them in `docs/CONTEXT.md`.
-- [ ] T029 Update `docs/CONTEXT.md` (history, next steps) and `docs/clarified-requirements.md` §12 (add 002d); push and open the PR to `master` with the success-criteria map when Ravi says so.
+- [x] T029 Update `docs/CONTEXT.md` (history, next steps) and `docs/clarified-requirements.md` §12 (add 002d); push and open the PR to `master` with the success-criteria map when Ravi says so.
 
 ---
 
