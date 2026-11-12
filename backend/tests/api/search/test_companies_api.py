@@ -245,26 +245,35 @@ async def _job(env: Env, company: UUID, title: str, state: str) -> None:
             description="text",
             state=state,
             applied_on=date(2026, 11, 3) if state == "applied" else None,
+            inquired_on=date(2026, 11, 2) if state == "inquired" else None,
             first_seen_at=NOW,
             last_seen_at=NOW,
         )
         await session.commit()
 
 
-async def test_company_row_says_whether_there_is_an_application(env: Env) -> None:
+async def test_FR009_company_pipeline_is_applied_inquired_or_null(env: Env) -> None:
     applied = await add(env, "Applied Co")
+    asked = await add(env, "Asked Co")
+    both = await add(env, "Both Co")
     browsing = await add(env, "Browsing Co")
     await add(env, "Nothing Co")
     await _job(env, applied, "Backend Engineer", "applied")
     await _job(env, applied, "Frontend Engineer", "explore")
+    await _job(env, asked, "Backend Engineer", "inquired")
+    await _job(env, both, "Backend Engineer", "inquired")
+    await _job(env, both, "Platform Engineer", "applied")  # applied wins over inquired
     await _job(env, browsing, "Backend Engineer", "explore")
     await _job(env, browsing, "QA Engineer", "skipped")
 
     rows = {c["name"]: c for c in (await env.client.get(BASE)).json()["items"]}
 
-    assert rows["Applied Co"]["has_application"] is True
-    assert rows["Browsing Co"]["has_application"] is False  # looking at jobs is not applying
-    assert rows["Nothing Co"]["has_application"] is False
+    assert rows["Applied Co"]["pipeline"] == "applied"
+    assert rows["Asked Co"]["pipeline"] == "inquired"
+    assert rows["Both Co"]["pipeline"] == "applied"
+    assert rows["Browsing Co"]["pipeline"] is None  # looking at jobs is not applying
+    assert rows["Nothing Co"]["pipeline"] is None
+    assert "has_application" not in rows["Nothing Co"]
 
 
 async def test_the_list_no_longer_carries_open_role_counts(env: Env) -> None:

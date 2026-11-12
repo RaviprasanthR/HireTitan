@@ -606,19 +606,28 @@ class ContactsRepo:
         return {company_id: (int(n), bool(noted)) for company_id, n, noted in result.all()}
 
 
-class AppliedCompaniesRepo:
-    """Which companies have a job the person applied to (feature 002b). Nothing is stored."""
+class PipelineCompaniesRepo:
+    """How far the person's jobs at each company have got (feature 002d). Nothing is stored."""
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def company_ids(self) -> set[UUID]:
+    async def states(self) -> dict[UUID, Literal["applied", "inquired"]]:
+        """``applied`` if any job at the company is applied, else ``inquired`` if any is inquired.
+        Companies with neither are left out. One query."""
         result = await self._session.execute(
-            select(JobRow.company_id)
-            .where(JobRow.state == JobState.applied.value, JobRow.company_id.is_not(None))
-            .distinct()
+            select(JobRow.company_id, func.bool_or(JobRow.state == JobState.applied.value))
+            .where(
+                JobRow.state.in_((JobState.applied.value, JobState.inquired.value)),
+                JobRow.company_id.is_not(None),
+            )
+            .group_by(JobRow.company_id)
         )
-        return {company_id for company_id in result.scalars() if company_id is not None}
+        return {
+            company_id: "applied" if any_applied else "inquired"
+            for company_id, any_applied in result.all()
+            if company_id is not None
+        }
 
 
 def _apply_contact_fields(row: ContactRow, fields: ContactFields) -> None:

@@ -304,11 +304,6 @@
             "title": "Contact Count",
             "type": "integer"
           },
-          "has_application": {
-            "default": false,
-            "title": "Has Application",
-            "type": "boolean"
-          },
           "has_note": {
             "default": false,
             "title": "Has Note",
@@ -375,6 +370,21 @@
           "origin": {
             "title": "Origin",
             "type": "string"
+          },
+          "pipeline": {
+            "anyOf": [
+              {
+                "enum": [
+                  "applied",
+                  "inquired"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pipeline"
           },
           "resolution": {
             "title": "Resolution",
@@ -5092,7 +5102,7 @@
     },
     "/api/v1/jobs/duplicates/{pair_id}/merge": {
       "post": {
-        "description": "Keep the older job (A) and move the other's sources onto it; the other is deleted.",
+        "description": "Keep the older job (A) and move the other's sources onto it; the other is deleted.\n\nThe kept job takes the stronger of the two pipeline states, with that job's date.",
         "operationId": "merge_api_v1_jobs_duplicates__pair_id__merge_post",
         "parameters": [
           {

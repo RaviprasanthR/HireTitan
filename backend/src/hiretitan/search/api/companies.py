@@ -33,10 +33,10 @@ from hiretitan.search.application.discovery import (
 )
 from hiretitan.search.application.ports import CareerOpsPort
 from hiretitan.search.infra.repos import (
-    AppliedCompaniesRepo,
     CompaniesRepo,
     ContactsRepo,
     NotesRepo,
+    PipelineCompaniesRepo,
 )
 
 
@@ -67,7 +67,7 @@ class CompanyOut(BaseModel):
     contact_count: int = 0
     has_note: bool = False
     note_preview: str | None = None
-    has_application: bool = False
+    pipeline: Literal["applied", "inquired"] | None = None
 
 
 class CompanyPage(BaseModel):
@@ -128,9 +128,9 @@ def create_companies_router(deps: SearchCompaniesApiDeps) -> APIRouter:
     async def companies(filter: Literal["all", "check_manually", "hidden"] = "all") -> CompanyPage:
         async with deps.sessions() as session:
             counts = await ContactsRepo(session).counts_by_company()
-            applied = await AppliedCompaniesRepo(session).company_ids()
+            pipeline = await PipelineCompaniesRepo(session).states()
             heads = await NotesRepo(session).heads(NOTE_HEAD)
-            views = await list_companies(CompaniesRepo(session), filter, counts, applied, heads)
+            views = await list_companies(CompaniesRepo(session), filter, counts, pipeline, heads)
         return CompanyPage(items=[out(v) for v in views])
 
     @router.post("", response_model=CompanyOut, status_code=201)
