@@ -96,29 +96,6 @@
         "title": "Body_upload_resume_api_v1_resumes_post",
         "type": "object"
       },
-      "BudgetOut": {
-        "properties": {
-          "cap_usd": {
-            "title": "Cap Usd",
-            "type": "string"
-          },
-          "period": {
-            "title": "Period",
-            "type": "string"
-          },
-          "spent_usd": {
-            "title": "Spent Usd",
-            "type": "string"
-          }
-        },
-        "required": [
-          "cap_usd",
-          "spent_usd",
-          "period"
-        ],
-        "title": "BudgetOut",
-        "type": "object"
-      },
       "CertificationModel": {
         "additionalProperties": false,
         "properties": {
@@ -3489,10 +3466,6 @@
             "title": "Added",
             "type": "integer"
           },
-          "ai_cost_usd": {
-            "title": "Ai Cost Usd",
-            "type": "string"
-          },
           "ai_note": {
             "anyOf": [
               {
@@ -3629,7 +3602,6 @@
           "added",
           "merged",
           "not_checked_by_ai",
-          "ai_cost_usd",
           "ai_note",
           "started_at",
           "finished_at",
@@ -3670,10 +3642,6 @@
           "added": {
             "title": "Added",
             "type": "integer"
-          },
-          "ai_cost_usd": {
-            "title": "Ai Cost Usd",
-            "type": "string"
           },
           "ai_note": {
             "anyOf": [
@@ -3804,66 +3772,11 @@
           "added",
           "merged",
           "not_checked_by_ai",
-          "ai_cost_usd",
           "ai_note",
           "started_at",
           "finished_at"
         ],
         "title": "SearchRunSummary",
-        "type": "object"
-      },
-      "SettingsIn": {
-        "additionalProperties": false,
-        "properties": {
-          "budget_cap_usd": {
-            "anyOf": [
-              {
-                "maximum": 10000.0,
-                "minimum": 0.0,
-                "type": "number"
-              },
-              {
-                "type": "string"
-              }
-            ],
-            "title": "Budget Cap Usd"
-          }
-        },
-        "required": [
-          "budget_cap_usd"
-        ],
-        "title": "SettingsIn",
-        "type": "object"
-      },
-      "SettingsOut": {
-        "properties": {
-          "budget_cap_usd": {
-            "title": "Budget Cap Usd",
-            "type": "string"
-          },
-          "key_status": {
-            "title": "Key Status",
-            "type": "string"
-          },
-          "spent_this_month_usd": {
-            "title": "Spent This Month Usd",
-            "type": "string"
-          },
-          "tiers": {
-            "items": {
-              "$ref": "#/components/schemas/TierOut"
-            },
-            "title": "Tiers",
-            "type": "array"
-          }
-        },
-        "required": [
-          "budget_cap_usd",
-          "spent_this_month_usd",
-          "tiers",
-          "key_status"
-        ],
-        "title": "SettingsOut",
         "type": "object"
       },
       "SourceOut": {
@@ -3924,17 +3837,13 @@
           "ai": {
             "$ref": "#/components/schemas/AiOut"
           },
-          "budget": {
-            "$ref": "#/components/schemas/BudgetOut"
-          },
           "checklist": {
             "$ref": "#/components/schemas/ChecklistOut"
           }
         },
         "required": [
           "ai",
-          "checklist",
-          "budget"
+          "checklist"
         ],
         "title": "StatusOut",
         "type": "object"
@@ -3992,29 +3901,6 @@
           }
         },
         "title": "SuggestionsOut",
-        "type": "object"
-      },
-      "TierOut": {
-        "properties": {
-          "model": {
-            "title": "Model",
-            "type": "string"
-          },
-          "provider": {
-            "title": "Provider",
-            "type": "string"
-          },
-          "tier": {
-            "title": "Tier",
-            "type": "string"
-          }
-        },
-        "required": [
-          "tier",
-          "provider",
-          "model"
-        ],
-        "title": "TierOut",
         "type": "object"
       },
       "ValidationError": {
@@ -6739,70 +6625,6 @@
         "summary": "Stop",
         "tags": [
           "search"
-        ]
-      }
-    },
-    "/api/v1/settings": {
-      "get": {
-        "operationId": "read_settings_api_v1_settings_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SettingsOut"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "Read Settings",
-        "tags": [
-          "settings"
-        ]
-      },
-      "put": {
-        "operationId": "write_settings_api_v1_settings_put",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SettingsIn"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "title": "Response Write Settings Api V1 Settings Put",
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Write Settings",
-        "tags": [
-          "settings"
         ]
       }
     },

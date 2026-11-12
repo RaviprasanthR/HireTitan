@@ -1,4 +1,4 @@
-"""Repository for the settings singleton, and the budget-cap provider for the AI guard."""
+"""Repository for the settings singleton (the person's name and the setup state)."""
 
 from __future__ import annotations
 
@@ -10,23 +10,14 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from hiretitan.setup.application.onboarding import OnboardingRecord
-from hiretitan.setup.application.settings import get_budget_cap
 from hiretitan.setup.infra.models import SettingsRow
 
 
 class SettingsRepo:
-    """Implements ``SettingsStore``."""
+    """The onboarding record: display name and when setup was completed."""
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
-
-    async def read_budget_cap(self) -> Decimal:
-        cap = await self._session.scalar(select(SettingsRow.budget_cap_usd))
-        return Decimal("25.00") if cap is None else Decimal(cap)
-
-    async def write_budget_cap(self, cap: Decimal) -> None:
-        await self._session.execute(update(SettingsRow).values(budget_cap_usd=cap))
-        await self._session.flush()
 
     async def read_onboarding(self) -> OnboardingRecord:
         row = (await self._session.execute(select(SettingsRow))).scalar_one()
@@ -44,10 +35,11 @@ class SettingsRepo:
 def budget_cap_provider(
     sessions: async_sessionmaker[AsyncSession],
 ) -> Callable[[], Awaitable[Decimal]]:
-    """The injected cap source for the budget guard (platform never imports setup)."""
+    """Still read by the AI guard until T020 removes the guard and this provider."""
 
     async def provider() -> Decimal:
         async with sessions() as session:
-            return await get_budget_cap(SettingsRepo(session))
+            cap = await session.scalar(select(SettingsRow.budget_cap_usd))
+        return Decimal("25.00") if cap is None else Decimal(cap)
 
     return provider

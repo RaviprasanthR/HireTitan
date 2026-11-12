@@ -55,7 +55,6 @@ from hiretitan.seed_dir import resolve_seed_dir
 from hiretitan.setup.api.data import DataApiDeps, create_data_router
 from hiretitan.setup.api.onboarding import OnboardingApiDeps, create_onboarding_router
 from hiretitan.setup.api.review_items import ReviewItemsApiDeps, create_review_items_router
-from hiretitan.setup.api.settings import SettingsApiDeps, create_settings_router
 from hiretitan.setup.api.status import StatusApiDeps, create_status_router
 from hiretitan.setup_wiring import RepoFacts, SqlDeleteAllStore
 
@@ -240,11 +239,6 @@ def build_app(settings: Settings | None = None) -> FastAPI:
             SearchJobsApiDeps(sessions=deps.sessions, queue=deps.queue, clock=clock)
         ),
         create_runs_router(deps.sessions, deps.queue),
-        create_settings_router(
-            SettingsApiDeps(
-                sessions=deps.sessions, queue=deps.queue, clock=clock, provider=provider
-            )
-        ),
         create_status_router(
             StatusApiDeps(
                 sessions=deps.sessions,

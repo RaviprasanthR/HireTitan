@@ -167,7 +167,6 @@ class SearchStore:
             "batches_done": run.batches_done,
             "companies_read": read or 0,
             "added": run.added,
-            "ai_cost_usd": str(run.ai_cost_usd),
         }
 
     async def commit(self) -> None:

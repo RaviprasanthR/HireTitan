@@ -821,24 +821,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/settings": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read Settings */
-        get: operations["read_settings_api_v1_settings_get"];
-        /** Write Settings */
-        put: operations["write_settings_api_v1_settings_put"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/status": {
         parameters: {
             query?: never;
@@ -910,15 +892,6 @@ export interface components {
         Body_upload_resume_api_v1_resumes_post: {
             /** File */
             file: string;
-        };
-        /** BudgetOut */
-        BudgetOut: {
-            /** Cap Usd */
-            cap_usd: string;
-            /** Period */
-            period: string;
-            /** Spent Usd */
-            spent_usd: string;
         };
         /** CertificationModel */
         CertificationModel: {
@@ -1911,8 +1884,6 @@ export interface components {
         SearchRunOut: {
             /** Added */
             added: number;
-            /** Ai Cost Usd */
-            ai_cost_usd: string;
             /** Ai Note */
             ai_note: string | null;
             /** Batches Done */
@@ -1969,8 +1940,6 @@ export interface components {
         SearchRunSummary: {
             /** Added */
             added: number;
-            /** Ai Cost Usd */
-            ai_cost_usd: string;
             /** Ai Note */
             ai_note: string | null;
             /** Batches Done */
@@ -2014,22 +1983,6 @@ export interface components {
             /** Stop Requested */
             stop_requested: boolean;
         };
-        /** SettingsIn */
-        SettingsIn: {
-            /** Budget Cap Usd */
-            budget_cap_usd: number | string;
-        };
-        /** SettingsOut */
-        SettingsOut: {
-            /** Budget Cap Usd */
-            budget_cap_usd: string;
-            /** Key Status */
-            key_status: string;
-            /** Spent This Month Usd */
-            spent_this_month_usd: string;
-            /** Tiers */
-            tiers: components["schemas"]["TierOut"][];
-        };
         /** SourceOut */
         SourceOut: {
             /** Kind */
@@ -2062,7 +2015,6 @@ export interface components {
         /** StatusOut */
         StatusOut: {
             ai: components["schemas"]["AiOut"];
-            budget: components["schemas"]["BudgetOut"];
             checklist: components["schemas"]["ChecklistOut"];
         };
         /** SuggestionOut */
@@ -2082,15 +2034,6 @@ export interface components {
             key_skills?: string[];
             /** Target Roles */
             target_roles?: string[];
-        };
-        /** TierOut */
-        TierOut: {
-            /** Model */
-            model: string;
-            /** Provider */
-            provider: string;
-            /** Tier */
-            tier: string;
         };
         /** ValidationError */
         ValidationError: {
@@ -3929,61 +3872,6 @@ export interface operations {
                 content: {
                     "application/json": {
                         [key: string]: boolean;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_settings_api_v1_settings_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SettingsOut"];
-                };
-            };
-        };
-    };
-    write_settings_api_v1_settings_put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SettingsIn"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: string;
                     };
                 };
             };

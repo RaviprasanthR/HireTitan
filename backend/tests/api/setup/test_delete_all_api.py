@@ -145,7 +145,6 @@ async def populate(env: Env, clock: FakeClock) -> UUID:
         settings_repo = SettingsRepo(session)
         await settings_repo.write_display_name("Jane")
         await settings_repo.write_setup_completed(clock.now())
-        await settings_repo.write_budget_cap(Decimal("40.00"))
         await session.execute(
             text(
                 "INSERT INTO lg.checkpoints (thread_id, checkpoint_ns, checkpoint_id, checkpoint,"
@@ -197,11 +196,9 @@ async def test_US4_AS2_returns_to_first_run_state(env: Env, fake_clock: FakeCloc
     async with env.sessions() as session:
         record = await SettingsRepo(session).read_onboarding()
         status = await ProviderStatusRepo(session).get("openai")
-        cap = await SettingsRepo(session).read_budget_cap()
     assert (record.display_name, record.setup_completed_at) == (None, None)
     assert status is not None
     assert status.status == "unknown"
-    assert cap == Decimal("25.00")
     assert env.key_checks == [1]
 
 

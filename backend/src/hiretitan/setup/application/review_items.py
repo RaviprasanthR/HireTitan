@@ -11,7 +11,6 @@ from hiretitan.platform.runtime.infra.runs_repo import Run
 from hiretitan.setup.application.status import SetupFacts
 
 PAUSE_TITLES = {
-    PauseReason.budget_reached: "Paused: monthly AI budget reached",
     PauseReason.key_missing: "Paused: AI key is missing",
     PauseReason.key_rejected: "Paused: AI key was rejected",
     PauseReason.out_of_credit: "Paused: your AI account is out of credit",
@@ -33,7 +32,7 @@ async def build_review_items(runs: list[Run], facts: SetupFacts) -> list[ReviewI
     for run in runs:
         state = run.state
         if state.status is RunStatus.paused and state.pause_reason is not None:
-            target = "/settings" if state.pause_reason is PauseReason.budget_reached else "/"
+            target = "/"
             items.append(
                 ReviewItem(
                     run.id, "paused", PAUSE_TITLES[state.pause_reason], target, run.updated_at

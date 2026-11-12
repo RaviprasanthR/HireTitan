@@ -1,15 +1,13 @@
-"""AI status, the setup checklist and budget, for the banner and Home (FR-028 to FR-030)."""
+"""AI status and the setup checklist, for the banner and Home (FR-028 to FR-030)."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from decimal import Decimal
 from typing import Protocol
 from uuid import UUID
 
 from hiretitan.platform.llm.infra.provider_status_repo import ProviderStatus
-from hiretitan.setup.application.settings import SettingsStore, SpendReader
 from hiretitan.setup.domain.checklist import Checklist, build_checklist
 
 
@@ -46,17 +44,9 @@ class AiStatus:
 
 
 @dataclass(frozen=True, slots=True)
-class Budget:
-    cap_usd: Decimal
-    spent_usd: Decimal
-    period: str  # YYYY-MM
-
-
-@dataclass(frozen=True, slots=True)
 class Status:
     ai: AiStatus
     checklist: Checklist
-    budget: Budget
 
 
 async def get_ai_status(providers: ProviderStatusReader, provider: str) -> AiStatus:
@@ -70,8 +60,6 @@ async def get_status(
     *,
     provider: str,
     providers: ProviderStatusReader,
-    settings: SettingsStore,
-    spend: SpendReader,
     facts: SetupFacts,
     now: datetime,
 ) -> Status:
@@ -84,9 +72,4 @@ async def get_status(
         rules_approved=await facts.rules_approved(),
         searched_once=await facts.searched_once(),
     )
-    budget = Budget(
-        cap_usd=await settings.read_budget_cap(),
-        spent_usd=await spend.spent_in_month(now.year, now.month),
-        period=f"{now.year:04d}-{now.month:02d}",
-    )
-    return Status(ai, checklist, budget)
+    return Status(ai, checklist)
