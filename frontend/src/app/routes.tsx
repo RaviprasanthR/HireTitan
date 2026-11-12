@@ -1,10 +1,10 @@
-import type { RouteObject } from 'react-router'
+import { Navigate, type RouteObject } from 'react-router'
 import {
-  AppliedPage,
   CompaniesPage,
   ExplorePage,
   JobDetailPage,
   NotFoundPage,
+  PipelinePage,
   PreferencesPage,
   ProfileEditor,
   ProfilePage,
@@ -28,7 +28,8 @@ export const routes: RouteObject[] = [
         element: <Shell />,
         children: [
           { path: '/', element: <ExplorePage /> },
-          { path: '/applied', element: <AppliedPage /> },
+          { path: '/pipeline', element: <PipelinePage /> },
+          { path: '/applied', element: <Navigate to="/pipeline" replace /> },
           { path: '/profile', element: <ProfilePage /> },
           { path: '/profile/edit', element: <ProfileEditor /> },
           { path: '/profile/review/:reviewId', element: <ProfileReviewPage /> },

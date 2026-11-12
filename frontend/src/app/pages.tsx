@@ -2,9 +2,9 @@ import type { ReactNode } from 'react'
 import { useParams } from 'react-router'
 import { CompaniesPage } from '@/features/companies/CompaniesPage'
 import { ExplorePage } from '@/features/explore/ExplorePage'
+import { PipelinePage } from '@/features/explore/PipelinePage'
 import { RunSummaryPage } from '@/features/explore/RunSummaryPage'
 import { SearchHistoryPage } from '@/features/explore/SearchHistoryPage'
-import { AppliedPage } from '@/features/jobs/AppliedPage'
 import { JobDetailPage } from '@/features/jobs/JobDetailPage'
 import { PreferencesPage } from '@/features/preferences/PreferencesPage'
 import { ReviewPage } from '@/features/review/ReviewPage'
@@ -33,10 +33,10 @@ export function ProfileReviewPage() {
 export const NotFoundPage = () => <Page title="Page not found" />
 
 export {
-  AppliedPage,
   CompaniesPage,
   ExplorePage,
   JobDetailPage,
+  PipelinePage,
   RunSummaryPage,
   SearchHistoryPage,
   SearchRulesPage,

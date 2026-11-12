@@ -4,8 +4,8 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { stubApi } from '@/test/api'
-import { AppliedPage } from './AppliedPage'
-import { UndoToast } from './UndoToast'
+import { UndoToast } from '@/features/jobs/UndoToast'
+import { PipelinePage } from './PipelinePage'
 
 function applied(id: string, title: string, day: string) {
   return {
@@ -23,11 +23,16 @@ function applied(id: string, title: string, day: string) {
     decision: null,
     listed: false,
     applied_on: day,
+    inquired_on: null,
   }
 }
 
+function inquired(id: string, title: string, day: string) {
+  return { ...applied(id, title, day), state: 'inquired', applied_on: null, inquired_on: day }
+}
+
 function renderPage() {
-  let rows = [applied('a', 'Newest', '2026-11-05'), applied('b', 'Older', '2026-10-01')]
+  let rows = [applied('a', 'Newest', '2026-11-05'), inquired('b', 'Older', '2026-10-01')]
   const calls = stubApi((call) => {
     if (call.method === 'DELETE' && call.path === '/jobs/a/applied') {
       rows = rows.filter((row) => row.id !== 'a')
@@ -45,7 +50,7 @@ function renderPage() {
       client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
     >
       <MemoryRouter>
-        <AppliedPage />
+        <PipelinePage />
         <UndoToast />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -55,16 +60,16 @@ function renderPage() {
 
 afterEach(() => vi.unstubAllGlobals())
 
-describe('AppliedPage', () => {
-  it('FR037_lists_applied_jobs_as_a_table_newest_first', async () => {
+describe('PipelinePage', () => {
+  it('US1 AS2 pipeline lists applied and inquired', async () => {
     const calls = renderPage()
 
-    const table = await screen.findByRole('table', { name: 'Applied jobs' })
+    const table = await screen.findByRole('table', { name: 'Pipeline jobs' })
     expect(
       within(table)
         .getAllByRole('columnheader')
         .map((header) => header.textContent),
-    ).toEqual(['Company', 'Role', 'Applied on', 'Status', 'Source', ''])
+    ).toEqual(['Company', 'Role', 'Date', 'Status', 'Source', ''])
     const [, newest, older] = within(table).getAllByRole('row')
     if (!newest || !older) throw new Error('expected two rows')
     expect(within(newest).getByRole('link', { name: 'Newest' })).toBeInTheDocument()
@@ -72,8 +77,10 @@ describe('AppliedPage', () => {
     expect(newest).toHaveTextContent('Acme')
     expect(newest).toHaveTextContent('5 Nov 2026')
     expect(newest).toHaveTextContent('Applied')
+    expect(older).toHaveTextContent('Inquired')
+    expect(older).toHaveTextContent('1 Oct 2026')
     expect(newest).toHaveTextContent('Company job board')
-    expect(calls.some((call) => call.path.includes('list=applied'))).toBe(true)
+    expect(calls.some((call) => call.path.includes('list=pipeline'))).toBe(true)
   })
 
   it('expanding_a_row_shows_the_description', async () => {
@@ -97,7 +104,7 @@ describe('AppliedPage', () => {
     render(
       <QueryClientProvider client={new QueryClient()}>
         <MemoryRouter>
-          <AppliedPage />
+          <PipelinePage />
         </MemoryRouter>
       </QueryClientProvider>,
     )
@@ -115,7 +122,7 @@ describe('AppliedPage', () => {
 
   it('the_edit_icon_opens_the_job_where_the_date_can_be_changed_or_undone', async () => {
     renderPage()
-    const table = await screen.findByRole('table', { name: 'Applied jobs' })
+    const table = await screen.findByRole('table', { name: 'Pipeline jobs' })
     const [, newest] = within(table).getAllByRole('row')
     if (!newest) throw new Error('expected a first row')
     expect(within(newest).getByRole('link', { name: /^Edit / })).toHaveAttribute('href', '/jobs/a')
@@ -129,24 +136,67 @@ describe('AppliedPage', () => {
 
   it('shows_the_status_and_source_as_tags', async () => {
     renderPage()
-    const table = await screen.findByRole('table', { name: 'Applied jobs' })
+    const table = await screen.findByRole('table', { name: 'Pipeline jobs' })
     const [, newest] = within(table).getAllByRole('row')
     if (!newest) throw new Error('expected a first row')
     expect(within(newest).getByText('Applied')).toHaveClass('ht-pill-green')
   })
 
-  it('says_so_when_nothing_is_applied_yet', async () => {
+  it('an inquired job shows an Inquired tag in its own colour', async () => {
+    stubApi((call) =>
+      call.path.startsWith('/jobs?')
+        ? { items: [inquired('i', 'Asked', '2026-11-02')], next_cursor: null }
+        : undefined,
+    )
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter>
+          <PipelinePage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+
+    const tag = await screen.findByText('Inquired')
+
+    expect(tag).toHaveClass('ht-pill-blue')
+  })
+
+  it('US1 AS3 the tab is in the address, and AS1 explore is the default tab', async () => {
+    stubApi((call) =>
+      call.path.startsWith('/jobs?') ? { items: [], next_cursor: null } : undefined,
+    )
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter initialEntries={['/pipeline']}>
+          <PipelinePage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+
+    const tabs = await screen.findByRole('navigation', { name: 'Home tabs' })
+
+    expect(within(tabs).getByRole('link', { name: 'Explore' })).toHaveAttribute('href', '/')
+    const pipeline = within(tabs).getByRole('link', { name: 'In pipeline' })
+    expect(pipeline).toHaveAttribute('href', '/pipeline')
+    expect(pipeline).toHaveAttribute('aria-current', 'page')
+  })
+
+  it('US1 AS5 empty pipeline message', async () => {
     stubApi((call) =>
       call.path.startsWith('/jobs?') ? { items: [], next_cursor: null } : undefined,
     )
     render(
       <QueryClientProvider client={new QueryClient()}>
         <MemoryRouter>
-          <AppliedPage />
+          <PipelinePage />
         </MemoryRouter>
       </QueryClientProvider>,
     )
 
-    expect(await screen.findByText(/haven.t marked any job as applied/i)).toBeInTheDocument()
+    expect(
+      await screen.findByText(
+        'Nothing in your pipeline yet. Mark a job as applied or inquired in Explore.',
+      ),
+    ).toBeInTheDocument()
   })
 })

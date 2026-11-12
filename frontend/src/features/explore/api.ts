@@ -60,12 +60,12 @@ export function useJobs(filters: JobFilters) {
   })
 }
 
-export function useAppliedJobs() {
+export function usePipelineJobs() {
   return useInfiniteQuery({
-    queryKey: ['jobs', 'applied'],
+    queryKey: ['jobs', 'pipeline'],
     initialPageParam: '',
     queryFn: ({ pageParam }) =>
-      apiFetch<JobPage>(`/jobs${query({ list: 'applied', cursor: pageParam })}`),
+      apiFetch<JobPage>(`/jobs${query({ list: 'pipeline', cursor: pageParam })}`),
     getNextPageParam: (last) => last.next_cursor ?? undefined,
     refetchOnWindowFocus: false,
   })

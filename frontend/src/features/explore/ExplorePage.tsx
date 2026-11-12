@@ -7,6 +7,7 @@ import { PasteJobDialog } from '@/features/jobs/PasteJobDialog'
 import { SetupChecklist } from '@/features/home/HomePage'
 import { setupIsDone } from '@/features/home/setup'
 import { DuplicatesPanel } from './DuplicatesPanel'
+import { HomeTabs } from './HomeTabs'
 import { SearchPanel } from './SearchPanel'
 import {
   type JobCard,
@@ -135,10 +136,7 @@ export function ExplorePage() {
   const setupDone = setupIsDone(status.data?.checklist)
   const items = jobs.data?.pages.flatMap((page) => page.items) ?? []
   const filtered =
-    filters.source !== '' ||
-    filters.work_mode !== '' ||
-    filters.city !== '' ||
-    company_id !== ''
+    filters.source !== '' || filters.work_mode !== '' || filters.city !== '' || company_id !== ''
 
   let list
   if (jobs.isPending || status.isPending) {
@@ -185,6 +183,7 @@ export function ExplorePage() {
           </Button>
         )}
       </div>
+      <HomeTabs />
       {adding && <PasteJobDialog onClose={() => setAdding(false)} />}
       {status.data && !setupDone && <SetupChecklist showAllSet={false} />}
       {setupDone && <SearchPanel />}

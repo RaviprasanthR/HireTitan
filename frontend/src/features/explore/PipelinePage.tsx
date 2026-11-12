@@ -2,7 +2,8 @@ import { Fragment, useState } from 'react'
 import { Link } from 'react-router'
 import { ChevronRight, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { formatDay, sourceLabel, useAppliedJobs, useJob, type JobCard } from '@/features/explore/api'
+import { HomeTabs } from './HomeTabs'
+import { formatDay, sourceLabel, usePipelineJobs, useJob, type JobCard } from './api'
 
 type Tone = 'green' | 'yellow' | 'orange' | 'red' | 'blue' | 'purple' | 'teal' | 'grey'
 
@@ -13,9 +14,7 @@ function Pill({ tone, children }: { tone: Tone; children: React.ReactNode }) {
 
 const STATUS_TONE: Record<string, Tone> = {
   Applied: 'green',
-  'In review': 'yellow',
-  Interview: 'orange',
-  Rejected: 'red',
+  Inquired: 'blue',
 }
 
 const SOURCE_TONE: Record<string, Tone> = {
@@ -29,7 +28,7 @@ const SOURCE_TONE: Record<string, Tone> = {
   'job site': 'blue',
 }
 
-const COLUMNS = ['Company', 'Role', 'Applied on', 'Status', 'Source'] as const
+const COLUMNS = ['Company', 'Role', 'Date', 'Status', 'Source'] as const
 
 /** What is known about the job when the row is opened: description, places, where it came from. */
 function Details({ id, colSpan }: { id: string; colSpan: number }) {
@@ -47,7 +46,12 @@ function Details({ id, colSpan }: { id: string; colSpan: number }) {
           {job.data.sources.map((source) => (
             <li key={`${source.kind}-${source.url}`}>
               {sourceLabel(source.kind)}:{' '}
-              <a href={source.url} target="_blank" rel="noreferrer noopener" className="text-link underline">
+              <a
+                href={source.url}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="text-link underline"
+              >
                 {source.url}
               </a>
             </li>
@@ -71,6 +75,7 @@ function Details({ id, colSpan }: { id: string; colSpan: number }) {
 function Row({ job }: { job: JobCard }) {
   const [open, setOpen] = useState(false)
   const source = job.sources[0]
+  const status = job.state === 'inquired' ? 'Inquired' : 'Applied'
   return (
     <Fragment>
       <tr className="ht-row border-t border-divider align-top">
@@ -84,9 +89,9 @@ function Row({ job }: { job: JobCard }) {
             {job.role}
           </Link>
         </td>
-        <td className="px-3 py-2">{formatDay(job.applied_on)}</td>
+        <td className="px-3 py-2">{formatDay(job.applied_on ?? job.inquired_on)}</td>
         <td className="px-3 py-2">
-          <Pill tone={STATUS_TONE.Applied ?? 'green'}>Applied</Pill>
+          <Pill tone={STATUS_TONE[status] ?? 'grey'}>{status}</Pill>
         </td>
         <td className="px-3 py-2">
           {source ? (
@@ -107,7 +112,10 @@ function Row({ job }: { job: JobCard }) {
               title={open ? 'Hide details' : 'Show details'}
               onClick={() => setOpen(!open)}
             >
-              <ChevronRight aria-hidden className={`size-4 transition-transform ${open ? 'rotate-90' : ''}`} />
+              <ChevronRight
+                aria-hidden
+                className={`size-4 transition-transform ${open ? 'rotate-90' : ''}`}
+              />
             </button>
             <Link
               to={`/jobs/${job.id}`}
@@ -125,20 +133,21 @@ function Row({ job }: { job: JobCard }) {
   )
 }
 
-/** Every job marked as applied, newest application first, as a table whose rows open up. */
-export function AppliedPage() {
-  const jobs = useAppliedJobs()
+/** Every job marked as applied or inquired, newest first, as a table whose rows open up. */
+export function PipelinePage() {
+  const jobs = usePipelineJobs()
   const items = jobs.data?.pages.flatMap((page) => page.items) ?? []
 
   let body
   if (jobs.isPending) body = <p>Loading…</p>
-  else if (jobs.isError) body = <p role="alert">Could not load your applied jobs.</p>
-  else if (items.length === 0) body = <p>You haven’t marked any job as applied yet.</p>
+  else if (jobs.isError) body = <p role="alert">Could not load your pipeline.</p>
+  else if (items.length === 0)
+    body = <p>Nothing in your pipeline yet. Mark a job as applied or inquired in Explore.</p>
   else
     body = (
       <>
         <div className="overflow-x-auto rounded-lg bg-surface">
-          <table aria-label="Applied jobs" className="w-full text-left text-sm">
+          <table aria-label="Pipeline jobs" className="w-full text-left text-sm">
             <thead className="ht-thead">
               <tr>
                 {COLUMNS.map((name) => (
@@ -171,7 +180,8 @@ export function AppliedPage() {
 
   return (
     <section className="space-y-4">
-      <h1 className="text-2xl font-semibold">Applied</h1>
+      <h1 className="text-2xl font-semibold">Jobs</h1>
+      <HomeTabs />
       {body}
     </section>
   )

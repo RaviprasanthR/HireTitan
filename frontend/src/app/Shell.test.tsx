@@ -36,13 +36,12 @@ describe('Shell', () => {
     vi.unstubAllGlobals()
   })
 
-  it('FR027_sidebar_has_eight_sections', async () => {
+  it('FR027_sidebar_has_seven_sections', async () => {
     renderAt('/')
     const nav = await screen.findByRole('navigation', { name: 'Main' })
     const links = within(nav).getAllByRole('link')
     expect(links.map((link) => link.textContent)).toEqual([
       'Home',
-      'Applied',
       'Profile',
       'Preferences',
       'Search rules',
@@ -50,6 +49,17 @@ describe('Shell', () => {
       'Review',
       'Settings',
     ])
+  })
+
+  it('US1 AS4 an old applied link opens the pipeline tab', async () => {
+    renderAt('/applied')
+
+    const tabs = await screen.findByRole('navigation', { name: 'Home tabs' })
+
+    expect(within(tabs).getByRole('link', { name: 'In pipeline' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
   })
 
   it('the window does not scroll: the menu stays put and the page area scrolls on its own', async () => {

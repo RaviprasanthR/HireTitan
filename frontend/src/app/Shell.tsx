@@ -5,7 +5,6 @@ import {
   Search,
   Settings,
   SlidersHorizontal,
-  SquareCheck,
   User,
 } from 'lucide-react'
 import { Outlet, NavLink } from 'react-router'
@@ -16,7 +15,6 @@ import { cn } from '@/lib/utils'
 
 const sections = [
   { to: '/', label: 'Home', end: true, Icon: House },
-  { to: '/applied', label: 'Applied', end: false, Icon: SquareCheck },
   { to: '/profile', label: 'Profile', end: false, Icon: User },
   { to: '/preferences', label: 'Preferences', end: false, Icon: SlidersHorizontal },
   { to: '/search/rules', label: 'Search rules', end: false, Icon: Search },
@@ -27,7 +25,10 @@ const sections = [
 
 export function Shell() {
   return (
-    <div data-testid="app-root" className="flex h-screen overflow-hidden bg-background text-foreground">
+    <div
+      data-testid="app-root"
+      className="flex h-screen overflow-hidden bg-background text-foreground"
+    >
       <aside className="flex w-56 shrink-0 flex-col gap-6 border-r border-white/[0.07] bg-[var(--ht-surface)] p-4">
         <AppName className="px-3" />
         <nav aria-label="Main" className="flex flex-col gap-1">
