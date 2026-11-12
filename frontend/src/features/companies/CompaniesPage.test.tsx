@@ -626,4 +626,37 @@ describe('CompaniesPage', () => {
       expect(screen.getByRole('button', { name: 'Import a company sheet' })).toBeInTheDocument()
     })
   })
+
+  describe('the toolbar', () => {
+    const list = (call: Call) =>
+      call.path.startsWith('/companies') ? { items: [ACME], next_cursor: null } : undefined
+
+    it('FR025 toolbar buttons have icons', async () => {
+      renderPage(list)
+      await screen.findByRole('listitem', { name: 'Acme' })
+
+      const filter = screen.getByRole('form', { name: 'Company filters' })
+      expect(filter.querySelector('svg')).not.toBeNull() // Show: eye icon
+      for (const name of ['Import / export', 'Add a company', 'Check manually']) {
+        const button = screen.getByRole(name === 'Check manually' ? 'tab' : 'button', { name })
+        expect(button.querySelector('svg')).not.toBeNull()
+        expect(button).toHaveClass('bg-[#243044]')
+        expect(button).toHaveClass('text-[#f0a35e]')
+      }
+    })
+
+    it('FR025 check manually is selectable', async () => {
+      const user = userEvent.setup()
+      renderPage(list)
+      await screen.findByRole('listitem', { name: 'Acme' })
+      const all = screen.getByRole('tab', { name: 'All companies' })
+      const manual = screen.getByRole('tab', { name: 'Check manually' })
+      expect(all).toHaveAttribute('aria-selected', 'true')
+
+      await user.click(manual)
+
+      expect(manual).toHaveAttribute('aria-selected', 'true')
+      expect(all).toHaveAttribute('aria-selected', 'false')
+    })
+  })
 })

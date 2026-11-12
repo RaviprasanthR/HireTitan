@@ -3,15 +3,18 @@ import {
   ArrowUp,
   BadgeCheck,
   Briefcase,
+  Check,
   ChevronDown,
   ChevronUp,
   Eye,
   EyeOff,
   Globe,
   Pencil,
+  Plus,
   Search,
   StickyNote,
   Trash2,
+  Upload,
   Users,
 } from 'lucide-react'
 import { useState } from 'react'
@@ -34,6 +37,10 @@ import { ImportExport } from './ImportExport'
 type Show = 'all' | 'contacts' | 'applied'
 type SortKey = 'name' | 'city' | 'applied' | 'contacts' | 'note'
 type Sort = { key: SortKey; dir: 'asc' | 'desc' }
+
+/** The filled slate chip used by the toolbar buttons. */
+const TOOL_CHIP =
+  'border-transparent bg-[#243044] text-[#f0a35e] hover:bg-[#2d3b52] hover:text-[#f0a35e] aria-selected:ring-1 aria-selected:ring-[#f0a35e]/60'
 
 const CHIP = 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs whitespace-nowrap'
 
@@ -545,13 +552,21 @@ export function CompaniesPage() {
               type="button"
               variant="outline"
               size="sm"
+              className={TOOL_CHIP}
               aria-expanded={tools}
               onClick={() => setTools(!tools)}
             >
+              <Upload aria-hidden />
               Import / export
             </Button>
             {!adding && (
-              <Button type="button" size="sm" onClick={() => setAdding(true)}>
+              <Button
+                type="button"
+                size="sm"
+                className={TOOL_CHIP}
+                onClick={() => setAdding(true)}
+              >
+                <Plus aria-hidden />
                 Add a company
               </Button>
             )}
@@ -569,16 +584,19 @@ export function CompaniesPage() {
                 type="button"
                 role="tab"
                 aria-selected={filter === tab.filter}
-                variant={filter === tab.filter ? 'default' : 'outline'}
+                variant="outline"
                 size="sm"
+                className={TOOL_CHIP}
                 onClick={() => setFilter(tab.filter)}
               >
+                {tab.filter === 'check_manually' && <Check aria-hidden />}
                 {tab.label}
               </Button>
             ))}
           </div>
           <form aria-label="Company filters" onSubmit={(e) => e.preventDefault()}>
             <label className="flex items-center gap-2 text-sm">
+              <Eye aria-hidden className="size-4 text-[#f0a35e]" />
               Show
               <select
                 className={inputClass}
