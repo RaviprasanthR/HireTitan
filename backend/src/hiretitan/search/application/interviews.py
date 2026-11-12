@@ -13,7 +13,14 @@ from datetime import datetime
 from typing import Protocol
 from uuid import UUID
 
-from hiretitan.search.domain.interviews import RoundSummary, can_add_round, status_summary
+from hiretitan.search.domain.contacts import ContactFields, FieldIssue
+from hiretitan.search.domain.interviews import (
+    RoundSummary,
+    can_add_round,
+    check_contact,
+    check_source,
+    status_summary,
+)
 
 PIPELINE_STATES = ("applied", "inquired")
 
@@ -183,3 +190,76 @@ async def read_interview(
         rounds=rounds,
         status=StatusView(state=state, round=number),
     )
+
+
+class NotInPipelineError(ValueError):
+    """The job is not applied or inquired, so nothing new can be recorded for it (research R6)."""
+
+
+class InterviewInputError(ValueError):
+    """Typed details failed their checks; nothing was saved."""
+
+    def __init__(self, errors: list[FieldIssue]) -> None:
+        super().__init__(" ".join(e.message for e in errors))
+        self.errors = errors
+
+
+class InterviewsWriter(Protocol):
+    async def upsert_contact(self, job_id: UUID, fields: ContactFields) -> None: ...
+
+    async def clear_contact(self, job_id: UUID) -> None: ...
+
+    async def set_source(self, job_id: UUID, kind: str | None, firm_name: str | None) -> None: ...
+
+
+async def _writable_job(jobs: JobsLookup, job_id: UUID) -> StoredJob:
+    job = await jobs.get(job_id)
+    if job is None or job.state == "deleted":
+        raise JobNotFoundError(str(job_id))
+    if job.state not in PIPELINE_STATES:
+        raise NotInPipelineError(
+            "This job is not in your pipeline. Mark it applied or inquired first."
+        )
+    return job
+
+
+async def save_contact(
+    jobs: JobsLookup,
+    store: InterviewsWriter,
+    job_id: UUID,
+    *,
+    name: str | None,
+    role: str | None = None,
+    email: str | None = None,
+    phone: str | None = None,
+    linkedin_url: str | None = None,
+) -> None:
+    """Replace the point of contact; email, phone and link are checked (FR-002)."""
+    await _writable_job(jobs, job_id)
+    fields, issues = check_contact(
+        name=name, role=role, email=email, phone=phone, linkedin_url=linkedin_url
+    )
+    if fields is None:
+        raise InterviewInputError(issues)
+    await store.upsert_contact(job_id, fields)
+
+
+async def remove_contact(jobs: JobsLookup, store: InterviewsWriter, job_id: UUID) -> None:
+    await _writable_job(jobs, job_id)
+    await store.clear_contact(job_id)
+
+
+async def save_source(
+    jobs: JobsLookup,
+    store: InterviewsWriter,
+    job_id: UUID,
+    *,
+    kind: str | None,
+    firm_name: str | None = None,
+) -> None:
+    """How the job came: direct, through a hiring firm (with its name) or not set (FR-003)."""
+    await _writable_job(jobs, job_id)
+    checked, issues = check_source(kind, firm_name)
+    if checked is None:
+        raise InterviewInputError(issues)
+    await store.set_source(job_id, checked[0], checked[1])

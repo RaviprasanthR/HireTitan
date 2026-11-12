@@ -356,6 +356,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/jobs/{job_id}/interview/contact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Put Contact */
+        put: operations["put_contact_api_v1_jobs__job_id__interview_contact_put"];
+        post?: never;
+        /** Delete Contact */
+        delete: operations["delete_contact_api_v1_jobs__job_id__interview_contact_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{job_id}/interview/source": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Put Source */
+        put: operations["put_source_api_v1_jobs__job_id__interview_source_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/jobs/{job_id}/recheck": {
         parameters: {
             query?: never;
@@ -1056,26 +1091,6 @@ export interface components {
              * Format: date-time
              */
             setup_completed_at: string;
-        };
-        /** ContactIn */
-        ContactIn: {
-            /** Confidence */
-            confidence?: string | null;
-            /** Email */
-            email?: string | null;
-            /** Linkedin Url */
-            linkedin_url?: string | null;
-            /**
-             * Name
-             * @default
-             */
-            name: string;
-            /** Note */
-            note?: string | null;
-            /** Phone */
-            phone?: string | null;
-            /** Role */
-            role?: string | null;
         };
         /** ContactModel */
         ContactModel: {
@@ -2032,6 +2047,13 @@ export interface components {
             /** Stop Requested */
             stop_requested: boolean;
         };
+        /** SourceIn */
+        SourceIn: {
+            /** Firm Name */
+            firm_name?: string | null;
+            /** Kind */
+            kind?: string | null;
+        };
         /** StartIn */
         StartIn: {
             /**
@@ -2144,6 +2166,26 @@ export interface components {
             /** Year */
             year: number;
         };
+        /** ContactIn */
+        hiretitan__search__api__contacts__ContactIn: {
+            /** Confidence */
+            confidence?: string | null;
+            /** Email */
+            email?: string | null;
+            /** Linkedin Url */
+            linkedin_url?: string | null;
+            /**
+             * Name
+             * @default
+             */
+            name: string;
+            /** Note */
+            note?: string | null;
+            /** Phone */
+            phone?: string | null;
+            /** Role */
+            role?: string | null;
+        };
         /** ContactOut */
         hiretitan__search__api__contacts__ContactOut: {
             /**
@@ -2180,6 +2222,22 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /** ContactIn */
+        hiretitan__search__api__interviews__ContactIn: {
+            /** Email */
+            email?: string | null;
+            /** Linkedin Url */
+            linkedin_url?: string | null;
+            /**
+             * Name
+             * @default
+             */
+            name: string;
+            /** Phone */
+            phone?: string | null;
+            /** Role */
+            role?: string | null;
         };
         /** ContactOut */
         hiretitan__search__api__interviews__ContactOut: {
@@ -2390,7 +2448,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ContactIn"];
+                "application/json": components["schemas"]["hiretitan__search__api__contacts__ContactIn"];
             };
         };
         responses: {
@@ -3049,6 +3107,107 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InterviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_contact_api_v1_jobs__job_id__interview_contact_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["hiretitan__search__api__interviews__ContactIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InterviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_contact_api_v1_jobs__job_id__interview_contact_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InterviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_source_api_v1_jobs__job_id__interview_source_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SourceIn"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
