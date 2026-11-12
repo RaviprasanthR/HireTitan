@@ -206,19 +206,35 @@ function SourceSection({
 }
 
 /** What the person recorded about one pipeline job; shown in the pipeline row and on the job page. */
-export function InterviewPanel({ jobId }: { jobId: string }) {
+export function InterviewPanel({
+  jobId,
+  heading,
+  hideWhenEmpty = false,
+}: {
+  jobId: string
+  /** A title above the panel (the job page has one; the pipeline row does not). */
+  heading?: string
+  /** Show nothing for a job outside the pipeline that has no details to read. */
+  hideWhenEmpty?: boolean
+}) {
   const interview = useInterview(jobId)
   // the sections remount when the saved values change, so their save state lives here
   const saveContact = useSaveContact(jobId)
   const saveSource = useSaveSource(jobId)
 
   if (interview.isPending) return <p>Loading…</p>
-  if (interview.isError) return <p role="alert">Could not load the details.</p>
+  if (interview.isError) {
+    // a job outside the pipeline with nothing to show stays quiet
+    return hideWhenEmpty ? null : <p role="alert">Could not load the details.</p>
+  }
   const data = interview.data
+  if (hideWhenEmpty && !data.can_edit && !data.contact && !data.source && data.rounds.length === 0)
+    return null
 
   return (
     <>
       <section aria-label="Interview details" className="space-y-4 border-t border-divider pt-3">
+        {heading && <h2 className="text-lg font-semibold">{heading}</h2>}
         {!data.can_edit && (
           <p className="text-sm text-muted-small">
             This job is not in your pipeline, so details can only be read. Mark it applied or

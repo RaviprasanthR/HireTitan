@@ -9,6 +9,7 @@ import {
   useRecheck,
 } from '@/features/explore/api'
 import { CompanyPanel } from '@/features/companies/CompanyPanel'
+import { InterviewPanel } from './interview/InterviewPanel'
 import { PipelineControl } from './PipelineControl'
 import { useUndoPipeline } from './pipelineApi'
 import { InjectionWarning, type InjectionFlag } from './InjectionWarning'
@@ -89,6 +90,14 @@ export function JobDetailPage() {
         </div>
       ) : (
         data.state !== 'deleted' && <PipelineControl id={data.id} state={data.state} />
+      )}
+
+      {data.state !== 'deleted' && (
+        <InterviewPanel
+          jobId={data.id}
+          heading="Interview details"
+          hideWhenEmpty={data.state !== 'applied' && data.state !== 'inquired'}
+        />
       )}
 
       <div className="flex flex-wrap items-center gap-4 text-sm">

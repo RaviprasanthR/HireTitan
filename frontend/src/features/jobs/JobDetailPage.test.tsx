@@ -63,8 +63,9 @@ function detail(over: Record<string, unknown> = {}) {
   }
 }
 
-function renderPage(job = detail()) {
+function renderPage(job = detail(), interview: unknown = undefined) {
   const calls = stubApi((call) => {
+    if (call.path === '/jobs/j1/interview') return interview
     if (call.path === '/jobs/j1/recheck')
       return new Response('{"run_id":"r1"}', {
         status: 202,
@@ -281,6 +282,54 @@ describe('JobDetailPage', () => {
     expect(await screen.findByText('Applied on 3 Nov 2026')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Undo' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'I applied' })).not.toBeInTheDocument()
+  })
+
+  it('US1 AS5 job page shows the same panel', async () => {
+    renderPage(detail({ state: 'applied', applied_on: '2026-11-06' }), {
+      job_id: 'j1',
+      can_edit: true,
+      can_add_round: true,
+      contact: { name: 'Asha Rao', role: null, email: null, phone: null, linkedin_url: null },
+      source: { kind: 'direct', firm_name: null },
+      rounds: [],
+      status: { state: 'applied', round: null },
+    })
+
+    expect(await screen.findByRole('heading', { name: 'Interview details' })).toBeInTheDocument()
+    expect(await screen.findByLabelText('Contact name')).toHaveValue('Asha Rao')
+    expect(screen.getByLabelText('Contact name')).toBeEnabled()
+    expect(screen.getByRole('radio', { name: 'Direct' })).toBeChecked()
+  })
+
+  it('US4 AS4 the panel is read-only outside the pipeline', async () => {
+    renderPage(detail({ state: 'explore' }), {
+      job_id: 'j1',
+      can_edit: false,
+      can_add_round: false,
+      contact: { name: 'Asha Rao', role: null, email: null, phone: null, linkedin_url: null },
+      source: null,
+      rounds: [],
+      status: { state: 'explore', round: null },
+    })
+
+    expect(await screen.findByLabelText('Contact name')).toBeDisabled()
+    expect(screen.queryByRole('button', { name: 'Save contact' })).not.toBeInTheDocument()
+  })
+
+  it('no interview panel on a job outside the pipeline that has no details', async () => {
+    renderPage(detail({ state: 'explore' }), {
+      job_id: 'j1',
+      can_edit: false,
+      can_add_round: false,
+      contact: null,
+      source: null,
+      rounds: [],
+      status: { state: 'explore', round: null },
+    })
+    await screen.findByRole('heading', { name: 'Description' })
+
+    expect(screen.queryByRole('heading', { name: 'Interview details' })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Contact name')).not.toBeInTheDocument()
   })
 
   it('US2 AS1 I inquired moves the job to the pipeline', async () => {
