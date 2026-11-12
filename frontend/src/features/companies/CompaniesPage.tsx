@@ -7,7 +7,6 @@ import {
   ChevronUp,
   Eye,
   EyeOff,
-  Globe,
   MessageCircleQuestion,
   Pencil,
   Plus,
@@ -267,26 +266,6 @@ function CompanyRow({ company }: { company: Company }) {
               >
                 {showPanel ? <ChevronUp aria-hidden /> : <ChevronDown aria-hidden />}
               </IconButton>
-              {company.website ? (
-                <Button
-                  asChild
-                  variant="ghost"
-                  size="icon-sm"
-                  className="text-orange-300 hover:bg-orange-500/20 hover:text-orange-200"
-                >
-                  <a
-                    href={company.website}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                    title="Company website"
-                    aria-label={`Open ${company.name} website`}
-                  >
-                    <Globe aria-hidden />
-                  </a>
-                </Button>
-              ) : (
-                <span className="size-7" aria-hidden />
-              )}
               {company.careers_url ? (
                 <Button
                   asChild

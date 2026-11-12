@@ -430,23 +430,16 @@ describe('CompaniesPage', () => {
       expect(within(row).getByRole('heading', { level: 2 })).toHaveTextContent('Nosite')
     })
 
-    it('there is an icon for the company site and another for the careers page', async () => {
+    it('the company name opens the site, so only the careers page has an icon', async () => {
       renderPage(list)
       const row = await screen.findByRole('listitem', { name: 'Acme' })
 
-      const site = within(row).getByRole('link', { name: 'Open Acme website' })
-      expect(site).toHaveAttribute('href', 'https://acme.example.com')
-      expect(site).toHaveAttribute('title', 'Company website')
-      expect(site).toHaveAttribute('target', '_blank')
-      const careers = within(row).getByRole('link', {
-        name: 'Open Acme careers page',
-      })
+      expect(within(row).queryByRole('link', { name: 'Open Acme website' })).toBeNull()
+      const careers = within(row).getByRole('link', { name: 'Open Acme careers page' })
       expect(careers).toHaveAttribute('href', 'https://acme.example.com/careers')
       expect(careers).toHaveAttribute('title', 'Careers page')
-      expect(site.querySelector('svg')).not.toBeNull()
-      expect(site.querySelector('svg')?.outerHTML).not.toEqual(
-        careers.querySelector('svg')?.outerHTML,
-      ) // two different icons
+      expect(careers).toHaveAttribute('target', '_blank')
+      expect(careers.querySelector('svg')).not.toBeNull()
     })
 
     it('a missing link leaves no icon', async () => {
@@ -495,7 +488,6 @@ describe('CompaniesPage', () => {
           }),
         ).toHaveClass(colour)
       tone('Details for Acme', 'text-slate-300')
-      tone('Open Acme website', 'text-orange-300')
       tone('Open Acme careers page', 'text-violet-300')
       tone('Hide Acme', 'text-yellow-300')
       tone('Edit Acme', 'text-emerald-300')

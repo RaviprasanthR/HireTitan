@@ -1,8 +1,8 @@
 import { NavLink } from 'react-router'
 
 const TABS = [
-  { to: '/', label: 'Explore' },
   { to: '/pipeline', label: 'In pipeline' },
+  { to: '/', label: 'Explore' },
 ]
 
 /** The two tabs of Home: new jobs to look at, and the jobs already applied to or asked about. */

@@ -181,6 +181,18 @@ describe('PipelinePage', () => {
     expect(pipeline).toHaveAttribute('aria-current', 'page')
   })
 
+  it('the tabs read In pipeline first, then Explore', async () => {
+    renderPage()
+
+    const tabs = await screen.findByRole('navigation', { name: 'Home tabs' })
+
+    expect(
+      within(tabs)
+        .getAllByRole('link')
+        .map((link) => link.textContent),
+    ).toEqual(['In pipeline', 'Explore'])
+  })
+
   it('US1 AS5 empty pipeline message', async () => {
     stubApi((call) =>
       call.path.startsWith('/jobs?') ? { items: [], next_cursor: null } : undefined,
