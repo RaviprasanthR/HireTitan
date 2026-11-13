@@ -387,6 +387,20 @@ describe('PipelinePage unsaved edits', () => {
     expect(screen.queryByLabelText('Contact name')).not.toBeInTheDocument()
   })
 
+  it('FR013 typing a letter and removing it is not a change', async () => {
+    const user = userEvent.setup()
+    renderOpenable()
+    await user.click(await screen.findByRole('button', { name: /Details for/ }))
+    const name = await screen.findByLabelText('Contact name')
+    await user.type(name, 'A')
+    await user.clear(name)
+
+    await user.click(screen.getByRole('button', { name: /Details for/ }))
+
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Contact name')).not.toBeInTheDocument()
+  })
+
   it('FR013 a typed new question counts as unsaved', async () => {
     const user = userEvent.setup()
     stubApi((call) => {

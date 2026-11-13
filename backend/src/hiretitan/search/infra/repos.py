@@ -779,10 +779,11 @@ class InterviewsRepo:
         await self._session.execute(select(JobRow.id).where(JobRow.id == job_id).with_for_update())
 
     async def get_round(self, round_id: UUID) -> InterviewRoundRow | None:
-        return await self._session.get(InterviewRoundRow, round_id)
+        # always from the database: a row seen before a lock may have been removed since
+        return await self._session.get(InterviewRoundRow, round_id, populate_existing=True)
 
     async def get_question(self, question_id: UUID) -> InterviewQuestionRow | None:
-        return await self._session.get(InterviewQuestionRow, question_id)
+        return await self._session.get(InterviewQuestionRow, question_id, populate_existing=True)
 
     # rounds
 

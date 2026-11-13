@@ -95,10 +95,24 @@ describe('QuestionList', () => {
     renderList(aRound([aQuestion(1, 'First'), aQuestion(2, 'Second')]))
 
     await user.click(screen.getByRole('button', { name: 'Delete question 1' }))
+    expect(calls.filter((c) => c.method === 'DELETE')).toHaveLength(0) // asks first
+    await user.click(screen.getByRole('button', { name: 'Yes, delete' }))
 
     const del = calls.find((c) => c.method === 'DELETE')
     expect(del?.path).toBe('/interview/questions/q1')
     expect(calls.filter((c) => c.method === 'DELETE')).toHaveLength(1)
+  })
+
+  it('keeping the question after the ask sends nothing', async () => {
+    const user = userEvent.setup()
+    const calls = stubApi(() => aPanel(aRound()))
+    renderList(aRound([aQuestion(1, 'First')]))
+
+    await user.click(screen.getByRole('button', { name: 'Delete question 1' }))
+    await user.click(screen.getByRole('button', { name: 'Keep it' }))
+
+    expect(calls).toHaveLength(0)
+    expect(screen.getByRole('button', { name: 'Save question 1' })).toBeInTheDocument()
   })
 
   it('US3 AS4 line breaks shown', () => {

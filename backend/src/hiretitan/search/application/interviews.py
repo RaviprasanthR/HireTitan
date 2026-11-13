@@ -381,6 +381,10 @@ async def _round_in_pipeline(
     if found is None:
         raise RoundNotFoundError(str(round_id))
     await store.lock_job(found.job_id)
+    # read again under the lock: the round may have been removed while this request waited
+    found = await store.get_round(round_id)
+    if found is None:
+        raise RoundNotFoundError(str(round_id))
     await _writable_job(jobs, found.job_id)
     return found
 
@@ -451,9 +455,12 @@ async def _question_in_pipeline(jobs: JobsLookup, store: RoundsStore, question_i
     if found is None:
         raise QuestionNotFoundError(str(question_id))
     try:
-        return (await _round_in_pipeline(jobs, store, found.round_id)).job_id
+        job_id = (await _round_in_pipeline(jobs, store, found.round_id)).job_id
     except RoundNotFoundError as error:
         raise QuestionNotFoundError(str(question_id)) from error
+    if await store.get_question(question_id) is None:  # removed while this request waited
+        raise QuestionNotFoundError(str(question_id))
+    return job_id
 
 
 async def update_question(

@@ -6,24 +6,36 @@ import { Button } from '@/components/ui/button'
 function useBeforeUnload(when: boolean) {
   useEffect(() => {
     if (!when) return
-    const ask = (event: BeforeUnloadEvent) => event.preventDefault()
+    const ask = (event: BeforeUnloadEvent) => {
+      event.preventDefault()
+      event.returnValue = '' // older browsers need a value to show their own question
+    }
     window.addEventListener('beforeunload', ask)
     return () => window.removeEventListener('beforeunload', ask)
   }, [when])
 }
 
 function RouterBlocker({ when }: { when: boolean }) {
-  const blocker = useBlocker(when)
+  // a link to the page already shown does not leave it, so it is not asked about
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      when &&
+      (currentLocation.pathname !== nextLocation.pathname ||
+        currentLocation.search !== nextLocation.search),
+  )
   if (blocker.state !== 'blocked') return null
   return (
     <div
       role="alertdialog"
       aria-label="Unsaved changes"
+      aria-describedby="leave-guard-message"
       className="space-y-2 rounded-lg bg-surface p-4"
     >
-      <p>You have changes that are not saved. Leave this page and lose them?</p>
+      <p id="leave-guard-message">
+        You have changes that are not saved. Leave this page and lose them?
+      </p>
       <div className="flex gap-2">
-        <Button type="button" size="sm" onClick={() => blocker.proceed()}>
+        <Button type="button" size="sm" autoFocus onClick={() => blocker.proceed()}>
           Leave and lose them
         </Button>
         <Button type="button" variant="ghost" size="sm" onClick={() => blocker.reset()}>

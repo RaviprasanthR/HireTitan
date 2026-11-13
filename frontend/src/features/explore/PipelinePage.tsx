@@ -152,15 +152,23 @@ function Row({ job, registry }: { job: JobCard; registry: UnsavedRegistry }) {
           </div>
         </td>
       </tr>
-      {open && asking && (
+      {open && asking && registry.anyIn(job.id) && (
         <tr>
           <td colSpan={COLUMNS.length + 1} className="bg-surface px-4 py-3">
-            <div role="alertdialog" aria-label="Unsaved changes" className="space-y-2">
-              <p className="text-sm">You have changes that are not saved. Close the details and lose them?</p>
+            <div
+              role="alertdialog"
+              aria-label="Unsaved changes"
+              aria-describedby={`${job.id}-ask`}
+              className="space-y-2"
+            >
+              <p id={`${job.id}-ask`} className="text-sm">
+                You have changes that are not saved. Close the details and lose them?
+              </p>
               <div className="flex gap-2">
                 <Button
                   type="button"
                   size="sm"
+                  autoFocus
                   onClick={() => {
                     setAsking(false)
                     setOpen(false)

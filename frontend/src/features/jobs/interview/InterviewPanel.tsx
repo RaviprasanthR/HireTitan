@@ -41,7 +41,13 @@ function ContactSection({
   const [dirty, setDirty] = useState(false)
   const result = dirty ? null : save
   const error = errorOf(result?.error)
-  useReportUnsaved(dirty || save.isError)
+  const changed =
+    name !== (contact?.name ?? '') ||
+    role !== (contact?.role ?? '') ||
+    email !== (contact?.email ?? '') ||
+    phone !== (contact?.phone ?? '') ||
+    link !== (contact?.linkedin_url ?? '')
+  useReportUnsaved(changed || save.isPending || save.isError)
   const typed = (setter: (value: string) => void) => (value: string) => {
     setter(value)
     setDirty(true)
@@ -156,7 +162,10 @@ function SourceSection({
   const [dirty, setDirty] = useState(false)
   const result = dirty ? null : save
   const error = errorOf(result?.error)
-  useReportUnsaved(dirty || save.isError)
+  const changed =
+    kind !== (source?.kind ?? null) ||
+    (kind === 'hiring_firm' && firm !== (source?.firm_name ?? ''))
+  useReportUnsaved(changed || save.isPending || save.isError)
   const choices: { value: 'direct' | 'hiring_firm' | null; label: string }[] = [
     { value: 'direct', label: 'Direct' },
     { value: 'hiring_firm', label: 'Through a hiring firm' },

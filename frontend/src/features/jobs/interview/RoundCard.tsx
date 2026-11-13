@@ -48,19 +48,20 @@ export function RoundCard({
 }) {
   const [form, setForm] = useState<Form>(() => formOf(round))
   const [dirty, setDirty] = useState(false)
+  const update = useUpdateRound(jobId)
   // follow the server while the person has not typed: the round can change under the card
   const [seen, setSeen] = useState(() => JSON.stringify(formOf(round)))
   const incoming = JSON.stringify(formOf(round))
   if (incoming !== seen) {
     setSeen(incoming)
-    if (!dirty) setForm(formOf(round))
+    if (!dirty && !update.isError) setForm(formOf(round))
   }
   const [confirming, setConfirming] = useState(false)
-  const update = useUpdateRound(jobId)
   const remove = useDeleteRound(jobId)
   const result = dirty ? null : update
   const error = errorOf(result?.error)
-  useReportUnsaved(dirty || update.isError)
+  const changed = JSON.stringify(form) !== JSON.stringify(formOf(round))
+  useReportUnsaved(changed || update.isPending || update.isError)
   const status = roundStatus(round.state, round.number)
   const change = (patch: Partial<Form>) => {
     setForm({ ...form, ...patch })

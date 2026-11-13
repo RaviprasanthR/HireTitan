@@ -26,22 +26,26 @@ function QuestionItem({
   const [text, setText] = useState(question.question)
   const [answer, setAnswer] = useState(question.answer ?? '')
   const [dirty, setDirty] = useState(false)
+  const [confirming, setConfirming] = useState(false)
+  const update = useUpdateQuestion(jobId)
   // follow the server while the person has not typed
   const incoming = JSON.stringify([question.question, question.answer])
   const [seen, setSeen] = useState(incoming)
   if (incoming !== seen) {
     setSeen(incoming)
-    if (!dirty) {
+    if (!dirty && !update.isError) {
       setText(question.question)
       setAnswer(question.answer ?? '')
     }
   }
-  const update = useUpdateQuestion(jobId)
   const remove = useDeleteQuestion(jobId)
   const result = dirty ? null : update
   const error = errorOf(result?.error)
   const n = question.position
-  useReportUnsaved(dirty || update.isError)
+  // unsaved means different from what is stored, so typing a letter and deleting it is not a
+  // change; a save in flight or one that failed still counts (FR-013)
+  const changed = text !== question.question || answer !== (question.answer ?? '')
+  useReportUnsaved(changed || update.isPending || update.isError)
 
   return (
     <li>
@@ -99,7 +103,7 @@ function QuestionItem({
             <p className="text-sm text-danger">{error.fieldError('answer')}</p>
           )}
         </div>
-        {editable && (
+        {editable && !confirming && (
           <div className="flex flex-wrap items-center gap-3">
             <Button type="submit" size="sm" disabled={update.isPending || text.trim() === ''}>
               Save question {n}
@@ -109,7 +113,7 @@ function QuestionItem({
               variant="ghost"
               size="sm"
               disabled={remove.isPending}
-              onClick={() => remove.mutate(question.id)}
+              onClick={() => setConfirming(true)}
             >
               Delete question {n}
             </Button>
@@ -118,6 +122,37 @@ function QuestionItem({
               saved={result?.isSuccess ? 'Question saved.' : null}
               fields={['question', 'answer']}
             />
+          </div>
+        )}
+        {confirming && (
+          <div className="space-y-2">
+            <p className="text-sm">Delete question {n} and its answer?</p>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                size="sm"
+                disabled={remove.isPending}
+                onClick={() => remove.mutate(question.id)}
+              >
+                Yes, delete
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  remove.reset()
+                  setConfirming(false)
+                }}
+              >
+                Keep it
+              </Button>
+            </div>
+            {remove.isError && (
+              <p role="alert" className="text-sm text-danger">
+                {remove.error.message}
+              </p>
+            )}
           </div>
         )}
       </form>

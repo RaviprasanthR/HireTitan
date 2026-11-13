@@ -98,6 +98,7 @@ export function JobDetailPage() {
 
       {data.state !== 'deleted' && (
         <InterviewPanel
+          key={data.id}
           jobId={data.id}
           heading="Interview details"
           registry={registry}

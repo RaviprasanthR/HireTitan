@@ -120,6 +120,8 @@ class RoundPatch(BaseModel):
     feedback: str | None = Field(default=None, max_length=100_000)
 
 
+# The caps below only stop an absurd body; the real limits (question 2,000, answer 10,000) are the
+# domain's, so the person gets a field error that names them.
 class QuestionIn(BaseModel):
     question: str = Field(default="", max_length=20_000)
     answer: str | None = Field(default=None, max_length=100_000)
