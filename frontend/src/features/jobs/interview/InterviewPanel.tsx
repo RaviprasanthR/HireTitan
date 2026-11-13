@@ -1,46 +1,21 @@
 import { useId, useState } from 'react'
-import { ApiError } from '@/api/client'
 import { Button } from '@/components/ui/button'
 import { Field, inputClass } from '@/features/companies/Field'
+import { errorOf } from './errors'
+import { Message } from './FormMessage'
 import {
+  ROUND_KINDS,
   type Interview,
   type InterviewContact,
+  type RoundKind,
+  useAddRound,
   useInterview,
   useSaveContact,
   useSaveSource,
 } from './interviewApi'
+import { RoundCard } from './RoundCard'
 
 type Source = Interview['source']
-
-function errorOf(error: unknown): ApiError | null {
-  return error instanceof ApiError ? error : null
-}
-
-function Message({
-  error,
-  saved,
-  fields,
-}: {
-  error: unknown
-  saved: string | null
-  /** The fields this form shows an error for; an error about any other field is shown here. */
-  fields: string[]
-}) {
-  const api = errorOf(error)
-  // field errors are shown on their fields; anything else is shown here
-  if (error && (!api || !api.fieldErrors.some((e) => fields.includes(e.field)))) {
-    return (
-      <p role="alert" className="text-sm text-danger">
-        {error instanceof Error ? error.message : 'Could not save.'}
-      </p>
-    )
-  }
-  return saved ? (
-    <p role="status" className="text-sm text-muted-small">
-      {saved}
-    </p>
-  ) : null
-}
 
 function ContactSection({
   contact,
@@ -246,6 +221,64 @@ function SourceSection({
   )
 }
 
+function RoundsSection({
+  jobId,
+  data,
+}: {
+  jobId: string
+  data: Interview
+}) {
+  const [kind, setKind] = useState<RoundKind>('technical')
+  const add = useAddRound(jobId)
+  const reason = useId()
+  const blocked = data.can_edit && !data.can_add_round
+  return (
+    <section aria-label="Interview rounds" className="space-y-3">
+      <h3 className="text-sm font-semibold">Interview rounds</h3>
+      {data.rounds.length === 0 && <p className="text-sm text-muted-small">No rounds yet.</p>}
+      {data.rounds.map((round) => (
+        <RoundCard key={round.id} jobId={jobId} round={round} editable={data.can_edit} />
+      ))}
+      {data.can_edit && (
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="space-y-1 text-sm font-medium">
+              <span className="block">New round type</span>
+              <select
+                className={inputClass}
+                value={kind}
+                disabled={blocked}
+                onChange={(e) => setKind(e.target.value as RoundKind)}
+              >
+                {ROUND_KINDS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <Button
+              type="button"
+              size="sm"
+              disabled={blocked || add.isPending}
+              aria-describedby={blocked ? reason : undefined}
+              onClick={() => add.mutate({ kind })}
+            >
+              Add round
+            </Button>
+          </div>
+          {blocked && (
+            <p id={reason} className="text-sm text-muted-small">
+              A round failed, so no new round can be added.
+            </p>
+          )}
+          <Message error={add.error} saved={null} fields={[]} />
+        </div>
+      )}
+    </section>
+  )
+}
+
 /** What the person recorded about one pipeline job; shown in the pipeline row and on the job page. */
 export function InterviewPanel({
   jobId,
@@ -294,6 +327,7 @@ export function InterviewPanel({
           save={saveSource}
           editable={data.can_edit}
         />
+        <RoundsSection jobId={jobId} data={data} />
       </section>
     </>
   )

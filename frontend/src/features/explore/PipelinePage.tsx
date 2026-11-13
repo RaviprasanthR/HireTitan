@@ -4,6 +4,7 @@ import { ChevronRight, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ReviewNotice } from '@/features/home/ReviewNotice'
 import { InterviewPanel } from '@/features/jobs/interview/InterviewPanel'
+import { roundStatus } from '@/features/jobs/interview/roundStatus'
 import { HomeTabs } from './HomeTabs'
 import { formatDay, sourceLabel, usePipelineJobs, useJob, type JobCard } from './api'
 
@@ -78,7 +79,12 @@ function Details({ id, colSpan }: { id: string; colSpan: number }) {
 function Row({ job }: { job: JobCard }) {
   const [open, setOpen] = useState(false)
   const source = job.sources[0]
-  const status = job.state === 'inquired' ? 'Inquired' : 'Applied'
+  // the latest round when there is one (a failed round wins), else Applied or Inquired (FR-007)
+  const status = job.interview
+    ? roundStatus(job.interview.state as 'scheduled' | 'cleared' | 'failed', job.interview.round)
+    : job.state === 'inquired'
+      ? { label: 'Inquired', tone: STATUS_TONE.Inquired }
+      : { label: 'Applied', tone: STATUS_TONE.Applied }
   return (
     <Fragment>
       <tr className="ht-row border-t border-divider align-top">
@@ -94,7 +100,7 @@ function Row({ job }: { job: JobCard }) {
         </td>
         <td className="px-3 py-2">{formatDay(job.applied_on ?? job.inquired_on)}</td>
         <td className="px-3 py-2">
-          <Pill tone={STATUS_TONE[status] ?? 'grey'}>{status}</Pill>
+          <Pill tone={status.tone ?? 'grey'}>{status.label}</Pill>
         </td>
         <td className="px-3 py-2">
           {source ? (

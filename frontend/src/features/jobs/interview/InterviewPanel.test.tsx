@@ -236,3 +236,98 @@ describe('InterviewPanel contact and source', () => {
     expect(document.body.textContent).not.toMatch(/AI cost|cost so far|budget|\bspend\b/i)
   })
 })
+
+function aRound(number: number, state: string, kind = 'technical') {
+  return {
+    id: `r${number}`,
+    number,
+    kind,
+    state,
+    scheduled_at: null,
+    interviewers: null,
+    feedback: null,
+    questions: [],
+  }
+}
+
+describe('InterviewPanel rounds', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('lists the rounds in order, each with its own card', async () => {
+    renderPanel(() =>
+      interview({
+        rounds: [aRound(1, 'cleared'), aRound(2, 'scheduled', 'hr')],
+        status: { state: 'scheduled', round: 2 },
+      }),
+    )
+
+    expect(await screen.findByRole('heading', { name: /Round 1/ })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Round 2/ })).toBeInTheDocument()
+    expect(screen.getAllByLabelText('Type')).toHaveLength(2)
+  })
+
+  it('US2 AS1 Add round sends the chosen type and shows the new round', async () => {
+    const user = userEvent.setup()
+    let rounds: ReturnType<typeof aRound>[] = []
+    const calls = renderPanel((call) => {
+      if (call.method === 'POST' && call.path === '/jobs/a/interview/rounds') {
+        rounds = [aRound(1, 'scheduled', 'hr')]
+      }
+      return interview({ rounds })
+    })
+    await user.selectOptions(await screen.findByLabelText('New round type'), 'hr')
+
+    await user.click(screen.getByRole('button', { name: 'Add round' }))
+
+    expect(await screen.findByRole('heading', { name: /Round 1/ })).toBeInTheDocument()
+    const post = calls.find((c) => c.method === 'POST')
+    expect(post?.body).toMatchObject({ kind: 'hr' })
+  })
+
+  it('US2 AS4 failed disables Add round with the reason', async () => {
+    renderPanel(() =>
+      interview({
+        can_add_round: false,
+        rounds: [aRound(1, 'failed')],
+        status: { state: 'failed', round: 1 },
+      }),
+    )
+
+    const add = await screen.findByRole('button', { name: 'Add round' })
+    expect(add).toBeDisabled()
+    expect(add).toHaveAccessibleDescription('A round failed, so no new round can be added.')
+  })
+
+  it('shows the error when a round cannot be added', async () => {
+    const user = userEvent.setup()
+    renderPanel((call) => {
+      if (call.method === 'POST') {
+        return problem(409, 'Conflict', {
+          detail: 'A round failed, so no new round can be added. Change that round first.',
+          reason: 'process_failed',
+        })
+      }
+      return interview()
+    })
+
+    await user.click(await screen.findByRole('button', { name: 'Add round' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('A round failed')
+  })
+
+  it('has no Add round button when the job is not in the pipeline', async () => {
+    renderPanel(() =>
+      interview({
+        can_edit: false,
+        can_add_round: false,
+        rounds: [aRound(1, 'cleared')],
+        status: { state: 'cleared', round: 1 },
+      }),
+    )
+
+    expect(await screen.findByRole('heading', { name: /Round 1/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Add round' })).not.toBeInTheDocument()
+  })
+})

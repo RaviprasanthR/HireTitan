@@ -256,3 +256,65 @@ describe('PipelinePage', () => {
     ).toBeInTheDocument()
   })
 })
+
+describe('PipelinePage status column', () => {
+  function renderWith(rows: unknown[]) {
+    stubApi((call) => (call.path.startsWith('/jobs?') ? { items: rows, next_cursor: null } : undefined))
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter>
+          <PipelinePage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+  }
+
+  async function statusOf(title: string) {
+    const link = await screen.findByRole('link', { name: title })
+    const row = link.closest('tr')
+    if (!row) throw new Error('no row')
+    return within(row).getAllByRole('cell')[3]
+  }
+
+  it('US2 AS1 status reads Round 1 scheduled', async () => {
+    renderWith([{ ...applied('a', 'Backend', '2026-11-05'), interview: { state: 'scheduled', round: 1 } }])
+
+    expect(await statusOf('Backend')).toHaveTextContent('Round 1 scheduled')
+  })
+
+  it('shows the latest round cleared, and a failed round wins', async () => {
+    renderWith([
+      { ...applied('a', 'Cleared one', '2026-11-05'), interview: { state: 'cleared', round: 2 } },
+      { ...applied('b', 'Failed one', '2026-11-04'), interview: { state: 'failed', round: 3 } },
+    ])
+
+    expect(await statusOf('Cleared one')).toHaveTextContent('Round 2 cleared')
+    expect(await statusOf('Failed one')).toHaveTextContent('Failed in round 3')
+  })
+
+  it('without rounds the status stays Applied or Inquired', async () => {
+    renderWith([
+      { ...applied('a', 'Plain applied', '2026-11-05'), interview: null },
+      inquired('b', 'Plain inquired', '2026-11-04'),
+    ])
+
+    expect(await statusOf('Plain applied')).toHaveTextContent('Applied')
+    expect(await statusOf('Plain inquired')).toHaveTextContent('Inquired')
+  })
+
+  it('each status has its own colour and the words stay visible', async () => {
+    renderWith([
+      { ...applied('a', 'One', '2026-11-05'), interview: { state: 'scheduled', round: 1 } },
+      { ...applied('b', 'Two', '2026-11-04'), interview: { state: 'cleared', round: 1 } },
+      { ...applied('c', 'Three', '2026-11-03'), interview: { state: 'failed', round: 1 } },
+    ])
+
+    const tones = await Promise.all(
+      ['One', 'Two', 'Three'].map(async (title) => {
+        const pill = (await statusOf(title))?.querySelector('.ht-pill')
+        return pill?.className
+      }),
+    )
+    expect(new Set(tones).size).toBe(3)
+  })
+})
