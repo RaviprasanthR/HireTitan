@@ -44,7 +44,7 @@ class SearchInterviewsApiDeps:
     sessions: async_sessionmaker[AsyncSession]
 
 
-class ContactOut(BaseModel):
+class PipelineContactOut(BaseModel):
     name: str
     role: str | None
     email: str | None
@@ -85,7 +85,7 @@ class InterviewOut(BaseModel):
     job_id: UUID
     can_edit: bool
     can_add_round: bool
-    contact: ContactOut | None
+    contact: PipelineContactOut | None
     source: SourceOut | None
     rounds: list[RoundOut]
     status: InterviewStatusOut

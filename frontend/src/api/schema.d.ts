@@ -1178,6 +1178,43 @@ export interface components {
             /** Phone */
             phone?: string | null;
         };
+        /** ContactOut */
+        ContactOut: {
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            /** Confidence */
+            confidence: ("high" | "medium" | "low") | null;
+            /** Email */
+            email: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Linkedin Url */
+            linkedin_url: string | null;
+            /** Name */
+            name: string;
+            /** Note */
+            note: string | null;
+            /** Phone */
+            phone: string | null;
+            /** Role */
+            role: string | null;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "import" | "typed";
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
         /**
          * ContactPatch
          * @description Only the fields that are sent change; an empty text clears an optional field.
@@ -1201,7 +1238,7 @@ export interface components {
         /** ContactsOut */
         ContactsOut: {
             /** Items */
-            items: components["schemas"]["hiretitan__search__api__contacts__ContactOut"][];
+            items: components["schemas"]["ContactOut"][];
             note: components["schemas"]["NoteOut"] | null;
         };
         /** DecisionHistoryOut */
@@ -1353,7 +1390,7 @@ export interface components {
             can_add_round: boolean;
             /** Can Edit */
             can_edit: boolean;
-            contact: components["schemas"]["hiretitan__search__api__interviews__ContactOut"] | null;
+            contact: components["schemas"]["PipelineContactOut"] | null;
             /**
              * Job Id
              * Format: uuid
@@ -1639,6 +1676,19 @@ export interface components {
             min_annual?: string | null;
             /** Target Annual */
             target_annual?: string | null;
+        };
+        /** PipelineContactOut */
+        PipelineContactOut: {
+            /** Email */
+            email: string | null;
+            /** Linkedin Url */
+            linkedin_url: string | null;
+            /** Name */
+            name: string;
+            /** Phone */
+            phone: string | null;
+            /** Role */
+            role: string | null;
         };
         /** PlaceModel */
         PlaceModel: {
@@ -2311,43 +2361,6 @@ export interface components {
             /** Role */
             role?: string | null;
         };
-        /** ContactOut */
-        hiretitan__search__api__contacts__ContactOut: {
-            /**
-             * Company Id
-             * Format: uuid
-             */
-            company_id: string;
-            /** Confidence */
-            confidence: ("high" | "medium" | "low") | null;
-            /** Email */
-            email: string | null;
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /** Linkedin Url */
-            linkedin_url: string | null;
-            /** Name */
-            name: string;
-            /** Note */
-            note: string | null;
-            /** Phone */
-            phone: string | null;
-            /** Role */
-            role: string | null;
-            /**
-             * Source
-             * @enum {string}
-             */
-            source: "import" | "typed";
-            /**
-             * Updated At
-             * Format: date-time
-             */
-            updated_at: string;
-        };
         /** ContactIn */
         hiretitan__search__api__interviews__ContactIn: {
             /** Email */
@@ -2363,19 +2376,6 @@ export interface components {
             phone?: string | null;
             /** Role */
             role?: string | null;
-        };
-        /** ContactOut */
-        hiretitan__search__api__interviews__ContactOut: {
-            /** Email */
-            email: string | null;
-            /** Linkedin Url */
-            linkedin_url: string | null;
-            /** Name */
-            name: string;
-            /** Phone */
-            phone: string | null;
-            /** Role */
-            role: string | null;
         };
         /** SourceOut */
         hiretitan__search__api__interviews__SourceOut: {
@@ -2583,7 +2583,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["hiretitan__search__api__contacts__ContactOut"];
+                    "application/json": components["schemas"]["ContactOut"];
                 };
             };
             /** @description Validation Error */
@@ -2649,7 +2649,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["hiretitan__search__api__contacts__ContactOut"];
+                    "application/json": components["schemas"]["ContactOut"];
                 };
             };
             /** @description Validation Error */

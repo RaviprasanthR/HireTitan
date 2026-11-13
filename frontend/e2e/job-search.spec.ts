@@ -118,6 +118,42 @@ test('SC002_job_search_journey', async ({ page, request }) => {
   })
   await expect.poll(async () => (await exploreJobs(request)).length).toBe(3)
 
+  // 7b. Interview tracking (feature 002e): mark a job applied, open its row, record a contact, a
+  // hiring firm, two rounds and a question; the Status column follows the latest round.
+  await page.goto('/')
+  await page.getByRole('button', { name: 'I applied' }).first().click()
+  await expect.poll(async () => (await exploreJobs(request)).length).toBe(2)
+  await page.getByRole('link', { name: 'In pipeline' }).click()
+  await page.getByRole('button', { name: /^Details for / }).first().click()
+  const details = page.getByRole('region', { name: 'Interview details' })
+  await expect(details).toBeVisible()
+
+  await details.getByLabel('Contact name').fill('Asha Rao')
+  await details.getByRole('button', { name: 'Save contact' }).click()
+  await expect(details.getByText('Contact saved.')).toBeVisible()
+
+  await details.getByLabel('Through a hiring firm').check()
+  await details.getByLabel('Firm name').fill('TalentBridge')
+  await details.getByRole('button', { name: 'Save source' }).click()
+  await expect(details.getByText('Source saved.')).toBeVisible()
+
+  await details.getByRole('button', { name: 'Add round' }).click()
+  const round1 = details.getByRole('form', { name: 'Round 1', exact: true })
+  await round1.getByLabel('Result').selectOption('cleared')
+  await round1.getByRole('button', { name: 'Save round 1' }).click()
+  await expect(round1.getByText('Round saved.')).toBeVisible()
+
+  await details.getByRole('button', { name: 'Add round' }).click()
+  await expect(details.getByRole('form', { name: 'Round 2', exact: true })).toBeVisible()
+
+  const ask = details.getByRole('form', { name: 'Add a question to round 2' })
+  await ask.getByLabel('New question').fill('How would you shard a large table?')
+  await ask.getByRole('button', { name: 'Add question' }).click()
+  await expect(details.getByRole('form', { name: 'Edit question 1', exact: true })).toBeVisible()
+
+  await expect(page.getByText('Round 2 scheduled', { exact: true }).first()).toBeVisible()
+  expect(await details.innerText()).not.toMatch(/AI cost|cost so far|budget|\bspend\b|\bspent\b/i)
+
   // 8. No page talks about AI cost or a budget (SC-005). "$" is not checked: pay can use it.
   const cost = /AI cost|cost so far|budget|\bspend\b|\bspent\b/i
   for (const path of [

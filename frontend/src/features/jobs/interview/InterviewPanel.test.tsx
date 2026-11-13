@@ -244,8 +244,8 @@ function aRound(number: number, state: string, kind = 'technical') {
     kind,
     state,
     scheduled_at: null,
-    interviewers: null,
-    feedback: null,
+    interviewers: null as string | null,
+    feedback: null as string | null,
     questions: [],
   }
 }

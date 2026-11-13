@@ -609,6 +609,123 @@
         "title": "ContactModel",
         "type": "object"
       },
+      "ContactOut": {
+        "properties": {
+          "company_id": {
+            "format": "uuid",
+            "title": "Company Id",
+            "type": "string"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "enum": [
+                  "high",
+                  "medium",
+                  "low"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "linkedin_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Linkedin Url"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
+          "source": {
+            "enum": [
+              "import",
+              "typed"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "company_id",
+          "name",
+          "role",
+          "linkedin_url",
+          "email",
+          "phone",
+          "confidence",
+          "note",
+          "source",
+          "updated_at"
+        ],
+        "title": "ContactOut",
+        "type": "object"
+      },
       "ContactPatch": {
         "description": "Only the fields that are sent change; an empty text clears an optional field.",
         "properties": {
@@ -697,7 +814,7 @@
         "properties": {
           "items": {
             "items": {
-              "$ref": "#/components/schemas/hiretitan__search__api__contacts__ContactOut"
+              "$ref": "#/components/schemas/ContactOut"
             },
             "title": "Items",
             "type": "array"
@@ -1173,7 +1290,7 @@
           "contact": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/hiretitan__search__api__interviews__ContactOut"
+                "$ref": "#/components/schemas/PipelineContactOut"
               },
               {
                 "type": "null"
@@ -2255,6 +2372,67 @@
           "basis"
         ],
         "title": "PayModel",
+        "type": "object"
+      },
+      "PipelineContactOut": {
+        "properties": {
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "linkedin_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Linkedin Url"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          }
+        },
+        "required": [
+          "name",
+          "role",
+          "email",
+          "phone",
+          "linkedin_url"
+        ],
+        "title": "PipelineContactOut",
         "type": "object"
       },
       "PlaceModel": {
@@ -4389,123 +4567,6 @@
         "title": "ContactIn",
         "type": "object"
       },
-      "hiretitan__search__api__contacts__ContactOut": {
-        "properties": {
-          "company_id": {
-            "format": "uuid",
-            "title": "Company Id",
-            "type": "string"
-          },
-          "confidence": {
-            "anyOf": [
-              {
-                "enum": [
-                  "high",
-                  "medium",
-                  "low"
-                ],
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Confidence"
-          },
-          "email": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Email"
-          },
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
-          },
-          "linkedin_url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Linkedin Url"
-          },
-          "name": {
-            "title": "Name",
-            "type": "string"
-          },
-          "note": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Note"
-          },
-          "phone": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Phone"
-          },
-          "role": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Role"
-          },
-          "source": {
-            "enum": [
-              "import",
-              "typed"
-            ],
-            "title": "Source",
-            "type": "string"
-          },
-          "updated_at": {
-            "format": "date-time",
-            "title": "Updated At",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "company_id",
-          "name",
-          "role",
-          "linkedin_url",
-          "email",
-          "phone",
-          "confidence",
-          "note",
-          "source",
-          "updated_at"
-        ],
-        "title": "ContactOut",
-        "type": "object"
-      },
       "hiretitan__search__api__interviews__ContactIn": {
         "properties": {
           "email": {
@@ -4559,67 +4620,6 @@
           }
         },
         "title": "ContactIn",
-        "type": "object"
-      },
-      "hiretitan__search__api__interviews__ContactOut": {
-        "properties": {
-          "email": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Email"
-          },
-          "linkedin_url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Linkedin Url"
-          },
-          "name": {
-            "title": "Name",
-            "type": "string"
-          },
-          "phone": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Phone"
-          },
-          "role": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Role"
-          }
-        },
-        "required": [
-          "name",
-          "role",
-          "email",
-          "phone",
-          "linkedin_url"
-        ],
-        "title": "ContactOut",
         "type": "object"
       },
       "hiretitan__search__api__interviews__SourceOut": {
@@ -4922,7 +4922,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/hiretitan__search__api__contacts__ContactOut"
+                  "$ref": "#/components/schemas/ContactOut"
                 }
               }
             },
@@ -5029,7 +5029,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/hiretitan__search__api__contacts__ContactOut"
+                  "$ref": "#/components/schemas/ContactOut"
                 }
               }
             },
