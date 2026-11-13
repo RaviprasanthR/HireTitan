@@ -37,12 +37,12 @@ from hiretitan.search.application.pipeline import (
 )
 from hiretitan.search.application.search import RunQueue
 from hiretitan.search.domain.job_state import IllegalJobTransitionError, JobState, transition
+from hiretitan.search.infra.interviews_repo import InterviewsRepo
 from hiretitan.search.infra.models import JobRow, JobSourceRow
 from hiretitan.search.infra.paste_store import SqlPasteStore
 from hiretitan.search.infra.repos import (
     Cursor,
     DecisionsRepo,
-    InterviewsRepo,
     JobFilters,
     JobsRepo,
 )

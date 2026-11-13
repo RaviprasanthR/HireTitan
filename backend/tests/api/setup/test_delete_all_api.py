@@ -29,6 +29,7 @@ from hiretitan.preferences.infra.repo import PreferencesRepo
 from hiretitan.profile.domain.content import Contact, ProfileContent
 from hiretitan.profile.infra.repos import Provenance, ResumeFilesRepo, ReviewsRepo, VersionsRepo
 from hiretitan.search.domain.interviews import check_contact
+from hiretitan.search.infra.interviews_repo import InterviewsRepo
 from hiretitan.search.infra.models import (
     CompanyRow,
     InterviewQuestionRow,
@@ -36,7 +37,7 @@ from hiretitan.search.infra.models import (
     JobRow,
     PipelineDetailsRow,
 )
-from hiretitan.search.infra.repos import CompaniesRepo, InterviewsRepo, JobsRepo, RuleSetsRepo
+from hiretitan.search.infra.repos import CompaniesRepo, JobsRepo, RuleSetsRepo
 from hiretitan.setup.api.data import DataApiDeps, create_data_router
 from hiretitan.setup.api.onboarding import OnboardingApiDeps, create_onboarding_router
 from hiretitan.setup.infra.settings_repo import SettingsRepo

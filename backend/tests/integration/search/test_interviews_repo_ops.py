@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from tests.integration.search.test_interviews_repo import a_job
 
 from hiretitan.search.domain.contacts import ContactFields
-from hiretitan.search.infra.repos import InterviewsRepo
+from hiretitan.search.infra.interviews_repo import InterviewsRepo
 
 
 async def repo_and_job(session: AsyncSession) -> tuple[InterviewsRepo, UUID]:

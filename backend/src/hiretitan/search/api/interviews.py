@@ -35,7 +35,8 @@ from hiretitan.search.application.interviews import (
     update_question,
     update_round,
 )
-from hiretitan.search.infra.repos import InterviewsRepo, JobsRepo
+from hiretitan.search.infra.interviews_repo import InterviewsRepo
+from hiretitan.search.infra.repos import JobsRepo
 
 
 @dataclass(frozen=True)

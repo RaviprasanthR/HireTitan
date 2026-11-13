@@ -18,8 +18,8 @@ from hiretitan.platform.clock import ClockPort
 from hiretitan.platform.web.problems import ProblemError
 from hiretitan.search.api.models import JobCardOut, job_cards
 from hiretitan.search.domain.job_state import JobState
+from hiretitan.search.infra.interviews_repo import InterviewsRepo
 from hiretitan.search.infra.models import JobRow, JobSourceRow, PossibleDuplicateRow
-from hiretitan.search.infra.repos import InterviewsRepo
 
 DEFAULT_LIMIT = 25
 MAX_LIMIT = 100
@@ -107,6 +107,10 @@ def create_duplicates_router(deps: SearchDuplicatesApiDeps) -> APIRouter:
         async with deps.sessions() as session:
             pair = await open_pair(session, pair_id)
             keep, loser = pair.job_a_id, pair.job_b_id
+            # one lock order for both jobs, taken before anything is changed, so two merges that
+            # share a job cannot wait on each other
+            for job_id in sorted((keep, loser)):
+                await InterviewsRepo(session).lock_job(job_id)
             have = set(
                 await session.scalars(select(JobSourceRow.url).where(JobSourceRow.job_id == keep))
             )

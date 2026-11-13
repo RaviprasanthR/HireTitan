@@ -16,7 +16,8 @@ from hiretitan.api_main import create_app
 from hiretitan.platform.clock import FakeClock
 from hiretitan.platform.config.settings import Settings
 from hiretitan.search.api.jobs import SearchJobsApiDeps, create_search_jobs_router
-from hiretitan.search.infra.repos import CompaniesRepo, InterviewsRepo, JobsRepo
+from hiretitan.search.infra.interviews_repo import InterviewsRepo
+from hiretitan.search.infra.repos import CompaniesRepo, JobsRepo
 
 NOW = datetime(2026, 11, 6, 9, tzinfo=UTC)
 TODAY = date(2026, 11, 6)

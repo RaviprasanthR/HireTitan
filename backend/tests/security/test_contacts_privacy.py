@@ -20,7 +20,8 @@ from hiretitan.platform.llm.port import LlmRequest, LlmResult, Usage
 from hiretitan.search.application.ports import ScanOk
 from hiretitan.search.domain.contacts import ContactFields
 from hiretitan.search.domain.interviews import check_contact
-from hiretitan.search.infra.repos import ContactsRepo, InterviewsRepo, JobsRepo, NotesRepo
+from hiretitan.search.infra.interviews_repo import InterviewsRepo
+from hiretitan.search.infra.repos import ContactsRepo, JobsRepo, NotesRepo
 
 REPO = Path(__file__).parents[3]
 # Unique strings: if any of them shows up where it should not, a leak is proven.
@@ -123,11 +124,22 @@ async def test_SC003_no_interview_text_in_ai_calls(env: Env) -> None:
     llm = RecordingLlm()
     assert env.deps.judge is not None
     env.deps.judge.llm = llm
-    env.career_ops.script(ref, ScanOk([posting("Backend Engineer", company="acme")]))
+    # the scan finds the pipeline job again (same company and title) next to a new posting, so
+    # the search has every reason to look at the job the notes belong to
+    env.career_ops.script(
+        ref,
+        ScanOk(
+            [
+                posting("Platform Engineer", company="acme"),
+                posting("Backend Engineer", company="acme"),
+            ]
+        ),
+    )
 
     await go(env, await new_search(env, mode="rules_and_ai"))
 
     assert llm.requests, "the search made no AI call, so this test proved nothing"
+    assert any("Backend Engineer" in r.prompt.user for r in llm.requests)
     for request in llm.requests:
         sent = request.prompt.system + "\n" + request.prompt.user
         for marker in INTERVIEW_MARKERS:
@@ -142,6 +154,7 @@ def test_FR022_workflows_cannot_import_contacts() -> None:
         "hiretitan.search.application.contacts",
         "hiretitan.search.domain.interviews",
         "hiretitan.search.application.interviews",
+        "hiretitan.search.infra.interviews_repo",
     )
     found = [
         (importer, imported)

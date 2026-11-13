@@ -20,12 +20,13 @@ from hiretitan.search.api.duplicates import SearchDuplicatesApiDeps, create_dupl
 from hiretitan.search.api.interviews import SearchInterviewsApiDeps, create_interviews_router
 from hiretitan.search.api.jobs import SearchJobsApiDeps, create_search_jobs_router
 from hiretitan.search.domain.interviews import check_contact
+from hiretitan.search.infra.interviews_repo import InterviewsRepo
 from hiretitan.search.infra.models import (
     InterviewQuestionRow,
     InterviewRoundRow,
     PipelineDetailsRow,
 )
-from hiretitan.search.infra.repos import CompaniesRepo, DuplicatesRepo, InterviewsRepo, JobsRepo
+from hiretitan.search.infra.repos import CompaniesRepo, DuplicatesRepo, JobsRepo
 
 NOW = datetime(2026, 11, 6, 9, tzinfo=UTC)
 TODAY = date(2026, 11, 6)
