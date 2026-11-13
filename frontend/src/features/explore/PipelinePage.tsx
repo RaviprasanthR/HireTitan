@@ -4,7 +4,9 @@ import { ChevronRight, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ReviewNotice } from '@/features/home/ReviewNotice'
 import { InterviewPanel } from '@/features/jobs/interview/InterviewPanel'
+import { LeaveGuard } from '@/features/jobs/interview/LeaveGuard'
 import { roundStatus } from '@/features/jobs/interview/roundStatus'
+import { useUnsavedRegistry, type UnsavedRegistry } from '@/features/jobs/interview/unsaved'
 import { HomeTabs } from './HomeTabs'
 import { formatDay, sourceLabel, usePipelineJobs, useJob, type JobCard } from './api'
 
@@ -34,7 +36,15 @@ const SOURCE_TONE: Record<string, Tone> = {
 const COLUMNS = ['Company', 'Role', 'Date', 'Status', 'Source'] as const
 
 /** What is known about the job when the row is opened: description, places, where it came from. */
-function Details({ id, colSpan }: { id: string; colSpan: number }) {
+function Details({
+  id,
+  colSpan,
+  registry,
+}: {
+  id: string
+  colSpan: number
+  registry: UnsavedRegistry
+}) {
   const job = useJob(id)
   let content
   if (job.isPending) content = <p>Loading…</p>
@@ -63,7 +73,7 @@ function Details({ id, colSpan }: { id: string; colSpan: number }) {
         <Link to={`/jobs/${id}`} className="text-link underline">
           Open the full job page
         </Link>
-        <InterviewPanel jobId={id} />
+        <InterviewPanel jobId={id} scope={id} registry={registry} />
       </div>
     )
   }
@@ -76,8 +86,9 @@ function Details({ id, colSpan }: { id: string; colSpan: number }) {
   )
 }
 
-function Row({ job }: { job: JobCard }) {
+function Row({ job, registry }: { job: JobCard; registry: UnsavedRegistry }) {
   const [open, setOpen] = useState(false)
+  const [asking, setAsking] = useState(false)
   const source = job.sources[0]
   // the latest round when there is one (a failed round wins), else Applied or Inquired (FR-007)
   const status = job.interview
@@ -119,7 +130,11 @@ function Row({ job }: { job: JobCard }) {
               aria-expanded={open}
               aria-label={`Details for ${job.title}`}
               title={open ? 'Hide details' : 'Show details'}
-              onClick={() => setOpen(!open)}
+              onClick={() => {
+                // closing a row that holds unsaved edits asks first (FR-013)
+                if (open && registry.anyIn(job.id)) setAsking(true)
+                else setOpen(!open)
+              }}
             >
               <ChevronRight
                 aria-hidden
@@ -137,7 +152,31 @@ function Row({ job }: { job: JobCard }) {
           </div>
         </td>
       </tr>
-      {open && <Details id={job.id} colSpan={COLUMNS.length + 1} />}
+      {open && asking && (
+        <tr>
+          <td colSpan={COLUMNS.length + 1} className="bg-surface px-4 py-3">
+            <div role="alertdialog" aria-label="Unsaved changes" className="space-y-2">
+              <p className="text-sm">You have changes that are not saved. Close the details and lose them?</p>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => {
+                    setAsking(false)
+                    setOpen(false)
+                  }}
+                >
+                  Close and lose them
+                </Button>
+                <Button type="button" variant="ghost" size="sm" onClick={() => setAsking(false)}>
+                  Keep editing
+                </Button>
+              </div>
+            </div>
+          </td>
+        </tr>
+      )}
+      {open && <Details id={job.id} colSpan={COLUMNS.length + 1} registry={registry} />}
     </Fragment>
   )
 }
@@ -145,6 +184,7 @@ function Row({ job }: { job: JobCard }) {
 /** Every job marked as applied or inquired, newest first, as a table whose rows open up. */
 export function PipelinePage() {
   const jobs = usePipelineJobs()
+  const registry = useUnsavedRegistry()
   const items = jobs.data?.pages.flatMap((page) => page.items) ?? []
 
   let body
@@ -169,7 +209,7 @@ export function PipelinePage() {
             </thead>
             <tbody>
               {items.map((job) => (
-                <Row key={job.id} job={job} />
+                <Row key={job.id} job={job} registry={registry} />
               ))}
             </tbody>
           </table>
@@ -191,6 +231,7 @@ export function PipelinePage() {
     <section className="space-y-4">
       <h1 className="text-2xl font-semibold">Jobs</h1>
       <ReviewNotice />
+      <LeaveGuard when={registry.any} />
       <HomeTabs />
       {body}
     </section>

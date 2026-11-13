@@ -94,6 +94,31 @@ export function useDeleteRound(jobId: string) {
   )
 }
 
+export type QuestionChanges = { question?: string; answer?: string }
+
+export function useAddQuestion(jobId: string) {
+  return useWrite(
+    jobId,
+    ({ roundId, ...input }: { roundId: string; question: string; answer?: string }) =>
+      apiFetch<Interview>(`/interview/rounds/${roundId}/questions`, {
+        method: 'POST',
+        json: input,
+      }),
+  )
+}
+
+export function useUpdateQuestion(jobId: string) {
+  return useWrite(jobId, ({ id, changes }: { id: string; changes: QuestionChanges }) =>
+    apiFetch<Interview>(`/interview/questions/${id}`, { method: 'PATCH', json: changes }),
+  )
+}
+
+export function useDeleteQuestion(jobId: string) {
+  return useWrite(jobId, (id: string) =>
+    apiFetch<Interview>(`/interview/questions/${id}`, { method: 'DELETE' }),
+  )
+}
+
 export function useSaveSource(jobId: string) {
   return useWrite(jobId, (input: SourceInput) =>
     apiFetch<Interview>(`/jobs/${jobId}/interview/source`, { method: 'PUT', json: input }),

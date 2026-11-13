@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useCallback, useId, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Field, inputClass } from '@/features/companies/Field'
 import { errorOf } from './errors'
@@ -14,6 +14,12 @@ import {
   useSaveSource,
 } from './interviewApi'
 import { RoundCard } from './RoundCard'
+import {
+  UnsavedContext,
+  useReportUnsaved,
+  useUnsavedRegistry,
+  type UnsavedRegistry,
+} from './unsaved'
 
 type Source = Interview['source']
 
@@ -35,6 +41,7 @@ function ContactSection({
   const [dirty, setDirty] = useState(false)
   const result = dirty ? null : save
   const error = errorOf(result?.error)
+  useReportUnsaved(dirty || save.isError)
   const typed = (setter: (value: string) => void) => (value: string) => {
     setter(value)
     setDirty(true)
@@ -149,6 +156,7 @@ function SourceSection({
   const [dirty, setDirty] = useState(false)
   const result = dirty ? null : save
   const error = errorOf(result?.error)
+  useReportUnsaved(dirty || save.isError)
   const choices: { value: 'direct' | 'hiring_firm' | null; label: string }[] = [
     { value: 'direct', label: 'Direct' },
     { value: 'hiring_firm', label: 'Through a hiring firm' },
@@ -221,13 +229,7 @@ function SourceSection({
   )
 }
 
-function RoundsSection({
-  jobId,
-  data,
-}: {
-  jobId: string
-  data: Interview
-}) {
+function RoundsSection({ jobId, data }: { jobId: string; data: Interview }) {
   const [kind, setKind] = useState<RoundKind>('technical')
   const add = useAddRound(jobId)
   const reason = useId()
@@ -284,13 +286,25 @@ export function InterviewPanel({
   jobId,
   heading,
   hideWhenEmpty = false,
+  registry,
+  scope = '',
 }: {
   jobId: string
   /** A title above the panel (the job page has one; the pipeline row does not). */
   heading?: string
   /** Show nothing for a job outside the pipeline that has no details to read. */
   hideWhenEmpty?: boolean
+  /** Where unsaved edits are reported; a page that must ask before closing or leaving passes one. */
+  registry?: UnsavedRegistry
+  /** Groups this panel's forms in the registry (a job id). */
+  scope?: string
 }) {
+  const own = useUnsavedRegistry()
+  const report = (registry ?? own).report
+  const scoped = useCallback(
+    (id: string, unsaved: boolean) => report(`${scope}|${id}`, unsaved),
+    [report, scope],
+  )
   const interview = useInterview(jobId)
   // the sections remount when the saved values change, so their save state lives here
   const saveContact = useSaveContact(jobId)
@@ -306,7 +320,7 @@ export function InterviewPanel({
     return null
 
   return (
-    <>
+    <UnsavedContext.Provider value={scoped}>
       <section aria-label="Interview details" className="space-y-4 border-t border-divider pt-3">
         {heading && <h2 className="text-lg font-semibold">{heading}</h2>}
         {!data.can_edit && (
@@ -329,6 +343,6 @@ export function InterviewPanel({
         />
         <RoundsSection jobId={jobId} data={data} />
       </section>
-    </>
+    </UnsavedContext.Provider>
   )
 }

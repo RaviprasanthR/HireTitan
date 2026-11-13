@@ -94,6 +94,20 @@ describe('RoundCard', () => {
     expect(patch?.body).not.toHaveProperty('scheduled_at') // the date was not touched
   })
 
+  it('US3 AS3 a feedback note is saved with the round', async () => {
+    const user = userEvent.setup()
+    const calls = stubApi(() => aPanel([aRound({ feedback: 'Good on design.' })]))
+    renderCard(aRound())
+
+    await user.type(screen.getByLabelText('Feedback'), 'Good on design.')
+    await user.click(screen.getByRole('button', { name: 'Save round 1' }))
+
+    await screen.findByText('Round saved.')
+    expect(calls.find((c) => c.method === 'PATCH')?.body).toMatchObject({
+      feedback: 'Good on design.',
+    })
+  })
+
   it('sends a typed date and time as an instant', async () => {
     const user = userEvent.setup()
     const calls = stubApi(() => aPanel([aRound()]))
@@ -113,7 +127,9 @@ describe('RoundCard', () => {
     const user = userEvent.setup()
     stubApi(() =>
       problem(422, 'Unprocessable Entity', {
-        errors: [{ field: 'interviewers', message: 'The interviewers can be at most 300 characters.' }],
+        errors: [
+          { field: 'interviewers', message: 'The interviewers can be at most 300 characters.' },
+        ],
       }),
     )
     renderCard(aRound())

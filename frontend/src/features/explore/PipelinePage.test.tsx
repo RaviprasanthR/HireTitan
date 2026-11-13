@@ -318,3 +318,115 @@ describe('PipelinePage status column', () => {
     expect(new Set(tones).size).toBe(3)
   })
 })
+
+
+describe('PipelinePage unsaved edits', () => {
+  const interview = {
+    job_id: 'a',
+    can_edit: true,
+    can_add_round: true,
+    contact: null,
+    source: null,
+    rounds: [],
+    status: { state: 'applied', round: null },
+  }
+
+  function renderOpenable() {
+    stubApi((call) => {
+      if (call.path.startsWith('/jobs?')) {
+        return { items: [applied('a', 'Backend', '2026-11-05')], next_cursor: null }
+      }
+      if (call.path === '/jobs/a') {
+        return {
+          ...applied('a', 'Backend', '2026-11-05'),
+          description: 'Build APIs.',
+          sources: [],
+        }
+      }
+      if (call.path === '/jobs/a/interview') return interview
+      return undefined
+    })
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter>
+          <PipelinePage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+  }
+
+  it('FR013 collapse with unsaved edits asks first', async () => {
+    const user = userEvent.setup()
+    renderOpenable()
+    await user.click(await screen.findByRole('button', { name: /Details for/ }))
+    await user.type(await screen.findByLabelText('Contact name'), 'Asha')
+
+    await user.click(screen.getByRole('button', { name: /Details for/ }))
+
+    expect(screen.getByRole('alertdialog', { name: 'Unsaved changes' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Contact name')).toHaveValue('Asha')
+
+    await user.click(screen.getByRole('button', { name: 'Keep editing' }))
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Contact name')).toHaveValue('Asha')
+
+    await user.click(screen.getByRole('button', { name: /Details for/ }))
+    await user.click(screen.getByRole('button', { name: 'Close and lose them' }))
+    expect(screen.queryByLabelText('Contact name')).not.toBeInTheDocument()
+  })
+
+  it('FR013 no question when nothing changed', async () => {
+    const user = userEvent.setup()
+    renderOpenable()
+    await user.click(await screen.findByRole('button', { name: /Details for/ }))
+    await screen.findByLabelText('Contact name')
+
+    await user.click(screen.getByRole('button', { name: /Details for/ }))
+
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Contact name')).not.toBeInTheDocument()
+  })
+
+  it('FR013 a typed new question counts as unsaved', async () => {
+    const user = userEvent.setup()
+    stubApi((call) => {
+      if (call.path.startsWith('/jobs?')) {
+        return { items: [applied('a', 'Backend', '2026-11-05')], next_cursor: null }
+      }
+      if (call.path === '/jobs/a') {
+        return { ...applied('a', 'Backend', '2026-11-05'), description: 'd', sources: [] }
+      }
+      if (call.path === '/jobs/a/interview') {
+        return {
+          ...interview,
+          rounds: [
+            {
+              id: 'r1',
+              number: 1,
+              kind: 'technical',
+              state: 'scheduled',
+              scheduled_at: null,
+              interviewers: null,
+              feedback: null,
+              questions: [],
+            },
+          ],
+        }
+      }
+      return undefined
+    })
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter>
+          <PipelinePage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+    await user.click(await screen.findByRole('button', { name: /Details for/ }))
+    await user.type(await screen.findByLabelText('New question'), 'Why us?')
+
+    await user.click(screen.getByRole('button', { name: /Details for/ }))
+
+    expect(screen.getByRole('alertdialog', { name: 'Unsaved changes' })).toBeInTheDocument()
+  })
+})

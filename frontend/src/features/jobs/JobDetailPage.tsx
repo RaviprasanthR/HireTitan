@@ -10,6 +10,8 @@ import {
 } from '@/features/explore/api'
 import { CompanyPanel } from '@/features/companies/CompanyPanel'
 import { InterviewPanel } from './interview/InterviewPanel'
+import { LeaveGuard } from './interview/LeaveGuard'
+import { useUnsavedRegistry } from './interview/unsaved'
 import { PipelineControl } from './PipelineControl'
 import { useUndoPipeline } from './pipelineApi'
 import { InjectionWarning, type InjectionFlag } from './InjectionWarning'
@@ -25,6 +27,7 @@ export function JobDetailPage() {
   const recheck = useRecheck()
   const undoApplied = useUndoPipeline('applied')
   const undoInquired = useUndoPipeline('inquired')
+  const registry = useUnsavedRegistry()
   if (job.isPending) return <p>Loading…</p>
   if (job.isError) return <p role="alert">Could not load this job.</p>
   const data = job.data
@@ -38,6 +41,7 @@ export function JobDetailPage() {
 
   return (
     <section className="space-y-4">
+      <LeaveGuard when={registry.any} />
       <h1 className="text-2xl font-semibold">{data.title}</h1>
       <p className="text-muted-small">{facts.join(' · ')}</p>
       <InjectionWarning flags={data.injection_flags as InjectionFlag[]} />
@@ -96,6 +100,7 @@ export function JobDetailPage() {
         <InterviewPanel
           jobId={data.id}
           heading="Interview details"
+          registry={registry}
           hideWhenEmpty={data.state !== 'applied' && data.state !== 'inquired'}
         />
       )}
