@@ -36,6 +36,13 @@ export function RoundCard({
 }) {
   const [form, setForm] = useState<Form>(() => formOf(round))
   const [dirty, setDirty] = useState(false)
+  // follow the server while the person has not typed: the round can change under the card
+  const [seen, setSeen] = useState(() => JSON.stringify(formOf(round)))
+  const incoming = JSON.stringify(formOf(round))
+  if (incoming !== seen) {
+    setSeen(incoming)
+    if (!dirty) setForm(formOf(round))
+  }
   const [confirming, setConfirming] = useState(false)
   const update = useUpdateRound(jobId)
   const remove = useDeleteRound(jobId)
@@ -53,25 +60,21 @@ export function RoundCard({
       className="space-y-2 rounded-md border border-divider p-3"
       onSubmit={(event) => {
         event.preventDefault()
+        if (update.isPending) return // Enter in a field submits even while the button is off
         setDirty(false)
-        update.mutate(
-          {
-            id: round.id,
-            changes: {
-              kind: form.kind,
-              scheduled_at: fromLocalInput(form.when),
-              interviewers: form.interviewers,
-              state: form.state,
-            },
+        update.mutate({
+          id: round.id,
+          changes: {
+            kind: form.kind,
+            interviewers: form.interviewers,
+            state: form.state,
+            // only a date the person changed is sent, so saving never rewrites seconds or
+            // moves a time that was not touched
+            ...(form.when !== toLocalInput(round.scheduled_at)
+              ? { scheduled_at: fromLocalInput(form.when) }
+              : {}),
           },
-          {
-            // show what the server kept (trimmed text, the instant in local time)
-            onSuccess: (interview) => {
-              const saved = interview.rounds.find((r) => r.id === round.id)
-              if (saved) setForm(formOf(saved))
-            },
-          },
-        )
+        })
       }}
     >
       <div className="flex flex-wrap items-center gap-3">
@@ -86,7 +89,7 @@ export function RoundCard({
               {...props}
               className={inputClass}
               value={form.kind}
-              disabled={!editable}
+              disabled={!editable || update.isPending}
               onChange={(e) => change({ kind: e.target.value as RoundKind })}
             >
               {ROUND_KINDS.map((kind) => (
@@ -103,7 +106,7 @@ export function RoundCard({
               {...props}
               className={inputClass}
               value={form.state}
-              disabled={!editable}
+              disabled={!editable || update.isPending}
               onChange={(e) => change({ state: e.target.value as RoundState })}
             >
               {ROUND_STATES.map((state) => (
@@ -121,7 +124,7 @@ export function RoundCard({
               type="datetime-local"
               className={inputClass}
               value={form.when}
-              disabled={!editable}
+              disabled={!editable || update.isPending}
               onChange={(e) => change({ when: e.target.value })}
             />
           )}
@@ -133,7 +136,7 @@ export function RoundCard({
               className={inputClass}
               maxLength={300}
               value={form.interviewers}
-              disabled={!editable}
+              disabled={!editable || update.isPending}
               onChange={(e) => change({ interviewers: e.target.value })}
             />
           )}
@@ -168,7 +171,11 @@ export function RoundCard({
             >
               Yes, delete
             </Button>
-            <Button type="button" variant="ghost" size="sm" onClick={() => setConfirming(false)}>
+            <Button type="button" variant="ghost" size="sm" onClick={() => {
+                remove.reset()
+                setConfirming(false)
+              }}
+            >
               Keep it
             </Button>
           </div>

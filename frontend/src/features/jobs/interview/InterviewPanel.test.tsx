@@ -317,6 +317,22 @@ describe('InterviewPanel rounds', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('A round failed')
   })
 
+  it('a saved round shows what the server kept', async () => {
+    const user = userEvent.setup()
+    let rounds = [aRound(1, 'scheduled')]
+    renderPanel((call) => {
+      if (call.method === 'PATCH') rounds = [{ ...aRound(1, 'cleared'), interviewers: 'Asha' }]
+      return interview({ rounds })
+    })
+    await user.selectOptions(await screen.findByLabelText('Result'), 'cleared')
+    await user.type(screen.getByLabelText('Interviewers'), '  Asha  ')
+
+    await user.click(screen.getByRole('button', { name: 'Save round 1' }))
+
+    expect(await screen.findByText('Round saved.')).toBeInTheDocument()
+    expect(screen.getByLabelText('Interviewers')).toHaveValue('Asha')
+  })
+
   it('has no Add round button when the job is not in the pipeline', async () => {
     renderPanel(() =>
       interview({

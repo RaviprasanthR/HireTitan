@@ -73,7 +73,7 @@ describe('RoundCard', () => {
     expect(screen.getByLabelText('Interviewers')).toHaveValue('Asha')
   })
 
-  it('saves the changed fields and shows what the server kept', async () => {
+  it('saves the changed fields', async () => {
     const user = userEvent.setup()
     const calls = stubApi((call) => {
       if (call.method === 'PATCH' && call.path === '/interview/rounds/r1') {
@@ -91,8 +91,7 @@ describe('RoundCard', () => {
     expect(await screen.findByText('Round saved.')).toBeInTheDocument()
     const patch = calls.find((c) => c.method === 'PATCH')
     expect(patch?.body).toMatchObject({ kind: 'hr', state: 'cleared', interviewers: '  Asha  ' })
-    expect(patch?.body).toHaveProperty('scheduled_at', null)
-    expect(screen.getByLabelText('Interviewers')).toHaveValue('Asha')
+    expect(patch?.body).not.toHaveProperty('scheduled_at') // the date was not touched
   })
 
   it('sends a typed date and time as an instant', async () => {

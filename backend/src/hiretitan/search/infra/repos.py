@@ -773,6 +773,11 @@ class InterviewsRepo:
                 by_round[question.round_id].append(question)
         return InterviewData(row, [RoundData(r, by_round[r.id]) for r in round_rows])
 
+    async def lock_job(self, job_id: UUID) -> None:
+        """Hold the job row until the transaction ends, so a check and the write that follows it
+        (the failed-round rule, the pipeline state) cannot be separated by another request."""
+        await self._session.execute(select(JobRow.id).where(JobRow.id == job_id).with_for_update())
+
     async def get_round(self, round_id: UUID) -> InterviewRoundRow | None:
         return await self._session.get(InterviewRoundRow, round_id)
 

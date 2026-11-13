@@ -117,7 +117,6 @@ def upgrade() -> None:
         ),
         schema=S,
     )
-    op.create_index("ix_app_interview_rounds_job_id", "interview_rounds", ["job_id"], schema=S)
 
     op.create_table(
         "interview_questions",
@@ -144,9 +143,6 @@ def upgrade() -> None:
             "char_length(answer) <= 10000", name="ck_interview_questions_answer_length"
         ),
         schema=S,
-    )
-    op.create_index(
-        "ix_app_interview_questions_round_id", "interview_questions", ["round_id"], schema=S
     )
 
 

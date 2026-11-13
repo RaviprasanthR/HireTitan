@@ -416,9 +416,7 @@ class InterviewRoundRow(IdTimestampMixin, Base):
         CheckConstraint("char_length(feedback) <= 10000", name="feedback_length"),
     )
 
-    job_id: Mapped[UUID] = mapped_column(
-        ForeignKey(f"{APP_SCHEMA}.jobs.id", ondelete="CASCADE"), index=True
-    )
+    job_id: Mapped[UUID] = mapped_column(ForeignKey(f"{APP_SCHEMA}.jobs.id", ondelete="CASCADE"))
     number: Mapped[int] = mapped_column(Integer)
     kind: Mapped[str] = mapped_column(Text)
     scheduled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -439,7 +437,7 @@ class InterviewQuestionRow(IdTimestampMixin, Base):
     )
 
     round_id: Mapped[UUID] = mapped_column(
-        ForeignKey(f"{APP_SCHEMA}.interview_rounds.id", ondelete="CASCADE"), index=True
+        ForeignKey(f"{APP_SCHEMA}.interview_rounds.id", ondelete="CASCADE")
     )
     position: Mapped[int] = mapped_column(Integer)
     question: Mapped[str] = mapped_column(Text)

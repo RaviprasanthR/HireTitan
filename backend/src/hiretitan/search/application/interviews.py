@@ -284,6 +284,8 @@ class StoredRoundRow(StoredRound, Protocol):
 
 
 class RoundsStore(InterviewsStore, Protocol):
+    async def lock_job(self, job_id: UUID) -> None: ...
+
     async def get_round(self, round_id: UUID) -> StoredRoundRow | None: ...
 
     async def add_round(
@@ -338,6 +340,7 @@ async def add_round(
     interviewers: str | None = None,
 ) -> None:
     """The next round of the job, numbered by the store and starting ``scheduled`` (FR-004)."""
+    await store.lock_job(job_id)  # the checks below and the insert happen under one lock
     await _writable_job(jobs, job_id)
     checked, issues = _round_text_checks(
         {"kind": kind, "scheduled_at": scheduled_at, "interviewers": interviewers}
@@ -363,6 +366,7 @@ async def _round_in_pipeline(
     found = await store.get_round(round_id)
     if found is None:
         raise RoundNotFoundError(str(round_id))
+    await store.lock_job(found.job_id)
     await _writable_job(jobs, found.job_id)
     return found
 
