@@ -19,7 +19,13 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from hiretitan.platform.clock import ClockPort
 from hiretitan.platform.runtime.infra.runs_repo import RunsRepo
 from hiretitan.platform.web.problems import ProblemError, problem
-from hiretitan.search.api.models import DecisionOut, JobCardOut, JobCardPage, job_cards
+from hiretitan.search.api.models import (
+    DecisionOut,
+    InterviewSummaryOut,
+    JobCardOut,
+    JobCardPage,
+    job_cards,
+)
 from hiretitan.search.application.paste import PasteError, PasteInput, paste_job
 from hiretitan.search.application.pipeline import (
     JobNotFoundError,
@@ -33,7 +39,13 @@ from hiretitan.search.application.search import RunQueue
 from hiretitan.search.domain.job_state import IllegalJobTransitionError, JobState, transition
 from hiretitan.search.infra.models import JobRow, JobSourceRow
 from hiretitan.search.infra.paste_store import SqlPasteStore
-from hiretitan.search.infra.repos import Cursor, DecisionsRepo, JobFilters, JobsRepo
+from hiretitan.search.infra.repos import (
+    Cursor,
+    DecisionsRepo,
+    InterviewsRepo,
+    JobFilters,
+    JobsRepo,
+)
 from hiretitan.search.workflow.recheck import RECHECK_WORKFLOW
 
 DEFAULT_LIMIT = 25
@@ -180,8 +192,16 @@ def create_search_jobs_router(deps: SearchJobsApiDeps) -> APIRouter:
             page = await JobsRepo(session).page(
                 filters, limit=limit, cursor=_decode(cursor) if cursor else None
             )
+            cards = await job_cards(session, page.items)
+            if list == "pipeline":
+                latest = await InterviewsRepo(session).summaries([card.id for card in cards])
+                for card in cards:
+                    if card.id in latest:
+                        card.interview = InterviewSummaryOut(
+                            state=latest[card.id][0], round=latest[card.id][1]
+                        )
             return JobCardPage(
-                items=await job_cards(session, page.items),
+                items=cards,
                 next_cursor=_encode(page.next_cursor) if page.next_cursor else None,
             )
 

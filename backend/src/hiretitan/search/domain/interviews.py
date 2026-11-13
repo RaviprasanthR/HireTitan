@@ -77,6 +77,15 @@ def check_round_text(
     return cleaned, []
 
 
+def check_choice(
+    field: str, value: str | None, allowed: tuple[str, ...], message: str
+) -> tuple[str | None, list[FieldIssue]]:
+    """A value that must be one of a fixed list (round type or state); ``None`` is not allowed."""
+    if value is None or value not in allowed:
+        return None, [FieldIssue(field, message)]
+    return value, []
+
+
 def next_round_number(numbers: Iterable[int]) -> int:
     """Rounds are numbered in the order added; deleting never renumbers (research R3)."""
     return max(numbers, default=0) + 1

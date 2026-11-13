@@ -25,6 +25,13 @@ class DecisionOut(BaseModel):
     reason: str
 
 
+class InterviewSummaryOut(BaseModel):
+    """The latest round of a pipeline job, for the Status column (feature 002e)."""
+
+    state: str
+    round: int
+
+
 class JobCardOut(BaseModel):
     id: UUID
     title: str
@@ -42,6 +49,7 @@ class JobCardOut(BaseModel):
     listed: bool
     applied_on: date | None
     inquired_on: date | None
+    interview: InterviewSummaryOut | None = None  # filled for the pipeline list only
 
 
 class JobCardPage(BaseModel):

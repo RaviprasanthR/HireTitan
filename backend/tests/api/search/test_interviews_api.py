@@ -6,6 +6,7 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from pathlib import Path
+from typing import Any
 from uuid import UUID
 
 import httpx
@@ -15,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from hiretitan.api_main import create_app
 from hiretitan.platform.config.settings import Settings
 from hiretitan.search.api.interviews import SearchInterviewsApiDeps, create_interviews_router
+from hiretitan.search.domain.job_state import JobState
 from hiretitan.search.infra.repos import CompaniesRepo, JobsRepo
 
 NOW = datetime(2026, 11, 6, 9, tzinfo=UTC)
@@ -291,3 +293,226 @@ async def test_review_saving_contact_and_source_at_once_both_work(env: Env) -> N
     body = (await env.client.get(url(job_id))).json()
     assert body["contact"]["name"] == "Asha Rao"
     assert body["source"] == {"kind": "hiring_firm", "firm_name": "TalentBridge"}
+
+
+# --- US2: rounds -------------------------------------------------------------------------------
+
+Body = dict[str, Any]
+MISSING = "00000000-0000-0000-0000-000000000000"
+
+
+async def add_round(env: Env, job_id: UUID, kind: str = "technical", **extra: object) -> Body:
+    response = await env.client.post(url(job_id, "/rounds"), json={"kind": kind, **extra})
+    assert response.status_code == 201, response.text
+    body: Body = response.json()
+    return body
+
+
+def round_url(round_id: str) -> str:
+    return f"/api/v1/interview/rounds/{round_id}"
+
+
+async def test_US2_AS1_first_round_is_round_1_scheduled(env: Env) -> None:
+    job_id = await add_job(env)
+
+    body = await add_round(env, job_id, "technical", interviewers="Ben (EM)")
+
+    assert [(r["number"], r["kind"], r["state"]) for r in body["rounds"]] == [
+        (1, "technical", "scheduled")
+    ]
+    assert body["rounds"][0]["interviewers"] == "Ben (EM)"
+    assert body["rounds"][0]["scheduled_at"] is None
+    assert body["status"] == {"state": "scheduled", "round": 1}
+
+
+async def test_US2_AS2_next_round_is_numbered_after(env: Env) -> None:
+    job_id = await add_job(env)
+    first = await add_round(env, job_id)
+    await env.client.patch(round_url(first["rounds"][0]["id"]), json={"state": "cleared"})
+
+    body = await add_round(env, job_id, "hr")
+
+    assert [(r["number"], r["state"]) for r in body["rounds"]] == [(1, "cleared"), (2, "scheduled")]
+    assert body["status"] == {"state": "scheduled", "round": 2}
+
+
+async def test_US2_AS3_can_add_while_one_is_scheduled(env: Env) -> None:
+    job_id = await add_job(env)
+    await add_round(env, job_id)
+
+    body = await add_round(env, job_id, "managerial")
+
+    assert [r["number"] for r in body["rounds"]] == [1, 2]
+    assert body["can_add_round"] is True
+
+
+async def test_US2_AS4_failed_blocks_new_rounds(env: Env) -> None:
+    job_id = await add_job(env)
+    first = await add_round(env, job_id)
+    patched = await env.client.patch(round_url(first["rounds"][0]["id"]), json={"state": "failed"})
+    assert patched.json()["can_add_round"] is False
+    assert patched.json()["status"] == {"state": "failed", "round": 1}
+
+    response = await env.client.post(url(job_id, "/rounds"), json={"kind": "hr"})
+
+    assert response.status_code == 409
+    assert response.json()["reason"] == "process_failed"
+
+
+async def test_US2_AS5_unfailing_allows_rounds_again(env: Env) -> None:
+    job_id = await add_job(env)
+    first = await add_round(env, job_id)
+    round_id = first["rounds"][0]["id"]
+    await env.client.patch(round_url(round_id), json={"state": "failed"})
+
+    back = await env.client.patch(round_url(round_id), json={"state": "cleared"})
+    assert back.json()["can_add_round"] is True
+
+    body = await add_round(env, job_id, "hr")
+    assert [r["number"] for r in body["rounds"]] == [1, 2]
+
+
+async def test_US2_AS6_deleting_the_latest_round(env: Env) -> None:
+    job_id = await add_job(env)
+    await add_round(env, job_id)
+    two = await add_round(env, job_id, "hr")
+    await env.client.patch(round_url(two["rounds"][0]["id"]), json={"state": "cleared"})
+
+    deleted = await env.client.delete(round_url(two["rounds"][1]["id"]))
+
+    assert deleted.status_code == 200
+    body = deleted.json()
+    assert [r["number"] for r in body["rounds"]] == [1]
+    assert body["status"] == {"state": "cleared", "round": 1}
+
+
+async def test_US2_deleting_a_middle_round_keeps_the_other_numbers(env: Env) -> None:
+    job_id = await add_job(env)
+    await add_round(env, job_id)
+    two = await add_round(env, job_id, "hr")
+    await add_round(env, job_id, "managerial")
+
+    deleted = await env.client.delete(round_url(two["rounds"][1]["id"]))
+
+    assert [r["number"] for r in deleted.json()["rounds"]] == [1, 3]
+
+
+async def test_US2_AS7_inquired_job_can_have_rounds(env: Env) -> None:
+    job_id = await add_job(env, state="inquired")
+
+    body = await add_round(env, job_id, "screening")
+
+    assert body["status"] == {"state": "scheduled", "round": 1}
+
+
+async def test_US2_AS8_past_date_on_scheduled_round(env: Env) -> None:
+    job_id = await add_job(env)
+
+    body = await add_round(env, job_id, scheduled_at="2020-01-02T10:30:00+05:30")
+
+    assert body["rounds"][0]["state"] == "scheduled"
+    assert body["rounds"][0]["scheduled_at"].startswith("2020-01-02T05:00:00")
+
+
+async def test_US2_edit_kind_date_and_interviewers_then_clear_them(env: Env) -> None:
+    job_id = await add_job(env)
+    created = await add_round(env, job_id, interviewers="Ben")
+    round_id = created["rounds"][0]["id"]
+
+    edited = await env.client.patch(
+        round_url(round_id),
+        json={"kind": "hr", "scheduled_at": "2026-11-14T10:30:00Z", "interviewers": "Asha"},
+    )
+    assert edited.status_code == 200
+    row = edited.json()["rounds"][0]
+    assert (row["kind"], row["interviewers"]) == ("hr", "Asha")
+    assert row["scheduled_at"].startswith("2026-11-14T10:30:00")
+
+    cleared = await env.client.patch(
+        round_url(round_id), json={"scheduled_at": None, "interviewers": ""}
+    )
+    row = cleared.json()["rounds"][0]
+    assert (row["scheduled_at"], row["interviewers"]) == (None, None)
+    assert row["kind"] == "hr"
+
+
+async def test_unknown_kind_refused(env: Env) -> None:
+    job_id = await add_job(env)
+
+    response = await env.client.post(url(job_id, "/rounds"), json={"kind": "coffee chat"})
+
+    assert response.status_code == 422
+    assert [e["field"] for e in response.json()["errors"]] == ["kind"]
+
+
+async def test_bad_date_and_long_interviewers_refused(env: Env) -> None:
+    job_id = await add_job(env)
+
+    bad_date = await env.client.post(
+        url(job_id, "/rounds"), json={"kind": "hr", "scheduled_at": "tomorrow-ish"}
+    )
+    too_long = await env.client.post(
+        url(job_id, "/rounds"), json={"kind": "hr", "interviewers": "x" * 301}
+    )
+
+    assert bad_date.status_code == 422
+    assert too_long.status_code == 422
+    assert [e["field"] for e in too_long.json()["errors"]] == ["interviewers"]
+
+
+async def test_unknown_state_on_patch_refused(env: Env) -> None:
+    job_id = await add_job(env)
+    created = await add_round(env, job_id)
+
+    response = await env.client.patch(
+        round_url(created["rounds"][0]["id"]), json={"state": "ghosted"}
+    )
+
+    assert response.status_code == 422
+
+
+async def test_R6_round_refused_outside_the_pipeline(env: Env) -> None:
+    job_id = await add_job(env, state="explore")
+
+    response = await env.client.post(url(job_id, "/rounds"), json={"kind": "hr"})
+
+    assert response.status_code == 409
+    assert response.json()["reason"] == "not_in_pipeline"
+
+
+async def test_R6_round_edit_refused_after_the_job_left_the_pipeline(env: Env) -> None:
+    job_id = await add_job(env)
+    created = await add_round(env, job_id)
+    round_id = created["rounds"][0]["id"]
+    async with env.sessions() as session:
+        await JobsRepo(session).set_status(job_id, JobState.explore, None)
+        await session.commit()
+
+    patched = await env.client.patch(round_url(round_id), json={"state": "cleared"})
+    deleted = await env.client.delete(round_url(round_id))
+
+    assert (patched.status_code, deleted.status_code) == (409, 409)
+    assert patched.json()["reason"] == "not_in_pipeline"
+
+
+async def test_unknown_round_is_404(env: Env) -> None:
+    patched = await env.client.patch(round_url(MISSING), json={"state": "cleared"})
+    deleted = await env.client.delete(round_url(MISSING))
+    unknown_job = await env.client.post(url(UUID(MISSING), "/rounds"), json={"kind": "hr"})
+
+    assert (patched.status_code, deleted.status_code, unknown_job.status_code) == (404, 404, 404)
+
+
+async def test_two_rounds_added_at_once_are_numbered_one_after_the_other(env: Env) -> None:
+    import asyncio
+
+    job_id = await add_job(env)
+
+    first, second = await asyncio.gather(
+        env.client.post(url(job_id, "/rounds"), json={"kind": "hr"}),
+        env.client.post(url(job_id, "/rounds"), json={"kind": "technical"}),
+    )
+
+    assert (first.status_code, second.status_code) == (201, 201)
+    body = (await env.client.get(url(job_id))).json()
+    assert [r["number"] for r in body["rounds"]] == [1, 2]

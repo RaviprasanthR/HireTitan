@@ -12,7 +12,7 @@ from typing import Any, Literal
 from uuid import UUID
 
 from fastapi import APIRouter
-from pydantic import BaseModel
+from pydantic import AwareDatetime, BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from hiretitan.platform.web.problems import ProblemError, problem
@@ -21,10 +21,15 @@ from hiretitan.search.application.interviews import (
     InterviewView,
     JobNotFoundError,
     NotInPipelineError,
+    ProcessFailedError,
+    RoundNotFoundError,
+    add_round,
     read_interview,
     remove_contact,
+    remove_round,
     save_contact,
     save_source,
+    update_round,
 )
 from hiretitan.search.infra.repos import InterviewsRepo, JobsRepo
 
@@ -95,6 +100,22 @@ class SourceIn(BaseModel):
     firm_name: str | None = None
 
 
+class RoundIn(BaseModel):
+    # the kind is checked against the list by the domain so the field error reads the same as the
+    # others; the length caps here only stop an absurd body before it is read
+    kind: str = ""
+    scheduled_at: AwareDatetime | None = None
+    interviewers: str | None = Field(default=None, max_length=20_000)
+
+
+class RoundPatch(BaseModel):
+    kind: str | None = None
+    scheduled_at: AwareDatetime | None = None
+    interviewers: str | None = Field(default=None, max_length=20_000)
+    state: str | None = None
+    feedback: str | None = Field(default=None, max_length=100_000)
+
+
 def _out(view: InterviewView) -> InterviewOut:
     return InterviewOut.model_validate(asdict(view))
 
@@ -105,6 +126,14 @@ def _no_job() -> ProblemError:
 
 def _not_in_pipeline(error: NotInPipelineError) -> ProblemError:
     return ProblemError(409, str(error), reason="not_in_pipeline")
+
+
+def _no_round() -> ProblemError:
+    return ProblemError(404, "That round does not exist.")
+
+
+def _process_failed(error: ProcessFailedError) -> ProblemError:
+    return ProblemError(409, str(error), reason="process_failed")
 
 
 def _invalid(error: InterviewInputError) -> Any:
@@ -170,6 +199,56 @@ def create_interviews_router(deps: SearchInterviewsApiDeps) -> APIRouter:
                 raise _not_in_pipeline(error) from error
             except InterviewInputError as error:
                 return _invalid(error)
+            await session.commit()
+        return _out(view)
+
+    @router.post("/jobs/{job_id}/interview/rounds", response_model=InterviewOut, status_code=201)
+    async def post_round(job_id: UUID, body: RoundIn) -> Any:
+        async with deps.sessions() as session:
+            jobs, store = JobsRepo(session), InterviewsRepo(session)
+            try:
+                await add_round(jobs, store, job_id, **body.model_dump())
+                view = await read_interview(jobs, store, job_id)
+            except JobNotFoundError as error:
+                raise _no_job() from error
+            except NotInPipelineError as error:
+                raise _not_in_pipeline(error) from error
+            except ProcessFailedError as error:
+                raise _process_failed(error) from error
+            except InterviewInputError as error:
+                return _invalid(error)
+            await session.commit()
+        return _out(view)
+
+    @router.patch("/interview/rounds/{round_id}", response_model=InterviewOut)
+    async def patch_round(round_id: UUID, body: RoundPatch) -> Any:
+        async with deps.sessions() as session:
+            jobs, store = JobsRepo(session), InterviewsRepo(session)
+            try:
+                job_id = await update_round(
+                    jobs, store, round_id, body.model_dump(exclude_unset=True)
+                )
+                view = await read_interview(jobs, store, job_id)
+            except (JobNotFoundError, RoundNotFoundError) as error:
+                raise _no_round() from error
+            except NotInPipelineError as error:
+                raise _not_in_pipeline(error) from error
+            except InterviewInputError as error:
+                return _invalid(error)
+            await session.commit()
+        return _out(view)
+
+    @router.delete("/interview/rounds/{round_id}", response_model=InterviewOut)
+    async def delete_round(round_id: UUID) -> InterviewOut:
+        async with deps.sessions() as session:
+            jobs, store = JobsRepo(session), InterviewsRepo(session)
+            try:
+                job_id = await remove_round(jobs, store, round_id)
+                view = await read_interview(jobs, store, job_id)
+            except (JobNotFoundError, RoundNotFoundError) as error:
+                raise _no_round() from error
+            except NotInPipelineError as error:
+                raise _not_in_pipeline(error) from error
             await session.commit()
         return _out(view)
 

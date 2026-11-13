@@ -1252,6 +1252,25 @@
         "title": "InterviewStatusOut",
         "type": "object"
       },
+      "InterviewSummaryOut": {
+        "description": "The latest round of a pipeline job, for the Status column (feature 002e).",
+        "properties": {
+          "round": {
+            "title": "Round",
+            "type": "integer"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state",
+          "round"
+        ],
+        "title": "InterviewSummaryOut",
+        "type": "object"
+      },
       "JobCardOut": {
         "properties": {
           "applied_on": {
@@ -1313,6 +1332,16 @@
               }
             ],
             "title": "Inquired On"
+          },
+          "interview": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InterviewSummaryOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "listed": {
             "title": "Listed",
@@ -1548,6 +1577,16 @@
               }
             ],
             "title": "Inquired On"
+          },
+          "interview": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InterviewSummaryOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "listed": {
             "title": "Listed",
@@ -1997,6 +2036,16 @@
               }
             ],
             "title": "Inquired On"
+          },
+          "interview": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InterviewSummaryOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "listed": {
             "title": "Listed",
@@ -3009,6 +3058,41 @@
         "title": "ReviewOut",
         "type": "object"
       },
+      "RoundIn": {
+        "properties": {
+          "interviewers": {
+            "anyOf": [
+              {
+                "maxLength": 20000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interviewers"
+          },
+          "kind": {
+            "default": "",
+            "title": "Kind",
+            "type": "string"
+          },
+          "scheduled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled At"
+          }
+        },
+        "title": "RoundIn",
+        "type": "object"
+      },
       "RoundOut": {
         "properties": {
           "feedback": {
@@ -3093,6 +3177,70 @@
           "questions"
         ],
         "title": "RoundOut",
+        "type": "object"
+      },
+      "RoundPatch": {
+        "properties": {
+          "feedback": {
+            "anyOf": [
+              {
+                "maxLength": 100000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feedback"
+          },
+          "interviewers": {
+            "anyOf": [
+              {
+                "maxLength": 20000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interviewers"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "scheduled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled At"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          }
+        },
+        "title": "RoundPatch",
         "type": "object"
       },
       "RuleItemModel": {
@@ -5104,6 +5252,100 @@
         "summary": "Health"
       }
     },
+    "/api/v1/interview/rounds/{round_id}": {
+      "delete": {
+        "operationId": "delete_round_api_v1_interview_rounds__round_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "round_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Round Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Round",
+        "tags": [
+          "interviews"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_round_api_v1_interview_rounds__round_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "round_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Round Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoundPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Patch Round",
+        "tags": [
+          "interviews"
+        ]
+      }
+    },
     "/api/v1/jobs": {
       "get": {
         "operationId": "list_jobs_api_v1_jobs_get",
@@ -5869,6 +6111,59 @@
           }
         },
         "summary": "Put Contact",
+        "tags": [
+          "interviews"
+        ]
+      }
+    },
+    "/api/v1/jobs/{job_id}/interview/rounds": {
+      "post": {
+        "operationId": "post_round_api_v1_jobs__job_id__interview_rounds_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoundIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Round",
         "tags": [
           "interviews"
         ]

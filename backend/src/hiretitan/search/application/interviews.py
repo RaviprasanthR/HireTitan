@@ -7,17 +7,23 @@ module (an import-linter contract checks it).
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Protocol
+from typing import Any, Protocol
 from uuid import UUID
 
 from hiretitan.search.domain.contacts import ContactFields, FieldIssue
 from hiretitan.search.domain.interviews import (
+    FEEDBACK_MAX,
+    INTERVIEWERS_MAX,
+    ROUND_KINDS,
+    ROUND_STATES,
     RoundSummary,
     can_add_round,
+    check_choice,
     check_contact,
+    check_round_text,
     check_source,
     status_summary,
 )
@@ -263,3 +269,119 @@ async def save_source(
     if checked is None:
         raise InterviewInputError(issues)
     await store.set_source(job_id, checked[0], checked[1])
+
+
+class ProcessFailedError(ValueError):
+    """A round failed, so the process has ended and no round can be added (FR-006)."""
+
+
+class RoundNotFoundError(LookupError):
+    """The round does not exist (or was deleted)."""
+
+
+class StoredRoundRow(StoredRound, Protocol):
+    job_id: UUID
+
+
+class RoundsStore(InterviewsStore, Protocol):
+    async def get_round(self, round_id: UUID) -> StoredRoundRow | None: ...
+
+    async def add_round(
+        self,
+        job_id: UUID,
+        *,
+        kind: str,
+        scheduled_at: datetime | None = None,
+        interviewers: str | None = None,
+    ) -> object: ...
+
+    async def update_round(self, round_id: UUID, changes: dict[str, Any]) -> object: ...
+
+    async def delete_round(self, round_id: UUID) -> None: ...
+
+
+def _round_text_checks(
+    changes: Mapping[str, Any],
+) -> tuple[dict[str, Any], list[FieldIssue]]:
+    """Check the fields of a round that were given; the result holds only those fields."""
+    checked: dict[str, Any] = {}
+    issues: list[FieldIssue] = []
+    if "kind" in changes:
+        kind, found = check_choice(
+            "kind", changes["kind"], ROUND_KINDS, "Pick a round type from the list."
+        )
+        issues += found
+        checked["kind"] = kind
+    if "state" in changes:
+        state, found = check_choice(
+            "state", changes["state"], ROUND_STATES, "A round is scheduled, cleared or failed."
+        )
+        issues += found
+        checked["state"] = state
+    if "scheduled_at" in changes:
+        checked["scheduled_at"] = changes["scheduled_at"]
+    for field, limit in (("interviewers", INTERVIEWERS_MAX), ("feedback", FEEDBACK_MAX)):
+        if field in changes:
+            text, found = check_round_text(field, changes[field], limit)
+            issues += found
+            checked[field] = text
+    return checked, issues
+
+
+async def add_round(
+    jobs: JobsLookup,
+    store: RoundsStore,
+    job_id: UUID,
+    *,
+    kind: str | None,
+    scheduled_at: datetime | None = None,
+    interviewers: str | None = None,
+) -> None:
+    """The next round of the job, numbered by the store and starting ``scheduled`` (FR-004)."""
+    await _writable_job(jobs, job_id)
+    checked, issues = _round_text_checks(
+        {"kind": kind, "scheduled_at": scheduled_at, "interviewers": interviewers}
+    )
+    if issues:
+        raise InterviewInputError(issues)
+    stored = await store.details(job_id)
+    if not can_add_round(item.round.state for item in stored.rounds):
+        raise ProcessFailedError(
+            "A round failed, so no new round can be added. Change that round first."
+        )
+    await store.add_round(
+        job_id,
+        kind=checked["kind"],
+        scheduled_at=checked["scheduled_at"],
+        interviewers=checked["interviewers"],
+    )
+
+
+async def _round_in_pipeline(
+    jobs: JobsLookup, store: RoundsStore, round_id: UUID
+) -> StoredRoundRow:
+    found = await store.get_round(round_id)
+    if found is None:
+        raise RoundNotFoundError(str(round_id))
+    await _writable_job(jobs, found.job_id)
+    return found
+
+
+async def update_round(
+    jobs: JobsLookup, store: RoundsStore, round_id: UUID, changes: Mapping[str, Any]
+) -> UUID:
+    """Change given round fields (any state change is allowed, US2 AS5). Returns the job id."""
+    found = await _round_in_pipeline(jobs, store, round_id)
+    checked, issues = _round_text_checks(changes)
+    if issues:
+        raise InterviewInputError(issues)
+    if checked:
+        await store.update_round(round_id, checked)
+    return found.job_id
+
+
+async def remove_round(jobs: JobsLookup, store: RoundsStore, round_id: UUID) -> UUID:
+    """Delete the round and its questions; the other rounds keep their numbers (research R3)."""
+    found = await _round_in_pipeline(jobs, store, round_id)
+    await store.delete_round(round_id)
+    return found.job_id

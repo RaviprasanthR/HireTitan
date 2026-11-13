@@ -195,6 +195,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/interview/rounds/{round_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Round */
+        delete: operations["delete_round_api_v1_interview_rounds__round_id__delete"];
+        options?: never;
+        head?: never;
+        /** Patch Round */
+        patch: operations["patch_round_api_v1_interview_rounds__round_id__patch"];
+        trace?: never;
+    };
     "/api/v1/jobs": {
         parameters: {
             query?: never;
@@ -369,6 +387,23 @@ export interface paths {
         post?: never;
         /** Delete Contact */
         delete: operations["delete_contact_api_v1_jobs__job_id__interview_contact_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{job_id}/interview/rounds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Round */
+        post: operations["post_round_api_v1_jobs__job_id__interview_rounds_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1304,6 +1339,16 @@ export interface components {
              */
             state: "explore" | "skipped" | "applied" | "inquired" | "scheduled" | "cleared" | "failed";
         };
+        /**
+         * InterviewSummaryOut
+         * @description The latest round of a pipeline job, for the Status column (feature 002e).
+         */
+        InterviewSummaryOut: {
+            /** Round */
+            round: number;
+            /** State */
+            state: string;
+        };
         /** JobCardOut */
         JobCardOut: {
             /** Applied On */
@@ -1325,6 +1370,7 @@ export interface components {
             id: string;
             /** Inquired On */
             inquired_on: string | null;
+            interview?: components["schemas"]["InterviewSummaryOut"] | null;
             /** Listed */
             listed: boolean;
             /** Location Text */
@@ -1388,6 +1434,7 @@ export interface components {
             }[];
             /** Inquired On */
             inquired_on: string | null;
+            interview?: components["schemas"]["InterviewSummaryOut"] | null;
             /** Listed */
             listed: boolean;
             /** Location Text */
@@ -1510,6 +1557,7 @@ export interface components {
             }[];
             /** Inquired On */
             inquired_on: string | null;
+            interview?: components["schemas"]["InterviewSummaryOut"] | null;
             /** Listed */
             listed: boolean;
             /** Location Text */
@@ -1795,6 +1843,18 @@ export interface components {
             /** Status */
             status: string;
         };
+        /** RoundIn */
+        RoundIn: {
+            /** Interviewers */
+            interviewers?: string | null;
+            /**
+             * Kind
+             * @default
+             */
+            kind: string;
+            /** Scheduled At */
+            scheduled_at?: string | null;
+        };
         /** RoundOut */
         RoundOut: {
             /** Feedback */
@@ -1822,6 +1882,19 @@ export interface components {
              * @enum {string}
              */
             state: "scheduled" | "cleared" | "failed";
+        };
+        /** RoundPatch */
+        RoundPatch: {
+            /** Feedback */
+            feedback?: string | null;
+            /** Interviewers */
+            interviewers?: string | null;
+            /** Kind */
+            kind?: string | null;
+            /** Scheduled At */
+            scheduled_at?: string | null;
+            /** State */
+            state?: string | null;
         };
         /** RuleItemModel */
         RuleItemModel: {
@@ -2739,6 +2812,72 @@ export interface operations {
             };
         };
     };
+    delete_round_api_v1_interview_rounds__round_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                round_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InterviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_round_api_v1_interview_rounds__round_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                round_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoundPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InterviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_jobs_api_v1_jobs_get: {
         parameters: {
             query?: {
@@ -3176,6 +3315,41 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InterviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_round_api_v1_jobs__job_id__interview_rounds_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoundIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
