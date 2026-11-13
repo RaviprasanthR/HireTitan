@@ -2800,6 +2800,30 @@
         "title": "ProvenanceOut",
         "type": "object"
       },
+      "QuestionIn": {
+        "properties": {
+          "answer": {
+            "anyOf": [
+              {
+                "maxLength": 100000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer"
+          },
+          "question": {
+            "default": "",
+            "maxLength": 20000,
+            "title": "Question",
+            "type": "string"
+          }
+        },
+        "title": "QuestionIn",
+        "type": "object"
+      },
       "QuestionOut": {
         "properties": {
           "answer": {
@@ -2834,6 +2858,36 @@
           "answer"
         ],
         "title": "QuestionOut",
+        "type": "object"
+      },
+      "QuestionPatch": {
+        "properties": {
+          "answer": {
+            "anyOf": [
+              {
+                "maxLength": 100000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer"
+          },
+          "question": {
+            "anyOf": [
+              {
+                "maxLength": 20000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Question"
+          }
+        },
+        "title": "QuestionPatch",
         "type": "object"
       },
       "ResumeFileOut": {
@@ -5252,6 +5306,100 @@
         "summary": "Health"
       }
     },
+    "/api/v1/interview/questions/{question_id}": {
+      "delete": {
+        "operationId": "delete_question_api_v1_interview_questions__question_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "question_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Question Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Question",
+        "tags": [
+          "interviews"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_question_api_v1_interview_questions__question_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "question_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Question Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuestionPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Patch Question",
+        "tags": [
+          "interviews"
+        ]
+      }
+    },
     "/api/v1/interview/rounds/{round_id}": {
       "delete": {
         "operationId": "delete_round_api_v1_interview_rounds__round_id__delete",
@@ -5341,6 +5489,59 @@
           }
         },
         "summary": "Patch Round",
+        "tags": [
+          "interviews"
+        ]
+      }
+    },
+    "/api/v1/interview/rounds/{round_id}/questions": {
+      "post": {
+        "operationId": "post_question_api_v1_interview_rounds__round_id__questions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "round_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Round Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuestionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Question",
         "tags": [
           "interviews"
         ]

@@ -516,3 +516,166 @@ async def test_two_rounds_added_at_once_are_numbered_one_after_the_other(env: En
     assert (first.status_code, second.status_code) == (201, 201)
     body = (await env.client.get(url(job_id))).json()
     assert [r["number"] for r in body["rounds"]] == [1, 2]
+
+
+# --- US3: questions, answers and feedback -----------------------------------------------------
+
+
+def question_url(question_id: str) -> str:
+    return f"/api/v1/interview/questions/{question_id}"
+
+
+async def add_question(env: Env, round_id: str, question: str, **extra: object) -> Body:
+    response = await env.client.post(
+        f"/api/v1/interview/rounds/{round_id}/questions", json={"question": question, **extra}
+    )
+    assert response.status_code == 201, response.text
+    body: Body = response.json()
+    return body
+
+
+async def a_round(env: Env) -> tuple[UUID, str]:
+    job_id = await add_job(env)
+    created = await add_round(env, job_id)
+    return job_id, created["rounds"][0]["id"]
+
+
+async def test_US3_AS1_question_without_answer_kept_in_order(env: Env) -> None:
+    _, round_id = await a_round(env)
+    await add_question(env, round_id, "Design a rate limiter")
+
+    body = await add_question(env, round_id, "Explain CAP", answer="Pick two")
+
+    questions = body["rounds"][0]["questions"]
+    assert [(q["position"], q["question"], q["answer"]) for q in questions] == [
+        (1, "Design a rate limiter", None),
+        (2, "Explain CAP", "Pick two"),
+    ]
+
+
+async def test_US3_AS2_edit_or_delete_one_leaves_the_rest(env: Env) -> None:
+    _, round_id = await a_round(env)
+    await add_question(env, round_id, "One")
+    await add_question(env, round_id, "Two")
+    body = await add_question(env, round_id, "Three")
+    one, two, three = (q["id"] for q in body["rounds"][0]["questions"])
+
+    edited = await env.client.patch(question_url(two), json={"answer": "My answer"})
+    answers = [q["answer"] for q in edited.json()["rounds"][0]["questions"]]
+    assert answers == [None, "My answer", None]
+
+    removed = await env.client.delete(question_url(one))
+
+    assert removed.status_code == 200
+    left = removed.json()["rounds"][0]["questions"]
+    assert [(q["id"], q["question"]) for q in left] == [(two, "Two"), (three, "Three")]
+
+
+async def test_US3_AS3_feedback_note_kept(env: Env) -> None:
+    _, round_id = await a_round(env)
+
+    saved = await env.client.patch(round_url(round_id), json={"feedback": "Good on design."})
+
+    assert saved.json()["rounds"][0]["feedback"] == "Good on design."
+    cleared = await env.client.patch(round_url(round_id), json={"feedback": ""})
+    assert cleared.json()["rounds"][0]["feedback"] is None
+
+
+async def test_US3_AS4_long_text_and_line_breaks_kept(env: Env) -> None:
+    _, round_id = await a_round(env)
+    question = "Line one\nLine two " + "q" * 1900
+    answer = "a\n\nb " + "z" * 9000
+
+    body = await add_question(env, round_id, question, answer=answer)
+    feedback = "x" * 9990 + "\nend"
+    saved = await env.client.patch(round_url(round_id), json={"feedback": feedback})
+
+    stored = body["rounds"][0]["questions"][0]
+    assert stored["question"] == question
+    assert stored["answer"] == answer
+    assert saved.json()["rounds"][0]["feedback"] == feedback
+
+
+async def test_FR014_too_long_refused_with_the_limit(env: Env) -> None:
+    _, round_id = await a_round(env)
+    url_ = f"/api/v1/interview/rounds/{round_id}/questions"
+
+    long_question = await env.client.post(url_, json={"question": "q" * 2001})
+    long_answer = await env.client.post(url_, json={"question": "ok", "answer": "a" * 10001})
+    long_feedback = await env.client.patch(round_url(round_id), json={"feedback": "f" * 10001})
+
+    for response, field, limit in (
+        (long_question, "question", "2000"),
+        (long_answer, "answer", "10000"),
+        (long_feedback, "feedback", "10000"),
+    ):
+        assert response.status_code == 422
+        (error,) = response.json()["errors"]
+        assert error["field"] == field
+        assert limit in error["message"]
+
+
+async def test_US3_a_question_needs_text(env: Env) -> None:
+    _, round_id = await a_round(env)
+
+    response = await env.client.post(
+        f"/api/v1/interview/rounds/{round_id}/questions", json={"question": "   "}
+    )
+
+    assert response.status_code == 422
+    assert [e["field"] for e in response.json()["errors"]] == ["question"]
+
+
+async def test_US3_editing_a_question_cannot_empty_it(env: Env) -> None:
+    _, round_id = await a_round(env)
+    body = await add_question(env, round_id, "Keep me")
+    question_id = body["rounds"][0]["questions"][0]["id"]
+
+    response = await env.client.patch(question_url(question_id), json={"question": ""})
+    cleared = await env.client.patch(question_url(question_id), json={"answer": None})
+
+    assert response.status_code == 422
+    assert cleared.status_code == 200
+
+
+async def test_R6_questions_refused_after_the_job_left_the_pipeline(env: Env) -> None:
+    job_id, round_id = await a_round(env)
+    body = await add_question(env, round_id, "Asked")
+    question_id = body["rounds"][0]["questions"][0]["id"]
+    async with env.sessions() as session:
+        await JobsRepo(session).set_status(job_id, JobState.explore, None)
+        await session.commit()
+
+    added = await env.client.post(
+        f"/api/v1/interview/rounds/{round_id}/questions", json={"question": "More"}
+    )
+    patched = await env.client.patch(question_url(question_id), json={"answer": "x"})
+    removed = await env.client.delete(question_url(question_id))
+
+    assert (added.status_code, patched.status_code, removed.status_code) == (409, 409, 409)
+
+
+async def test_unknown_question_or_round_is_404(env: Env) -> None:
+    added = await env.client.post(
+        f"/api/v1/interview/rounds/{MISSING}/questions", json={"question": "Q"}
+    )
+    patched = await env.client.patch(question_url(MISSING), json={"answer": "x"})
+    removed = await env.client.delete(question_url(MISSING))
+
+    assert (added.status_code, patched.status_code, removed.status_code) == (404, 404, 404)
+
+
+async def test_questions_added_at_once_get_distinct_positions(env: Env) -> None:
+    import asyncio
+
+    _, round_id = await a_round(env)
+    url_ = f"/api/v1/interview/rounds/{round_id}/questions"
+
+    first, second = await asyncio.gather(
+        env.client.post(url_, json={"question": "A"}),
+        env.client.post(url_, json={"question": "B"}),
+    )
+
+    assert (first.status_code, second.status_code) == (201, 201)
+    last = second.json() if len(second.json()["rounds"][0]["questions"]) == 2 else first.json()
+    assert sorted(q["position"] for q in last["rounds"][0]["questions"]) == [1, 2]

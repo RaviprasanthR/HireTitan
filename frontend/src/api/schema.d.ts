@@ -195,6 +195,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/interview/questions/{question_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Question */
+        delete: operations["delete_question_api_v1_interview_questions__question_id__delete"];
+        options?: never;
+        head?: never;
+        /** Patch Question */
+        patch: operations["patch_question_api_v1_interview_questions__question_id__patch"];
+        trace?: never;
+    };
     "/api/v1/interview/rounds/{round_id}": {
         parameters: {
             query?: never;
@@ -211,6 +229,23 @@ export interface paths {
         head?: never;
         /** Patch Round */
         patch: operations["patch_round_api_v1_interview_rounds__round_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/interview/rounds/{round_id}/questions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Question */
+        post: operations["post_question_api_v1_interview_rounds__round_id__questions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/jobs": {
@@ -1746,6 +1781,16 @@ export interface components {
             /** Provider */
             provider: string;
         };
+        /** QuestionIn */
+        QuestionIn: {
+            /** Answer */
+            answer?: string | null;
+            /**
+             * Question
+             * @default
+             */
+            question: string;
+        };
         /** QuestionOut */
         QuestionOut: {
             /** Answer */
@@ -1759,6 +1804,13 @@ export interface components {
             position: number;
             /** Question */
             question: string;
+        };
+        /** QuestionPatch */
+        QuestionPatch: {
+            /** Answer */
+            answer?: string | null;
+            /** Question */
+            question?: string | null;
         };
         /** ResumeFileOut */
         ResumeFileOut: {
@@ -2812,6 +2864,72 @@ export interface operations {
             };
         };
     };
+    delete_question_api_v1_interview_questions__question_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                question_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InterviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_question_api_v1_interview_questions__question_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                question_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuestionPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InterviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     delete_round_api_v1_interview_rounds__round_id__delete: {
         parameters: {
             query?: never;
@@ -2860,6 +2978,41 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InterviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_question_api_v1_interview_rounds__round_id__questions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                round_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuestionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };

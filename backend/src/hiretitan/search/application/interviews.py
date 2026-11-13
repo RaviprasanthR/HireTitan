@@ -15,8 +15,10 @@ from uuid import UUID
 
 from hiretitan.search.domain.contacts import ContactFields, FieldIssue
 from hiretitan.search.domain.interviews import (
+    ANSWER_MAX,
     FEEDBACK_MAX,
     INTERVIEWERS_MAX,
+    QUESTION_MAX,
     ROUND_KINDS,
     ROUND_STATES,
     RoundSummary,
@@ -283,8 +285,20 @@ class StoredRoundRow(StoredRound, Protocol):
     job_id: UUID
 
 
+class StoredQuestionRow(StoredQuestion, Protocol):
+    round_id: UUID
+
+
 class RoundsStore(InterviewsStore, Protocol):
     async def lock_job(self, job_id: UUID) -> None: ...
+
+    async def get_question(self, question_id: UUID) -> StoredQuestionRow | None: ...
+
+    async def add_question(self, round_id: UUID, question: str, answer: str | None) -> object: ...
+
+    async def update_question(self, question_id: UUID, changes: dict[str, Any]) -> object: ...
+
+    async def delete_question(self, question_id: UUID) -> None: ...
 
     async def get_round(self, round_id: UUID) -> StoredRoundRow | None: ...
 
@@ -389,3 +403,74 @@ async def remove_round(jobs: JobsLookup, store: RoundsStore, round_id: UUID) -> 
     found = await _round_in_pipeline(jobs, store, round_id)
     await store.delete_round(round_id)
     return found.job_id
+
+
+class QuestionNotFoundError(LookupError):
+    """The question does not exist (or was removed)."""
+
+
+def _question_checks(
+    changes: Mapping[str, Any],
+) -> tuple[dict[str, Any], list[FieldIssue]]:
+    """Check the question and answer that were given. A question needs text; an answer may be
+    empty (it becomes ``None``)."""
+    checked: dict[str, Any] = {}
+    issues: list[FieldIssue] = []
+    if "question" in changes:
+        text, found = check_round_text("question", changes["question"], QUESTION_MAX)
+        if text is None and not found:
+            found = [FieldIssue("question", "Write the question that was asked.")]
+        issues += found
+        checked["question"] = text
+    if "answer" in changes:
+        text, found = check_round_text("answer", changes["answer"], ANSWER_MAX)
+        issues += found
+        checked["answer"] = text
+    return checked, issues
+
+
+async def add_question(
+    jobs: JobsLookup,
+    store: RoundsStore,
+    round_id: UUID,
+    *,
+    question: str | None,
+    answer: str | None = None,
+) -> UUID:
+    """Add a question (and its answer, if any) after the others in the round; returns the job."""
+    found = await _round_in_pipeline(jobs, store, round_id)
+    checked, issues = _question_checks({"question": question, "answer": answer})
+    if issues:
+        raise InterviewInputError(issues)
+    await store.add_question(round_id, checked["question"], checked["answer"])
+    return found.job_id
+
+
+async def _question_in_pipeline(jobs: JobsLookup, store: RoundsStore, question_id: UUID) -> UUID:
+    found = await store.get_question(question_id)
+    if found is None:
+        raise QuestionNotFoundError(str(question_id))
+    try:
+        return (await _round_in_pipeline(jobs, store, found.round_id)).job_id
+    except RoundNotFoundError as error:
+        raise QuestionNotFoundError(str(question_id)) from error
+
+
+async def update_question(
+    jobs: JobsLookup, store: RoundsStore, question_id: UUID, changes: Mapping[str, Any]
+) -> UUID:
+    """Change the given fields of a question; returns the job id."""
+    job_id = await _question_in_pipeline(jobs, store, question_id)
+    checked, issues = _question_checks(changes)
+    if issues:
+        raise InterviewInputError(issues)
+    if checked:
+        await store.update_question(question_id, checked)
+    return job_id
+
+
+async def remove_question(jobs: JobsLookup, store: RoundsStore, question_id: UUID) -> UUID:
+    """Remove one question; the others keep their order."""
+    job_id = await _question_in_pipeline(jobs, store, question_id)
+    await store.delete_question(question_id)
+    return job_id
