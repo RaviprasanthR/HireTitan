@@ -360,6 +360,8 @@ def create_search_jobs_router(deps: SearchJobsApiDeps) -> APIRouter:
             row.state = JobState.deleted.value
             row.applied_on = None
             row.inquired_on = None
+            # what was recorded about the job goes with it (feature 002e, FR-011)
+            await InterviewsRepo(session).delete_for_job(job_id)
             await session.commit()
         return Response(status_code=204)
 

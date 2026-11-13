@@ -884,6 +884,47 @@ class InterviewsRepo:
         )
         await self._session.flush()
 
+    async def merge_details(self, keep_id: UUID, loser_id: UUID) -> None:
+        """Fold the losing job's notes into the kept job (feature 002e, research R7): the kept
+        job's own contact and source stay, and the loser's fill them only when empty; the
+        loser's rounds come over (renumbered 1..n, questions with them) only when the kept job
+        has none. Whatever is left of the loser's notes is removed."""
+        # one order for both rows, so two merges at once cannot wait on each other
+        for job_id in sorted((keep_id, loser_id)):
+            await self.lock_job(job_id)
+        lost = await self._session.get(PipelineDetailsRow, loser_id, populate_existing=True)
+        if lost is not None and (lost.contact_name is not None or lost.source is not None):
+            kept = await self._details_row(keep_id)
+            if kept.contact_name is None and lost.contact_name is not None:
+                kept.contact_name = lost.contact_name
+                kept.contact_role = lost.contact_role
+                kept.contact_email = lost.contact_email
+                kept.contact_phone = lost.contact_phone
+                kept.contact_linkedin = lost.contact_linkedin
+            if kept.source is None and lost.source is not None:
+                kept.source = lost.source
+                kept.firm_name = lost.firm_name
+            await self._session.flush()
+        has_rounds = await self._session.scalar(
+            select(func.count())
+            .select_from(InterviewRoundRow)
+            .where(InterviewRoundRow.job_id == keep_id)
+        )
+        if not has_rounds:
+            moving = (
+                await self._session.scalars(
+                    select(InterviewRoundRow)
+                    .where(InterviewRoundRow.job_id == loser_id)
+                    .order_by(InterviewRoundRow.number)
+                )
+            ).all()
+            for position, row in enumerate(moving, start=1):
+                row.job_id = keep_id
+                row.number = position
+            await self._session.flush()
+        await self.delete_for_job(loser_id)
+        await self._prune(keep_id)
+
     async def summaries(self, job_ids: list[UUID]) -> dict[UUID, tuple[str, int]]:
         """``{job_id: (state, round)}`` for the jobs that have rounds, in one statement; the
         rule is the domain's ``status_summary`` (a failed round wins)."""

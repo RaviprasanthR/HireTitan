@@ -19,6 +19,7 @@ from hiretitan.platform.web.problems import ProblemError
 from hiretitan.search.api.models import JobCardOut, job_cards
 from hiretitan.search.domain.job_state import JobState
 from hiretitan.search.infra.models import JobRow, JobSourceRow, PossibleDuplicateRow
+from hiretitan.search.infra.repos import InterviewsRepo
 
 DEFAULT_LIMIT = 25
 MAX_LIMIT = 100
@@ -128,6 +129,7 @@ def create_duplicates_router(deps: SearchDuplicatesApiDeps) -> APIRouter:
             loser_row.state = JobState.deleted.value
             loser_row.applied_on = None
             loser_row.inquired_on = None
+            await InterviewsRepo(session).merge_details(keep, loser)
             pair.status = "merged"
             pair.decided_at = deps.clock.now()
             await session.commit()
