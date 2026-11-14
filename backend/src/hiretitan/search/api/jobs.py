@@ -351,6 +351,7 @@ def create_search_jobs_router(deps: SearchJobsApiDeps) -> APIRouter:
     @router.delete("/{job_id}", status_code=204)
     async def delete_job(job_id: UUID) -> Response:
         async with deps.sessions() as session:
+            await InterviewsRepo(session).lock_job(job_id)  # a contact save cannot slip in after
             row = await load(session, job_id, deleted_ok=True)
             try:
                 transition(JobState(row.state), JobState.deleted)

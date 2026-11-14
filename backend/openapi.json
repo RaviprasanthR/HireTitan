@@ -4184,6 +4184,7 @@
           "firm_name": {
             "anyOf": [
               {
+                "maxLength": 2000,
                 "type": "string"
               },
               {
@@ -4195,6 +4196,7 @@
           "kind": {
             "anyOf": [
               {
+                "maxLength": 100,
                 "type": "string"
               },
               {
@@ -4572,6 +4574,7 @@
           "email": {
             "anyOf": [
               {
+                "maxLength": 2000,
                 "type": "string"
               },
               {
@@ -4583,6 +4586,7 @@
           "linkedin_url": {
             "anyOf": [
               {
+                "maxLength": 2000,
                 "type": "string"
               },
               {
@@ -4593,12 +4597,14 @@
           },
           "name": {
             "default": "",
+            "maxLength": 2000,
             "title": "Name",
             "type": "string"
           },
           "phone": {
             "anyOf": [
               {
+                "maxLength": 2000,
                 "type": "string"
               },
               {
@@ -4610,6 +4616,7 @@
           "role": {
             "anyOf": [
               {
+                "maxLength": 2000,
                 "type": "string"
               },
               {

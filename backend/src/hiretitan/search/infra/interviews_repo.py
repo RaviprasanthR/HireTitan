@@ -61,7 +61,7 @@ class InterviewsRepo:
         return await self._session.get_one(PipelineDetailsRow, job_id, populate_existing=True)
 
     async def _prune(self, job_id: UUID) -> None:
-        row = await self._session.get(PipelineDetailsRow, job_id)
+        row = await self._session.get(PipelineDetailsRow, job_id, populate_existing=True)
         if row is not None and row.contact_name is None and row.source is None:
             await self._session.execute(
                 delete(PipelineDetailsRow).where(PipelineDetailsRow.job_id == job_id)

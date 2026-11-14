@@ -1,8 +1,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { problem, stubApi, type Call } from '@/test/api'
+import { json, problem, stubApi, type Call } from '@/test/api'
 import { InterviewPanel } from './InterviewPanel'
 
 function interview(overrides: Record<string, unknown> = {}) {
@@ -212,6 +212,56 @@ describe('InterviewPanel contact and source', () => {
     await user.click(screen.getByRole('button', { name: 'Save source' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('A hiring firm needs a name.')
+  })
+
+  it('review: the fields are locked while the contact save is on its way', async () => {
+    const user = userEvent.setup()
+    let release: (response: Response) => void = () => undefined
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url: string, init?: RequestInit) => {
+        if ((init?.method ?? 'GET') === 'PUT') {
+          return new Promise<Response>((resolve) => {
+            release = resolve
+          })
+        }
+        return json(interview())
+      }),
+    )
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <InterviewPanel jobId="a" />
+      </QueryClientProvider>,
+    )
+    await user.type(await screen.findByLabelText('Contact name'), 'Asha')
+
+    await user.click(screen.getByRole('button', { name: 'Save contact' }))
+
+    expect(screen.getByLabelText('Phone')).toBeDisabled()
+    release(json(interview()))
+  })
+
+  it('review: a failed refresh keeps the forms and what was typed', async () => {
+    const user = userEvent.setup()
+    let failing = false
+    stubApi(() => (failing ? problem(500, 'Down') : interview()))
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(
+      <QueryClientProvider client={client}>
+        <InterviewPanel jobId="a" />
+      </QueryClientProvider>,
+    )
+    await user.type(await screen.findByLabelText('Contact name'), 'Asha')
+
+    failing = true
+    await client.refetchQueries({ queryKey: ['job-interview'] })
+    await waitFor(() =>
+      expect(client.getQueryState(['job-interview', 'a'])?.status).toBe('error'),
+    )
+    await new Promise((resolve) => setTimeout(resolve, 20))
+
+    expect(screen.getByLabelText('Contact name')).toHaveValue('Asha')
+    expect(screen.queryByText('Could not load the details.')).not.toBeInTheDocument()
   })
 
   it('the panel is read-only when the job is not in the pipeline', async () => {

@@ -52,6 +52,8 @@ function ContactSection({
     setter(value)
     setDirty(true)
   }
+  // typing while the save is on its way would be lost when the form is rebuilt from the answer
+  const locked = !editable || save.isPending
   const onName = typed(setName)
   const onRole = typed(setRole)
   const onEmail = typed(setEmail)
@@ -77,7 +79,7 @@ function ContactSection({
               className={inputClass}
               maxLength={120}
               value={name}
-              disabled={!editable}
+              disabled={locked}
               onChange={(e) => onName(e.target.value)}
             />
           )}
@@ -89,7 +91,7 @@ function ContactSection({
               className={inputClass}
               maxLength={120}
               value={role}
-              disabled={!editable}
+              disabled={locked}
               onChange={(e) => onRole(e.target.value)}
             />
           )}
@@ -101,7 +103,7 @@ function ContactSection({
               className={inputClass}
               maxLength={254}
               value={email}
-              disabled={!editable}
+              disabled={locked}
               onChange={(e) => onEmail(e.target.value)}
             />
           )}
@@ -113,7 +115,7 @@ function ContactSection({
               className={inputClass}
               maxLength={30}
               value={phone}
-              disabled={!editable}
+              disabled={locked}
               onChange={(e) => onPhone(e.target.value)}
             />
           )}
@@ -125,7 +127,7 @@ function ContactSection({
               className={inputClass}
               maxLength={500}
               value={link}
-              disabled={!editable}
+              disabled={locked}
               onChange={(e) => onLink(e.target.value)}
             />
           )}
@@ -166,6 +168,7 @@ function SourceSection({
     kind !== (source?.kind ?? null) ||
     (kind === 'hiring_firm' && firm !== (source?.firm_name ?? ''))
   useReportUnsaved(changed || save.isPending || save.isError)
+  const locked = !editable || save.isPending
   const choices: { value: 'direct' | 'hiring_firm' | null; label: string }[] = [
     { value: 'direct', label: 'Direct' },
     { value: 'hiring_firm', label: 'Through a hiring firm' },
@@ -190,7 +193,7 @@ function SourceSection({
               type="radio"
               name={group}
               checked={kind === choice.value}
-              disabled={!editable}
+              disabled={locked}
               onChange={() => {
                 setKind(choice.value)
                 setDirty(true)
@@ -208,7 +211,7 @@ function SourceSection({
               className={inputClass}
               maxLength={120}
               value={firm}
-              disabled={!editable}
+              disabled={locked}
               onChange={(e) => {
                 setFirm(e.target.value)
                 setDirty(true)
@@ -320,11 +323,12 @@ export function InterviewPanel({
   const saveSource = useSaveSource(jobId)
 
   if (interview.isPending) return <p>Loading…</p>
-  if (interview.isError) {
+  // A failed refresh keeps what was loaded: swapping the forms for an error would drop edits.
+  const data = interview.data
+  if (data === undefined) {
     // a job outside the pipeline with nothing to show stays quiet
     return hideWhenEmpty ? null : <p role="alert">Could not load the details.</p>
   }
-  const data = interview.data
   if (hideWhenEmpty && !data.can_edit && !data.contact && !data.source && data.rounds.length === 0)
     return null
 

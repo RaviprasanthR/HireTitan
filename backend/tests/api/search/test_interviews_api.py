@@ -679,3 +679,51 @@ async def test_questions_added_at_once_get_distinct_positions(env: Env) -> None:
     assert (first.status_code, second.status_code) == (201, 201)
     last = second.json() if len(second.json()["rounds"][0]["questions"]) == 2 else first.json()
     assert sorted(q["position"] for q in last["rounds"][0]["questions"]) == [1, 2]
+
+
+# --- T020 final review fixes --------------------------------------------------------------------
+
+
+async def test_review_a_link_that_is_too_long_once_https_is_added_is_a_field_error(
+    env: Env,
+) -> None:
+    job_id = await add_job(env)
+    # 500 characters as typed, 508 once "https://" is put in front of the bare host
+    link = "linkedin.com/in/" + "a" * 484
+
+    response = await env.client.put(
+        url(job_id, "/contact"), json={"name": "Asha", "linkedin_url": link}
+    )
+
+    assert response.status_code == 422
+    assert [e["field"] for e in response.json()["errors"]] == ["linkedin_url"]
+
+
+async def test_review_contact_save_waits_for_a_delete_in_flight(env: Env) -> None:
+    import asyncio
+
+    from hiretitan.search.infra.interviews_repo import InterviewsRepo
+    from hiretitan.search.infra.models import JobRow, PipelineDetailsRow
+
+    job_id = await add_job(env)
+    holding = asyncio.Event()
+
+    async def delete_slowly() -> None:
+        async with env.sessions() as session:
+            await InterviewsRepo(session).lock_job(job_id)
+            holding.set()
+            await asyncio.sleep(0.3)
+            row = await session.get_one(JobRow, job_id)
+            row.state = "deleted"
+            row.applied_on = None
+            await InterviewsRepo(session).delete_for_job(job_id)
+            await session.commit()
+
+    deleting = asyncio.create_task(delete_slowly())
+    await holding.wait()
+    response = await env.client.put(url(job_id, "/contact"), json={"name": "Asha Rao"})
+    await deleting
+
+    assert response.status_code == 404
+    async with env.sessions() as session:
+        assert await session.get(PipelineDetailsRow, job_id) is None

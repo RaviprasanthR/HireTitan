@@ -219,6 +219,8 @@ class InterviewsWriter(Protocol):
 
     async def set_source(self, job_id: UUID, kind: str | None, firm_name: str | None) -> None: ...
 
+    async def lock_job(self, job_id: UUID) -> None: ...
+
 
 async def _writable_job(jobs: JobsLookup, job_id: UUID) -> StoredJob:
     job = await jobs.get(job_id)
@@ -243,6 +245,7 @@ async def save_contact(
     linkedin_url: str | None = None,
 ) -> None:
     """Replace the point of contact; email, phone and link are checked (FR-002)."""
+    await store.lock_job(job_id)  # so a delete or merge cannot slip in between check and write
     await _writable_job(jobs, job_id)
     fields, issues = check_contact(
         name=name, role=role, email=email, phone=phone, linkedin_url=linkedin_url
@@ -253,6 +256,7 @@ async def save_contact(
 
 
 async def remove_contact(jobs: JobsLookup, store: InterviewsWriter, job_id: UUID) -> None:
+    await store.lock_job(job_id)
     await _writable_job(jobs, job_id)
     await store.clear_contact(job_id)
 
@@ -266,6 +270,7 @@ async def save_source(
     firm_name: str | None = None,
 ) -> None:
     """How the job came: direct, through a hiring firm (with its name) or not set (FR-003)."""
+    await store.lock_job(job_id)
     await _writable_job(jobs, job_id)
     checked, issues = check_source(kind, firm_name)
     if checked is None:

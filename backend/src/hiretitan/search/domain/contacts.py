@@ -73,6 +73,8 @@ def normalize_link(raw: str) -> str | None:
         candidate = f"https://{text}"
     else:
         return None
+    if len(candidate) > LINK_MAX:  # a bare host gained "https://", and the stored value is capped
+        return None
     parts = urlsplit(candidate)
     if parts.scheme.lower() not in ("http", "https") or not parts.hostname:
         return None

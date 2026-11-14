@@ -93,16 +93,16 @@ class InterviewOut(BaseModel):
 
 class ContactIn(BaseModel):
     # a default, so a missing name is reported field by field like any other bad value
-    name: str = ""
-    role: str | None = None
-    email: str | None = None
-    phone: str | None = None
-    linkedin_url: str | None = None
+    name: str = Field(default="", max_length=2_000)
+    role: str | None = Field(default=None, max_length=2_000)
+    email: str | None = Field(default=None, max_length=2_000)
+    phone: str | None = Field(default=None, max_length=2_000)
+    linkedin_url: str | None = Field(default=None, max_length=2_000)
 
 
 class SourceIn(BaseModel):
-    kind: str | None = None
-    firm_name: str | None = None
+    kind: str | None = Field(default=None, max_length=100)
+    firm_name: str | None = Field(default=None, max_length=2_000)
 
 
 class RoundIn(BaseModel):
