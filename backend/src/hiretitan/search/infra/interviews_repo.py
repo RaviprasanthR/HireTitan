@@ -7,7 +7,7 @@ Kept apart from the other repositories so an import-linter contract can forbid e
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 from uuid import UUID
 
@@ -62,7 +62,12 @@ class InterviewsRepo:
 
     async def _prune(self, job_id: UUID) -> None:
         row = await self._session.get(PipelineDetailsRow, job_id, populate_existing=True)
-        if row is not None and row.contact_name is None and row.source is None:
+        if (
+            row is not None
+            and row.contact_name is None
+            and row.source is None
+            and row.resume_name is None
+        ):
             await self._session.execute(
                 delete(PipelineDetailsRow).where(PipelineDetailsRow.job_id == job_id)
             )
@@ -93,6 +98,34 @@ class InterviewsRepo:
         row.firm_name = firm_name
         await self._session.flush()
         await self._prune(job_id)
+
+    # the resume used (feature 002f)
+
+    async def set_resume(self, job_id: UUID, file_id: UUID, name: str, added_on: date) -> None:
+        """Record a stored file as the job's resume: the link, and a copy of its name and the day
+        it was added, so the name stays as a note if the file is removed later."""
+        row = await self._details_row(job_id)
+        row.resume_file_id = file_id
+        row.resume_name = name
+        row.resume_added_on = added_on
+        await self._session.flush()
+
+    async def clear_resume(self, job_id: UUID) -> None:
+        """Forget the job's resume, or its removed-file note; drop the row if nothing is left."""
+        row = await self._session.get(PipelineDetailsRow, job_id, populate_existing=True)
+        if row is None:
+            return
+        row.resume_file_id = row.resume_name = row.resume_added_on = None
+        await self._prune(job_id)
+
+    async def usage(self) -> dict[UUID, int]:
+        """How many jobs point at each stored file (a removed note points at none)."""
+        rows = await self._session.execute(
+            select(PipelineDetailsRow.resume_file_id, func.count())
+            .where(PipelineDetailsRow.resume_file_id.is_not(None))
+            .group_by(PipelineDetailsRow.resume_file_id)
+        )
+        return {file_id: count for file_id, count in rows if file_id is not None}
 
     # reading
 
