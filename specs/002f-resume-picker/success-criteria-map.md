@@ -16,10 +16,10 @@ Each success criterion of [spec.md](spec.md) and the tests that prove it. Backen
 | Gate | Result |
 |---|---|
 | `ruff check`, `ruff format --check`, `mypy --strict`, `lint-imports` | clean (8 contracts kept) |
-| Backend tests with coverage | 1639 passed, 8 skipped (image tests, career-ops checkout, private deny list); coverage gate passed |
+| Backend tests with coverage | 1638 passed, 8 skipped (image tests, career-ops checkout, private deny list); coverage gate passed on the T016 run (1639 tests; one redundant unit test was removed in T017) |
 | `pip-audit --skip-editable` | no known vulnerabilities |
 | Backend licence gate | passed (81 packages) |
-| Frontend `tsc`, `eslint`, tests with coverage | clean (0 errors, 1 old warning); 458 tests; lines 92.5% |
+| Frontend `tsc`, `eslint`, tests with coverage | clean (0 errors, 1 old warning); 462 tests after T017 (458 and 92.5% lines on the T016 coverage run) |
 | Frontend `npm run build` | passed |
 | `npm audit --omit=dev`, licence check | 0 vulnerabilities; licence check exit 0 (101 packages) |
 | Playwright (company contacts, job search with the resume step, setup and profile) | 3 passed against a stack built from the branch |
