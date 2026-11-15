@@ -176,6 +176,40 @@ def test_0016_inquired_up_down(
         engine.dispose()
 
 
+def test_0019_resume_picker_up_down(
+    fresh_database_url: str, make_alembic_config: Callable[[str], Config]
+) -> None:
+    """002f: 0019 adds the resume columns and the one-row settings table; downgrading removes
+    them and leaves the 0018 tables as they were."""
+    cfg = make_alembic_config(fresh_database_url)
+    columns = {"resume_file_id", "resume_name", "resume_added_on"}
+    command.upgrade(cfg, "0018")
+    engine = create_engine(fresh_database_url)
+    try:
+        details = {
+            c["name"] for c in inspect(engine).get_columns("job_pipeline_details", schema="app")
+        }
+        assert not columns & details
+        assert "pipeline_settings" not in inspect(engine).get_table_names(schema="app")
+
+        command.upgrade(cfg, "0019")
+        details = {
+            c["name"] for c in inspect(engine).get_columns("job_pipeline_details", schema="app")
+        }
+        assert columns <= details
+        assert "pipeline_settings" in inspect(engine).get_table_names(schema="app")
+
+        command.downgrade(cfg, "0018")
+        details = {
+            c["name"] for c in inspect(engine).get_columns("job_pipeline_details", schema="app")
+        }
+        assert not columns & details
+        assert "pipeline_settings" not in inspect(engine).get_table_names(schema="app")
+        assert "job_pipeline_details" in inspect(engine).get_table_names(schema="app")
+    finally:
+        engine.dispose()
+
+
 def test_0018_interview_tracking_up_down(
     fresh_database_url: str, make_alembic_config: Callable[[str], Config]
 ) -> None:
