@@ -47,16 +47,15 @@ test('SC002_job_search_journey', async ({ page, request }) => {
   await page.getByLabel('Target roles').press('Enter')
   await page.getByRole('button', { name: 'Finish setup' }).click()
   await expect(page.getByRole('heading', { name: 'Jobs', level: 1 })).toBeVisible()
-  // Home opens on In pipeline (empty at first); the checklist and the search live in Explore.
+  // Home opens on In pipeline (empty at first); the search lives in Explore.
   await expect(page.getByRole('link', { name: 'In pipeline' })).toHaveAttribute('aria-current', 'page')
   await page.getByRole('link', { name: 'Explore' }).click()
 
-  // 1. The checklist asks for the rules.
-  await expect(page.getByRole('link', { name: 'Review your search rules' })).toBeVisible()
+  // 1. Explore does not show the setup checklist.
+  await expect(page.getByRole('list', { name: 'Setup checklist' })).toHaveCount(0)
 
-  // 2. Search rules: proposed from the profile, then approved.
-  await page.getByRole('link', { name: 'Review your search rules' }).click()
-  await expect(page).toHaveURL(/\/profile\/search-rules$/)
+  // 2. Search rules (a Profile tab): proposed from the profile, then approved.
+  await page.goto('/profile/search-rules')
   await page.getByRole('button', { name: 'Suggest rules' }).click()
   await expect(page.getByRole('region', { name: /job titles/i })).toBeVisible()
   await page.getByRole('button', { name: /approve/i }).click()

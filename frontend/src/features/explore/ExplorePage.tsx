@@ -4,7 +4,6 @@ import { useStatus } from '@/api/useStatus'
 import { Button } from '@/components/ui/button'
 import { PipelineControl } from '@/features/jobs/PipelineControl'
 import { PasteJobDialog } from '@/features/jobs/PasteJobDialog'
-import { SetupChecklist } from '@/features/home/HomePage'
 import { setupIsDone } from '@/features/home/setup'
 import { DuplicatesPanel } from './DuplicatesPanel'
 import { ReviewNotice } from '@/features/home/ReviewNotice'
@@ -187,7 +186,6 @@ export function ExplorePage() {
       <ReviewNotice />
       <HomeTabs />
       {adding && <PasteJobDialog onClose={() => setAdding(false)} />}
-      {status.data && !setupDone && <SetupChecklist showAllSet={false} />}
       {setupDone && <SearchPanel />}
       {setupDone && <DuplicatesPanel />}
       {company_id && (

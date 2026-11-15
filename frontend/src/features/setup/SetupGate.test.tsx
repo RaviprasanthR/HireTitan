@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -79,6 +79,23 @@ describe('SetupGate', () => {
       'aria-valuenow',
       String(step),
     )
+  })
+
+  it.each([
+    [1, '25%'],
+    [2, '50%'],
+    [3, '75%'],
+    [4, '100%'],
+  ] as const)('the_step_bar_fill_is_visible_at_step %s', async (step, width) => {
+    renderAt('/', step)
+    const bar = await screen.findByRole('progressbar', { name: 'Setup progress' })
+    // the themed track and fill, not the navy `bg-primary` that matches the track's colour
+    expect(bar).toHaveClass('ht-progress')
+    // orange, the brand accent: green is kept for "done", and the resume bar
+    expect(bar).toHaveAttribute('data-tone', 'accent')
+    const fill = within(bar).getByTestId('progress-fill')
+    expect(fill).toHaveClass('ht-progress-fill')
+    expect(fill).toHaveStyle({ width })
   })
 
   it('going_back_to_the_name_lowers_the_step_bar', async () => {

@@ -95,6 +95,9 @@ h3 {
   border-radius: 9999px;
   background: var(--ht-divider);
 }
+.ht-progress[data-tone="accent"] {
+  --ht-progress-fill: var(--ht-accent);
+}
 .ht-progress[data-tone="warning"] {
   --ht-progress-fill: #d29922;
 }
