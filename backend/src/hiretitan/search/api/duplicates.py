@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from hiretitan.platform.clock import ClockPort
 from hiretitan.platform.web.problems import ProblemError
-from hiretitan.search.api.models import JobCardOut, job_cards
+from hiretitan.search.api.models import JobCardOut, job_cards, with_resumes
 from hiretitan.search.domain.job_state import JobState
 from hiretitan.search.infra.interviews_repo import InterviewsRepo
 from hiretitan.search.infra.models import JobRow, JobSourceRow, PossibleDuplicateRow
@@ -55,7 +55,9 @@ def create_duplicates_router(deps: SearchDuplicatesApiDeps) -> APIRouter:
     ) -> list[DuplicatePairOut]:
         ids = {j for p in pairs for j in (p.job_a_id, p.job_b_id)}
         rows = list(await session.scalars(select(JobRow).where(JobRow.id.in_(ids)))) if ids else []
-        cards = {c.id: c for c in await job_cards(session, rows)}
+        found_cards = await job_cards(session, rows)
+        await with_resumes(session, found_cards)  # a pair can hold a pipeline job
+        cards = {c.id: c for c in found_cards}
         return [
             DuplicatePairOut(
                 id=p.id,

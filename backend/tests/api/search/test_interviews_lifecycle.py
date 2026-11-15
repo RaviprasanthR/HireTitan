@@ -27,6 +27,7 @@ from hiretitan.search.infra.models import (
     PipelineDetailsRow,
 )
 from hiretitan.search.infra.repos import CompaniesRepo, DuplicatesRepo, JobsRepo
+from hiretitan.search_wiring import SqlResumeLookup
 
 NOW = datetime(2026, 11, 6, 9, tzinfo=UTC)
 TODAY = date(2026, 11, 6)
@@ -52,9 +53,13 @@ async def env(sessions: async_sessionmaker[AsyncSession], tmp_path: Path) -> Asy
         routers=[
             create_duplicates_router(SearchDuplicatesApiDeps(sessions=sessions, clock=clock)),
             create_search_jobs_router(
-                SearchJobsApiDeps(sessions=sessions, queue=_Queue(), clock=clock)
+                SearchJobsApiDeps(
+                    sessions=sessions, queue=_Queue(), clock=clock, resume_lookup=SqlResumeLookup
+                )
             ),
-            create_interviews_router(SearchInterviewsApiDeps(sessions=sessions)),
+            create_interviews_router(
+                SearchInterviewsApiDeps(sessions=sessions, resume_lookup=SqlResumeLookup)
+            ),
         ],
     )
     async with httpx.AsyncClient(

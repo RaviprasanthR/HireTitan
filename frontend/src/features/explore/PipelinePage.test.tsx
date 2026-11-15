@@ -1,9 +1,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { stubApi } from '@/test/api'
+import { problem, stubApi } from '@/test/api'
 import { UndoToast } from '@/features/jobs/UndoToast'
 import { PipelinePage } from './PipelinePage'
 
@@ -36,8 +36,11 @@ function inquired(id: string, title: string, day: string) {
   }
 }
 
-function renderPage() {
-  let rows = [applied('a', 'Newest', '2026-11-05'), inquired('b', 'Older', '2026-10-01')]
+function renderPage(initial?: unknown[]) {
+  let rows = (initial as ReturnType<typeof applied>[] | undefined) ?? [
+    applied('a', 'Newest', '2026-11-05'),
+    inquired('b', 'Older', '2026-10-01'),
+  ]
   const calls = stubApi((call) => {
     if (call.method === 'DELETE' && call.path === '/jobs/a/applied') {
       rows = rows.filter((row) => row.id !== 'a')
@@ -74,7 +77,7 @@ describe('PipelinePage', () => {
       within(table)
         .getAllByRole('columnheader')
         .map((header) => header.textContent),
-    ).toEqual(['Company', 'Role', 'Date', 'Status', 'Source', ''])
+    ).toEqual(['Company', 'Role', 'Date', 'Status', 'Resume', 'Source', ''])
     const [, newest, older] = within(table).getAllByRole('row')
     if (!newest || !older) throw new Error('expected two rows')
     expect(within(newest).getByRole('link', { name: 'Newest' })).toBeInTheDocument()
@@ -154,6 +157,7 @@ describe('PipelinePage', () => {
           source: { kind: 'hiring_firm', firm_name: 'TalentBridge' },
           rounds: [],
           status: { state: 'applied', round: null },
+          resume: { state: 'none', resume_file_id: null, name: null, added_on: null },
         }
       if (call.path === '/jobs/a')
         return {
@@ -271,6 +275,7 @@ describe('PipelinePage', () => {
           source: null,
           rounds: [],
           status: { state: 'applied', round: null },
+          resume: { state: 'none', resume_file_id: null, name: null, added_on: null },
         }
       }
       if (call.path.startsWith('/jobs?'))
@@ -482,6 +487,7 @@ describe('PipelinePage unsaved edits', () => {
     source: null,
     rounds: [],
     status: { state: 'applied', round: null },
+    resume: { state: 'none', resume_file_id: null, name: null, added_on: null },
   }
 
   function renderOpenable() {
@@ -558,4 +564,250 @@ describe('PipelinePage unsaved edits', () => {
     expect(await screen.findByText('Nothing yet.')).toBeInTheDocument()
     expect(screen.queryByLabelText('Contact name')).not.toBeInTheDocument()
   })
+
+  describe('the resume column (feature 002f)', () => {
+    const chosen = {
+      state: 'chosen',
+      resume_file_id: 'f1',
+      name: 'Backend_2025.pdf',
+      added_on: '2026-10-02',
+    }
+    const none = { state: 'none', resume_file_id: null, name: null, added_on: null }
+    const resumeCell = (row: HTMLElement) => within(row).getAllByRole('cell')[4] as HTMLElement
+
+    async function rowsFor(...resumes: (unknown | undefined)[]) {
+      const jobs = resumes.map((resume, i) => ({
+        ...applied(`j${i}`, `Job ${i}`, '2026-11-05'),
+        ...(resume === undefined ? {} : { resume }),
+      }))
+      renderPage(jobs)
+      const table = await screen.findByRole('table', { name: 'Pipeline jobs' })
+      return within(table).getAllByRole('row').slice(1)
+    }
+
+    it('US2 AS1 shows the name of the resume used', async () => {
+      const [row] = await rowsFor(chosen)
+
+      expect(resumeCell(row as HTMLElement)).toHaveTextContent('Backend_2025.pdf')
+    })
+
+    it('US2 AS2 shows a dash without a resume', async () => {
+      const [withNone, withoutField] = await rowsFor(none, undefined)
+
+      expect(resumeCell(withNone as HTMLElement)).toHaveTextContent('—')
+      expect(resumeCell(withoutField as HTMLElement)).toHaveTextContent('—')
+    })
+
+    it('US2 AS4 shortens a long name and keeps the full name in a title', async () => {
+      const long = `${'Backend_Engineer_Resume_'.repeat(6)}2025.pdf`
+      const [row] = await rowsFor({ ...chosen, name: long })
+
+      // the whole name is on the element's title; jsdom does no layout, so the cutting itself
+      // is a styling matter that a browser run shows
+      const name = within(resumeCell(row as HTMLElement)).getByText(long)
+      expect(name).toHaveAttribute('title', long)
+    })
+
+    it('FR009 keeps the removed marker visible when a long name is cut short', async () => {
+      const long = `${'Backend_Engineer_Resume_'.repeat(6)}2024.pdf`
+      const [row] = await rowsFor({
+        state: 'removed',
+        resume_file_id: null,
+        name: long,
+        added_on: '2025-03-14',
+      })
+
+      const cell = resumeCell(row as HTMLElement)
+      // the marker is its own element, apart from the name that can be cut short
+      const marker = within(cell).getByText('(removed)')
+      expect(marker).toBeInTheDocument()
+      expect(marker).not.toContainElement(within(cell).getByText(long))
+      expect(cell).toHaveTextContent(`${long} (removed)`)
+    })
+
+    it('FR009 shows a removed file as its name marked removed', async () => {
+      const [row] = await rowsFor({
+        state: 'removed',
+        resume_file_id: null,
+        name: 'Backend_2024.pdf',
+        added_on: '2025-03-14',
+      })
+
+      expect(resumeCell(row as HTMLElement)).toHaveTextContent('Backend_2024.pdf (removed)')
+    })
+  })
+
+  describe('the resume in the opened row (feature 002f)', () => {
+    it('US2 AS3 shows the name and the day it was added', async () => {
+      const user = userEvent.setup()
+      const job = {
+        ...applied('j0', 'Job 0', '2026-11-05'),
+        resume: {
+          state: 'chosen',
+          resume_file_id: 'f1',
+          name: 'Backend_2025.pdf',
+          added_on: '2026-10-02',
+        },
+      }
+      stubApi((call) => {
+        if (call.path === '/jobs/j0')
+          return { ...job, description: 'd', city: null, country: null, skills_found: [] }
+        if (call.path === '/jobs/j0/interview')
+          return {
+            job_id: 'j0',
+            can_edit: true,
+            can_add_round: true,
+            contact: null,
+            source: null,
+            rounds: [],
+            status: { state: 'applied', round: null },
+            resume: job.resume,
+          }
+        if (call.path.startsWith('/jobs?')) return { items: [job], next_cursor: null }
+        return undefined
+      })
+      render(
+        <QueryClientProvider
+          client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+        >
+          <MemoryRouter>
+            <PipelinePage />
+          </MemoryRouter>
+        </QueryClientProvider>,
+      )
+
+      await user.click(await screen.findByRole('button', { name: /Details for/ }))
+
+      expect(await screen.findByText('Backend_2025.pdf · added 2 Oct 2026')).toBeInTheDocument()
+    })
+  })
 })
+
+describe('the edit card resume guard (feature 002f)', () => {
+  const file = {
+    id: 'f1',
+    kind: 'upload_pdf',
+    original_name: 'Backend_2025.pdf',
+    size_bytes: 1000,
+    page_count: 1,
+    parse_status: 'parsed',
+    parse_result: null,
+    created_at: '2026-10-02T09:00:00Z',
+    has_open_review: false,
+    open_review_id: null,
+  }
+
+  it('US3 AS3 closing the card with an unsaved resume change asks first', async () => {
+    const user = userEvent.setup()
+    stubApi((call) => {
+      if (call.path === '/resumes') return [file]
+      if (call.path === '/pipeline/resumes') return { last_choice: null, usage: [] }
+      if (call.path === '/jobs/a')
+        return {
+          ...applied('a', 'Newest', '2026-11-05'),
+          description: 'd',
+          canonical_url: null,
+          injection_flags: [],
+          decision_history: [],
+          first_search_id: null,
+          company_id: null,
+          location_text: null,
+        }
+      if (call.path === '/jobs/a/interview')
+        return {
+          job_id: 'a',
+          can_edit: true,
+          can_add_round: true,
+          contact: null,
+          source: null,
+          rounds: [],
+          status: { state: 'applied', round: null },
+          resume: { state: 'none', resume_file_id: null, name: null, added_on: null },
+        }
+      if (call.path.startsWith('/jobs?'))
+        return { items: [applied('a', 'Newest', '2026-11-05')], next_cursor: null }
+      return undefined
+    })
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter>
+          <PipelinePage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+    await user.click(await screen.findByRole('button', { name: /^Edit / }))
+    const card = await screen.findByRole('dialog', { name: /^Edit / })
+    await user.selectOptions(await within(card).findByRole('combobox', { name: 'Resume file' }), 'f1')
+
+    await user.click(within(card).getByRole('button', { name: 'Close' }))
+
+    expect(await screen.findByRole('alertdialog')).toBeInTheDocument()
+  })
+
+  it('after a refused save the form is clean, so closing the card does not ask', async () => {
+    const user = userEvent.setup()
+    const removed = {
+      state: 'removed',
+      resume_file_id: null,
+      name: 'Backend_2025.pdf',
+      added_on: '2026-10-02',
+    }
+    let refused = false
+    stubApi((call) => {
+      if (call.path === '/resumes') return [file]
+      if (call.path === '/pipeline/resumes') return { last_choice: null, usage: [] }
+      if (call.path === '/jobs/a/interview/resume') {
+        refused = true
+        return problem(422, 'Choose one of your stored resume files.', {
+          errors: [{ field: 'resume_file_id', message: 'Choose one of your stored resume files.' }],
+        })
+      }
+      if (call.path === '/jobs/a')
+        return {
+          ...applied('a', 'Newest', '2026-11-05'),
+          description: 'd',
+          canonical_url: null,
+          injection_flags: [],
+          decision_history: [],
+          first_search_id: null,
+          company_id: null,
+          location_text: null,
+        }
+      if (call.path === '/jobs/a/interview')
+        return {
+          job_id: 'a',
+          can_edit: true,
+          can_add_round: true,
+          contact: null,
+          source: null,
+          rounds: [],
+          status: { state: 'applied', round: null },
+          // the file was removed meanwhile: a read after the refusal shows the note
+          resume: refused
+            ? removed
+            : { state: 'none', resume_file_id: null, name: null, added_on: null },
+        }
+      if (call.path.startsWith('/jobs?'))
+        return { items: [applied('a', 'Newest', '2026-11-05')], next_cursor: null }
+      return undefined
+    })
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter>
+          <PipelinePage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+    await user.click(await screen.findByRole('button', { name: /^Edit / }))
+    const card = await screen.findByRole('dialog', { name: /^Edit / })
+    await user.selectOptions(await within(card).findByRole('combobox', { name: 'Resume file' }), 'f1')
+    await user.click(within(card).getByRole('button', { name: 'Save resume' }))
+    await within(card).findByText(/Backend_2025.pdf \(removed\)/)
+
+    await user.click(within(card).getByRole('button', { name: 'Close' }))
+
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  })
+})
+

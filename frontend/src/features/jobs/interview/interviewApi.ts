@@ -27,15 +27,42 @@ export function useInterview(jobId: string) {
 }
 
 /** Every write answers with the whole interview, so the panel redraws from one response. */
-function useWrite<Input>(jobId: string, send: (input: Input) => Promise<Interview>) {
+function useWrite<Input>(
+  jobId: string,
+  send: (input: Input) => Promise<Interview>,
+  options: { refreshOnError?: boolean } = {},
+) {
   const client = useQueryClient()
   return useMutation({
     mutationFn: send,
     onSuccess: async (interview) => {
       client.setQueryData(key(jobId), interview)
-      await client.invalidateQueries({ queryKey: ['jobs'] }) // the Status column
+      await client.invalidateQueries({ queryKey: ['jobs'] }) // the Status and Resume columns
+      await client.invalidateQueries({ queryKey: ['pipeline-resumes'] }) // how many jobs use a file
     },
+    // a refusal may mean what the form shows is out of date: read the job and the files again
+    onError: options.refreshOnError
+      ? async () => {
+          await client.invalidateQueries({ queryKey: key(jobId) })
+          await client.invalidateQueries({ queryKey: ['resumes'] })
+        }
+      : undefined,
   })
+}
+
+/** Sets the job's resume to a stored file, or forgets it (and a removed file's note) for null. */
+export function useSaveResume(jobId: string) {
+  return useWrite(
+    jobId,
+    (fileId: string | null) =>
+      fileId
+        ? apiFetch<Interview>(`/jobs/${jobId}/interview/resume`, {
+            method: 'PUT',
+            json: { resume_file_id: fileId },
+          })
+        : apiFetch<Interview>(`/jobs/${jobId}/interview/resume`, { method: 'DELETE' }),
+    { refreshOnError: true },
+  )
 }
 
 export function useSaveContact(jobId: string) {

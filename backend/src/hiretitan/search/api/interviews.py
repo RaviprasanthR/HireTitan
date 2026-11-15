@@ -6,6 +6,7 @@ or hands data to an AI step (FR-010).
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from typing import Any, Literal
@@ -16,6 +17,7 @@ from pydantic import AwareDatetime, BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from hiretitan.platform.web.problems import ProblemError, problem
+from hiretitan.search.api.models import ResumeChoiceOut
 from hiretitan.search.application.interviews import (
     InterviewInputError,
     InterviewView,
@@ -35,6 +37,7 @@ from hiretitan.search.application.interviews import (
     update_question,
     update_round,
 )
+from hiretitan.search.application.resume_choice import ResumeLookup, choose_for_job, clear_for_job
 from hiretitan.search.infra.interviews_repo import InterviewsRepo
 from hiretitan.search.infra.repos import JobsRepo
 
@@ -42,6 +45,8 @@ from hiretitan.search.infra.repos import JobsRepo
 @dataclass(frozen=True)
 class SearchInterviewsApiDeps:
     sessions: async_sessionmaker[AsyncSession]
+    # Checks a stored resume file for the "Resume used" choice (feature 002f).
+    resume_lookup: Callable[[AsyncSession], ResumeLookup]
 
 
 class PipelineContactOut(BaseModel):
@@ -89,6 +94,11 @@ class InterviewOut(BaseModel):
     source: SourceOut | None
     rounds: list[RoundOut]
     status: InterviewStatusOut
+    resume: ResumeChoiceOut
+
+
+class ResumeIn(BaseModel):
+    resume_file_id: UUID
 
 
 class ContactIn(BaseModel):
@@ -199,6 +209,42 @@ def create_interviews_router(deps: SearchInterviewsApiDeps) -> APIRouter:
             jobs, store = JobsRepo(session), InterviewsRepo(session)
             try:
                 await remove_contact(jobs, store, job_id)
+                view = await read_interview(jobs, store, job_id)
+            except JobNotFoundError as error:
+                raise _no_job() from error
+            except NotInPipelineError as error:
+                raise _not_in_pipeline(error) from error
+            await session.commit()
+        return _out(view)
+
+    @router.put("/jobs/{job_id}/interview/resume", response_model=InterviewOut)
+    async def put_resume(job_id: UUID, body: ResumeIn) -> Any:
+        """Set or change the resume used for a pipeline job. Only marking a job changes the
+        starting value of the choice, so this does not (feature 002f, FR-014)."""
+        async with deps.sessions() as session:
+            jobs, store = JobsRepo(session), InterviewsRepo(session)
+            try:
+                await choose_for_job(
+                    jobs, deps.resume_lookup(session), store, job_id, body.resume_file_id
+                )
+                view = await read_interview(jobs, store, job_id)
+            except JobNotFoundError as error:
+                raise _no_job() from error
+            except NotInPipelineError as error:
+                raise _not_in_pipeline(error) from error
+            except InterviewInputError as error:
+                await session.rollback()
+                return _invalid(error)
+            await session.commit()
+        return _out(view)
+
+    @router.delete("/jobs/{job_id}/interview/resume", response_model=InterviewOut)
+    async def delete_resume(job_id: UUID) -> InterviewOut:
+        """Forget the resume used, or the note a removed file left behind."""
+        async with deps.sessions() as session:
+            jobs, store = JobsRepo(session), InterviewsRepo(session)
+            try:
+                await clear_for_job(jobs, store, job_id)
                 view = await read_interview(jobs, store, job_id)
             except JobNotFoundError as error:
                 raise _no_job() from error

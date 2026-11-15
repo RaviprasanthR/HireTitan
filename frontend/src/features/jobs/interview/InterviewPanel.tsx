@@ -1,4 +1,4 @@
-import { useCallback, useId, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Field, inputClass } from '@/features/companies/Field'
 import { errorOf } from './errors'
@@ -11,8 +11,11 @@ import {
   useAddRound,
   useInterview,
   useSaveContact,
+  useSaveResume,
   useSaveSource,
 } from './interviewApi'
+import { ResumeSelect } from '@/features/jobs/resume/ResumeSelect'
+import { resumeDetail, useResumeOptions } from '@/features/jobs/resume/resumeApi'
 import { RoundCard } from './RoundCard'
 import {
   UnsavedContext,
@@ -293,6 +296,103 @@ function RoundsSection({ jobId, data }: { jobId: string; data: Interview }) {
   )
 }
 
+/**
+ * The resume used for the job (feature 002f): its name and the day it was added. When the job can
+ * be edited, a choice of the stored files with its own Save, as for the contact and the source;
+ * a removed file's name stays as a note with Clear.
+ */
+function ResumeSection({
+  resume,
+  editable,
+  save,
+}: {
+  resume: Interview['resume']
+  editable: boolean
+  save: ReturnType<typeof useSaveResume>
+}) {
+  const headingId = useId()
+  const files = useResumeOptions()
+  const stored = resume.state === 'chosen' && resume.resume_file_id ? resume.resume_file_id : ''
+  const [picked, setPicked] = useState(stored)
+  // after an edit the last result (saved, or a refusal) no longer describes the form
+  const [dirty, setDirty] = useState(false)
+  // The stored resume can change under the form (a save, a refresh, a file removed elsewhere).
+  // The form follows it unless the person has an edit in progress, which is never thrown away.
+  const identity = `${resume.state}|${resume.resume_file_id ?? ''}|${resume.name ?? ''}`
+  const [seen, setSeen] = useState(identity)
+  if (seen !== identity) {
+    setSeen(identity)
+    if (!dirty) setPicked(stored)
+  }
+  const result = dirty ? null : save
+  const changed = picked !== stored
+  // a refused save is shown as a message; it is only unsaved while the pick still differs
+  useReportUnsaved(editable && (changed || save.isPending))
+  // Save is disabled once nothing differs, and Clear goes with the note: a keyboard user would
+  // lose their place, so the focus goes to the select after a save or a clear.
+  const choice = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (save.isSuccess) choice.current?.querySelector('select')?.focus()
+  }, [save.isSuccess, save.submittedAt])
+
+  return (
+    <form
+      aria-labelledby={headingId}
+      className="space-y-2"
+      onSubmit={(event) => {
+        event.preventDefault()
+        setDirty(false)
+        save.mutate(picked === '' ? null : picked)
+      }}
+    >
+      <h3 id={headingId} className="text-sm font-semibold">
+        Resume used
+      </h3>
+      <p className="text-sm">{resumeDetail(resume)}</p>
+      {editable && (
+        <>
+          <div ref={choice} className="flex flex-wrap items-end gap-2">
+            <ResumeSelect
+              label="Resume file"
+              files={files.data ?? []}
+              value={picked}
+              disabled={save.isPending}
+              onChange={(value) => {
+                setPicked(value)
+                setDirty(true)
+              }}
+            />
+            {resume.state === 'removed' && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={save.isPending}
+                onClick={() => {
+                  setDirty(false)
+                  save.mutate(null)
+                }}
+              >
+                Clear
+              </Button>
+            )}
+          </div>
+          <div className="flex items-center gap-3">
+            <Button type="submit" size="sm" disabled={save.isPending || !changed}>
+              Save resume
+            </Button>
+            <Message
+              error={result?.error}
+              saved={result?.isSuccess ? 'Resume saved.' : null}
+              fields={[]}
+            />
+          </div>
+        </>
+      )}
+    </form>
+  )
+}
+
 /** What the person recorded about one pipeline job; shown in the pipeline row and on the job page. */
 export function InterviewPanel({
   jobId,
@@ -324,6 +424,7 @@ export function InterviewPanel({
   // the sections remount when the saved values change, so their save state lives here
   const saveContact = useSaveContact(jobId)
   const saveSource = useSaveSource(jobId)
+  const saveResume = useSaveResume(jobId)
 
   if (interview.isPending) return <p>Loading…</p>
   // A failed refresh keeps what was loaded: swapping the forms for an error would drop edits.
@@ -333,7 +434,15 @@ export function InterviewPanel({
     // a job outside the pipeline with nothing to show stays quiet
     return hideWhenEmpty ? null : <p role="alert">Could not load the details.</p>
   }
-  if (hideWhenEmpty && !data.can_edit && !data.contact && !data.source && data.rounds.length === 0)
+  const hasResume = data.resume.state !== 'none'
+  if (
+    hideWhenEmpty &&
+    !data.can_edit &&
+    !data.contact &&
+    !data.source &&
+    data.rounds.length === 0 &&
+    !hasResume
+  )
     return null
 
   return (
@@ -346,7 +455,7 @@ export function InterviewPanel({
             inquired to change them.
           </p>
         )}
-        {readOnly && !data.contact && !data.source && data.rounds.length === 0 ? (
+        {readOnly && !data.contact && !data.source && data.rounds.length === 0 && !hasResume ? (
           <p className="text-sm text-muted-small">Nothing yet.</p>
         ) : (
           <>
@@ -364,6 +473,13 @@ export function InterviewPanel({
                 source={data.source}
                 save={saveSource}
                 editable={data.can_edit}
+              />
+            )}
+            {(!readOnly || hasResume) && (
+              <ResumeSection
+                resume={data.resume}
+                editable={data.can_edit}
+                save={saveResume}
               />
             )}
             {(!readOnly || data.rounds.length > 0) && <RoundsSection jobId={jobId} data={data} />}

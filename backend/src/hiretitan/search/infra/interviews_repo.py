@@ -7,7 +7,7 @@ Kept apart from the other repositories so an import-linter contract can forbid e
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 from uuid import UUID
 
@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from hiretitan.search.domain.contacts import ContactFields
 from hiretitan.search.domain.interviews import RoundSummary, status_summary
+from hiretitan.search.domain.resume_choice import ResumeChoice, choice_from
 from hiretitan.search.infra.models import (
     InterviewQuestionRow,
     InterviewRoundRow,
@@ -62,7 +63,12 @@ class InterviewsRepo:
 
     async def _prune(self, job_id: UUID) -> None:
         row = await self._session.get(PipelineDetailsRow, job_id, populate_existing=True)
-        if row is not None and row.contact_name is None and row.source is None:
+        if (
+            row is not None
+            and row.contact_name is None
+            and row.source is None
+            and row.resume_name is None
+        ):
             await self._session.execute(
                 delete(PipelineDetailsRow).where(PipelineDetailsRow.job_id == job_id)
             )
@@ -93,6 +99,67 @@ class InterviewsRepo:
         row.firm_name = firm_name
         await self._session.flush()
         await self._prune(job_id)
+
+    # the resume used (feature 002f)
+
+    async def set_resume(self, job_id: UUID, file_id: UUID, name: str, added_on: date) -> None:
+        """Record a stored file as the job's resume: the link, and a copy of its name and the day
+        it was added, so the name stays as a note if the file is removed later."""
+        row = await self._details_row(job_id)
+        row.resume_file_id = file_id
+        row.resume_name = name
+        row.resume_added_on = added_on
+        await self._session.flush()
+
+    async def clear_resume(self, job_id: UUID) -> None:
+        """Forget the job's resume, or its removed-file note; drop the row if nothing is left."""
+        row = await self._session.get(PipelineDetailsRow, job_id, populate_existing=True)
+        if row is None:
+            return
+        row.resume_file_id = row.resume_name = row.resume_added_on = None
+        await self._prune(job_id)
+
+    async def resume_choices(self, job_ids: list[UUID]) -> dict[UUID, ResumeChoice]:
+        """The resume shown for each of these jobs that has one (chosen, or a removed note), in
+        one query; a job missing from the answer has none."""
+        if not job_ids:
+            return {}
+        rows = await self._session.execute(
+            select(
+                PipelineDetailsRow.job_id,
+                PipelineDetailsRow.resume_file_id,
+                PipelineDetailsRow.resume_name,
+                PipelineDetailsRow.resume_added_on,
+            ).where(
+                PipelineDetailsRow.job_id.in_(job_ids), PipelineDetailsRow.resume_name.is_not(None)
+            )
+        )
+        return {job_id: choice_from(file_id, name, day) for job_id, file_id, name, day in rows}
+
+    async def clear_resume_everywhere(self, file_id: UUID) -> None:
+        """Forget a stored file on every job that uses it, so removing the file leaves no name
+        behind (feature 002f, FR-009); a details row left empty is dropped."""
+        rows = (
+            await self._session.scalars(
+                select(PipelineDetailsRow)
+                .where(PipelineDetailsRow.resume_file_id == file_id)
+                .with_for_update()
+            )
+        ).all()
+        for row in rows:
+            row.resume_file_id = row.resume_name = row.resume_added_on = None
+        await self._session.flush()
+        for row in rows:
+            await self._prune(row.job_id)
+
+    async def usage(self) -> dict[UUID, int]:
+        """How many jobs point at each stored file (a removed note points at none)."""
+        rows = await self._session.execute(
+            select(PipelineDetailsRow.resume_file_id, func.count())
+            .where(PipelineDetailsRow.resume_file_id.is_not(None))
+            .group_by(PipelineDetailsRow.resume_file_id)
+        )
+        return {file_id: count for file_id, count in rows if file_id is not None}
 
     # reading
 
@@ -230,14 +297,16 @@ class InterviewsRepo:
 
     async def merge_details(self, keep_id: UUID, loser_id: UUID) -> None:
         """Fold the losing job's notes into the kept job (feature 002e, research R7): the kept
-        job's own contact and source stay, and the loser's fill them only when empty; the
+        job's own contact, source and resume stay, and the loser's fill them only when empty; the
         loser's rounds come over (renumbered 1..n, questions with them) only when the kept job
         has none. Whatever is left of the loser's notes is removed."""
         # one order for both rows, so two merges at once cannot wait on each other
         for job_id in sorted((keep_id, loser_id)):
             await self.lock_job(job_id)
         lost = await self._session.get(PipelineDetailsRow, loser_id, populate_existing=True)
-        if lost is not None and (lost.contact_name is not None or lost.source is not None):
+        if lost is not None and (
+            lost.contact_name is not None or lost.source is not None or lost.resume_name is not None
+        ):
             kept = await self._details_row(keep_id)
             if kept.contact_name is None and lost.contact_name is not None:
                 kept.contact_name = lost.contact_name
@@ -248,6 +317,12 @@ class InterviewsRepo:
             if kept.source is None and lost.source is not None:
                 kept.source = lost.source
                 kept.firm_name = lost.firm_name
+            if kept.resume_name is None and lost.resume_name is not None:
+                # the link, the name and the day come together (a check requires it); a removed
+                # file's note comes over as it is, with no link (feature 002f, FR-010)
+                kept.resume_file_id = lost.resume_file_id
+                kept.resume_name = lost.resume_name
+                kept.resume_added_on = lost.resume_added_on
             await self._session.flush()
         has_rounds = await self._session.scalar(
             select(func.count())

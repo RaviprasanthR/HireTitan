@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import binascii
 import json
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
@@ -25,7 +26,9 @@ from hiretitan.search.api.models import (
     JobCardOut,
     JobCardPage,
     job_cards,
+    with_resumes,
 )
+from hiretitan.search.application.interviews import InterviewInputError
 from hiretitan.search.application.paste import PasteError, PasteInput, paste_job
 from hiretitan.search.application.pipeline import (
     JobNotFoundError,
@@ -35,11 +38,13 @@ from hiretitan.search.application.pipeline import (
     undo_applied,
     undo_inquired,
 )
+from hiretitan.search.application.resume_choice import ResumeLookup, clear_for_job, record_on_mark
 from hiretitan.search.application.search import RunQueue
 from hiretitan.search.domain.job_state import IllegalJobTransitionError, JobState, transition
 from hiretitan.search.infra.interviews_repo import InterviewsRepo
 from hiretitan.search.infra.models import JobRow, JobSourceRow
 from hiretitan.search.infra.paste_store import SqlPasteStore
+from hiretitan.search.infra.pipeline_settings_repo import PipelineSettingsRepo
 from hiretitan.search.infra.repos import (
     Cursor,
     DecisionsRepo,
@@ -57,6 +62,8 @@ class SearchJobsApiDeps:
     sessions: async_sessionmaker[AsyncSession]
     queue: RunQueue
     clock: ClockPort
+    # Checks a stored resume file for the "Resume used" choice (feature 002f).
+    resume_lookup: Callable[[AsyncSession], ResumeLookup]
 
 
 class DecisionHistoryOut(DecisionOut):
@@ -70,10 +77,14 @@ class DecisionHistoryOut(DecisionOut):
 
 class AppliedIn(BaseModel):
     applied_on: date | None = None
+    # Absent: the job keeps the resume it has. Present: the job's resume is set to this stored
+    # file, or cleared for null (feature 002f, FR-001, FR-003).
+    resume_file_id: UUID | None = None
 
 
 class InquiredIn(BaseModel):
     inquired_on: date | None = None
+    resume_file_id: UUID | None = None
 
 
 class PasteIn(BaseModel):
@@ -134,8 +145,37 @@ def create_search_jobs_router(deps: SearchJobsApiDeps) -> APIRouter:
             raise _not_found()
         return row
 
+    async def record_resume(
+        session: AsyncSession, job_id: UUID, body: AppliedIn | InquiredIn | None
+    ) -> Any | None:
+        """Record the "Resume used" choice of a mark, in the mark's own transaction (002f).
+
+        Returns nothing when it is recorded or the request did not carry one. A refused file
+        returns the 422 answer, after rolling the whole mark back."""
+        if body is None or "resume_file_id" not in body.model_fields_set:
+            return None  # absent: nothing changes, and a one-click mark behaves as before (FR-002)
+        try:
+            await record_on_mark(
+                JobsRepo(session),
+                deps.resume_lookup(session),
+                InterviewsRepo(session),
+                PipelineSettingsRepo(session),
+                job_id,
+                file_id=body.resume_file_id,
+            )
+        except InterviewInputError as error:
+            await session.rollback()  # nothing is saved: the mark rolls back too
+            return problem(
+                422,
+                str(error),
+                errors=[{"field": e.field, "message": e.message} for e in error.errors],
+            )
+        return None
+
     async def detail(session: AsyncSession, row: JobRow) -> JobDetailOut:
-        (card,) = await job_cards(session, [row])
+        cards = await job_cards(session, [row])
+        await with_resumes(session, cards)
+        (card,) = cards
         history = [
             DecisionHistoryOut(
                 outcome=d.outcome,
@@ -194,6 +234,7 @@ def create_search_jobs_router(deps: SearchJobsApiDeps) -> APIRouter:
             )
             cards = await job_cards(session, page.items)
             if list == "pipeline":
+                await with_resumes(session, cards)
                 latest = await InterviewsRepo(session).summaries([card.id for card in cards])
                 for card in cards:
                     if card.id in latest:
@@ -288,6 +329,8 @@ def create_search_jobs_router(deps: SearchJobsApiDeps) -> APIRouter:
                 raise _not_found() from error
             except IllegalJobTransitionError as error:
                 raise ProblemError(409, str(error)) from error
+            if (refused := await record_resume(session, job_id, body)) is not None:
+                return refused
             await session.commit()
             return await detail(session, await load(session, job_id))
 
@@ -297,6 +340,7 @@ def create_search_jobs_router(deps: SearchJobsApiDeps) -> APIRouter:
             row = await load(session, job_id)
             if row.state != JobState.applied:
                 raise ProblemError(409, "This job is not marked as applied.", reason="not_applied")
+            await clear_for_job(JobsRepo(session), InterviewsRepo(session), job_id)  # FR-008
             await undo_applied(JobsRepo(session), job_id)
             await session.commit()
             return await detail(session, await load(session, job_id))
@@ -333,6 +377,8 @@ def create_search_jobs_router(deps: SearchJobsApiDeps) -> APIRouter:
                 raise _not_found() from error
             except IllegalJobTransitionError as error:
                 raise ProblemError(409, str(error)) from error
+            if (refused := await record_resume(session, job_id, body)) is not None:
+                return refused
             await session.commit()
             return await detail(session, await load(session, job_id))
 
@@ -344,6 +390,7 @@ def create_search_jobs_router(deps: SearchJobsApiDeps) -> APIRouter:
                 raise ProblemError(
                     409, "This job is not marked as inquired.", reason="not_inquired"
                 )
+            await clear_for_job(JobsRepo(session), InterviewsRepo(session), job_id)  # FR-008
             await undo_inquired(JobsRepo(session), job_id)
             await session.commit()
             return await detail(session, await load(session, job_id))

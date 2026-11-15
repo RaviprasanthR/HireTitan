@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertDialog } from 'radix-ui'
 import { useState } from 'react'
-import { ApiError } from '@/api/client'
+import { ApiError, apiFetch } from '@/api/client'
 import { Button } from '@/components/ui/button'
+import { usePipelineResumes } from '@/features/jobs/resume/resumeApi'
 import { type ResumeFile, deleteResume, fetchResumes } from './api'
 
 const KIND: Record<string, string> = {
@@ -16,6 +17,9 @@ function sizeLabel(bytes: number): string {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`
 }
 
+/** The names were cleared from the jobs, but the file itself could not be removed. */
+class PartialRemoval extends Error {}
+
 /** The stored resume files, each with a delete action (FR-034). */
 export function ResumeFiles() {
   const queryClient = useQueryClient()
@@ -27,19 +31,58 @@ export function ResumeFiles() {
     refetchOnWindowFocus: false,
   })
 
+  // how many pipeline jobs use each file (feature 002f), and whether to clear their names too
+  const pipeline = usePipelineResumes()
+  const [clearNames, setClearNames] = useState(false)
+  // Until the count is known the dialog cannot be confirmed: a count taken as 0 would hide the
+  // option to clear the names (FR-009).
+  const checking = pipeline.isPending || pipeline.isFetching
+  const checkFailed = pipeline.isError
+  const uses = target
+    ? ((pipeline.data?.usage ?? []).find((u) => u.resume_file_id === target.id)?.jobs ?? 0)
+    : 0
+
+  const refreshJobs = () =>
+    Promise.all(
+      [['pipeline-resumes'], ['jobs'], ['job-interview']].map((queryKey) =>
+        queryClient.invalidateQueries({ queryKey }),
+      ),
+    )
+
   const remove = useMutation({
-    mutationFn: (id: string) => deleteResume(id),
+    mutationFn: async ({ id, clear }: { id: string; clear: boolean }) => {
+      // The jobs are cleared first: once the file is gone nothing points at it any more. If this
+      // fails the file stays, and the person sees why.
+      if (clear) await apiFetch(`/pipeline/resumes/${id}/uses`, { method: 'DELETE' })
+      try {
+        return await deleteResume(id)
+      } catch (e) {
+        if (clear) throw new PartialRemoval(e instanceof ApiError ? e.detail : '')
+        throw e
+      }
+    },
     onSuccess: async () => {
       setTarget(null)
       setError(null)
-      await Promise.all(
-        [['resumes'], ['profile'], ['onboarding'], ['status'], ['review-items']].map((queryKey) =>
-          queryClient.invalidateQueries({ queryKey }),
+      await Promise.all([
+        ...[['resumes'], ['profile'], ['onboarding'], ['status'], ['review-items']].map(
+          (queryKey) => queryClient.invalidateQueries({ queryKey }),
         ),
-      )
+        refreshJobs(),
+      ])
     },
-    onError: (e) =>
-      setError(e instanceof ApiError ? e.detail : 'Something went wrong. Please try again.'),
+    onError: async (e) => {
+      if (e instanceof PartialRemoval) {
+        setError(
+          `The names were cleared from the jobs, but the file could not be removed${
+            e.message ? ` (${e.message})` : ''
+          }. Try again.`,
+        )
+        await refreshJobs() // the jobs changed even though the file did not go
+      } else {
+        setError(e instanceof ApiError ? e.detail : 'Something went wrong. Please try again.')
+      }
+    },
   })
 
   const files = query.data ?? []
@@ -65,7 +108,9 @@ export function ResumeFiles() {
               aria-label={`Delete ${f.original_name}`}
               onClick={() => {
                 setError(null)
+                setClearNames(false)
                 setTarget(f)
+                void pipeline.refetch() // a count that is current, not one from earlier
               }}
             >
               Delete
@@ -74,7 +119,9 @@ export function ResumeFiles() {
         ))}
       </ul>
 
-      <AlertDialog.Root open={target !== null} onOpenChange={(open) => !open && setTarget(null)}>
+      <AlertDialog.Root open={target !== null} onOpenChange={(open) => {
+          if (!open && !remove.isPending) setTarget(null)
+        }}>
         <AlertDialog.Portal>
           <AlertDialog.Overlay className="fixed inset-0 bg-black/60" />
           <AlertDialog.Content className="fixed top-1/2 left-1/2 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 space-y-4 rounded-lg bg-surface p-6">
@@ -91,7 +138,37 @@ export function ResumeFiles() {
                   This file has an unsaved review. Deleting the file discards that review.
                 </span>
               )}
+              {checking && <span className="block">Checking which jobs use this file…</span>}
+              {checkFailed && (
+                <span className="block">
+                  Could not check which jobs use this file.{' '}
+                  <button
+                    type="button"
+                    className="underline"
+                    onClick={() => void pipeline.refetch()}
+                  >
+                    Try again
+                  </button>
+                </span>
+              )}
+              {uses > 0 && (
+                <span className="block">
+                  Used on {uses} {uses === 1 ? 'job' : 'jobs'}. Their name stays on them as a note
+                  you can clear.
+                </span>
+              )}
             </AlertDialog.Description>
+            {uses > 0 && (
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={clearNames}
+                  disabled={remove.isPending}
+                  onChange={(event) => setClearNames(event.target.checked)}
+                />
+                Also clear the name from these jobs
+              </label>
+            )}
             {error && (
               <p role="alert" className="text-sm text-danger">
                 {error}
@@ -99,16 +176,18 @@ export function ResumeFiles() {
             )}
             <div className="flex gap-3">
               <Button
-                disabled={remove.isPending}
+                disabled={remove.isPending || checking || checkFailed}
                 onClick={(event) => {
                   event.preventDefault() // stay open until the server answers
-                  if (target) remove.mutate(target.id)
+                  if (target) remove.mutate({ id: target.id, clear: uses > 0 && clearNames })
                 }}
               >
                 Delete file
               </Button>
               <AlertDialog.Cancel asChild>
-                <Button variant="secondary">Cancel</Button>
+                <Button variant="secondary" disabled={remove.isPending}>
+                  Cancel
+                </Button>
               </AlertDialog.Cancel>
             </div>
           </AlertDialog.Content>

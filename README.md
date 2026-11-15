@@ -26,6 +26,7 @@ Then open <http://127.0.0.1:8000>. Details, what is sent to OpenAI and how to de
 | 001 | Setup & profile | `docker compose up`, first-run wizard, resume upload → AI-extracted editable profile, job preferences |
 | 002 | Job search | AI-proposed queries you approve; jobs from public ATS boards, company careers pages, job-alert emails, aggregator APIs and manual paste; AI relevance check with visible reasons |
 | 002e | Interview tracking | Per pipeline job: point of contact, hiring firm, interview rounds with results and feedback, questions and answers; the pipeline status follows the rounds; all of it stays on your machine and never goes to an AI |
+| 002f | Resume picker | Say which of your stored resume files you used for each pipeline job; shown in a Resume column; stays on your machine and never goes to an AI |
 | 003 | Applications | Status tracking, follow-up reminders, referrals, recruiters, offers |
 | 004 | Outreach drafts | Referral requests, LinkedIn notes, HR emails, follow-ups in your own writing style |
 | 005 | Tailored resume | Per-job resume that never invents facts; ATS-friendly PDF + DOCX |

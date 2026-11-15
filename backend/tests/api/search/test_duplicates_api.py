@@ -10,13 +10,15 @@ from uuid import UUID
 
 import httpx
 import pytest
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from tests.fakes.resume_files import add_resume_file
 
 from hiretitan.api_main import create_app
 from hiretitan.platform.clock import FakeClock
 from hiretitan.platform.config.settings import Settings
 from hiretitan.search.api.duplicates import SearchDuplicatesApiDeps, create_duplicates_router
+from hiretitan.search.infra.interviews_repo import InterviewsRepo
 from hiretitan.search.infra.models import JobRow, JobSourceRow, PossibleDuplicateRow
 from hiretitan.search.infra.repos import CompaniesRepo, DuplicatesRepo, JobsRepo
 
@@ -84,6 +86,28 @@ async def test_list_shows_open_pairs_side_by_side(env: Env) -> None:
     assert (item["job_a"]["id"], item["job_b"]["id"]) == (str(keep), str(other))
     assert item["similarity"] == pytest.approx(0.92)
     assert item["status"] == "open"
+
+
+async def test_FR004_a_pair_card_carries_the_resume_of_a_pipeline_job(env: Env) -> None:
+    keep, _ = await add_pair(env)
+    async with env.sessions() as session:
+        file_id = await add_resume_file(
+            session, "Backend_2025.pdf", created_at="2025-03-14T09:00:00+00:00"
+        )
+        await session.execute(
+            text("UPDATE app.jobs SET state = 'applied', applied_on = '2026-11-01' WHERE id = :id"),
+            {"id": keep},
+        )
+        await InterviewsRepo(session).set_resume(
+            keep, file_id, "Backend_2025.pdf", date(2025, 3, 14)
+        )
+        await session.commit()
+
+    item = (await env.client.get(BASE)).json()["items"][0]
+
+    assert item["job_a"]["resume"]["name"] == "Backend_2025.pdf"
+    assert item["job_a"]["resume"]["state"] == "chosen"
+    assert item["job_b"]["resume"]["state"] == "none"
 
 
 async def test_FR021_merge_moves_sources(env: Env) -> None:

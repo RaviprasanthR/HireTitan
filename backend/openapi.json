@@ -77,6 +77,18 @@
               }
             ],
             "title": "Applied On"
+          },
+          "resume_file_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resume File Id"
           }
         },
         "title": "AppliedIn",
@@ -1272,6 +1284,18 @@
               }
             ],
             "title": "Inquired On"
+          },
+          "resume_file_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resume File Id"
           }
         },
         "title": "InquiredIn",
@@ -1302,6 +1326,9 @@
             "title": "Job Id",
             "type": "string"
           },
+          "resume": {
+            "$ref": "#/components/schemas/ResumeChoiceOut"
+          },
           "rounds": {
             "items": {
               "$ref": "#/components/schemas/RoundOut"
@@ -1330,7 +1357,8 @@
           "contact",
           "source",
           "rounds",
-          "status"
+          "status",
+          "resume"
         ],
         "title": "InterviewOut",
         "type": "object"
@@ -1490,6 +1518,9 @@
           "restored": {
             "title": "Restored",
             "type": "boolean"
+          },
+          "resume": {
+            "$ref": "#/components/schemas/ResumeChoiceOut"
           },
           "role": {
             "title": "Role",
@@ -1735,6 +1766,9 @@
           "restored": {
             "title": "Restored",
             "type": "boolean"
+          },
+          "resume": {
+            "$ref": "#/components/schemas/ResumeChoiceOut"
           },
           "role": {
             "title": "Role",
@@ -2207,6 +2241,9 @@
             "title": "Restored",
             "type": "boolean"
           },
+          "resume": {
+            "$ref": "#/components/schemas/ResumeChoiceOut"
+          },
           "role": {
             "title": "Role",
             "type": "string"
@@ -2433,6 +2470,35 @@
           "linkedin_url"
         ],
         "title": "PipelineContactOut",
+        "type": "object"
+      },
+      "PipelineResumesOut": {
+        "properties": {
+          "last_choice": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Choice"
+          },
+          "usage": {
+            "items": {
+              "$ref": "#/components/schemas/ResumeUsageOut"
+            },
+            "title": "Usage",
+            "type": "array"
+          }
+        },
+        "required": [
+          "last_choice",
+          "usage"
+        ],
+        "title": "PipelineResumesOut",
         "type": "object"
       },
       "PlaceModel": {
@@ -3068,6 +3134,58 @@
         "title": "QuestionPatch",
         "type": "object"
       },
+      "ResumeChoiceOut": {
+        "description": "The resume used for a pipeline job (feature 002f): ``chosen`` (a stored file), ``removed``\n(the file is gone and its name stays as a note), or ``none``.",
+        "properties": {
+          "added_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Added On"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "resume_file_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resume File Id"
+          },
+          "state": {
+            "default": "none",
+            "enum": [
+              "chosen",
+              "removed",
+              "none"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "title": "ResumeChoiceOut",
+        "type": "object"
+      },
       "ResumeFileOut": {
         "properties": {
           "created_at": {
@@ -3149,6 +3267,39 @@
           "open_review_id"
         ],
         "title": "ResumeFileOut",
+        "type": "object"
+      },
+      "ResumeIn": {
+        "properties": {
+          "resume_file_id": {
+            "format": "uuid",
+            "title": "Resume File Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "resume_file_id"
+        ],
+        "title": "ResumeIn",
+        "type": "object"
+      },
+      "ResumeUsageOut": {
+        "properties": {
+          "jobs": {
+            "title": "Jobs",
+            "type": "integer"
+          },
+          "resume_file_id": {
+            "format": "uuid",
+            "title": "Resume File Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "resume_file_id",
+          "jobs"
+        ],
+        "title": "ResumeUsageOut",
         "type": "object"
       },
       "ReviewItemOut": {
@@ -6324,6 +6475,102 @@
         ]
       }
     },
+    "/api/v1/jobs/{job_id}/interview/resume": {
+      "delete": {
+        "description": "Forget the resume used, or the note a removed file left behind.",
+        "operationId": "delete_resume_api_v1_jobs__job_id__interview_resume_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Resume",
+        "tags": [
+          "interviews"
+        ]
+      },
+      "put": {
+        "description": "Set or change the resume used for a pipeline job. Only marking a job changes the\nstarting value of the choice, so this does not (feature 002f, FR-014).",
+        "operationId": "put_resume_api_v1_jobs__job_id__interview_resume_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResumeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Resume",
+        "tags": [
+          "interviews"
+        ]
+      }
+    },
     "/api/v1/jobs/{job_id}/interview/rounds": {
       "post": {
         "operationId": "post_round_api_v1_jobs__job_id__interview_rounds_post",
@@ -6601,6 +6848,65 @@
         "summary": "Write Name",
         "tags": [
           "onboarding"
+        ]
+      }
+    },
+    "/api/v1/pipeline/resumes": {
+      "get": {
+        "description": "The resume the person chose the last time they marked a job (the choice starts on it),\nand how many pipeline jobs use each stored file.",
+        "operationId": "pipeline_resumes_api_v1_pipeline_resumes_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PipelineResumesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Pipeline Resumes",
+        "tags": [
+          "pipeline"
+        ]
+      }
+    },
+    "/api/v1/pipeline/resumes/{file_id}/uses": {
+      "delete": {
+        "description": "Forget a stored file on every job and as the last choice, names included. Used before\nthe file is removed when the person wants nothing of it left (feature 002f, FR-009).",
+        "operationId": "clear_uses_api_v1_pipeline_resumes__file_id__uses_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "file_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "File Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Clear Uses",
+        "tags": [
+          "pipeline"
         ]
       }
     },

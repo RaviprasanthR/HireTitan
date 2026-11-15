@@ -23,6 +23,7 @@ from sqlalchemy import (
     Integer,
     Numeric,
     PrimaryKeyConstraint,
+    SmallInteger,
     Text,
     UniqueConstraint,
     func,
@@ -383,11 +384,26 @@ class PipelineDetailsRow(Base):
         ),
         CheckConstraint("char_length(contact_linkedin) <= 500", name="contact_linkedin_length"),
         CheckConstraint("char_length(firm_name) BETWEEN 1 AND 120", name="firm_name_length"),
+        # the resume used (feature 002f): a link to the stored file, and a copy of its name and
+        # day, so removing the file (link set to null) leaves the name behind as a note
+        CheckConstraint("char_length(resume_name) BETWEEN 1 AND 255", name="resume_name_length"),
+        CheckConstraint(
+            "(resume_name IS NULL) = (resume_added_on IS NULL)", name="resume_snapshot_together"
+        ),
+        CheckConstraint(
+            "resume_file_id IS NULL OR resume_name IS NOT NULL", name="resume_link_has_snapshot"
+        ),
+        Index("ix_job_pipeline_details_resume_file_id", "resume_file_id"),
     )
 
     job_id: Mapped[UUID] = mapped_column(
         ForeignKey(f"{APP_SCHEMA}.jobs.id", ondelete="CASCADE"), primary_key=True
     )
+    resume_file_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey(f"{APP_SCHEMA}.resume_files.id", ondelete="SET NULL")
+    )
+    resume_name: Mapped[str | None] = mapped_column(Text)
+    resume_added_on: Mapped[date | None] = mapped_column(Date)
     contact_name: Mapped[str | None] = mapped_column(Text)
     contact_role: Mapped[str | None] = mapped_column(Text)
     contact_email: Mapped[str | None] = mapped_column(Text)
@@ -442,3 +458,16 @@ class InterviewQuestionRow(IdTimestampMixin, Base):
     position: Mapped[int] = mapped_column(Integer)
     question: Mapped[str] = mapped_column(Text)
     answer: Mapped[str | None] = mapped_column(Text)
+
+
+class PipelineSettingsRow(Base):
+    """The pipeline's one settings row (feature 002f): the resume the person chose the last time
+    they marked a job. Removing that file sets it back to nothing."""
+
+    __tablename__ = "pipeline_settings"
+    __table_args__ = (CheckConstraint("id = 1", name="single_row"),)
+
+    id: Mapped[int] = mapped_column(SmallInteger, primary_key=True, autoincrement=False)
+    last_resume_file_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey(f"{APP_SCHEMA}.resume_files.id", ondelete="SET NULL")
+    )

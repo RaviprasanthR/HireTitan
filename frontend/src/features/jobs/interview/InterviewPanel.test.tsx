@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { json, problem, stubApi, type Call } from '@/test/api'
@@ -14,11 +14,12 @@ function interview(overrides: Record<string, unknown> = {}) {
     source: null,
     rounds: [],
     status: { state: 'applied', round: null },
+    resume: { state: 'none', resume_file_id: null, name: null, added_on: null },
     ...overrides,
   }
 }
 
-function renderPanel(handler: (call: Call) => unknown) {
+function renderPanel(handler: (call: Call) => unknown, readOnly = false) {
   const calls = stubApi((call) => {
     if (call.method === 'GET' && call.path === '/jobs/a/interview') return handler(call)
     return handler(call)
@@ -27,7 +28,7 @@ function renderPanel(handler: (call: Call) => unknown) {
     <QueryClientProvider
       client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
     >
-      <InterviewPanel jobId="a" />
+      <InterviewPanel jobId="a" readOnly={readOnly} />
     </QueryClientProvider>,
   )
   return calls
@@ -395,5 +396,321 @@ describe('InterviewPanel rounds', () => {
 
     expect(await screen.findByRole('heading', { name: /Round 1/ })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Add round' })).not.toBeInTheDocument()
+  })
+})
+
+describe('InterviewPanel resume used (feature 002f)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  const chosen = {
+    state: 'chosen',
+    resume_file_id: 'f1',
+    name: 'Backend_2025.pdf',
+    added_on: '2026-10-02',
+  }
+
+  it('US2 AS3 shows the resume name and the day it was added', async () => {
+    renderPanel(() => interview({ resume: chosen }), true)
+
+    expect(await screen.findByRole('heading', { name: 'Resume used' })).toBeInTheDocument()
+    expect(screen.getByText('Backend_2025.pdf · added 2 Oct 2026')).toBeInTheDocument()
+  })
+
+  it('a job with only a resume is not shown as "Nothing yet."', async () => {
+    renderPanel(() => interview({ resume: chosen }), true)
+
+    await screen.findByText('Backend_2025.pdf · added 2 Oct 2026')
+    expect(screen.queryByText('Nothing yet.')).not.toBeInTheDocument()
+  })
+
+  it('FR009 shows a removed file by its name, marked removed', async () => {
+    renderPanel(
+      () =>
+        interview({
+          resume: {
+            state: 'removed',
+            resume_file_id: null,
+            name: 'Gone.pdf',
+            added_on: '2025-03-14',
+          },
+        }),
+      true,
+    )
+
+    expect(await screen.findByText('Gone.pdf (removed) · added 14 Mar 2025')).toBeInTheDocument()
+  })
+
+  it('a resume without a known day shows just its name', async () => {
+    renderPanel(() => interview({ resume: { ...chosen, added_on: null } }), true)
+
+    expect(await screen.findByText('Backend_2025.pdf')).toBeInTheDocument()
+  })
+
+  it('read-only with nothing recorded still says "Nothing yet."', async () => {
+    renderPanel(() => interview(), true)
+
+    expect(await screen.findByText('Nothing yet.')).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Resume used' })).not.toBeInTheDocument()
+  })
+
+  it('an editable panel shows the section even with no resume', async () => {
+    renderPanel(() => interview())
+
+    expect(await screen.findByRole('heading', { name: 'Resume used' })).toBeInTheDocument()
+    expect(screen.getByText('None')).toBeInTheDocument()
+  })
+})
+
+describe('InterviewPanel resume editing (feature 002f)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  const file = (id: string, name: string, at: string) => ({
+    id,
+    kind: 'upload_pdf',
+    original_name: name,
+    size_bytes: 1000,
+    page_count: 1,
+    parse_status: 'parsed',
+    parse_result: null,
+    created_at: at,
+    has_open_review: false,
+    open_review_id: null,
+  })
+  const FILES = [
+    file('f1', 'Backend_2024.pdf', '2025-03-14T09:00:00Z'),
+    file('f2', 'Backend_2025.pdf', '2026-10-02T09:00:00Z'),
+  ]
+  const chosen = (id: string, name: string, day: string) => ({
+    state: 'chosen',
+    resume_file_id: id,
+    name,
+    added_on: day,
+  })
+  const NONE = { state: 'none', resume_file_id: null, name: null, added_on: null }
+
+  /** The panel over a job whose resume starts as `start`; writes change it as the server would. */
+  function renderEditable(start: unknown, opts: { refuse?: boolean; afterRefusal?: unknown } = {}) {
+    let current = start
+    let refused = false
+    const calls = stubApi((call) => {
+      if (call.path === '/resumes') return FILES
+      if (call.path === '/pipeline/resumes') return { last_choice: null, usage: [] }
+      if (call.path === '/jobs/a/interview/resume') {
+        if (call.method === 'PUT') {
+          if (opts.refuse) {
+            refused = true
+            return problem(422, 'Choose one of your stored resume files.', {
+              errors: [
+                { field: 'resume_file_id', message: 'Choose one of your stored resume files.' },
+              ],
+            })
+          }
+          const id = (call.body as { resume_file_id: string }).resume_file_id
+          const found = FILES.find((f) => f.id === id)
+          current = chosen(id, found?.original_name ?? '', found?.created_at.slice(0, 10) ?? '')
+        } else {
+          current = NONE
+        }
+        return interview({ resume: current })
+      }
+      if (call.path === '/jobs/a/interview')
+        return interview({ resume: refused && opts.afterRefusal ? opts.afterRefusal : current })
+      return undefined
+    })
+    render(
+      <QueryClientProvider
+        client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      >
+        <InterviewPanel jobId="a" />
+      </QueryClientProvider>,
+    )
+    return calls
+  }
+  const writes = (calls: { method: string; path: string; body?: unknown }[]) =>
+    calls.filter((c) => c.path === '/jobs/a/interview/resume')
+
+  it('US3 AS1 choose a resume and save', async () => {
+    const user = userEvent.setup()
+    const calls = renderEditable(NONE)
+    const select = await screen.findByRole('combobox', { name: 'Resume file' })
+    expect(screen.getByRole('button', { name: 'Save resume' })).toBeDisabled() // nothing changed
+
+    await user.selectOptions(select, 'f2')
+    await user.click(screen.getByRole('button', { name: 'Save resume' }))
+
+    expect(await screen.findByText('Resume saved.')).toBeInTheDocument()
+    expect(writes(calls)).toEqual([
+      { method: 'PUT', path: '/jobs/a/interview/resume', body: { resume_file_id: 'f2' } },
+    ])
+    expect(
+      screen.getByText('Backend_2025.pdf · added 2 Oct 2026', { selector: 'p' }),
+    ).toBeInTheDocument()
+  })
+
+  it('US3 AS2 change the resume, then clear it', async () => {
+    const user = userEvent.setup()
+    const calls = renderEditable(chosen('f1', 'Backend_2024.pdf', '2025-03-14'))
+    const select = await screen.findByRole('combobox', { name: 'Resume file' })
+    expect(select).toHaveValue('f1')
+
+    await user.selectOptions(select, 'f2')
+    await user.click(screen.getByRole('button', { name: 'Save resume' }))
+    expect(
+      await screen.findByText('Backend_2025.pdf · added 2 Oct 2026', { selector: 'p' }),
+    ).toBeInTheDocument()
+
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Resume file' }), 'None')
+    await user.click(screen.getByRole('button', { name: 'Save resume' }))
+
+    await waitFor(() => expect(writes(calls)).toHaveLength(2))
+    expect(writes(calls).map((c) => c.method)).toEqual(['PUT', 'DELETE'])
+    expect(await screen.findByRole('status')).toHaveTextContent('Resume saved.')
+  })
+
+  it('a removed file shows as a note with Clear, and Clear forgets it', async () => {
+    const user = userEvent.setup()
+    const calls = renderEditable({
+      state: 'removed',
+      resume_file_id: null,
+      name: 'Gone.pdf',
+      added_on: '2025-03-14',
+    })
+
+    expect(await screen.findByText('Gone.pdf (removed) · added 14 Mar 2025')).toBeInTheDocument()
+    expect(await screen.findByRole('combobox', { name: 'Resume file' })).toHaveValue('') // None
+    await user.click(screen.getByRole('button', { name: 'Clear' }))
+
+    await waitFor(() => expect(writes(calls).map((c) => c.method)).toEqual(['DELETE']))
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Clear' })).not.toBeInTheDocument())
+  })
+
+  it('a file removed meanwhile is refused with a message and the note appears', async () => {
+    const user = userEvent.setup()
+    renderEditable(NONE, {
+      refuse: true,
+      afterRefusal: {
+        state: 'removed',
+        resume_file_id: null,
+        name: 'Backend_2025.pdf',
+        added_on: '2026-10-02',
+      },
+    })
+    const select = await screen.findByRole('combobox', { name: 'Resume file' })
+
+    await user.selectOptions(select, 'f2')
+    await user.click(screen.getByRole('button', { name: 'Save resume' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Choose one of your stored')
+    expect(screen.getByRole('button', { name: 'Save resume' })).toBeDisabled() // nothing pending
+    expect(
+      await screen.findByText('Backend_2025.pdf (removed) · added 2 Oct 2026'),
+    ).toBeInTheDocument()
+  })
+
+  it('a second save that fails keeps the new pick instead of snapping back', async () => {
+    const user = userEvent.setup()
+    let failNext = false
+    const stored = { current: chosen('f1', 'Backend_2024.pdf', '2025-03-14') as unknown }
+    stubApi((call) => {
+      if (call.path === '/resumes') return FILES
+      if (call.path === '/pipeline/resumes') return { last_choice: null, usage: [] }
+      if (call.path === '/jobs/a/interview/resume') {
+        if (failNext) return problem(500, 'Something went wrong')
+        stored.current = chosen('f2', 'Backend_2025.pdf', '2026-10-02')
+        return interview({ resume: stored.current })
+      }
+      if (call.path === '/jobs/a/interview') return interview({ resume: stored.current })
+      return undefined
+    })
+    render(
+      <QueryClientProvider
+        client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      >
+        <InterviewPanel jobId="a" />
+      </QueryClientProvider>,
+    )
+    const select = await screen.findByRole('combobox', { name: 'Resume file' })
+    await user.selectOptions(select, 'f2')
+    await user.click(screen.getByRole('button', { name: 'Save resume' }))
+    await screen.findByText('Resume saved.')
+
+    failNext = true
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Resume file' }), 'None')
+    await user.click(screen.getByRole('button', { name: 'Save resume' }))
+
+    expect(await screen.findByRole('alert')).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Resume file' })).toHaveValue('') // the pick stands
+    expect(screen.getByRole('button', { name: 'Save resume' })).toBeEnabled()
+  })
+
+  it('a pick in progress survives a refresh that changes the stored resume', async () => {
+    const user = userEvent.setup()
+    const stored = { current: chosen('f1', 'Backend_2024.pdf', '2025-03-14') as unknown }
+    stubApi((call) => {
+      if (call.path === '/resumes') return FILES
+      if (call.path === '/pipeline/resumes') return { last_choice: null, usage: [] }
+      if (call.path === '/jobs/a/interview') return interview({ resume: stored.current })
+      return undefined
+    })
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(
+      <QueryClientProvider client={client}>
+        <InterviewPanel jobId="a" />
+      </QueryClientProvider>,
+    )
+    const select = await screen.findByRole('combobox', { name: 'Resume file' })
+    await user.selectOptions(select, 'None')
+
+    // the job is refreshed in the background and now shows its file as removed
+    stored.current = {
+      state: 'removed',
+      resume_file_id: null,
+      name: 'Backend_2024.pdf',
+      added_on: '2025-03-14',
+    }
+    await act(() => client.invalidateQueries({ queryKey: ['job-interview', 'a'] }))
+
+    expect(await screen.findByText(/Backend_2024.pdf \(removed\)/)).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Resume file' })).toHaveValue('')
+  })
+
+  it('after Save the focus goes to the select, not the page top', async () => {
+    const user = userEvent.setup()
+    renderEditable(NONE)
+    const select = await screen.findByRole('combobox', { name: 'Resume file' })
+
+    await user.selectOptions(select, 'f2')
+    await user.click(screen.getByRole('button', { name: 'Save resume' }))
+
+    await screen.findByText('Resume saved.')
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Resume file' })).toHaveFocus())
+  })
+
+  it('after Clear the focus goes to the select', async () => {
+    const user = userEvent.setup()
+    renderEditable({
+      state: 'removed',
+      resume_file_id: null,
+      name: 'Gone.pdf',
+      added_on: '2025-03-14',
+    })
+    await screen.findByText('Gone.pdf (removed) · added 14 Mar 2025')
+    await screen.findByRole('combobox', { name: 'Resume file' })
+
+    await user.click(screen.getByRole('button', { name: 'Clear' }))
+
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Resume file' })).toHaveFocus())
+  })
+
+  it('is not editable in the read-only view: no select and no Save', async () => {
+    renderPanel(() => interview({ resume: chosen('f1', 'Backend_2024.pdf', '2025-03-14') }), true)
+
+    await screen.findByText('Backend_2024.pdf · added 14 Mar 2025')
+    expect(screen.queryByRole('combobox', { name: 'Resume file' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Save resume' })).not.toBeInTheDocument()
   })
 })

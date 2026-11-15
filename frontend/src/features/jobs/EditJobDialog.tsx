@@ -112,7 +112,16 @@ export function EditJobDialog({
             >
               Undo
             </Button>
-            {data.state === 'inquired' && <PipelineControl id={data.id} state={data.state} />}
+            {data.state === 'inquired' && (
+              <PipelineControl
+                id={data.id}
+                state={data.state}
+                ownResumeId={
+                  data.resume === undefined ? undefined : (data.resume.resume_file_id ?? null)
+                }
+                ownRemoved={data.resume?.state === 'removed'}
+              />
+            )}
           </div>
         )}
 

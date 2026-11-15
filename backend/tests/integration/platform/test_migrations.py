@@ -176,6 +176,81 @@ def test_0016_inquired_up_down(
         engine.dispose()
 
 
+def test_0019_resume_picker_up_down(
+    fresh_database_url: str, make_alembic_config: Callable[[str], Config]
+) -> None:
+    """002f: 0019 adds the resume columns and the one-row settings table; downgrading removes
+    them and leaves the 0018 tables as they were."""
+    cfg = make_alembic_config(fresh_database_url)
+    columns = {"resume_file_id", "resume_name", "resume_added_on"}
+    command.upgrade(cfg, "0018")
+    engine = create_engine(fresh_database_url)
+    try:
+        details = {
+            c["name"] for c in inspect(engine).get_columns("job_pipeline_details", schema="app")
+        }
+        assert not columns & details
+        assert "pipeline_settings" not in inspect(engine).get_table_names(schema="app")
+
+        command.upgrade(cfg, "0019")
+        details = {
+            c["name"] for c in inspect(engine).get_columns("job_pipeline_details", schema="app")
+        }
+        assert columns <= details
+        assert "pipeline_settings" in inspect(engine).get_table_names(schema="app")
+
+        with engine.connect() as conn:
+            defs = list(
+                conn.execute(
+                    text(
+                        "SELECT pg_get_constraintdef(oid) FROM pg_constraint "
+                        "WHERE contype = 'c' AND conrelid IN "
+                        "('app.job_pipeline_details'::regclass, 'app.pipeline_settings'::regclass)"
+                    )
+                ).scalars()
+            )
+
+            def has(*tokens: str) -> bool:
+                return any(all(token in d for token in tokens) for d in defs)
+
+            # the CHECKs, by what they say: Alembic's drift test does not compare CHECKs, and the
+            # names carry the naming convention twice (as in the older migrations)
+            assert has("char_length(resume_name)", "255")  # the name is 1 to 255 characters
+            assert has("resume_name IS NULL", "resume_added_on IS NULL")  # name and day together
+            assert has("resume_file_id IS NULL", "resume_name IS NOT NULL")  # a link needs a name
+            assert has("id = 1")  # the settings table holds one row
+            # removing a resume file must set both links to null, not refuse or cascade
+            rules = set(
+                conn.execute(
+                    text(
+                        "SELECT confdeltype FROM pg_constraint WHERE conname IN "
+                        "('fk_job_pipeline_details_resume_file_id_resume_files', "
+                        "'fk_pipeline_settings_last_resume_file_id_resume_files')"
+                    )
+                ).scalars()
+            )
+            assert rules == {"n"}  # n = SET NULL
+
+        command.downgrade(cfg, "0018")
+        details = {
+            c["name"] for c in inspect(engine).get_columns("job_pipeline_details", schema="app")
+        }
+        assert not columns & details
+        assert "pipeline_settings" not in inspect(engine).get_table_names(schema="app")
+        assert "job_pipeline_details" in inspect(engine).get_table_names(schema="app")
+        with engine.connect() as conn:
+            left = conn.execute(
+                text(
+                    "SELECT pg_get_constraintdef(oid) FROM pg_constraint "
+                    "WHERE conrelid = 'app.job_pipeline_details'::regclass"
+                )
+            ).scalars()
+            # the downgrade leaves no constraint that mentions the resume columns
+            assert not [d for d in left if "resume" in d]
+    finally:
+        engine.dispose()
+
+
 def test_0018_interview_tracking_up_down(
     fresh_database_url: str, make_alembic_config: Callable[[str], Config]
 ) -> None:

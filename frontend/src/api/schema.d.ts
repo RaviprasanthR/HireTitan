@@ -427,6 +427,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/jobs/{job_id}/interview/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Put Resume
+         * @description Set or change the resume used for a pipeline job. Only marking a job changes the
+         *     starting value of the choice, so this does not (feature 002f, FR-014).
+         */
+        put: operations["put_resume_api_v1_jobs__job_id__interview_resume_put"];
+        post?: never;
+        /**
+         * Delete Resume
+         * @description Forget the resume used, or the note a removed file left behind.
+         */
+        delete: operations["delete_resume_api_v1_jobs__job_id__interview_resume_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/jobs/{job_id}/interview/rounds": {
         parameters: {
             query?: never;
@@ -541,6 +566,48 @@ export interface paths {
         put: operations["write_name_api_v1_onboarding_name_put"];
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pipeline/resumes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Pipeline Resumes
+         * @description The resume the person chose the last time they marked a job (the choice starts on it),
+         *     and how many pipeline jobs use each stored file.
+         */
+        get: operations["pipeline_resumes_api_v1_pipeline_resumes_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pipeline/resumes/{file_id}/uses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Clear Uses
+         * @description Forget a stored file on every job and as the last choice, names included. Used before
+         *     the file is removed when the person wants nothing of it left (feature 002f, FR-009).
+         */
+        delete: operations["clear_uses_api_v1_pipeline_resumes__file_id__uses_delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1026,6 +1093,8 @@ export interface components {
         AppliedIn: {
             /** Applied On */
             applied_on?: string | null;
+            /** Resume File Id */
+            resume_file_id?: string | null;
         };
         /** Body_upload_resume_api_v1_resumes_post */
         Body_upload_resume_api_v1_resumes_post: {
@@ -1400,6 +1469,8 @@ export interface components {
         InquiredIn: {
             /** Inquired On */
             inquired_on?: string | null;
+            /** Resume File Id */
+            resume_file_id?: string | null;
         };
         /** InterviewOut */
         InterviewOut: {
@@ -1413,6 +1484,7 @@ export interface components {
              * Format: uuid
              */
             job_id: string;
+            resume: components["schemas"]["ResumeChoiceOut"];
             /** Rounds */
             rounds: components["schemas"]["RoundOut"][];
             source: components["schemas"]["hiretitan__search__api__interviews__SourceOut"] | null;
@@ -1468,6 +1540,7 @@ export interface components {
             posted_at: string | null;
             /** Restored */
             restored: boolean;
+            resume?: components["schemas"]["ResumeChoiceOut"];
             /** Role */
             role: string;
             /** Sources */
@@ -1532,6 +1605,7 @@ export interface components {
             posted_at: string | null;
             /** Restored */
             restored: boolean;
+            resume?: components["schemas"]["ResumeChoiceOut"];
             /** Role */
             role: string;
             /** Skills Found */
@@ -1657,6 +1731,7 @@ export interface components {
             posted_at: string | null;
             /** Restored */
             restored: boolean;
+            resume?: components["schemas"]["ResumeChoiceOut"];
             /** Role */
             role: string;
             /** Skills Found */
@@ -1706,6 +1781,13 @@ export interface components {
             phone: string | null;
             /** Role */
             role: string | null;
+        };
+        /** PipelineResumesOut */
+        PipelineResumesOut: {
+            /** Last Choice */
+            last_choice: string | null;
+            /** Usage */
+            usage: components["schemas"]["ResumeUsageOut"][];
         };
         /** PlaceModel */
         PlaceModel: {
@@ -1879,6 +1961,25 @@ export interface components {
             /** Question */
             question?: string | null;
         };
+        /**
+         * ResumeChoiceOut
+         * @description The resume used for a pipeline job (feature 002f): ``chosen`` (a stored file), ``removed``
+         *     (the file is gone and its name stays as a note), or ``none``.
+         */
+        ResumeChoiceOut: {
+            /** Added On */
+            added_on?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Resume File Id */
+            resume_file_id?: string | null;
+            /**
+             * State
+             * @default none
+             * @enum {string}
+             */
+            state: "chosen" | "removed" | "none";
+        };
         /** ResumeFileOut */
         ResumeFileOut: {
             /**
@@ -1909,6 +2010,24 @@ export interface components {
             parse_status: string;
             /** Size Bytes */
             size_bytes: number;
+        };
+        /** ResumeIn */
+        ResumeIn: {
+            /**
+             * Resume File Id
+             * Format: uuid
+             */
+            resume_file_id: string;
+        };
+        /** ResumeUsageOut */
+        ResumeUsageOut: {
+            /** Jobs */
+            jobs: number;
+            /**
+             * Resume File Id
+             * Format: uuid
+             */
+            resume_file_id: string;
         };
         /** ReviewItemOut */
         ReviewItemOut: {
@@ -3503,6 +3622,72 @@ export interface operations {
             };
         };
     };
+    put_resume_api_v1_jobs__job_id__interview_resume_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResumeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InterviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_resume_api_v1_jobs__job_id__interview_resume_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InterviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     post_round_api_v1_jobs__job_id__interview_rounds_post: {
         parameters: {
             query?: never;
@@ -3698,6 +3883,55 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["NameOut"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pipeline_resumes_api_v1_pipeline_resumes_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PipelineResumesOut"];
+                };
+            };
+        };
+    };
+    clear_uses_api_v1_pipeline_resumes__file_id__uses_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                file_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

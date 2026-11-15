@@ -222,4 +222,50 @@ describe('ExplorePage', () => {
       expect(last?.path).not.toContain('area')
     })
   })
+
+  it("US1 each card's resume choice names its job", async () => {
+    const file = {
+      id: 'f1',
+      kind: 'upload_pdf',
+      original_name: 'Backend_2025.pdf',
+      size_bytes: 1000,
+      page_count: 1,
+      parse_status: 'parsed',
+      parse_result: null,
+      created_at: '2026-10-02T09:00:00Z',
+      has_open_review: false,
+      open_review_id: null,
+    }
+    stubApi((call: Call) => {
+      if (call.path === '/status') return STATUS
+      if (call.path === '/onboarding') return { display_name: null }
+      if (call.path === '/search/latest') return null
+      if (call.path.startsWith('/jobs/duplicates')) return { items: [], next_cursor: null }
+      if (call.path === '/resumes') return [file]
+      if (call.path === '/pipeline/resumes') return { last_choice: null, usage: [] }
+      if (call.path.startsWith('/jobs?'))
+        return {
+          items: [card('1', 'Backend Engineer'), card('2', 'Platform Engineer')],
+          next_cursor: null,
+        }
+      return undefined
+    })
+    render(
+      <QueryClientProvider
+        client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      >
+        <MemoryRouter>
+          <ExplorePage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+
+    expect(
+      await screen.findByRole('combobox', { name: 'Resume used for Backend Engineer' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('combobox', { name: 'Resume used for Platform Engineer' }),
+    ).toBeInTheDocument()
+  })
 })
+
