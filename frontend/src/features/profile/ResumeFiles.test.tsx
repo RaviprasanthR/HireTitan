@@ -56,6 +56,13 @@ function renderList() {
   )
 }
 
+async function confirmRemoval(dialog: HTMLElement) {
+  // the count is read again each time the dialog opens, and the file cannot go until it is known
+  const button = within(dialog).getByRole('button', { name: 'Delete file' })
+  await waitFor(() => expect(button).toBeEnabled())
+  await userEvent.click(button)
+}
+
 describe('ResumeFiles', () => {
   it('lists the stored resume files', async () => {
     renderList()
@@ -72,7 +79,7 @@ describe('ResumeFiles', () => {
     expect(dialog).toHaveTextContent(/versions? you already confirmed keep/i)
     expect(calls.filter((c) => c.method === 'DELETE')).toEqual([])
 
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Delete file' }))
+    await confirmRemoval(dialog)
 
     await waitFor(() => expect(screen.queryByText('cv-2025.pdf')).not.toBeInTheDocument())
     expect(calls.filter((c) => c.method === 'DELETE')).toEqual([
@@ -178,7 +185,7 @@ describe('ResumeFiles removal and the jobs that use a file (feature 002f)', () =
     })
     expect(option).not.toBeChecked()
 
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Delete file' }))
+    await confirmRemoval(dialog)
 
     await waitFor(() => expect(removals()).toEqual(['/api/v1/resumes/f1']))
   })
@@ -189,7 +196,7 @@ describe('ResumeFiles removal and the jobs that use a file (feature 002f)', () =
       await within(dialog).findByRole('checkbox', { name: 'Also clear the name from these jobs' }),
     )
 
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Delete file' }))
+    await confirmRemoval(dialog)
 
     await waitFor(() =>
       expect(removals()).toEqual(['/api/v1/pipeline/resumes/f1/uses', '/api/v1/resumes/f1']),
@@ -207,7 +214,7 @@ describe('ResumeFiles removal and the jobs that use a file (feature 002f)', () =
       await within(dialog).findByRole('checkbox', { name: 'Also clear the name from these jobs' }),
     )
 
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Delete file' }))
+    await confirmRemoval(dialog)
 
     expect(await within(dialog).findByRole('alert')).toBeInTheDocument()
     expect(removals()).toEqual(['/api/v1/pipeline/resumes/f1/uses']) // the file is still there
@@ -218,7 +225,7 @@ describe('ResumeFiles removal and the jobs that use a file (feature 002f)', () =
     const dialog = await openDialog('cv-2025.pdf')
     const before = log.filter((c) => c.url === '/api/v1/pipeline/resumes').length
 
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Delete file' }))
+    await confirmRemoval(dialog)
 
     await waitFor(() =>
       expect(log.filter((c) => c.url === '/api/v1/pipeline/resumes').length).toBeGreaterThan(before),
@@ -326,7 +333,7 @@ describe('ResumeFiles removal edge cases (story review)', () => {
       await within(dialog).findByRole('checkbox', { name: 'Also clear the name from these jobs' }),
     )
 
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Delete file' }))
+    await confirmRemoval(dialog)
 
     expect(await within(dialog).findByRole('alert')).toHaveTextContent(
       /names were cleared from the jobs, but the file could not be removed/i,
@@ -342,7 +349,7 @@ describe('ResumeFiles removal edge cases (story review)', () => {
     const dialog = await open()
     await within(dialog).findByRole('checkbox', { name: 'Also clear the name from these jobs' })
 
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Delete file' }))
+    await confirmRemoval(dialog)
     await waitFor(() => expect(within(dialog).getByRole('button', { name: 'Cancel' })).toBeDisabled())
     await userEvent.keyboard('{Escape}')
 
@@ -352,12 +359,25 @@ describe('ResumeFiles removal edge cases (story review)', () => {
     expect(removals()).toEqual(['/api/v1/resumes/f1'])
   })
 
+  it('FR009 a second open cannot be confirmed on a count from the first while it is read again', async () => {
+    const dialog = await open()
+    await waitFor(() => expect(dialog).toHaveTextContent('Used on 2 jobs.'))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }))
+
+    usageMode = 'pending' // the next read never answers, as when the server is slow
+    await userEvent.click(screen.getByRole('button', { name: 'Delete cv-2025.pdf' }))
+
+    const again = await screen.findByRole('alertdialog')
+    expect(await within(again).findByText('Checking which jobs use this file…')).toBeInTheDocument()
+    expect(within(again).getByRole('button', { name: 'Delete file' })).toBeDisabled()
+  })
+
   it('refreshes the jobs and their details after a removal', async () => {
     const spy = vi.spyOn(client, 'invalidateQueries')
     const dialog = await open()
     await within(dialog).findByRole('checkbox', { name: 'Also clear the name from these jobs' })
 
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Delete file' }))
+    await confirmRemoval(dialog)
 
     await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument())
     const keys = spy.mock.calls.map((call) => JSON.stringify(call[0]?.queryKey))

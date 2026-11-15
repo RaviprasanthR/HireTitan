@@ -1,4 +1,4 @@
-import { useCallback, useId, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Field, inputClass } from '@/features/companies/Field'
 import { errorOf } from './errors'
@@ -328,6 +328,12 @@ function ResumeSection({
   const changed = picked !== stored
   // a refused save is shown as a message; it is only unsaved while the pick still differs
   useReportUnsaved(editable && (changed || save.isPending))
+  // Save is disabled once nothing differs, and Clear goes with the note: a keyboard user would
+  // lose their place, so the focus goes to the select after a save or a clear.
+  const choice = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (save.isSuccess) choice.current?.querySelector('select')?.focus()
+  }, [save.isSuccess, save.submittedAt])
 
   return (
     <form
@@ -345,7 +351,7 @@ function ResumeSection({
       <p className="text-sm">{resumeDetail(resume)}</p>
       {editable && (
         <>
-          <div className="flex flex-wrap items-end gap-2">
+          <div ref={choice} className="flex flex-wrap items-end gap-2">
             <ResumeSelect
               label="Resume file"
               files={files.data ?? []}

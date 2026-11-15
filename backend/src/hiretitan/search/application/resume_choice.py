@@ -97,18 +97,13 @@ async def record_on_mark(
     settings: LastChoiceWriter,
     job_id: UUID,
     *,
-    provided: bool,
     file_id: UUID | None,
 ) -> None:
-    """Called in the same transaction as marking a job applied or inquired.
-
-    ``provided`` is whether the request carried a ``resume_file_id`` at all. Absent: the job
-    keeps the resume it has (inquired to applied, FR-003) and the last choice is untouched, so a
-    one-click mark behaves as before (FR-002). Present: the job's resume is set to that file, or
-    cleared for ``None``, and the person's last choice becomes it (FR-014).
+    """Called in the same transaction as marking a job applied or inquired, when the request
+    carried a ``resume_file_id`` (the API leaves it out otherwise, so a one-click mark behaves as
+    before, FR-002, and an inquired job keeps its resume, FR-003). The job's resume is set to that
+    file, or cleared for ``None``, and the person's last choice becomes it (FR-014).
     """
-    if not provided:
-        return
     await store.lock_job(job_id)
     await writable_job(jobs, job_id)
     if file_id is None:

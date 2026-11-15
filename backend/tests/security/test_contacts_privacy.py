@@ -14,7 +14,7 @@ from typing import Any
 
 import grimp
 import pytest
-from sqlalchemy import text
+from tests.fakes.resume_files import add_resume_file
 from tests.fakes.search_env import Env, add_company, go, new_search, posting
 
 from hiretitan.platform.llm.port import LlmRequest, LlmResult, Usage
@@ -154,16 +154,7 @@ async def test_SC005_no_resume_name_in_ai_calls(env: Env) -> None:
     ref = await add_company(env, "Acme")
     async with env.sessions() as session:
         now = datetime(2026, 11, 6, 9, tzinfo=UTC)
-        file_id = (
-            await session.execute(
-                text(
-                    "INSERT INTO app.resume_files (id, kind, original_name, size_bytes, sha256, "
-                    "parse_status) VALUES (gen_random_uuid(), 'upload_pdf', :name, 1000, :sha, "
-                    "'parsed') RETURNING id"
-                ),
-                {"name": RESUME_MARKER, "sha": "a" * 64},
-            )
-        ).scalar_one()
+        file_id = await add_resume_file(session, RESUME_MARKER)
         job = await JobsRepo(session).add(
             company_id=ref.company_id,
             company_name="Acme",

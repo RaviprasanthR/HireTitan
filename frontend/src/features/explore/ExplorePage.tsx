@@ -40,7 +40,7 @@ export function JobCardItem({ job, showCheck = true }: { job: JobCard; showCheck
       </Link>
       <p className="text-sm text-muted-small">{facts.join(' · ')}</p>
       {reasonOf(job) && <p className="text-sm">{reasonOf(job)}</p>}
-      <PipelineControl id={job.id} state={job.state} />
+      <PipelineControl id={job.id} state={job.state} title={job.title} />
       {showCheck && isNotChecked(job) && (
         <div className="flex items-center gap-3">
           <Button

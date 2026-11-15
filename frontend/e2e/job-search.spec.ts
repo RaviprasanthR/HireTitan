@@ -167,7 +167,7 @@ test('SC002_job_search_journey', async ({ page, request }) => {
   const stored = await (await request.get('/api/v1/resumes')).json()
   const fileName: string = stored[0].original_name
   await page.goto('/explore')
-  const resumeChoice = page.getByRole('combobox', { name: 'Resume used' }).first()
+  const resumeChoice = page.getByRole('combobox', { name: /^Resume used/ }).first()
   await expect(resumeChoice).toBeVisible()
   await resumeChoice.selectOption(stored[0].id)
   await page.getByRole('button', { name: 'I applied' }).first().click()

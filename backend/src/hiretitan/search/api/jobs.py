@@ -147,19 +147,30 @@ def create_search_jobs_router(deps: SearchJobsApiDeps) -> APIRouter:
 
     async def record_resume(
         session: AsyncSession, job_id: UUID, body: AppliedIn | InquiredIn | None
-    ) -> None:
-        """Record the "Resume used" choice of a mark, in the mark's own transaction (002f)."""
+    ) -> Any | None:
+        """Record the "Resume used" choice of a mark, in the mark's own transaction (002f).
+
+        Returns nothing when it is recorded or the request did not carry one. A refused file
+        returns the 422 answer, after rolling the whole mark back."""
         if body is None or "resume_file_id" not in body.model_fields_set:
-            return  # absent: nothing changes, and a one-click mark behaves as before (FR-002)
-        await record_on_mark(
-            JobsRepo(session),
-            deps.resume_lookup(session),
-            InterviewsRepo(session),
-            PipelineSettingsRepo(session),
-            job_id,
-            provided=True,
-            file_id=body.resume_file_id,
-        )
+            return None  # absent: nothing changes, and a one-click mark behaves as before (FR-002)
+        try:
+            await record_on_mark(
+                JobsRepo(session),
+                deps.resume_lookup(session),
+                InterviewsRepo(session),
+                PipelineSettingsRepo(session),
+                job_id,
+                file_id=body.resume_file_id,
+            )
+        except InterviewInputError as error:
+            await session.rollback()  # nothing is saved: the mark rolls back too
+            return problem(
+                422,
+                str(error),
+                errors=[{"field": e.field, "message": e.message} for e in error.errors],
+            )
+        return None
 
     async def detail(session: AsyncSession, row: JobRow) -> JobDetailOut:
         cards = await job_cards(session, [row])
@@ -318,15 +329,8 @@ def create_search_jobs_router(deps: SearchJobsApiDeps) -> APIRouter:
                 raise _not_found() from error
             except IllegalJobTransitionError as error:
                 raise ProblemError(409, str(error)) from error
-            try:
-                await record_resume(session, job_id, body)
-            except InterviewInputError as error:  # nothing is saved: the mark rolls back too
-                await session.rollback()
-                return problem(
-                    422,
-                    str(error),
-                    errors=[{"field": e.field, "message": e.message} for e in error.errors],
-                )
+            if (refused := await record_resume(session, job_id, body)) is not None:
+                return refused
             await session.commit()
             return await detail(session, await load(session, job_id))
 
@@ -373,15 +377,8 @@ def create_search_jobs_router(deps: SearchJobsApiDeps) -> APIRouter:
                 raise _not_found() from error
             except IllegalJobTransitionError as error:
                 raise ProblemError(409, str(error)) from error
-            try:
-                await record_resume(session, job_id, body)
-            except InterviewInputError as error:
-                await session.rollback()
-                return problem(
-                    422,
-                    str(error),
-                    errors=[{"field": e.field, "message": e.message} for e in error.errors],
-                )
+            if (refused := await record_resume(session, job_id, body)) is not None:
+                return refused
             await session.commit()
             return await detail(session, await load(session, job_id))
 

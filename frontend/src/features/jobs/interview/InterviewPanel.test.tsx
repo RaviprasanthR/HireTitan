@@ -678,6 +678,34 @@ describe('InterviewPanel resume editing (feature 002f)', () => {
     expect(screen.getByRole('combobox', { name: 'Resume file' })).toHaveValue('')
   })
 
+  it('after Save the focus goes to the select, not the page top', async () => {
+    const user = userEvent.setup()
+    renderEditable(NONE)
+    const select = await screen.findByRole('combobox', { name: 'Resume file' })
+
+    await user.selectOptions(select, 'f2')
+    await user.click(screen.getByRole('button', { name: 'Save resume' }))
+
+    await screen.findByText('Resume saved.')
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Resume file' })).toHaveFocus())
+  })
+
+  it('after Clear the focus goes to the select', async () => {
+    const user = userEvent.setup()
+    renderEditable({
+      state: 'removed',
+      resume_file_id: null,
+      name: 'Gone.pdf',
+      added_on: '2025-03-14',
+    })
+    await screen.findByText('Gone.pdf (removed) · added 14 Mar 2025')
+    await screen.findByRole('combobox', { name: 'Resume file' })
+
+    await user.click(screen.getByRole('button', { name: 'Clear' }))
+
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Resume file' })).toHaveFocus())
+  })
+
   it('is not editable in the read-only view: no select and no Save', async () => {
     renderPanel(() => interview({ resume: chosen('f1', 'Backend_2024.pdf', '2025-03-14') }), true)
 

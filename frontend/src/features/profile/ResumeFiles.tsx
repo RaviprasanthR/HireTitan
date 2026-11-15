@@ -36,7 +36,7 @@ export function ResumeFiles() {
   const [clearNames, setClearNames] = useState(false)
   // Until the count is known the dialog cannot be confirmed: a count taken as 0 would hide the
   // option to clear the names (FR-009).
-  const checking = pipeline.isPending
+  const checking = pipeline.isPending || pipeline.isFetching
   const checkFailed = pipeline.isError
   const uses = target
     ? ((pipeline.data?.usage ?? []).find((u) => u.resume_file_id === target.id)?.jobs ?? 0)
@@ -119,7 +119,9 @@ export function ResumeFiles() {
         ))}
       </ul>
 
-      <AlertDialog.Root open={target !== null} onOpenChange={(open) => !open && !remove.isPending && setTarget(null)}>
+      <AlertDialog.Root open={target !== null} onOpenChange={(open) => {
+          if (!open && !remove.isPending) setTarget(null)
+        }}>
         <AlertDialog.Portal>
           <AlertDialog.Overlay className="fixed inset-0 bg-black/60" />
           <AlertDialog.Content className="fixed top-1/2 left-1/2 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 space-y-4 rounded-lg bg-surface p-6">

@@ -13,6 +13,7 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from tests.fakes.resume_files import add_resume_file
 
 from hiretitan.api_main import create_app
 from hiretitan.platform.clock import FakeClock
@@ -85,16 +86,9 @@ async def add_job(env: Env, title: str = "Backend Engineer") -> UUID:
 
 async def add_file(env: Env, name: str, status: str = "parsed") -> UUID:
     async with env.sessions() as session:
-        file_id = (
-            await session.execute(
-                text(
-                    "INSERT INTO app.resume_files (id, kind, original_name, size_bytes, sha256, "
-                    "parse_status, created_at) VALUES (gen_random_uuid(), 'upload_pdf', :name, "
-                    "1000, :sha, :status, '2025-03-14T09:00:00+00:00') RETURNING id"
-                ),
-                {"name": name, "sha": "a" * 64, "status": status},
-            )
-        ).scalar_one()
+        file_id = await add_resume_file(
+            session, name, status, created_at="2025-03-14T09:00:00+00:00"
+        )
         await session.commit()
         return file_id
 

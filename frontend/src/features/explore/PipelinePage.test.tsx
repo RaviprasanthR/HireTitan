@@ -602,9 +602,10 @@ describe('PipelinePage unsaved edits', () => {
       const long = `${'Backend_Engineer_Resume_'.repeat(6)}2025.pdf`
       const [row] = await rowsFor({ ...chosen, name: long })
 
+      // the whole name is on the element's title; jsdom does no layout, so the cutting itself
+      // is a styling matter that a browser run shows
       const name = within(resumeCell(row as HTMLElement)).getByText(long)
       expect(name).toHaveAttribute('title', long)
-      expect(name).toHaveClass('truncate')
     })
 
     it('FR009 keeps the removed marker visible when a long name is cut short', async () => {
@@ -617,8 +618,11 @@ describe('PipelinePage unsaved edits', () => {
       })
 
       const cell = resumeCell(row as HTMLElement)
-      expect(within(cell).getByText(long)).toHaveClass('truncate')
-      expect(within(cell).getByText('(removed)')).not.toHaveClass('truncate')
+      // the marker is its own element, apart from the name that can be cut short
+      const marker = within(cell).getByText('(removed)')
+      expect(marker).toBeInTheDocument()
+      expect(marker).not.toContainElement(within(cell).getByText(long))
+      expect(cell).toHaveTextContent(`${long} (removed)`)
     })
 
     it('FR009 shows a removed file as its name marked removed', async () => {

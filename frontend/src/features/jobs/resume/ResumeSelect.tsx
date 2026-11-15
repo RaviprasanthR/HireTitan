@@ -12,6 +12,7 @@ export function ResumeSelect({
   disabled,
   id,
   label = 'Resume used',
+  ariaLabel,
 }: {
   files: ResumeFile[]
   value: string
@@ -20,6 +21,8 @@ export function ResumeSelect({
   id?: string
   /** The name of the choice; the mark control and the edit card are on one page and differ. */
   label?: string
+  /** A longer accessible name, e.g. one that names the job when a page has many choices. */
+  ariaLabel?: string
 }) {
   if (files.length === 0) return null
   return (
@@ -27,6 +30,7 @@ export function ResumeSelect({
       {label}
       <select
         id={id}
+        aria-label={ariaLabel}
         value={value}
         disabled={disabled}
         onChange={(event) => onChange(event.target.value)}

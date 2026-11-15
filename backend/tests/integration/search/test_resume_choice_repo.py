@@ -13,6 +13,7 @@ from uuid import UUID
 import pytest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
+from tests.fakes.resume_files import add_resume_file
 from tests.integration.search.test_schema import job, rejected, run, uid
 
 from hiretitan.search.application.interviews import (
@@ -31,10 +32,6 @@ from hiretitan.search.infra.pipeline_settings_repo import PipelineSettingsRepo
 from hiretitan.search.infra.repos import JobsRepo
 from hiretitan.search_wiring import SqlResumeLookup
 
-FILE = (
-    "INSERT INTO app.resume_files (id, kind, original_name, size_bytes, sha256, parse_status) "
-    "VALUES (:id, 'upload_pdf', :name, 1000, :sha, :status)"
-)
 DETAILS = "INSERT INTO app.job_pipeline_details (job_id{cols}) VALUES (:job{vals})"
 SETTINGS = "INSERT INTO app.pipeline_settings (id, last_resume_file_id) VALUES (:id, :file)"
 
@@ -50,9 +47,7 @@ async def a_job(session: AsyncSession) -> str:
 async def a_file(
     session: AsyncSession, name: str = "Backend_2025.pdf", status: str = "parsed"
 ) -> str:
-    file_id = uid()
-    await run(session, FILE, id=file_id, name=name, sha="a" * 64, status=status)
-    return file_id
+    return str(await add_resume_file(session, name, status))
 
 
 async def test_resume_columns_constraints(db_session: AsyncSession) -> None:
@@ -362,27 +357,6 @@ async def test_clear_for_job_forgets_the_resume(db_session: AsyncSession) -> Non
     assert (await repo.details(job_id)).details is None
 
 
-async def test_record_on_mark_absent_changes_nothing(db_session: AsyncSession) -> None:
-    repo, jobs, lookup = (
-        InterviewsRepo(db_session),
-        JobsRepo(db_session),
-        SqlResumeLookup(db_session),
-    )
-    settings = PipelineSettingsRepo(db_session)
-    job_id = UUID(await a_job(db_session))
-    mine = UUID(await a_file(db_session, "Mine.pdf"))
-    last = UUID(await a_file(db_session, "Last.pdf"))
-    await choose_for_job(jobs, lookup, repo, job_id, mine)
-    await settings.set_last_choice(last)
-
-    await record_on_mark(jobs, lookup, repo, settings, job_id, provided=False, file_id=None)
-
-    row = (await repo.details(job_id)).details
-    assert row is not None
-    assert row.resume_file_id == mine  # inquired to applied keeps it (FR-003)
-    assert await settings.last_choice() == last
-
-
 async def test_record_on_mark_with_a_file_sets_the_job_and_the_last_choice(
     db_session: AsyncSession,
 ) -> None:
@@ -395,7 +369,7 @@ async def test_record_on_mark_with_a_file_sets_the_job_and_the_last_choice(
     job_id = UUID(await a_job(db_session))
     file_id = UUID(await a_file(db_session, "Backend_2025.pdf"))
 
-    await record_on_mark(jobs, lookup, repo, settings, job_id, provided=True, file_id=file_id)
+    await record_on_mark(jobs, lookup, repo, settings, job_id, file_id=file_id)
 
     row = (await repo.details(job_id)).details
     assert row is not None
@@ -415,7 +389,7 @@ async def test_record_on_mark_null_sets_none(db_session: AsyncSession) -> None:
     await choose_for_job(jobs, lookup, repo, job_id, file_id)
     await settings.set_last_choice(file_id)
 
-    await record_on_mark(jobs, lookup, repo, settings, job_id, provided=True, file_id=None)
+    await record_on_mark(jobs, lookup, repo, settings, job_id, file_id=None)
 
     assert (await repo.details(job_id)).details is None  # the job's resume is cleared
     assert await settings.last_choice() is None  # and None is what the next mark starts on
@@ -433,9 +407,7 @@ async def test_record_on_mark_with_a_bad_file_saves_nothing(db_session: AsyncSes
     await settings.set_last_choice(last)
 
     with pytest.raises(InterviewInputError):
-        await record_on_mark(
-            jobs, lookup, repo, settings, job_id, provided=True, file_id=UUID(uid())
-        )
+        await record_on_mark(jobs, lookup, repo, settings, job_id, file_id=UUID(uid()))
 
     assert (await repo.details(job_id)).details is None
     assert await settings.last_choice() == last

@@ -14,6 +14,7 @@ import pytest
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from tests.fakes.resume_files import add_resume_file
 
 from hiretitan.api_main import create_app
 from hiretitan.platform.clock import FakeClock
@@ -394,16 +395,7 @@ async def test_SC004_delete_all_removes_interview_data(env: Env) -> None:
 
 async def test_SC005_delete_all_removes_resume_choices_and_last_choice(env: Env) -> None:
     async with env.sessions() as session:
-        file_id = (
-            await session.execute(
-                text(
-                    "INSERT INTO app.resume_files (id, kind, original_name, size_bytes, sha256, "
-                    "parse_status) VALUES (gen_random_uuid(), 'upload_pdf', 'Backend_2025.pdf', "
-                    "1000, :sha, 'parsed') RETURNING id"
-                ),
-                {"sha": "a" * 64},
-            )
-        ).scalar_one()
+        file_id = await add_resume_file(session, "Backend_2025.pdf")
         job = await JobsRepo(session).add(
             company_id=None,
             company_name="Acme",

@@ -12,6 +12,7 @@ import httpx
 import pytest
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from tests.fakes.resume_files import add_resume_file
 
 from hiretitan.api_main import create_app
 from hiretitan.platform.clock import FakeClock
@@ -90,17 +91,9 @@ async def test_list_shows_open_pairs_side_by_side(env: Env) -> None:
 async def test_FR004_a_pair_card_carries_the_resume_of_a_pipeline_job(env: Env) -> None:
     keep, _ = await add_pair(env)
     async with env.sessions() as session:
-        file_id = (
-            await session.execute(
-                text(
-                    "INSERT INTO app.resume_files (id, kind, original_name, size_bytes, sha256, "
-                    "parse_status, created_at) VALUES (gen_random_uuid(), 'upload_pdf', "
-                    "'Backend_2025.pdf', 1000, :sha, 'parsed', '2025-03-14T09:00:00+00:00') "
-                    "RETURNING id"
-                ),
-                {"sha": "a" * 64},
-            )
-        ).scalar_one()
+        file_id = await add_resume_file(
+            session, "Backend_2025.pdf", created_at="2025-03-14T09:00:00+00:00"
+        )
         await session.execute(
             text("UPDATE app.jobs SET state = 'applied', applied_on = '2026-11-01' WHERE id = :id"),
             {"id": keep},

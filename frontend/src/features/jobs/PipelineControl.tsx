@@ -26,9 +26,12 @@ export function PipelineControl({
   state,
   ownResumeId,
   ownRemoved = false,
+  title,
 }: {
   id: string
   state: string
+  /** The job's title, so the choice is named for it where a page lists many jobs. */
+  title?: string
   /** The job's own resume file, `null` for none; left out while it is not known. */
   ownResumeId?: string | null
   /** The job's resume file was removed and only its name is left as a note. */
@@ -83,6 +86,7 @@ export function PipelineControl({
       )}
       {showResume && (
         <ResumeSelect
+          ariaLabel={title ? `Resume used for ${title}` : undefined}
           files={offered}
           value={resumeValue}
           onChange={setPicked}
