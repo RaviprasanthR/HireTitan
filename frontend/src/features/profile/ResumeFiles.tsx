@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertDialog } from 'radix-ui'
 import { useState } from 'react'
-import { ApiError } from '@/api/client'
+import { ApiError, apiFetch } from '@/api/client'
 import { Button } from '@/components/ui/button'
+import { usePipelineResumes } from '@/features/jobs/resume/resumeApi'
 import { type ResumeFile, deleteResume, fetchResumes } from './api'
 
 const KIND: Record<string, string> = {
@@ -27,15 +28,34 @@ export function ResumeFiles() {
     refetchOnWindowFocus: false,
   })
 
+  // how many pipeline jobs use each file (feature 002f), and whether to clear their names too
+  const pipeline = usePipelineResumes()
+  const [clearNames, setClearNames] = useState(false)
+  const uses = target
+    ? ((pipeline.data?.usage ?? []).find((u) => u.resume_file_id === target.id)?.jobs ?? 0)
+    : 0
+
   const remove = useMutation({
-    mutationFn: (id: string) => deleteResume(id),
+    mutationFn: async ({ id, clear }: { id: string; clear: boolean }) => {
+      // The jobs are cleared first: once the file is gone nothing points at it any more. If this
+      // fails the file stays, and the person sees why.
+      if (clear) await apiFetch(`/pipeline/resumes/${id}/uses`, { method: 'DELETE' })
+      return deleteResume(id)
+    },
     onSuccess: async () => {
       setTarget(null)
       setError(null)
       await Promise.all(
-        [['resumes'], ['profile'], ['onboarding'], ['status'], ['review-items']].map((queryKey) =>
-          queryClient.invalidateQueries({ queryKey }),
-        ),
+        [
+          ['resumes'],
+          ['profile'],
+          ['onboarding'],
+          ['status'],
+          ['review-items'],
+          ['pipeline-resumes'], // the use counts
+          ['jobs'], // the Resume column
+          ['job-interview'], // a job's details
+        ].map((queryKey) => queryClient.invalidateQueries({ queryKey })),
       )
     },
     onError: (e) =>
@@ -65,6 +85,7 @@ export function ResumeFiles() {
               aria-label={`Delete ${f.original_name}`}
               onClick={() => {
                 setError(null)
+                setClearNames(false)
                 setTarget(f)
               }}
             >
@@ -91,7 +112,24 @@ export function ResumeFiles() {
                   This file has an unsaved review. Deleting the file discards that review.
                 </span>
               )}
+              {uses > 0 && (
+                <span className="block">
+                  Used on {uses} {uses === 1 ? 'job' : 'jobs'}. Their name stays on them as a note
+                  you can clear.
+                </span>
+              )}
             </AlertDialog.Description>
+            {uses > 0 && (
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={clearNames}
+                  disabled={remove.isPending}
+                  onChange={(event) => setClearNames(event.target.checked)}
+                />
+                Also clear the name from these jobs
+              </label>
+            )}
             {error && (
               <p role="alert" className="text-sm text-danger">
                 {error}
@@ -102,7 +140,7 @@ export function ResumeFiles() {
                 disabled={remove.isPending}
                 onClick={(event) => {
                   event.preventDefault() // stay open until the server answers
-                  if (target) remove.mutate(target.id)
+                  if (target) remove.mutate({ id: target.id, clear: uses > 0 && clearNames })
                 }}
               >
                 Delete file
