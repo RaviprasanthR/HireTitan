@@ -119,6 +119,7 @@ export function useRefreshing() {
       [
         ['jobs'],
         ['job-interview'], // whether the details can be edited follows the mark
+        ['pipeline-resumes'], // the resume choice starts on the last one marked
         ['companies'],
         ['search-latest'],
         ['search-run'],
