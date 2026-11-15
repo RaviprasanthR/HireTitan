@@ -51,6 +51,19 @@ Unsaved edits are never dropped silently: closing the row, leaving the page or c
 
 **What stays private:** these notes live only in your own database. They are never sent to an AI, never fetched or opened, and **Delete all my data** removes them.
 
-## 8. Your data
+## 8. The resume you used
+
+HireTitan keeps the resume files you uploaded on the Profile page. For each job in your pipeline you can say which one you used, so months later you still know which version a company received. It is a label for your own reference: HireTitan does not attach, send or change any resume.
+
+- **While marking a job:** beside the date, **Resume used** lists your stored files (newest first) and **None**. It starts on the resume you chose the last time you marked a job, or on the job's own resume when it already has one. Leave it alone and **I applied** stays one click. If you have no stored file, the choice is not shown.
+- **Later:** in a job's edit card (the pencil), **Resume file** and **Save resume** set, change or clear it. Closing the card with an unsaved change asks first.
+- **Where it shows:** the **Resume** column of In pipeline (a long name is cut short, and the whole name shows on hover), and the details of the job: its row, its page and its edit card, with the day the file was added.
+- **Undo** of an applied or inquired mark forgets the resume for that job.
+- **If you remove a resume file:** the Profile page tells you how many jobs use it. Those jobs keep the file's name as a note marked **(removed)**, which you can clear from a job's edit card with **Clear**. To remove the name everywhere in one step, tick **Also clear the name from these jobs** in the removal dialog (it is off by default).
+- **Merging duplicates:** the job you keep keeps its own resume, and takes the other job's only when it has none.
+
+**What stays private:** the choice and the file name live only in your own database. They are never sent to an AI, and **Delete all my data** removes them.
+
+## 9. Your data
 
 **Delete all my data** in Settings removes your jobs, search rules, run history, company edits and added companies, and puts the shipped company list back to its original state.
