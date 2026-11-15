@@ -34,6 +34,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from hiretitan.platform.db import APP_SCHEMA, Base, IdTimestampMixin
 from hiretitan.search.domain.companies import CHECK_RESULTS, COMPANY_ORIGINS, RESOLUTIONS
+from hiretitan.search.domain.interviews import ROUND_KINDS, ROUND_STATES, SOURCES
 
 JsonDict = dict[str, Any]
 
@@ -355,3 +356,89 @@ class CompanyNoteRow(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
+
+
+class PipelineDetailsRow(Base):
+    """The contact and the source of one pipeline job (feature 002e). The person's own data,
+    never AI input. The spec's "pipeline contact" and "job source" are the columns of this row."""
+
+    __tablename__ = "job_pipeline_details"
+    __table_args__ = (
+        CheckConstraint("source IS NULL OR " + _in("source", SOURCES), name="source_values"),
+        CheckConstraint(
+            "(source IS NOT DISTINCT FROM 'hiring_firm') = (firm_name IS NOT NULL)",
+            name="firm_iff_hiring_firm",
+        ),
+        CheckConstraint(
+            "contact_name IS NOT NULL OR (contact_role IS NULL AND contact_email IS NULL"
+            " AND contact_phone IS NULL AND contact_linkedin IS NULL)",
+            name="contact_has_name",
+        ),
+        CheckConstraint("char_length(contact_name) BETWEEN 1 AND 120", name="contact_name_length"),
+        CheckConstraint("char_length(contact_role) <= 120", name="contact_role_length"),
+        CheckConstraint("char_length(contact_email) <= 254", name="contact_email_length"),
+        CheckConstraint(
+            "contact_phone IS NULL OR contact_phone ~ '^[0-9 +()-]{5,30}$'",
+            name="contact_phone_shape",
+        ),
+        CheckConstraint("char_length(contact_linkedin) <= 500", name="contact_linkedin_length"),
+        CheckConstraint("char_length(firm_name) BETWEEN 1 AND 120", name="firm_name_length"),
+    )
+
+    job_id: Mapped[UUID] = mapped_column(
+        ForeignKey(f"{APP_SCHEMA}.jobs.id", ondelete="CASCADE"), primary_key=True
+    )
+    contact_name: Mapped[str | None] = mapped_column(Text)
+    contact_role: Mapped[str | None] = mapped_column(Text)
+    contact_email: Mapped[str | None] = mapped_column(Text)
+    contact_phone: Mapped[str | None] = mapped_column(Text)
+    contact_linkedin: Mapped[str | None] = mapped_column(Text)
+    source: Mapped[str | None] = mapped_column(Text)
+    firm_name: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+
+class InterviewRoundRow(IdTimestampMixin, Base):
+    """One interview step of one job, numbered in the order added (feature 002e)."""
+
+    __tablename__ = "interview_rounds"
+    __table_args__ = (
+        UniqueConstraint("job_id", "number", name="uq_interview_rounds_job_number"),
+        CheckConstraint(_in("kind", ROUND_KINDS), name="kind_values"),
+        CheckConstraint(_in("state", ROUND_STATES), name="state_values"),
+        CheckConstraint("number >= 1", name="number_positive"),
+        CheckConstraint("char_length(interviewers) <= 300", name="interviewers_length"),
+        CheckConstraint("char_length(feedback) <= 10000", name="feedback_length"),
+    )
+
+    job_id: Mapped[UUID] = mapped_column(ForeignKey(f"{APP_SCHEMA}.jobs.id", ondelete="CASCADE"))
+    number: Mapped[int] = mapped_column(Integer)
+    kind: Mapped[str] = mapped_column(Text)
+    scheduled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    interviewers: Mapped[str | None] = mapped_column(Text)
+    state: Mapped[str] = mapped_column(Text, server_default="scheduled")
+    feedback: Mapped[str | None] = mapped_column(Text)
+
+
+class InterviewQuestionRow(IdTimestampMixin, Base):
+    """One question asked in a round, and the answer given (feature 002e)."""
+
+    __tablename__ = "interview_questions"
+    __table_args__ = (
+        UniqueConstraint("round_id", "position", name="uq_interview_questions_round_position"),
+        CheckConstraint("position >= 1", name="position_positive"),
+        CheckConstraint("char_length(question) BETWEEN 1 AND 2000", name="question_length"),
+        CheckConstraint("char_length(answer) <= 10000", name="answer_length"),
+    )
+
+    round_id: Mapped[UUID] = mapped_column(
+        ForeignKey(f"{APP_SCHEMA}.interview_rounds.id", ondelete="CASCADE")
+    )
+    position: Mapped[int] = mapped_column(Integer)
+    question: Mapped[str] = mapped_column(Text)
+    answer: Mapped[str | None] = mapped_column(Text)

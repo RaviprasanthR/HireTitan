@@ -41,6 +41,7 @@ from hiretitan.profile.infra.repos import VersionsRepo
 from hiretitan.search.api.companies import SearchCompaniesApiDeps, create_companies_router
 from hiretitan.search.api.contacts import SearchContactsApiDeps, create_contacts_router
 from hiretitan.search.api.duplicates import SearchDuplicatesApiDeps, create_duplicates_router
+from hiretitan.search.api.interviews import SearchInterviewsApiDeps, create_interviews_router
 from hiretitan.search.api.jobs import SearchJobsApiDeps, create_search_jobs_router
 from hiretitan.search.api.rules import SearchRulesApiDeps, create_search_rules_router
 from hiretitan.search.api.runs import SearchRunsApiDeps, create_search_runs_router
@@ -235,6 +236,7 @@ def build_app(settings: Settings | None = None) -> FastAPI:
             )
         ),
         create_contacts_router(SearchContactsApiDeps(sessions=deps.sessions)),
+        create_interviews_router(SearchInterviewsApiDeps(sessions=deps.sessions)),
         create_search_jobs_router(
             SearchJobsApiDeps(sessions=deps.sessions, queue=deps.queue, clock=clock)
         ),

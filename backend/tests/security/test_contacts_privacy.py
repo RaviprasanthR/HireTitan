@@ -8,6 +8,7 @@ workflow, prompt and LLM code cannot import the contacts code; nothing shipped i
 from __future__ import annotations
 
 import re
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -18,7 +19,9 @@ from tests.fakes.search_env import Env, add_company, go, new_search, posting
 from hiretitan.platform.llm.port import LlmRequest, LlmResult, Usage
 from hiretitan.search.application.ports import ScanOk
 from hiretitan.search.domain.contacts import ContactFields
-from hiretitan.search.infra.repos import ContactsRepo, NotesRepo
+from hiretitan.search.domain.interviews import check_contact
+from hiretitan.search.infra.interviews_repo import InterviewsRepo
+from hiretitan.search.infra.repos import ContactsRepo, JobsRepo, NotesRepo
 
 REPO = Path(__file__).parents[3]
 # Unique strings: if any of them shows up where it should not, a leak is proven.
@@ -29,6 +32,16 @@ MARKERS = (
     "linkedin.com/in/zebulon-marker",
     "leak-check note about the hiring manager",
     "leak-check company note",
+)
+# the same kind of proof for what the person records about a pipeline job (feature 002e)
+INTERVIEW_MARKERS = (
+    "Quillon Marker",
+    "quillon.marker@leak-check.example",
+    "Leakcheck Staffing Firm",
+    "leak-check interviewer Rowan",
+    "leak-check question about sharding",
+    "leak-check answer about sharding",
+    "leak-check feedback from the panel",
 )
 PLACEHOLDER_SLUG = re.compile(r"example|placeholder|your-|sample|jane-|john-", re.IGNORECASE)
 LINKEDIN_PROFILE = re.compile(r"linkedin\.com/in/([A-Za-z0-9_%\-]+)", re.IGNORECASE)
@@ -83,12 +96,65 @@ async def test_FR022_no_ai_call_contains_contacts_or_notes(env: Env) -> None:
             assert marker not in sent, f"{marker!r} reached the model"
 
 
+async def test_SC003_no_interview_text_in_ai_calls(env: Env) -> None:
+    ref = await add_company(env, "Acme")
+    async with env.sessions() as session:
+        now = datetime(2026, 11, 6, 9, tzinfo=UTC)
+        job = await JobsRepo(session).add(
+            company_id=ref.company_id,
+            company_name="Acme",
+            title="Platform Engineer",
+            first_seen_at=now,
+            last_seen_at=now,
+            description="d",
+            state="applied",
+            applied_on=date(2026, 11, 6),
+        )
+        interviews = InterviewsRepo(session)
+        fields, _ = check_contact(name=INTERVIEW_MARKERS[0], email=INTERVIEW_MARKERS[1])
+        assert fields is not None
+        await interviews.upsert_contact(job.id, fields)
+        await interviews.set_source(job.id, "hiring_firm", INTERVIEW_MARKERS[2])
+        row = await interviews.add_round(
+            job.id, kind="technical", interviewers=INTERVIEW_MARKERS[3]
+        )
+        await interviews.update_round(row.id, {"feedback": INTERVIEW_MARKERS[6]})
+        await interviews.add_question(row.id, INTERVIEW_MARKERS[4], INTERVIEW_MARKERS[5])
+        await session.commit()
+    llm = RecordingLlm()
+    assert env.deps.judge is not None
+    env.deps.judge.llm = llm
+    # the scan finds the pipeline job again (same company and title) next to a new posting, so
+    # the search has every reason to look at the job the notes belong to
+    env.career_ops.script(
+        ref,
+        ScanOk(
+            [
+                posting("Platform Engineer", company="acme"),
+                posting("Backend Engineer", company="acme"),
+            ]
+        ),
+    )
+
+    await go(env, await new_search(env, mode="rules_and_ai"))
+
+    assert llm.requests, "the search made no AI call, so this test proved nothing"
+    assert any("Backend Engineer" in r.prompt.user for r in llm.requests)
+    for request in llm.requests:
+        sent = request.prompt.system + "\n" + request.prompt.user
+        for marker in INTERVIEW_MARKERS:
+            assert marker not in sent, f"{marker!r} reached the model"
+
+
 def test_FR022_workflows_cannot_import_contacts() -> None:
     graph = grimp.build_graph("hiretitan")
     ai_paths = ("hiretitan.search.workflow", "hiretitan.prompts", "hiretitan.platform.llm")
     contacts_code = (
         "hiretitan.search.domain.contacts",
         "hiretitan.search.application.contacts",
+        "hiretitan.search.domain.interviews",
+        "hiretitan.search.application.interviews",
+        "hiretitan.search.infra.interviews_repo",
     )
     found = [
         (importer, imported)

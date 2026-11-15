@@ -1,9 +1,10 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes } from 'react-router'
+import { act } from 'react'
+import { MemoryRouter, Route, RouterProvider, Routes, createMemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { problem, stubApi } from '@/test/api'
+import { problem, stubApi, type Call } from '@/test/api'
 import { JobDetailPage } from './JobDetailPage'
 import { UndoToast } from './UndoToast'
 
@@ -63,8 +64,10 @@ function detail(over: Record<string, unknown> = {}) {
   }
 }
 
-function renderPage(job = detail()) {
+function renderPage(job = detail(), interview: unknown = undefined) {
   const calls = stubApi((call) => {
+    if (call.path === '/jobs/j1/interview')
+      return typeof interview === 'function' ? interview() : interview
     if (call.path === '/jobs/j1/recheck')
       return new Response('{"run_id":"r1"}', {
         status: 202,
@@ -283,6 +286,77 @@ describe('JobDetailPage', () => {
     expect(screen.queryByRole('button', { name: 'I applied' })).not.toBeInTheDocument()
   })
 
+  it('US1 AS5 job page shows the same panel', async () => {
+    renderPage(detail({ state: 'applied', applied_on: '2026-11-06' }), {
+      job_id: 'j1',
+      can_edit: true,
+      can_add_round: true,
+      contact: { name: 'Asha Rao', role: null, email: null, phone: null, linkedin_url: null },
+      source: { kind: 'direct', firm_name: null },
+      rounds: [],
+      status: { state: 'applied', round: null },
+    })
+
+    expect(await screen.findByRole('heading', { name: 'Interview details' })).toBeInTheDocument()
+    expect(await screen.findByLabelText('Contact name')).toHaveValue('Asha Rao')
+    expect(screen.getByLabelText('Contact name')).toBeEnabled()
+    expect(screen.getByRole('radio', { name: 'Direct' })).toBeChecked()
+  })
+
+  it('review: marking the job applied refreshes the panel so it becomes editable', async () => {
+    const user = userEvent.setup()
+    let calls: Call[] = []
+    const answer = () => {
+      const marked = calls.some((c) => c.method === 'POST' && c.path === '/jobs/j1/applied')
+      return {
+        job_id: 'j1',
+        can_edit: marked,
+        can_add_round: marked,
+        contact: { name: 'Asha Rao', role: null, email: null, phone: null, linkedin_url: null },
+        source: null,
+        rounds: [],
+        status: { state: marked ? 'applied' : 'explore', round: null },
+      }
+    }
+    calls = renderPage(detail({ state: 'explore' }), answer)
+    expect(await screen.findByLabelText('Contact name')).toBeDisabled()
+
+    await user.click(await screen.findByRole('button', { name: 'I applied' }))
+
+    await waitFor(() => expect(screen.getByLabelText('Contact name')).toBeEnabled())
+  })
+
+  it('US4 AS4 the panel is read-only outside the pipeline', async () => {
+    renderPage(detail({ state: 'explore' }), {
+      job_id: 'j1',
+      can_edit: false,
+      can_add_round: false,
+      contact: { name: 'Asha Rao', role: null, email: null, phone: null, linkedin_url: null },
+      source: null,
+      rounds: [],
+      status: { state: 'explore', round: null },
+    })
+
+    expect(await screen.findByLabelText('Contact name')).toBeDisabled()
+    expect(screen.queryByRole('button', { name: 'Save contact' })).not.toBeInTheDocument()
+  })
+
+  it('no interview panel on a job outside the pipeline that has no details', async () => {
+    renderPage(detail({ state: 'explore' }), {
+      job_id: 'j1',
+      can_edit: false,
+      can_add_round: false,
+      contact: null,
+      source: null,
+      rounds: [],
+      status: { state: 'explore', round: null },
+    })
+    await screen.findByRole('heading', { name: 'Description' })
+
+    expect(screen.queryByRole('heading', { name: 'Interview details' })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Contact name')).not.toBeInTheDocument()
+  })
+
   it('US2 AS1 I inquired moves the job to the pipeline', async () => {
     const user = userEvent.setup()
     const calls = renderPage()
@@ -358,5 +432,75 @@ describe('JobDetailPage', () => {
     await user.click(screen.getByRole('button', { name: 'I inquired' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('The date cannot be in the future.')
+  })
+})
+
+
+describe('JobDetailPage unsaved edits', () => {
+  function renderInDataRouter() {
+    stubApi((call) => {
+      if (call.path === '/jobs/j1') return detail({ state: 'applied', applied_on: '2026-11-05' })
+      if (call.path === '/jobs/j1/interview') {
+        return {
+          job_id: 'j1',
+          can_edit: true,
+          can_add_round: true,
+          contact: null,
+          source: null,
+          rounds: [],
+          status: { state: 'applied', round: null },
+        }
+      }
+      return undefined
+    })
+    const router = createMemoryRouter(
+      [
+        { path: '/jobs/:id', element: <JobDetailPage /> },
+        { path: '/elsewhere', element: <p>Another page</p> },
+      ],
+      { initialEntries: ['/jobs/j1'] },
+    )
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>,
+    )
+    return router
+  }
+
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('FR013 leaving the page with unsaved edits asks first', async () => {
+    const user = userEvent.setup()
+    const router = renderInDataRouter()
+    await user.type(await screen.findByLabelText('Contact name'), 'Asha')
+
+    await act(async () => {
+      await router.navigate('/elsewhere')
+    })
+
+    expect(screen.getByRole('alertdialog', { name: 'Unsaved changes' })).toBeInTheDocument()
+    expect(screen.queryByText('Another page')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Stay on this page' }))
+    expect(screen.getByLabelText('Contact name')).toHaveValue('Asha')
+
+    await act(async () => {
+      await router.navigate('/elsewhere')
+    })
+    await user.click(screen.getByRole('button', { name: 'Leave and lose them' }))
+    expect(await screen.findByText('Another page')).toBeInTheDocument()
+  })
+
+  it('FR013 no question when nothing changed', async () => {
+    const router = renderInDataRouter()
+    await screen.findByLabelText('Contact name')
+
+    await act(async () => {
+      await router.navigate('/elsewhere')
+    })
+
+    expect(await screen.findByText('Another page')).toBeInTheDocument()
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
   })
 })

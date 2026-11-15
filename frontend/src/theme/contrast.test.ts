@@ -73,6 +73,28 @@ describe('theme', () => {
     }
   })
 
+  it('FR007 status colours meet contrast', () => {
+    // The status pills (Applied, Inquired, Round n scheduled / cleared, Failed) are tinted, so
+    // the text is checked against the tint laid over the panel colour.
+    const css = readFileSync(resolve(process.cwd(), 'src/theme/theme.css'), 'utf8')
+    const hex = (n: number) => n.toString(16).padStart(2, '0')
+    const panel = Number.parseInt(tokens.surface.replace('#', ''), 16)
+    const base = [(panel >> 16) & 255, (panel >> 8) & 255, panel & 255]
+    const seen: string[] = []
+    for (const [, tone, text, r, g, b, alpha] of css.matchAll(
+      /\.ht-pill-(\w+)\s*\{\s*color:\s*(#[0-9a-f]{6});\s*background:\s*rgb\((\d+) (\d+) (\d+) \/ ([\d.]+)\)/g,
+    )) {
+      const mixed = [r, g, b].map((c, i) =>
+        Math.round(Number(c) * Number(alpha) + (base[i] ?? 0) * (1 - Number(alpha))),
+      )
+      const background = `#${mixed.map((c) => hex(c)).join('')}`
+      expect(contrastRatio(text as string, background), `pill ${tone}`).toBeGreaterThanOrEqual(4.5)
+      seen.push(tone as string)
+    }
+    // the tones the pipeline status uses must all exist
+    for (const tone of ['green', 'blue', 'yellow', 'teal', 'red']) expect(seen).toContain(tone)
+  })
+
   it('contrast_ratio_matches_known_values', () => {
     expect(contrastRatio('#000000', '#ffffff')).toBeCloseTo(21, 1)
     expect(contrastRatio('#777777', '#777777')).toBeCloseTo(1, 5)

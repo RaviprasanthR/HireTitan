@@ -18,6 +18,7 @@ from hiretitan.search.application.ports import ProposalSource
 from hiretitan.search.application.rules import (
     NoProposalError,
     RuleSetView,
+    RulesNotApprovedError,
     RulesService,
     RulesUnavailableError,
 )
@@ -181,6 +182,18 @@ def create_search_rules_router(deps: SearchRulesApiDeps) -> APIRouter:
                 view = await service(session).propose()
             except RulesUnavailableError as error:
                 raise _unavailable(error) from error
+            await session.commit()
+            return await render(session, view)
+
+    @router.post("/proposal/from-approved", status_code=201)
+    async def make_proposal_from_approved() -> RuleSetOut:
+        async with deps.sessions() as session:
+            try:
+                view = await service(session).propose_from_approved()
+            except RulesNotApprovedError as error:
+                raise ProblemError(
+                    409, "There are no approved rules to edit.", reason="rules_not_approved"
+                ) from error
             await session.commit()
             return await render(session, view)
 

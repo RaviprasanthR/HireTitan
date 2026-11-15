@@ -552,83 +552,6 @@
         "title": "CompletedOut",
         "type": "object"
       },
-      "ContactIn": {
-        "properties": {
-          "confidence": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Confidence"
-          },
-          "email": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Email"
-          },
-          "linkedin_url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Linkedin Url"
-          },
-          "name": {
-            "default": "",
-            "title": "Name",
-            "type": "string"
-          },
-          "note": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Note"
-          },
-          "phone": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Phone"
-          },
-          "role": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Role"
-          }
-        },
-        "title": "ContactIn",
-        "type": "object"
-      },
       "ContactModel": {
         "additionalProperties": false,
         "properties": {
@@ -1354,6 +1277,117 @@
         "title": "InquiredIn",
         "type": "object"
       },
+      "InterviewOut": {
+        "properties": {
+          "can_add_round": {
+            "title": "Can Add Round",
+            "type": "boolean"
+          },
+          "can_edit": {
+            "title": "Can Edit",
+            "type": "boolean"
+          },
+          "contact": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PipelineContactOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "job_id": {
+            "format": "uuid",
+            "title": "Job Id",
+            "type": "string"
+          },
+          "rounds": {
+            "items": {
+              "$ref": "#/components/schemas/RoundOut"
+            },
+            "title": "Rounds",
+            "type": "array"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/hiretitan__search__api__interviews__SourceOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/InterviewStatusOut"
+          }
+        },
+        "required": [
+          "job_id",
+          "can_edit",
+          "can_add_round",
+          "contact",
+          "source",
+          "rounds",
+          "status"
+        ],
+        "title": "InterviewOut",
+        "type": "object"
+      },
+      "InterviewStatusOut": {
+        "properties": {
+          "round": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Round"
+          },
+          "state": {
+            "enum": [
+              "explore",
+              "skipped",
+              "applied",
+              "inquired",
+              "scheduled",
+              "cleared",
+              "failed"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state",
+          "round"
+        ],
+        "title": "InterviewStatusOut",
+        "type": "object"
+      },
+      "InterviewSummaryOut": {
+        "description": "The latest round of a pipeline job, for the Status column (feature 002e).",
+        "properties": {
+          "round": {
+            "title": "Round",
+            "type": "integer"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state",
+          "round"
+        ],
+        "title": "InterviewSummaryOut",
+        "type": "object"
+      },
       "JobCardOut": {
         "properties": {
           "applied_on": {
@@ -1416,6 +1450,16 @@
             ],
             "title": "Inquired On"
           },
+          "interview": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InterviewSummaryOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "listed": {
             "title": "Listed",
             "type": "boolean"
@@ -1453,7 +1497,7 @@
           },
           "sources": {
             "items": {
-              "$ref": "#/components/schemas/SourceOut"
+              "$ref": "#/components/schemas/hiretitan__search__api__models__SourceOut"
             },
             "title": "Sources",
             "type": "array"
@@ -1651,6 +1695,16 @@
             ],
             "title": "Inquired On"
           },
+          "interview": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InterviewSummaryOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "listed": {
             "title": "Listed",
             "type": "boolean"
@@ -1695,7 +1749,7 @@
           },
           "sources": {
             "items": {
-              "$ref": "#/components/schemas/SourceOut"
+              "$ref": "#/components/schemas/hiretitan__search__api__models__SourceOut"
             },
             "title": "Sources",
             "type": "array"
@@ -2100,6 +2154,16 @@
             ],
             "title": "Inquired On"
           },
+          "interview": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InterviewSummaryOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "listed": {
             "title": "Listed",
             "type": "boolean"
@@ -2156,7 +2220,7 @@
           },
           "sources": {
             "items": {
-              "$ref": "#/components/schemas/SourceOut"
+              "$ref": "#/components/schemas/hiretitan__search__api__models__SourceOut"
             },
             "title": "Sources",
             "type": "array"
@@ -2308,6 +2372,67 @@
           "basis"
         ],
         "title": "PayModel",
+        "type": "object"
+      },
+      "PipelineContactOut": {
+        "properties": {
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "linkedin_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Linkedin Url"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          }
+        },
+        "required": [
+          "name",
+          "role",
+          "email",
+          "phone",
+          "linkedin_url"
+        ],
+        "title": "PipelineContactOut",
         "type": "object"
       },
       "PlaceModel": {
@@ -2853,6 +2978,96 @@
         "title": "ProvenanceOut",
         "type": "object"
       },
+      "QuestionIn": {
+        "properties": {
+          "answer": {
+            "anyOf": [
+              {
+                "maxLength": 100000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer"
+          },
+          "question": {
+            "default": "",
+            "maxLength": 20000,
+            "title": "Question",
+            "type": "string"
+          }
+        },
+        "title": "QuestionIn",
+        "type": "object"
+      },
+      "QuestionOut": {
+        "properties": {
+          "answer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "position": {
+            "title": "Position",
+            "type": "integer"
+          },
+          "question": {
+            "title": "Question",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "position",
+          "question",
+          "answer"
+        ],
+        "title": "QuestionOut",
+        "type": "object"
+      },
+      "QuestionPatch": {
+        "properties": {
+          "answer": {
+            "anyOf": [
+              {
+                "maxLength": 100000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer"
+          },
+          "question": {
+            "anyOf": [
+              {
+                "maxLength": 20000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Question"
+          }
+        },
+        "title": "QuestionPatch",
+        "type": "object"
+      },
       "ResumeFileOut": {
         "properties": {
           "created_at": {
@@ -3073,6 +3288,191 @@
           "provenance"
         ],
         "title": "ReviewOut",
+        "type": "object"
+      },
+      "RoundIn": {
+        "properties": {
+          "interviewers": {
+            "anyOf": [
+              {
+                "maxLength": 20000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interviewers"
+          },
+          "kind": {
+            "default": "",
+            "title": "Kind",
+            "type": "string"
+          },
+          "scheduled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled At"
+          }
+        },
+        "title": "RoundIn",
+        "type": "object"
+      },
+      "RoundOut": {
+        "properties": {
+          "feedback": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feedback"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "interviewers": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interviewers"
+          },
+          "kind": {
+            "enum": [
+              "screening",
+              "technical",
+              "hr",
+              "managerial",
+              "other"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "integer"
+          },
+          "questions": {
+            "items": {
+              "$ref": "#/components/schemas/QuestionOut"
+            },
+            "title": "Questions",
+            "type": "array"
+          },
+          "scheduled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled At"
+          },
+          "state": {
+            "enum": [
+              "scheduled",
+              "cleared",
+              "failed"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "kind",
+          "state",
+          "scheduled_at",
+          "interviewers",
+          "feedback",
+          "questions"
+        ],
+        "title": "RoundOut",
+        "type": "object"
+      },
+      "RoundPatch": {
+        "properties": {
+          "feedback": {
+            "anyOf": [
+              {
+                "maxLength": 100000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feedback"
+          },
+          "interviewers": {
+            "anyOf": [
+              {
+                "maxLength": 20000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interviewers"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "scheduled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled At"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          }
+        },
+        "title": "RoundPatch",
         "type": "object"
       },
       "RuleItemModel": {
@@ -3779,22 +4179,34 @@
         "title": "SearchRunSummary",
         "type": "object"
       },
-      "SourceOut": {
+      "SourceIn": {
         "properties": {
-          "kind": {
-            "title": "Kind",
-            "type": "string"
+          "firm_name": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Firm Name"
           },
-          "url": {
-            "title": "Url",
-            "type": "string"
+          "kind": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
           }
         },
-        "required": [
-          "kind",
-          "url"
-        ],
-        "title": "SourceOut",
+        "title": "SourceIn",
         "type": "object"
       },
       "StartIn": {
@@ -4079,6 +4491,190 @@
         ],
         "title": "YearMonthModel",
         "type": "object"
+      },
+      "hiretitan__search__api__contacts__ContactIn": {
+        "properties": {
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "linkedin_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Linkedin Url"
+          },
+          "name": {
+            "default": "",
+            "title": "Name",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          }
+        },
+        "title": "ContactIn",
+        "type": "object"
+      },
+      "hiretitan__search__api__interviews__ContactIn": {
+        "properties": {
+          "email": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "linkedin_url": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Linkedin Url"
+          },
+          "name": {
+            "default": "",
+            "maxLength": 2000,
+            "title": "Name",
+            "type": "string"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          }
+        },
+        "title": "ContactIn",
+        "type": "object"
+      },
+      "hiretitan__search__api__interviews__SourceOut": {
+        "properties": {
+          "firm_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Firm Name"
+          },
+          "kind": {
+            "enum": [
+              "direct",
+              "hiring_firm"
+            ],
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "firm_name"
+        ],
+        "title": "SourceOut",
+        "type": "object"
+      },
+      "hiretitan__search__api__models__SourceOut": {
+        "properties": {
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "url"
+        ],
+        "title": "SourceOut",
+        "type": "object"
       }
     }
   },
@@ -4322,7 +4918,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ContactIn"
+                "$ref": "#/components/schemas/hiretitan__search__api__contacts__ContactIn"
               }
             }
           },
@@ -4715,6 +5311,247 @@
           }
         },
         "summary": "Health"
+      }
+    },
+    "/api/v1/interview/questions/{question_id}": {
+      "delete": {
+        "operationId": "delete_question_api_v1_interview_questions__question_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "question_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Question Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Question",
+        "tags": [
+          "interviews"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_question_api_v1_interview_questions__question_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "question_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Question Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuestionPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Patch Question",
+        "tags": [
+          "interviews"
+        ]
+      }
+    },
+    "/api/v1/interview/rounds/{round_id}": {
+      "delete": {
+        "operationId": "delete_round_api_v1_interview_rounds__round_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "round_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Round Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Round",
+        "tags": [
+          "interviews"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_round_api_v1_interview_rounds__round_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "round_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Round Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoundPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Patch Round",
+        "tags": [
+          "interviews"
+        ]
+      }
+    },
+    "/api/v1/interview/rounds/{round_id}/questions": {
+      "post": {
+        "operationId": "post_question_api_v1_interview_rounds__round_id__questions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "round_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Round Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuestionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Question",
+        "tags": [
+          "interviews"
+        ]
       }
     },
     "/api/v1/jobs": {
@@ -5347,6 +6184,249 @@
         "summary": "Inquired",
         "tags": [
           "jobs"
+        ]
+      }
+    },
+    "/api/v1/jobs/{job_id}/interview": {
+      "get": {
+        "operationId": "read_api_v1_jobs__job_id__interview_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Read",
+        "tags": [
+          "interviews"
+        ]
+      }
+    },
+    "/api/v1/jobs/{job_id}/interview/contact": {
+      "delete": {
+        "operationId": "delete_contact_api_v1_jobs__job_id__interview_contact_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Contact",
+        "tags": [
+          "interviews"
+        ]
+      },
+      "put": {
+        "operationId": "put_contact_api_v1_jobs__job_id__interview_contact_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/hiretitan__search__api__interviews__ContactIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Contact",
+        "tags": [
+          "interviews"
+        ]
+      }
+    },
+    "/api/v1/jobs/{job_id}/interview/rounds": {
+      "post": {
+        "operationId": "post_round_api_v1_jobs__job_id__interview_rounds_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoundIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Round",
+        "tags": [
+          "interviews"
+        ]
+      }
+    },
+    "/api/v1/jobs/{job_id}/interview/source": {
+      "put": {
+        "operationId": "put_source_api_v1_jobs__job_id__interview_source_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SourceIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Source",
+        "tags": [
+          "interviews"
         ]
       }
     },
@@ -6366,6 +7446,27 @@
           }
         },
         "summary": "Approve",
+        "tags": [
+          "search"
+        ]
+      }
+    },
+    "/api/v1/search/rules/proposal/from-approved": {
+      "post": {
+        "operationId": "make_proposal_from_approved_api_v1_search_rules_proposal_from_approved_post",
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleSetOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Make Proposal From Approved",
         "tags": [
           "search"
         ]

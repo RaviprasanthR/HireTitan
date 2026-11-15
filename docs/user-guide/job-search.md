@@ -35,6 +35,22 @@ Home has two tabs. **Explore** lists new jobs to look at. **In pipeline** lists 
 
 Each job has two one-click buttons. **I inquired** is for when you asked about a job but have not applied. **I applied** is for when you applied, including after an earlier inquiry, and it turns the Inquired job into an Applied one. Both use today's date. For another date, open **Other date**, pick it and press the button. **Undo** is offered for 10 seconds, and on the job's own page. Later searches leave jobs in your pipeline alone, and the Companies page shows an **Applied** or **Inquired** chip for the company.
 
-## 7. Your data
+## 7. Interview tracking
+
+Open a job in **In pipeline** with the arrow at the end of its row (or on the job's own page) to keep your own record of how it went. Nothing here is sent anywhere or written for you.
+
+- **Point of contact:** name, role, email, phone and LinkedIn link of the person you deal with. Only the name is needed.
+- **How the job came:** direct, or through a hiring firm (type the firm's name), or not set.
+- **Rounds:** press **Add round** and pick screening, technical, HR, managerial or other. Each round has a date and time, interviewers, a result (**Scheduled**, **Cleared** or **Failed**) and feedback. Rounds are numbered 1, 2, 3; removing one does not renumber the rest. Once a round is **Failed**, no new round can be added.
+- **Questions:** under each round, add the questions you were asked and, if you like, your answer.
+- **Status:** the Status column follows your rounds: **Applied** or **Inquired** until the first round, then **Round 2 scheduled**, **Round 1 cleared**, or **Failed in round 2**. A failed round wins over later ones.
+
+Details can only be changed while the job is Applied or Inquired. If you undo that mark, what you recorded stays and can be read. If you remove the job, its details go with it. If you merge two duplicate jobs, the job you keep also gets the contact, source and rounds it was missing.
+
+Unsaved edits are never dropped silently: closing the row, leaving the page or closing the tab asks first.
+
+**What stays private:** these notes live only in your own database. They are never sent to an AI, never fetched or opened, and **Delete all my data** removes them.
+
+## 8. Your data
 
 **Delete all my data** in Settings removes your jobs, search rules, run history, company edits and added companies, and puts the shipped company list back to its original state.

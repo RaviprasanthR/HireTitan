@@ -501,16 +501,14 @@ describe('CompaniesPage', () => {
       expect(row).toHaveClass('hover:bg-[#9c4f37]/25')
     })
 
-    it('FR023 the header is plain title case with a bottom divider', async () => {
+    it('the header has the same look as the pipeline table header', async () => {
       renderPage(list)
       await screen.findByRole('listitem', { name: 'Acme' })
 
       const button = screen.getByRole('button', { name: /^Sort by company/ })
       const header = button.parentElement as HTMLElement
 
-      expect(header).toHaveClass('border-b')
-      expect(header).not.toHaveClass('bg-slate-200/10')
-      expect(button).not.toHaveClass('uppercase')
+      expect(header).toHaveClass('ht-thead-row')
     })
   })
 

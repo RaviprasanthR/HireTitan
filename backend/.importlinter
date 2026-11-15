@@ -144,3 +144,6 @@ source_modules =
 forbidden_modules =
     hiretitan.search.domain.contacts
     hiretitan.search.application.contacts
+    hiretitan.search.domain.interviews
+    hiretitan.search.application.interviews
+    hiretitan.search.infra.interviews_repo

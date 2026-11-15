@@ -1,11 +1,11 @@
 import { NavLink } from 'react-router'
 
 const TABS = [
-  { to: '/pipeline', label: 'In pipeline' },
-  { to: '/', label: 'Explore' },
+  { to: '/', label: 'In pipeline' },
+  { to: '/explore', label: 'Explore' },
 ]
 
-/** The two tabs of Home: new jobs to look at, and the jobs already applied to or asked about. */
+/** The two tabs of Home: the jobs already applied to or asked about (the default), and new jobs to look at. */
 export function HomeTabs() {
   return (
     <nav aria-label="Home tabs" className="flex gap-2 border-b border-divider">

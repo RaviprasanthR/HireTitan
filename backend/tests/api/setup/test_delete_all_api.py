@@ -28,7 +28,15 @@ from hiretitan.preferences.domain.defaults import default_preferences
 from hiretitan.preferences.infra.repo import PreferencesRepo
 from hiretitan.profile.domain.content import Contact, ProfileContent
 from hiretitan.profile.infra.repos import Provenance, ResumeFilesRepo, ReviewsRepo, VersionsRepo
-from hiretitan.search.infra.models import CompanyRow, JobRow
+from hiretitan.search.domain.interviews import check_contact
+from hiretitan.search.infra.interviews_repo import InterviewsRepo
+from hiretitan.search.infra.models import (
+    CompanyRow,
+    InterviewQuestionRow,
+    InterviewRoundRow,
+    JobRow,
+    PipelineDetailsRow,
+)
 from hiretitan.search.infra.repos import CompaniesRepo, JobsRepo, RuleSetsRepo
 from hiretitan.setup.api.data import DataApiDeps, create_data_router
 from hiretitan.setup.api.onboarding import OnboardingApiDeps, create_onboarding_router
@@ -352,3 +360,31 @@ async def test_delete_all_removes_inquired_jobs(env: Env) -> None:
 
     async with env.sessions() as session:
         assert (await session.scalars(select(JobRow))).all() == []
+
+
+async def test_SC004_delete_all_removes_interview_data(env: Env) -> None:
+    async with env.sessions() as session:
+        job = await JobsRepo(session).add(
+            company_id=None,
+            company_name="Acme",
+            title="Interviewed",
+            first_seen_at=datetime(2026, 11, 7, tzinfo=UTC),
+            last_seen_at=datetime(2026, 11, 7, tzinfo=UTC),
+            description="d",
+            state="applied",
+            applied_on=date(2026, 11, 7),
+        )
+        interviews = InterviewsRepo(session)
+        fields, _ = check_contact(name="Asha Rao")
+        assert fields is not None
+        await interviews.upsert_contact(job.id, fields)
+        await interviews.set_source(job.id, "hiring_firm", "TalentBridge")
+        row = await interviews.add_round(job.id, kind="technical")
+        await interviews.add_question(row.id, "Design a rate limiter", "Token bucket")
+        await session.commit()
+
+    assert (await env.client.post(URL, json={"confirm": "DELETE"})).status_code == 204
+
+    async with env.sessions() as session:
+        for table in (PipelineDetailsRow, InterviewRoundRow, InterviewQuestionRow):
+            assert (await session.scalars(select(table))).all() == []

@@ -314,7 +314,7 @@ Exact schemas are designed per feature. Ownership by area:
 | Setup | `settings` (app state; **no API keys**, those live in `.env`; the tier → model mapping is a shipped file) | 001 |
 | Profile | `resume_files`, `profiles`, `profile_versions` (each linked to its source resume file), `preferences`, `style_guides` | 001 (style guide: 004) |
 | Runtime | `workflow_runs`, `llm_calls`, `events`, plus Procrastinate's own queue tables | 001 (foundation) |
-| Search | `companies` (built-in seed + user), `company_contacts` and `company_notes` (002b, the person's own), `sources`, `search_rules`, `source_runs`, `jobs`, `job_sources`, `job_facts`, `filter_decisions` (rule and AI), `job_scores` | 002 |
+| Search | `companies` (built-in seed + user), `company_contacts` and `company_notes` (002b, the person's own), `job_pipeline_details`, `interview_rounds` and `interview_questions` (002e, the person's own: contact, source, rounds, questions), `sources`, `search_rules`, `source_runs`, `jobs`, `job_sources`, `job_facts`, `filter_decisions` (rule and AI), `job_scores` | 002 |
 | Applications | `applications`, `application_events`, `contacts` (entered by the user), `offers` | 003 |
 | Outreach | `drafts`, `draft_versions` | 004 |
 | Resumes | `tailored_resumes` | 005 |
@@ -339,6 +339,7 @@ Cross-cutting rules: UUID primary keys; `created_at`/`updated_at`; AI-produced r
 - Uploads: type sniffing (not just the extension), size limit, parsed in the worker.
 - SPA: strict Content Security Policy; model output is rendered as text, never as HTML.
 - **Company contacts and notes (002b)** are the person's own data in their local database only: never in `seed/companies.yaml`, never sent to an AI (import-linter contract `contacts-stay-out-of-ai-paths` plus a recorded-call test in `tests/security/test_contacts_privacy.py`), never fetched (LinkedIn links are stored and shown, not opened), left out of the CSV export unless the person ticks "Include contacts and notes", and removed by Delete all my data.
+- **Interview details (002e)** (`job_pipeline_details`, `interview_rounds`, `interview_questions`) follow the same rules: the domain, application and `infra.interviews_repo` modules are on the forbidden list of the same import-linter contract, `test_SC003_no_interview_text_in_ai_calls` records every model request of a search that finds the pipeline job again and finds none of the notes, and the no-send architecture scan covers the interview modules. A job's status in the pipeline is derived when read (a failed round wins, else the latest round, else Applied or Inquired), never stored. Writes lock the job row first (`SELECT ... FOR UPDATE`), re-read the round or question, then re-check that the job is still Applied or Inquired; a merge locks both jobs in id order.
 
 ## 10. Frontend
 

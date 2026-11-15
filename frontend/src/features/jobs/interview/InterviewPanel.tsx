@@ -1,0 +1,375 @@
+import { useCallback, useId, useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { Field, inputClass } from '@/features/companies/Field'
+import { errorOf } from './errors'
+import { Message } from './FormMessage'
+import {
+  ROUND_KINDS,
+  type Interview,
+  type InterviewContact,
+  type RoundKind,
+  useAddRound,
+  useInterview,
+  useSaveContact,
+  useSaveSource,
+} from './interviewApi'
+import { RoundCard } from './RoundCard'
+import {
+  UnsavedContext,
+  useReportUnsaved,
+  useUnsavedRegistry,
+  type UnsavedRegistry,
+} from './unsaved'
+
+type Source = Interview['source']
+
+function ContactSection({
+  contact,
+  editable,
+  save,
+}: {
+  contact: InterviewContact | null
+  editable: boolean
+  save: ReturnType<typeof useSaveContact>
+}) {
+  const [name, setName] = useState(contact?.name ?? '')
+  const [role, setRole] = useState(contact?.role ?? '')
+  const [email, setEmail] = useState(contact?.email ?? '')
+  const [phone, setPhone] = useState(contact?.phone ?? '')
+  const [link, setLink] = useState(contact?.linkedin_url ?? '')
+  // after an edit the last result (saved, or a field error) no longer describes the form
+  const [dirty, setDirty] = useState(false)
+  const result = dirty ? null : save
+  const error = errorOf(result?.error)
+  const changed =
+    name !== (contact?.name ?? '') ||
+    role !== (contact?.role ?? '') ||
+    email !== (contact?.email ?? '') ||
+    phone !== (contact?.phone ?? '') ||
+    link !== (contact?.linkedin_url ?? '')
+  useReportUnsaved(changed || save.isPending || save.isError)
+  const typed = (setter: (value: string) => void) => (value: string) => {
+    setter(value)
+    setDirty(true)
+  }
+  // typing while the save is on its way would be lost when the form is rebuilt from the answer
+  const locked = !editable || save.isPending
+  const onName = typed(setName)
+  const onRole = typed(setRole)
+  const onEmail = typed(setEmail)
+  const onPhone = typed(setPhone)
+  const onLink = typed(setLink)
+
+  return (
+    <form
+      aria-label="Point of contact"
+      className="space-y-2"
+      onSubmit={(event) => {
+        event.preventDefault()
+        setDirty(false)
+        save.mutate({ name, role, email, phone, linkedin_url: link })
+      }}
+    >
+      <h3 className="text-sm font-semibold">Point of contact</h3>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <Field label="Contact name" error={error?.fieldError('name')}>
+          {(props) => (
+            <input
+              {...props}
+              className={inputClass}
+              maxLength={120}
+              value={name}
+              disabled={locked}
+              onChange={(e) => onName(e.target.value)}
+            />
+          )}
+        </Field>
+        <Field label="Role" error={error?.fieldError('role')}>
+          {(props) => (
+            <input
+              {...props}
+              className={inputClass}
+              maxLength={120}
+              value={role}
+              disabled={locked}
+              onChange={(e) => onRole(e.target.value)}
+            />
+          )}
+        </Field>
+        <Field label="Email" error={error?.fieldError('email')}>
+          {(props) => (
+            <input
+              {...props}
+              className={inputClass}
+              maxLength={254}
+              value={email}
+              disabled={locked}
+              onChange={(e) => onEmail(e.target.value)}
+            />
+          )}
+        </Field>
+        <Field label="Phone" error={error?.fieldError('phone')}>
+          {(props) => (
+            <input
+              {...props}
+              className={inputClass}
+              maxLength={30}
+              value={phone}
+              disabled={locked}
+              onChange={(e) => onPhone(e.target.value)}
+            />
+          )}
+        </Field>
+        <Field label="LinkedIn link" error={error?.fieldError('linkedin_url')}>
+          {(props) => (
+            <input
+              {...props}
+              className={inputClass}
+              maxLength={500}
+              value={link}
+              disabled={locked}
+              onChange={(e) => onLink(e.target.value)}
+            />
+          )}
+        </Field>
+      </div>
+      {editable && (
+        <div className="flex items-center gap-3">
+          <Button type="submit" size="sm" disabled={save.isPending}>
+            Save contact
+          </Button>
+          <Message
+            error={result?.error}
+            saved={result?.isSuccess ? 'Contact saved.' : null}
+            fields={['name', 'role', 'email', 'phone', 'linkedin_url']}
+          />
+        </div>
+      )}
+    </form>
+  )
+}
+
+function SourceSection({
+  source,
+  editable,
+  save,
+}: {
+  source: Source
+  editable: boolean
+  save: ReturnType<typeof useSaveSource>
+}) {
+  const [kind, setKind] = useState<'direct' | 'hiring_firm' | null>(source?.kind ?? null)
+  const [firm, setFirm] = useState(source?.firm_name ?? '')
+  const group = useId()
+  const [dirty, setDirty] = useState(false)
+  const result = dirty ? null : save
+  const error = errorOf(result?.error)
+  const changed =
+    kind !== (source?.kind ?? null) ||
+    (kind === 'hiring_firm' && firm !== (source?.firm_name ?? ''))
+  useReportUnsaved(changed || save.isPending || save.isError)
+  const locked = !editable || save.isPending
+  const choices: { value: 'direct' | 'hiring_firm' | null; label: string }[] = [
+    { value: 'direct', label: 'Direct' },
+    { value: 'hiring_firm', label: 'Through a hiring firm' },
+    { value: null, label: 'Not set' },
+  ]
+
+  return (
+    <form
+      aria-label="How the job came"
+      className="space-y-2"
+      onSubmit={(event) => {
+        event.preventDefault()
+        setDirty(false)
+        save.mutate(kind === 'hiring_firm' ? { kind, firm_name: firm } : { kind })
+      }}
+    >
+      <h3 className="text-sm font-semibold">How the job came</h3>
+      <div role="radiogroup" aria-label="Source" className="flex flex-wrap gap-4 text-sm">
+        {choices.map((choice) => (
+          <label key={choice.label} className="flex items-center gap-2">
+            <input
+              type="radio"
+              name={group}
+              checked={kind === choice.value}
+              disabled={locked}
+              onChange={() => {
+                setKind(choice.value)
+                setDirty(true)
+              }}
+            />
+            {choice.label}
+          </label>
+        ))}
+      </div>
+      {kind === 'hiring_firm' && (
+        <Field label="Firm name" error={error?.fieldError('firm_name')}>
+          {(props) => (
+            <input
+              {...props}
+              className={inputClass}
+              maxLength={120}
+              value={firm}
+              disabled={locked}
+              onChange={(e) => {
+                setFirm(e.target.value)
+                setDirty(true)
+              }}
+            />
+          )}
+        </Field>
+      )}
+      {error?.fieldError('kind') && (
+        <p role="alert" className="text-sm text-danger">
+          {error.fieldError('kind')}
+        </p>
+      )}
+      {editable && (
+        <div className="flex items-center gap-3">
+          <Button type="submit" size="sm" disabled={save.isPending}>
+            Save source
+          </Button>
+          <Message
+            error={result?.error}
+            saved={result?.isSuccess ? 'Source saved.' : null}
+            fields={kind === 'hiring_firm' ? ['kind', 'firm_name'] : ['kind']}
+          />
+        </div>
+      )}
+    </form>
+  )
+}
+
+function RoundsSection({ jobId, data }: { jobId: string; data: Interview }) {
+  const [kind, setKind] = useState<RoundKind>('technical')
+  const add = useAddRound(jobId)
+  const reason = useId()
+  const blocked = data.can_edit && !data.can_add_round
+  return (
+    <section aria-label="Interview rounds" className="space-y-3">
+      <h3 className="text-sm font-semibold">Interview rounds</h3>
+      {data.rounds.length === 0 && <p className="text-sm text-muted-small">No rounds yet.</p>}
+      {data.rounds.map((round) => (
+        <RoundCard key={round.id} jobId={jobId} round={round} editable={data.can_edit} />
+      ))}
+      {data.can_edit && (
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="space-y-1 text-sm font-medium">
+              <span className="block">New round type</span>
+              <select
+                className={inputClass}
+                value={kind}
+                disabled={blocked}
+                onChange={(e) => setKind(e.target.value as RoundKind)}
+              >
+                {ROUND_KINDS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <Button
+              type="button"
+              size="sm"
+              disabled={blocked || add.isPending}
+              aria-describedby={blocked ? reason : undefined}
+              onClick={() => add.mutate({ kind })}
+            >
+              Add round
+            </Button>
+          </div>
+          {blocked && (
+            <p id={reason} className="text-sm text-muted-small">
+              A round failed, so no new round can be added.
+            </p>
+          )}
+          <Message error={add.error} saved={null} fields={[]} />
+        </div>
+      )}
+    </section>
+  )
+}
+
+/** What the person recorded about one pipeline job; shown in the pipeline row and on the job page. */
+export function InterviewPanel({
+  jobId,
+  heading,
+  hideWhenEmpty = false,
+  registry,
+  scope = '',
+  readOnly = false,
+}: {
+  jobId: string
+  /** Show the details to read only (the pipeline row); changes are made from the edit card. */
+  readOnly?: boolean
+  /** A title above the panel (the job page has one; the pipeline row does not). */
+  heading?: string
+  /** Show nothing for a job outside the pipeline that has no details to read. */
+  hideWhenEmpty?: boolean
+  /** Where unsaved edits are reported; a page that must ask before closing or leaving passes one. */
+  registry?: UnsavedRegistry
+  /** Groups this panel's forms in the registry (a job id). */
+  scope?: string
+}) {
+  const own = useUnsavedRegistry()
+  const report = (registry ?? own).report
+  const scoped = useCallback(
+    (id: string, unsaved: boolean) => report(`${scope}|${id}`, unsaved),
+    [report, scope],
+  )
+  const interview = useInterview(jobId)
+  // the sections remount when the saved values change, so their save state lives here
+  const saveContact = useSaveContact(jobId)
+  const saveSource = useSaveSource(jobId)
+
+  if (interview.isPending) return <p>Loading…</p>
+  // A failed refresh keeps what was loaded: swapping the forms for an error would drop edits.
+  const loaded = interview.data
+  const data = loaded && readOnly ? { ...loaded, can_edit: false } : loaded
+  if (data === undefined) {
+    // a job outside the pipeline with nothing to show stays quiet
+    return hideWhenEmpty ? null : <p role="alert">Could not load the details.</p>
+  }
+  if (hideWhenEmpty && !data.can_edit && !data.contact && !data.source && data.rounds.length === 0)
+    return null
+
+  return (
+    <UnsavedContext.Provider value={scoped}>
+      <section aria-label="Interview details" className="space-y-4 border-t border-divider pt-3">
+        {heading && <h2 className="text-lg font-semibold">{heading}</h2>}
+        {!data.can_edit && !readOnly && (
+          <p className="text-sm text-muted-small">
+            This job is not in your pipeline, so details can only be read. Mark it applied or
+            inquired to change them.
+          </p>
+        )}
+        {readOnly && !data.contact && !data.source && data.rounds.length === 0 ? (
+          <p className="text-sm text-muted-small">Nothing yet.</p>
+        ) : (
+          <>
+            {(!readOnly || data.contact) && (
+              <ContactSection
+                key={`contact-${JSON.stringify(data.contact)}-${saveContact.isSuccess ? saveContact.submittedAt : 0}`}
+                contact={data.contact}
+                save={saveContact}
+                editable={data.can_edit}
+              />
+            )}
+            {(!readOnly || data.source) && (
+              <SourceSection
+                key={`source-${JSON.stringify(data.source)}-${saveSource.isSuccess ? saveSource.submittedAt : 0}`}
+                source={data.source}
+                save={saveSource}
+                editable={data.can_edit}
+              />
+            )}
+            {(!readOnly || data.rounds.length > 0) && <RoundsSection jobId={jobId} data={data} />}
+          </>
+        )}
+      </section>
+    </UnsavedContext.Provider>
+  )
+}

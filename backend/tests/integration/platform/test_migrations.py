@@ -176,6 +176,37 @@ def test_0016_inquired_up_down(
         engine.dispose()
 
 
+def test_0018_interview_tracking_up_down(
+    fresh_database_url: str, make_alembic_config: Callable[[str], Config]
+) -> None:
+    """002e: 0018 adds the three interview tables; downgrading drops them and nothing else."""
+    cfg = make_alembic_config(fresh_database_url)
+    tables = ("job_pipeline_details", "interview_rounds", "interview_questions")
+    command.upgrade(cfg, "0017")
+    engine = create_engine(fresh_database_url)
+    try:
+        assert not set(tables) & set(inspect(engine).get_table_names(schema="app"))
+
+        command.upgrade(cfg, "0018")
+        assert set(tables) <= set(inspect(engine).get_table_names(schema="app"))
+        rounds = {c["name"] for c in inspect(engine).get_columns("interview_rounds", schema="app")}
+        assert {
+            "job_id",
+            "number",
+            "kind",
+            "scheduled_at",
+            "interviewers",
+            "state",
+            "feedback",
+        } <= (rounds)
+
+        command.downgrade(cfg, "0017")
+        assert not set(tables) & set(inspect(engine).get_table_names(schema="app"))
+        assert "jobs" in inspect(engine).get_table_names(schema="app")
+    finally:
+        engine.dispose()
+
+
 def test_FR014_0017_budget_paused_runs_become_failed(
     fresh_database_url: str, make_alembic_config: Callable[[str], Config]
 ) -> None:

@@ -438,7 +438,7 @@ function HeaderRow({ sort, onSort }: { sort: Sort; onSort: (key: SortKey) => voi
   }
   return (
     <div
-      className={`hidden border-b border-border px-3 py-2 text-sm font-semibold text-muted-small [scrollbar-gutter:stable] ${COLUMNS}`}
+      className={`ht-thead-row hidden px-3 py-3 [scrollbar-gutter:stable] ${COLUMNS}`}
     >
       {button('name', 'Company')}
       {button('city', 'Location')}
@@ -492,7 +492,7 @@ export function CompaniesPage() {
     )
 
   return (
-    <section className="flex min-h-0 flex-1 flex-col gap-3">
+    <section className="flex min-h-0 flex-1 flex-col">
       <div className="shrink-0 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-semibold">Companies</h1>

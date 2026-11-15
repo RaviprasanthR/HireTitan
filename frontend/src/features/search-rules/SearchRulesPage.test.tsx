@@ -20,9 +20,7 @@ function rules(overrides: Record<string, unknown> = {}) {
       { city: 'Pune', country: 'IN', origin: 'preference:blocked_locations[0]', effect: 'skips' },
     ],
     max_age_days: 30,
-    stack_keywords: [
-      { text: 'Python', origin: 'profile:skills', effect: 'guides_ai' },
-    ] as Item[],
+    stack_keywords: [{ text: 'Python', origin: 'profile:skills', effect: 'guides_ai' }] as Item[],
     preferred_locations: [],
     work_modes: ['remote'],
     seniority: [],
@@ -124,16 +122,18 @@ describe('SearchRulesPage', () => {
     expect(await screen.findByText(/rules approved/i)).toBeInTheDocument()
   })
 
-  it('US2_AS4_stale_notice_offers_new_proposal', async () => {
+  it('US2_AS4_stale_notice_offers_a_reset_to_suggested', async () => {
     const user = userEvent.setup()
     state = { approved: ruleSet('approved'), proposal: null, stale: true }
     renderPage()
 
     expect(await screen.findByText(/your profile or preferences changed/i)).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: /propose new rules/i }))
+    await user.click(screen.getByRole('button', { name: /reset to suggested/i }))
 
     await waitFor(() =>
-      expect(calls.some((c) => c.method === 'POST' && c.path === '/search/rules/proposal')).toBe(true),
+      expect(calls.some((c) => c.method === 'POST' && c.path === '/search/rules/proposal')).toBe(
+        true,
+      ),
     )
     expect(await screen.findByRole('button', { name: /approve/i })).toBeInTheDocument()
   })
@@ -155,7 +155,9 @@ describe('SearchRulesPage', () => {
     renderPage()
 
     await screen.findByRole('region', { name: /job titles/i })
-    for (const remove of screen.getAllByRole('button', { name: /remove (backend engineer|backend developer)/i })) {
+    for (const remove of screen.getAllByRole('button', {
+      name: /remove (backend engineer|backend developer)/i,
+    })) {
       await user.click(remove)
     }
     await user.click(screen.getByRole('button', { name: /approve/i }))
@@ -170,7 +172,7 @@ describe('SearchRulesPage', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: /propose rules/i }))
+    await user.click(await screen.findByRole('button', { name: /suggest rules/i }))
 
     expect(await screen.findByRole('button', { name: /approve/i })).toBeInTheDocument()
   })
@@ -188,7 +190,7 @@ describe('SearchRulesPage', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: /propose rules/i }))
+    await user.click(await screen.findByRole('button', { name: /suggest rules/i }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Confirm your profile first.')
   })
@@ -201,5 +203,20 @@ describe('SearchRulesPage', () => {
     await user.click(await screen.findByRole('button', { name: /discard/i }))
 
     await waitFor(() => expect(calls.some((c) => c.method === 'DELETE')).toBe(true))
+  })
+
+  it('Edit rules opens a draft copied from the approved rules', async () => {
+    const user = userEvent.setup()
+    state = { approved: ruleSet('approved'), proposal: null, stale: false }
+    renderPage()
+
+    await user.click(await screen.findByRole('button', { name: /edit rules/i }))
+
+    await waitFor(() =>
+      expect(
+        calls.some((c) => c.method === 'POST' && c.path === '/search/rules/proposal/from-approved'),
+      ).toBe(true),
+    )
+    expect(await screen.findByRole('button', { name: /approve/i })).toBeInTheDocument()
   })
 })
