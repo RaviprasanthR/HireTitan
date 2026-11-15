@@ -427,6 +427,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/jobs/{job_id}/interview/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Put Resume
+         * @description Set or change the resume used for a pipeline job. Only marking a job changes the
+         *     starting value of the choice, so this does not (feature 002f, FR-014).
+         */
+        put: operations["put_resume_api_v1_jobs__job_id__interview_resume_put"];
+        post?: never;
+        /**
+         * Delete Resume
+         * @description Forget the resume used, or the note a removed file left behind.
+         */
+        delete: operations["delete_resume_api_v1_jobs__job_id__interview_resume_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/jobs/{job_id}/interview/rounds": {
         parameters: {
             query?: never;
@@ -1494,12 +1519,7 @@ export interface components {
             posted_at: string | null;
             /** Restored */
             restored: boolean;
-            /**
-             * @default {
-             *       "state": "none"
-             *     }
-             */
-            resume: components["schemas"]["ResumeChoiceOut"];
+            resume?: components["schemas"]["ResumeChoiceOut"];
             /** Role */
             role: string;
             /** Sources */
@@ -1564,12 +1584,7 @@ export interface components {
             posted_at: string | null;
             /** Restored */
             restored: boolean;
-            /**
-             * @default {
-             *       "state": "none"
-             *     }
-             */
-            resume: components["schemas"]["ResumeChoiceOut"];
+            resume?: components["schemas"]["ResumeChoiceOut"];
             /** Role */
             role: string;
             /** Skills Found */
@@ -1695,12 +1710,7 @@ export interface components {
             posted_at: string | null;
             /** Restored */
             restored: boolean;
-            /**
-             * @default {
-             *       "state": "none"
-             *     }
-             */
-            resume: components["schemas"]["ResumeChoiceOut"];
+            resume?: components["schemas"]["ResumeChoiceOut"];
             /** Role */
             role: string;
             /** Skills Found */
@@ -1979,6 +1989,14 @@ export interface components {
             parse_status: string;
             /** Size Bytes */
             size_bytes: number;
+        };
+        /** ResumeIn */
+        ResumeIn: {
+            /**
+             * Resume File Id
+             * Format: uuid
+             */
+            resume_file_id: string;
         };
         /** ResumeUsageOut */
         ResumeUsageOut: {
@@ -3553,6 +3571,72 @@ export interface operations {
         };
     };
     delete_contact_api_v1_jobs__job_id__interview_contact_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InterviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_resume_api_v1_jobs__job_id__interview_resume_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResumeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InterviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_resume_api_v1_jobs__job_id__interview_resume_delete: {
         parameters: {
             query?: never;
             header?: never;

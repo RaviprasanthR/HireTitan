@@ -26,8 +26,8 @@ All paths under `/api/v1`. Errors use the existing problem format (`detail`, `er
 
 | Method and path | Body | Result |
 |---|---|---|
-| `PUT /jobs/{job_id}/interview/resume` | `{ "resume_file_id": "uuid" }` | 200 `ResumeChoiceOut`. 404 job not found or not in the pipeline; 422 unknown or not-offerable file. Does not change the last choice. |
-| `DELETE /jobs/{job_id}/interview/resume` | none | 204. Clears the choice or a removed note. 404 as above. |
+| `PUT /jobs/{job_id}/interview/resume` | `{ "resume_file_id": "uuid" }` | 200 `InterviewOut` (the full details, as the other interview writes return, so `resume` is in it). 404 job unknown; 409 `not_in_pipeline`; 422 unknown, removed or not-offerable file (field `resume_file_id`). Does not change the last choice. |
+| `DELETE /jobs/{job_id}/interview/resume` | none | 200 `InterviewOut`. Clears the choice or a removed note. 404 and 409 as above. |
 | `GET /pipeline/resumes` | none | 200 `{ "last_choice": "uuid" \| null, "usage": [{ "resume_file_id": "uuid", "jobs": 2 }] }` |
 | `DELETE /pipeline/resumes/{file_id}/uses` | none | 204. Clears the resume (id and snapshot) on every job pointing at the file, and the last choice if it is that file. Used by the removal dialog's "also clear the name" option before `DELETE /resumes/{file_id}` (research R9). 204 also when nothing pointed at it. |
 

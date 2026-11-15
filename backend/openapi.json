@@ -1520,10 +1520,7 @@
             "type": "boolean"
           },
           "resume": {
-            "$ref": "#/components/schemas/ResumeChoiceOut",
-            "default": {
-              "state": "none"
-            }
+            "$ref": "#/components/schemas/ResumeChoiceOut"
           },
           "role": {
             "title": "Role",
@@ -1771,10 +1768,7 @@
             "type": "boolean"
           },
           "resume": {
-            "$ref": "#/components/schemas/ResumeChoiceOut",
-            "default": {
-              "state": "none"
-            }
+            "$ref": "#/components/schemas/ResumeChoiceOut"
           },
           "role": {
             "title": "Role",
@@ -2248,10 +2242,7 @@
             "type": "boolean"
           },
           "resume": {
-            "$ref": "#/components/schemas/ResumeChoiceOut",
-            "default": {
-              "state": "none"
-            }
+            "$ref": "#/components/schemas/ResumeChoiceOut"
           },
           "role": {
             "title": "Role",
@@ -3276,6 +3267,20 @@
           "open_review_id"
         ],
         "title": "ResumeFileOut",
+        "type": "object"
+      },
+      "ResumeIn": {
+        "properties": {
+          "resume_file_id": {
+            "format": "uuid",
+            "title": "Resume File Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "resume_file_id"
+        ],
+        "title": "ResumeIn",
         "type": "object"
       },
       "ResumeUsageOut": {
@@ -6465,6 +6470,102 @@
           }
         },
         "summary": "Put Contact",
+        "tags": [
+          "interviews"
+        ]
+      }
+    },
+    "/api/v1/jobs/{job_id}/interview/resume": {
+      "delete": {
+        "description": "Forget the resume used, or the note a removed file left behind.",
+        "operationId": "delete_resume_api_v1_jobs__job_id__interview_resume_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Resume",
+        "tags": [
+          "interviews"
+        ]
+      },
+      "put": {
+        "description": "Set or change the resume used for a pipeline job. Only marking a job changes the\nstarting value of the choice, so this does not (feature 002f, FR-014).",
+        "operationId": "put_resume_api_v1_jobs__job_id__interview_resume_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResumeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Resume",
         "tags": [
           "interviews"
         ]

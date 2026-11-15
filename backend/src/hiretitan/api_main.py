@@ -238,7 +238,9 @@ def build_app(settings: Settings | None = None) -> FastAPI:
             )
         ),
         create_contacts_router(SearchContactsApiDeps(sessions=deps.sessions)),
-        create_interviews_router(SearchInterviewsApiDeps(sessions=deps.sessions)),
+        create_interviews_router(
+            SearchInterviewsApiDeps(sessions=deps.sessions, resume_lookup=SqlResumeLookup)
+        ),
         create_search_jobs_router(
             SearchJobsApiDeps(
                 sessions=deps.sessions,

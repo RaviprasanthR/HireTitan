@@ -50,7 +50,9 @@ async def env(sessions: async_sessionmaker[AsyncSession], tmp_path: Path) -> Asy
         routers=[
             create_search_jobs_router(deps),
             create_pipeline_router(PipelineApiDeps(sessions)),
-            create_interviews_router(SearchInterviewsApiDeps(sessions=sessions)),
+            create_interviews_router(
+                SearchInterviewsApiDeps(sessions=sessions, resume_lookup=SqlResumeLookup)
+            ),
         ],
     )
     async with httpx.AsyncClient(
@@ -337,3 +339,114 @@ async def test_FR009_a_removed_file_shows_as_a_removed_note(env: Env) -> None:
     }
     assert (await pipeline_cards(env))["Backend Engineer"]["resume"] == note
     assert (await env.client.get(f"/api/v1/jobs/{job_id}/interview")).json()["resume"] == note
+
+
+# --- the edit card: set, change and clear (US3) ----------------------------------------------
+
+
+async def applied_job(env: Env, title: str = "Backend Engineer") -> UUID:
+    job_id = await add_job(env, title)
+    await env.client.post(f"/api/v1/jobs/{job_id}/applied")
+    return job_id
+
+
+def resume_url(job_id: UUID) -> str:
+    return f"/api/v1/jobs/{job_id}/interview/resume"
+
+
+async def test_FR006_edit_card_sets_changes_and_clears(env: Env) -> None:
+    job_id = await applied_job(env)
+    first = await add_file(env, "First.pdf")
+    second = await add_file(env, "Second.pdf")
+
+    chosen = await env.client.put(resume_url(job_id), json={"resume_file_id": str(first)})
+    assert chosen.status_code == 200
+    assert chosen.json()["resume"]["state"] == "chosen"
+    assert await stored(env, job_id) == (first, "First.pdf")
+
+    changed = await env.client.put(resume_url(job_id), json={"resume_file_id": str(second)})
+    assert changed.json()["resume"]["name"] == "Second.pdf"
+    assert await stored(env, job_id) == (second, "Second.pdf")
+
+    cleared = await env.client.delete(resume_url(job_id))
+    assert cleared.status_code == 200
+    assert cleared.json()["resume"] == NONE
+    assert await stored(env, job_id) == (None, None)
+
+
+async def test_FR006_edit_card_works_on_an_inquired_job(env: Env) -> None:
+    job_id = await add_job(env)
+    await env.client.post(f"/api/v1/jobs/{job_id}/inquired")
+    file_id = await add_file(env, "First.pdf")
+
+    chosen = await env.client.put(resume_url(job_id), json={"resume_file_id": str(file_id)})
+
+    assert chosen.status_code == 200
+    assert await stored(env, job_id) == (file_id, "First.pdf")
+
+
+async def test_FR014_last_choice_follows_marks_not_edit_card(env: Env) -> None:
+    marked_with = await add_file(env, "Marked.pdf")
+    edited_to = await add_file(env, "Edited.pdf")
+    first = await add_job(env, "First")
+    await env.client.post(
+        f"/api/v1/jobs/{first}/applied", json={"resume_file_id": str(marked_with)}
+    )
+    second = await applied_job(env, "Second")
+
+    await env.client.put(resume_url(second), json={"resume_file_id": str(edited_to)})
+    await env.client.delete(resume_url(first))
+
+    assert await last_choice(env) == marked_with  # only a mark changes the starting value
+
+
+async def test_edit_card_resume_needs_a_pipeline_job(env: Env) -> None:
+    explore = await add_job(env, "Still in Explore")
+    file_id = await add_file(env, "First.pdf")
+
+    refused = await env.client.put(resume_url(explore), json={"resume_file_id": str(file_id)})
+    refused_clear = await env.client.delete(resume_url(explore))
+    unknown = await env.client.put(
+        resume_url(UUID("00000000-0000-4000-8000-000000000009")),
+        json={"resume_file_id": str(file_id)},
+    )
+
+    assert refused.status_code == 409
+    assert refused.json()["reason"] == "not_in_pipeline"
+    assert refused_clear.status_code == 409
+    assert unknown.status_code == 404
+    assert await stored(env, explore) == (None, None)
+
+
+@pytest.mark.parametrize("kind", ["not_resume_file", "removed_file"])
+async def test_edit_card_resume_of_a_removed_file_is_refused(env: Env, kind: str) -> None:
+    job_id = await applied_job(env)
+    kept = await add_file(env, "Kept.pdf")
+    await env.client.put(resume_url(job_id), json={"resume_file_id": str(kept)})
+    bad = await add_file(env, "Bad.pdf", "not_resume" if kind == "not_resume_file" else "parsed")
+    if kind == "removed_file":
+        async with env.sessions() as session:
+            await session.execute(text("DELETE FROM app.resume_files WHERE id = :id"), {"id": bad})
+            await session.commit()
+
+    refused = await env.client.put(resume_url(job_id), json={"resume_file_id": str(bad)})
+
+    assert refused.status_code == 422
+    assert [e["field"] for e in refused.json()["errors"]] == ["resume_file_id"]
+    assert await stored(env, job_id) == (kept, "Kept.pdf")  # what was there is untouched
+
+
+async def test_FR009_a_removed_note_can_be_cleared(env: Env) -> None:
+    job_id = await add_job(env)
+    file_id = await add_file(env, "Gone.pdf")
+    await env.client.post(f"/api/v1/jobs/{job_id}/applied", json={"resume_file_id": str(file_id)})
+    async with env.sessions() as session:
+        await session.execute(text("DELETE FROM app.resume_files WHERE id = :id"), {"id": file_id})
+        await session.commit()
+    assert await stored(env, job_id) == (None, "Gone.pdf")  # the name stays as a note
+
+    cleared = await env.client.delete(resume_url(job_id))
+
+    assert cleared.status_code == 200
+    assert cleared.json()["resume"] == NONE
+    assert await stored(env, job_id) == (None, None)

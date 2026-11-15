@@ -57,7 +57,9 @@ async def env(sessions: async_sessionmaker[AsyncSession], tmp_path: Path) -> Asy
                     sessions=sessions, queue=_Queue(), clock=clock, resume_lookup=SqlResumeLookup
                 )
             ),
-            create_interviews_router(SearchInterviewsApiDeps(sessions=sessions)),
+            create_interviews_router(
+                SearchInterviewsApiDeps(sessions=sessions, resume_lookup=SqlResumeLookup)
+            ),
         ],
     )
     async with httpx.AsyncClient(
