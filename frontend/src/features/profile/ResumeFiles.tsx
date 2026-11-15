@@ -64,11 +64,12 @@ export function ResumeFiles() {
     onSuccess: async () => {
       setTarget(null)
       setError(null)
-      await Promise.all(
-        [['resumes'], ['profile'], ['onboarding'], ['status'], ['review-items']]
-          .map((queryKey) => queryClient.invalidateQueries({ queryKey }))
-          .concat(refreshJobs()),
-      )
+      await Promise.all([
+        ...[['resumes'], ['profile'], ['onboarding'], ['status'], ['review-items']].map(
+          (queryKey) => queryClient.invalidateQueries({ queryKey }),
+        ),
+        refreshJobs(),
+      ])
     },
     onError: async (e) => {
       if (e instanceof PartialRemoval) {
