@@ -61,9 +61,8 @@ class SearchJobsApiDeps:
     sessions: async_sessionmaker[AsyncSession]
     queue: RunQueue
     clock: ClockPort
-    # Checks a stored resume file for the "Resume used" choice (feature 002f). It is wired in
-    # the composition root; a request that carries a resume without it fails loudly.
-    resume_lookup: Callable[[AsyncSession], ResumeLookup] | None = None
+    # Checks a stored resume file for the "Resume used" choice (feature 002f).
+    resume_lookup: Callable[[AsyncSession], ResumeLookup]
 
 
 class DecisionHistoryOut(DecisionOut):
@@ -151,8 +150,6 @@ def create_search_jobs_router(deps: SearchJobsApiDeps) -> APIRouter:
         """Record the "Resume used" choice of a mark, in the mark's own transaction (002f)."""
         if body is None or "resume_file_id" not in body.model_fields_set:
             return  # absent: nothing changes, and a one-click mark behaves as before (FR-002)
-        if deps.resume_lookup is None:
-            raise RuntimeError("the resume lookup is not wired into the jobs router")
         await record_on_mark(
             JobsRepo(session),
             deps.resume_lookup(session),
@@ -320,6 +317,7 @@ def create_search_jobs_router(deps: SearchJobsApiDeps) -> APIRouter:
             try:
                 await record_resume(session, job_id, body)
             except InterviewInputError as error:  # nothing is saved: the mark rolls back too
+                await session.rollback()
                 return problem(
                     422,
                     str(error),
@@ -374,6 +372,7 @@ def create_search_jobs_router(deps: SearchJobsApiDeps) -> APIRouter:
             try:
                 await record_resume(session, job_id, body)
             except InterviewInputError as error:
+                await session.rollback()
                 return problem(
                     422,
                     str(error),

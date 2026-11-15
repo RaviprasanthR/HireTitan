@@ -58,15 +58,21 @@ async def _offerable_file(lookup: ResumeLookup, file_id: UUID) -> ResumeFacts:
     return facts
 
 
+async def _assign(
+    lookup: ResumeLookup, store: ResumeWriter, job_id: UUID, file_id: UUID
+) -> ResumeChoice:
+    facts = await _offerable_file(lookup, file_id)
+    await store.set_resume(job_id, file_id, facts.name, facts.added_on)
+    return choice_from(file_id, facts.name, facts.added_on)
+
+
 async def choose_for_job(
     jobs: JobsLookup, lookup: ResumeLookup, store: ResumeWriter, job_id: UUID, file_id: UUID
 ) -> ResumeChoice:
     """Set the job's resume to a stored file: the link, and a copy of its name and day."""
     await store.lock_job(job_id)  # so a delete or merge cannot slip in between check and write
     await writable_job(jobs, job_id)
-    facts = await _offerable_file(lookup, file_id)
-    await store.set_resume(job_id, file_id, facts.name, facts.added_on)
-    return choice_from(file_id, facts.name, facts.added_on)
+    return await _assign(lookup, store, job_id, file_id)
 
 
 async def clear_for_job(jobs: JobsLookup, store: ResumeWriter, job_id: UUID) -> None:
@@ -100,6 +106,5 @@ async def record_on_mark(
     if file_id is None:
         await store.clear_resume(job_id)
     else:
-        facts = await _offerable_file(lookup, file_id)
-        await store.set_resume(job_id, file_id, facts.name, facts.added_on)
+        await _assign(lookup, store, job_id, file_id)
     await settings.set_last_choice(file_id)

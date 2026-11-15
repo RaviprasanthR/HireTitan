@@ -21,6 +21,7 @@ from hiretitan.platform.config.settings import Settings
 from hiretitan.search.api.jobs import SearchJobsApiDeps, create_search_jobs_router
 from hiretitan.search.infra.models import JobRow
 from hiretitan.search.infra.repos import CompaniesRepo, DecisionsRepo, JobsRepo
+from hiretitan.search_wiring import SqlResumeLookup
 
 NOW = datetime(2026, 11, 6, 9, tzinfo=UTC)
 
@@ -43,7 +44,9 @@ class Env:
 @pytest.fixture
 async def env(sessions: async_sessionmaker[AsyncSession], tmp_path: Path) -> AsyncIterator[Env]:
     queue = Queue()
-    deps = SearchJobsApiDeps(sessions=sessions, queue=queue, clock=FakeClock(NOW))
+    deps = SearchJobsApiDeps(
+        sessions=sessions, queue=queue, clock=FakeClock(NOW), resume_lookup=SqlResumeLookup
+    )
     app = create_app(
         Settings(), frontend_dist=tmp_path / "none", routers=[create_search_jobs_router(deps)]
     )

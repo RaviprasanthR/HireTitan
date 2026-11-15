@@ -439,3 +439,58 @@ async def test_record_on_mark_with_a_bad_file_saves_nothing(db_session: AsyncSes
 
     assert (await repo.details(job_id)).details is None
     assert await settings.last_choice() == last
+
+
+# --- merging duplicates (FR-010) -------------------------------------------------------------
+
+
+async def test_FR010_merge_keeps_own_resume_else_takes_the_other(db_session: AsyncSession) -> None:
+    repo = InterviewsRepo(db_session)
+    mine = UUID(await a_file(db_session, "Mine.pdf"))
+    theirs = UUID(await a_file(db_session, "Theirs.pdf"))
+
+    # both have one: the kept job keeps its own
+    both_keep, both_lose = UUID(await a_job(db_session)), UUID(await a_job(db_session))
+    await repo.set_resume(both_keep, mine, "Mine.pdf", ADDED)
+    await repo.set_resume(both_lose, theirs, "Theirs.pdf", date(2026, 1, 5))
+    await repo.merge_details(both_keep, both_lose)
+    row = (await repo.details(both_keep)).details
+    assert row is not None
+    assert (row.resume_file_id, row.resume_name, row.resume_added_on) == (mine, "Mine.pdf", ADDED)
+
+    # only the other one has one, and it holds nothing else: it still comes over
+    bare_keep, bare_lose = UUID(await a_job(db_session)), UUID(await a_job(db_session))
+    await repo.set_resume(bare_lose, theirs, "Theirs.pdf", date(2026, 1, 5))
+    await repo.merge_details(bare_keep, bare_lose)
+    row = (await repo.details(bare_keep)).details
+    assert row is not None
+    assert (row.resume_file_id, row.resume_name, row.resume_added_on) == (
+        theirs,
+        "Theirs.pdf",
+        date(2026, 1, 5),
+    )
+    assert (await repo.details(bare_lose)).details is None
+
+    # the kept job has none, and the other has a resume together with a contact
+    full_keep, full_lose = UUID(await a_job(db_session)), UUID(await a_job(db_session))
+    await repo.set_resume(full_lose, theirs, "Theirs.pdf", date(2026, 1, 5))
+    await repo.set_source(full_lose, "direct", None)
+    await repo.merge_details(full_keep, full_lose)
+    row = (await repo.details(full_keep)).details
+    assert row is not None
+    assert (row.resume_name, row.source) == ("Theirs.pdf", "direct")
+
+
+async def test_FR010_merge_carries_a_removed_note_too(db_session: AsyncSession) -> None:
+    repo = InterviewsRepo(db_session)
+    file_id = UUID(await a_file(db_session, "Gone.pdf"))
+    keep, lose = UUID(await a_job(db_session)), UUID(await a_job(db_session))
+    await repo.set_resume(lose, file_id, "Gone.pdf", ADDED)
+    await run(db_session, "DELETE FROM app.resume_files WHERE id = :id", id=file_id)
+    db_session.expire_all()
+
+    await repo.merge_details(keep, lose)
+
+    row = (await repo.details(keep)).details
+    assert row is not None
+    assert (row.resume_file_id, row.resume_name) == (None, "Gone.pdf")

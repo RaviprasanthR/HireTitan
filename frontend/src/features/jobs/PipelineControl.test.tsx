@@ -1,8 +1,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { stubApi } from '@/test/api'
+import { problem, stubApi } from '@/test/api'
 import { PipelineControl } from './PipelineControl'
 
 function file(id: string, name: string, createdAt: string, status = 'parsed') {
@@ -32,21 +32,33 @@ function renderControl(
     last?: string | null
     state?: string
     ownResumeId?: string | null
+    lastFails?: boolean
+    markFails?: boolean
   } = {},
 ) {
-  const { files = [OLDER, NEWER, LETTER], last = null, state = 'explore', ownResumeId } = opts
+  const {
+    files = [OLDER, NEWER, LETTER],
+    last = null,
+    state = 'explore',
+    ownResumeId,
+    lastFails = false,
+    markFails = false,
+  } = opts
   const calls = stubApi((call) => {
     if (call.path === '/resumes') return files
-    if (call.path === '/pipeline/resumes') return { last_choice: last, usage: [] }
-    if (call.method === 'POST' && call.path.startsWith('/jobs/j1/')) return JOB
+    if (call.path === '/pipeline/resumes')
+      return lastFails ? problem(500, 'Something went wrong') : { last_choice: last, usage: [] }
+    if (call.method === 'POST' && call.path.startsWith('/jobs/j1/'))
+      return markFails ? problem(422, 'Choose one of your stored resume files.') : JOB
     return undefined
   })
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   render(
-    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+    <QueryClientProvider client={client}>
       <PipelineControl id="j1" state={state} ownResumeId={ownResumeId} />
     </QueryClientProvider>,
   )
-  return calls
+  return Object.assign(calls, { client })
 }
 
 const marks = (calls: { method: string; path: string; body?: unknown }[]) =>
@@ -142,5 +154,79 @@ describe('PipelineControl resume choice', () => {
 
     const select = await screen.findByRole('combobox', { name: 'Resume used' })
     expect(select).toHaveTextContent('Fresh.pdf')
+  })
+
+  it('FR003 an inquired job whose own resume is not known sends no resume and shows no choice', async () => {
+    // the caller has not said which resume the job has, so one click must not overwrite it
+    const user = userEvent.setup()
+    const calls = renderControl({ state: 'inquired', last: 'f2' })
+
+    await waitFor(() => expect(calls.some((c) => c.path === '/pipeline/resumes')).toBe(true))
+    expect(screen.queryByRole('combobox', { name: 'Resume used' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'I applied' }))
+
+    await waitFor(() => expect(marks(calls)).toHaveLength(1))
+    expect(marks(calls)[0]?.body).toBeUndefined()
+  })
+
+  it('FR003 an inquired job known to have no resume starts on the last choice', async () => {
+    renderControl({ state: 'inquired', last: 'f2', ownResumeId: null })
+
+    expect(await screen.findByRole('combobox', { name: 'Resume used' })).toHaveValue('f2')
+  })
+
+  it('FR001 choosing None sends null even when the choice started on a resume', async () => {
+    const user = userEvent.setup()
+    const calls = renderControl({ last: 'f2' })
+    const select = await screen.findByRole('combobox', { name: 'Resume used' })
+
+    await user.selectOptions(select, 'None')
+    await user.click(screen.getByRole('button', { name: 'I applied' }))
+
+    await waitFor(() => expect(marks(calls)).toHaveLength(1))
+    expect(marks(calls)[0]?.body).toEqual({ resume_file_id: null })
+  })
+
+  it('a picked file that is removed meanwhile is not sent', async () => {
+    const user = userEvent.setup()
+    const calls = renderControl({ last: null })
+    const select = await screen.findByRole('combobox', { name: 'Resume used' })
+    await user.selectOptions(select, 'f1')
+
+    // the file is removed on the Profile page; the shared list refreshes without it
+    act(() => calls.client.setQueryData(['resumes'], [NEWER, LETTER]))
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Resume used' })).toHaveValue(''))
+    await user.click(screen.getByRole('button', { name: 'I applied' }))
+
+    await waitFor(() => expect(marks(calls)).toHaveLength(1))
+    expect(marks(calls)[0]?.body).toEqual({ resume_file_id: null })
+  })
+
+  it('still offers the choice, starting on None, when the last choice cannot be read', async () => {
+    renderControl({ lastFails: true })
+
+    expect(await screen.findByRole('combobox', { name: 'Resume used' })).toHaveValue('')
+  })
+
+  it('shows the refusal of a mark, and clears it when the other mark succeeds', async () => {
+    const user = userEvent.setup()
+    renderControl({ markFails: true })
+    await screen.findByRole('combobox', { name: 'Resume used' })
+
+    await user.click(screen.getByRole('button', { name: 'I applied' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Choose one of your stored')
+  })
+
+  it('refreshes the last choice after a mark', async () => {
+    const user = userEvent.setup()
+    const calls = renderControl({ last: 'f2' })
+    await screen.findByRole('combobox', { name: 'Resume used' })
+    const before = calls.filter((c) => c.path === '/pipeline/resumes').length
+
+    await user.click(screen.getByRole('button', { name: 'I applied' }))
+
+    await waitFor(() =>
+      expect(calls.filter((c) => c.path === '/pipeline/resumes').length).toBeGreaterThan(before),
+    )
   })
 })

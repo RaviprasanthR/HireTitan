@@ -263,14 +263,16 @@ class InterviewsRepo:
 
     async def merge_details(self, keep_id: UUID, loser_id: UUID) -> None:
         """Fold the losing job's notes into the kept job (feature 002e, research R7): the kept
-        job's own contact and source stay, and the loser's fill them only when empty; the
+        job's own contact, source and resume stay, and the loser's fill them only when empty; the
         loser's rounds come over (renumbered 1..n, questions with them) only when the kept job
         has none. Whatever is left of the loser's notes is removed."""
         # one order for both rows, so two merges at once cannot wait on each other
         for job_id in sorted((keep_id, loser_id)):
             await self.lock_job(job_id)
         lost = await self._session.get(PipelineDetailsRow, loser_id, populate_existing=True)
-        if lost is not None and (lost.contact_name is not None or lost.source is not None):
+        if lost is not None and (
+            lost.contact_name is not None or lost.source is not None or lost.resume_name is not None
+        ):
             kept = await self._details_row(keep_id)
             if kept.contact_name is None and lost.contact_name is not None:
                 kept.contact_name = lost.contact_name
@@ -281,6 +283,12 @@ class InterviewsRepo:
             if kept.source is None and lost.source is not None:
                 kept.source = lost.source
                 kept.firm_name = lost.firm_name
+            if kept.resume_name is None and lost.resume_name is not None:
+                # the link, the name and the day come together (a check requires it); a removed
+                # file's note comes over as it is, with no link (feature 002f, FR-010)
+                kept.resume_file_id = lost.resume_file_id
+                kept.resume_name = lost.resume_name
+                kept.resume_added_on = lost.resume_added_on
             await self._session.flush()
         has_rounds = await self._session.scalar(
             select(func.count())

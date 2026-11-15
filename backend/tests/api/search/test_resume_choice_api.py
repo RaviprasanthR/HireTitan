@@ -11,6 +11,7 @@ from uuid import UUID
 import httpx
 import pytest
 from sqlalchemy import text
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from hiretitan.api_main import create_app
@@ -247,3 +248,19 @@ async def test_pipeline_resumes_last_choice_and_usage(env: Env) -> None:
         str(first): 2,
         str(second): 1,
     }
+
+
+async def test_a_file_being_chosen_cannot_be_removed_until_the_mark_ends(env: Env) -> None:
+    """The lookup holds the file row, so a removal in the middle of a mark waits instead of
+    leaving the mark to fail on a link to a file that is gone (review finding, T007r)."""
+    file_id = await add_file(env, "Backend_2025.pdf")
+    async with env.sessions() as marking:
+        facts = await SqlResumeLookup(marking).get(file_id)
+        assert facts is not None
+        async with env.sessions() as removing:
+            await removing.execute(text("SET LOCAL lock_timeout = '300ms'"))
+            with pytest.raises(DBAPIError):  # waits for the mark, then gives up
+                await removing.execute(
+                    text("DELETE FROM app.resume_files WHERE id = :id"), {"id": file_id}
+                )
+        await marking.rollback()

@@ -40,11 +40,17 @@ export function PipelineControl({
   if (state === 'applied' || state === 'deleted') return null
 
   const offered = files.data ?? []
-  const showResume = files.isSuccess && pipeline.isSuccess && offered.length > 0
   const stillStored = (fileId: string | null | undefined) =>
     fileId && offered.some((file) => file.id === fileId) ? fileId : undefined
+  // An inquired job may already have a resume. Until the caller says which (`ownResumeId`, null
+  // for none), the choice is not shown and nothing is sent, so one click cannot overwrite it.
+  const ownKnown = state !== 'inquired' || ownResumeId !== undefined
+  // The last choice failing to load must not take the choice away: it then starts on None.
+  const startKnown = pipeline.isSuccess || pipeline.isError
+  const showResume = ownKnown && files.isSuccess && startKnown && offered.length > 0
   const start = stillStored(ownResumeId) ?? stillStored(pipeline.data?.last_choice) ?? ''
-  const resumeValue = picked ?? start
+  // A picked file that has been removed since is no longer sent: the select shows the start again.
+  const resumeValue = picked === '' || stillStored(picked) ? (picked ?? start) : start
   // not shown: leave the field out, so the server changes nothing about the resume
   const resume = showResume ? resumeValue || null : undefined
 
@@ -79,7 +85,10 @@ export function PipelineControl({
         variant="outline"
         size="sm"
         disabled={busy}
-        onClick={() => applied.mutate({ id, day, resume })}
+        onClick={() => {
+          inquired.reset() // an old refusal of the other mark is not shown beside a new one
+          applied.mutate({ id, day, resume })
+        }}
       >
         I applied
       </Button>
@@ -89,7 +98,10 @@ export function PipelineControl({
           variant="outline"
           size="sm"
           disabled={busy}
-          onClick={() => inquired.mutate({ id, day, resume })}
+          onClick={() => {
+            applied.reset()
+            inquired.mutate({ id, day, resume })
+          }}
         >
           I inquired
         </Button>

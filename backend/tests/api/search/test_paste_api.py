@@ -16,6 +16,7 @@ from hiretitan.api_main import create_app
 from hiretitan.platform.clock import FakeClock
 from hiretitan.platform.config.settings import Settings
 from hiretitan.search.api.jobs import SearchJobsApiDeps, create_search_jobs_router
+from hiretitan.search_wiring import SqlResumeLookup
 
 NOW = datetime(2026, 11, 7, 9, tzinfo=UTC)
 DESCRIPTION = "We build payment APIs in Python. You will own services end to end."
@@ -33,7 +34,9 @@ class Env:
 
 @pytest.fixture
 async def env(sessions: async_sessionmaker[AsyncSession], tmp_path: Path) -> AsyncIterator[Env]:
-    deps = SearchJobsApiDeps(sessions=sessions, queue=_Queue(), clock=FakeClock(NOW))
+    deps = SearchJobsApiDeps(
+        sessions=sessions, queue=_Queue(), clock=FakeClock(NOW), resume_lookup=SqlResumeLookup
+    )
     app = create_app(
         Settings(), frontend_dist=tmp_path / "none", routers=[create_search_jobs_router(deps)]
     )
