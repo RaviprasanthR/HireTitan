@@ -592,6 +592,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/pipeline/resumes/{file_id}/uses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Clear Uses
+         * @description Forget a stored file on every job and as the last choice, names included. Used before
+         *     the file is removed when the person wants nothing of it left (feature 002f, FR-009).
+         */
+        delete: operations["clear_uses_api_v1_pipeline_resumes__file_id__uses_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/preferences": {
         parameters: {
             query?: never;
@@ -3890,6 +3911,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PipelineResumesOut"];
+                };
+            };
+        };
+    };
+    clear_uses_api_v1_pipeline_resumes__file_id__uses_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                file_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

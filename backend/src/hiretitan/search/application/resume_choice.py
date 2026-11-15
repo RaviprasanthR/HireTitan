@@ -49,6 +49,14 @@ class LastChoiceWriter(Protocol):
     async def set_last_choice(self, file_id: UUID | None) -> None: ...
 
 
+class UsesWriter(Protocol):
+    async def clear_resume_everywhere(self, file_id: UUID) -> None: ...
+
+
+class LastChoiceForgetter(Protocol):
+    async def forget(self, file_id: UUID) -> None: ...
+
+
 async def _offerable_file(lookup: ResumeLookup, file_id: UUID) -> ResumeFacts:
     facts = await lookup.get(file_id)
     if facts is None or not facts.offerable:
@@ -108,3 +116,11 @@ async def record_on_mark(
     else:
         await _assign(lookup, store, job_id, file_id)
     await settings.set_last_choice(file_id)
+
+
+async def clear_file_uses(store: UsesWriter, settings: LastChoiceForgetter, file_id: UUID) -> None:
+    """Forget a stored file everywhere: on every job that used it (its name too) and as the
+    starting value. The profile page does this first when the person removes a file and asks for
+    its name to go as well (FR-009); a file nothing uses is not an error."""
+    await store.clear_resume_everywhere(file_id)
+    await settings.forget(file_id)

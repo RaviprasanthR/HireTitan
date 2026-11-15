@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -40,5 +40,14 @@ class PipelineSettingsRepo:
                 index_elements=[PipelineSettingsRow.id],
                 set_={"last_resume_file_id": stmt.excluded.last_resume_file_id},
             )
+        )
+        await self._session.flush()
+
+    async def forget(self, file_id: UUID) -> None:
+        """The last choice goes back to none if it was this file."""
+        await self._session.execute(
+            update(PipelineSettingsRow)
+            .where(PipelineSettingsRow.last_resume_file_id == file_id)
+            .values(last_resume_file_id=None)
         )
         await self._session.flush()

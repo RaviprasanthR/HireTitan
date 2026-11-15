@@ -450,3 +450,73 @@ async def test_FR009_a_removed_note_can_be_cleared(env: Env) -> None:
     assert cleared.status_code == 200
     assert cleared.json()["resume"] == NONE
     assert await stored(env, job_id) == (None, None)
+
+
+# --- removing a file completely, and removing a job (US4) ------------------------------------
+
+
+def uses_url(file_id: UUID) -> str:
+    return f"/api/v1/pipeline/resumes/{file_id}/uses"
+
+
+async def test_FR009_clear_all_uses_of_a_file(env: Env) -> None:
+    doomed = await add_file(env, "Doomed.pdf")
+    other = await add_file(env, "Other.pdf")
+    first = await add_job(env, "One")
+    second = await add_job(env, "Two")
+    third = await add_job(env, "Three")
+    for job_id, file_id in ((first, doomed), (second, doomed), (third, other)):
+        await env.client.post(
+            f"/api/v1/jobs/{job_id}/applied", json={"resume_file_id": str(file_id)}
+        )
+    last = await add_job(env, "Last")
+    await env.client.post(f"/api/v1/jobs/{last}/applied", json={"resume_file_id": str(doomed)})
+    assert await last_choice(env) == doomed
+
+    cleared = await env.client.delete(uses_url(doomed))
+
+    assert cleared.status_code == 204
+    for job_id in (first, second, last):
+        assert await stored(env, job_id) == (None, None)  # not even a removed note is left
+    assert await stored(env, third) == (other, "Other.pdf")  # another file's jobs are untouched
+    assert await last_choice(env) is None  # the starting value was that file
+    body = (await env.client.get("/api/v1/pipeline/resumes")).json()
+    assert {u["resume_file_id"]: u["jobs"] for u in body["usage"]} == {str(other): 1}
+
+
+async def test_FR009_clearing_uses_keeps_other_details_and_another_last_choice(env: Env) -> None:
+    doomed = await add_file(env, "Doomed.pdf")
+    other = await add_file(env, "Other.pdf")
+    job_id = await add_job(env, "With contact")
+    await env.client.post(f"/api/v1/jobs/{job_id}/applied", json={"resume_file_id": str(doomed)})
+    await env.client.put(
+        f"/api/v1/jobs/{job_id}/interview/source", json={"kind": "hiring_firm", "firm_name": "Firm"}
+    )
+    elsewhere = await add_job(env, "Elsewhere")
+    await env.client.post(f"/api/v1/jobs/{elsewhere}/applied", json={"resume_file_id": str(other)})
+
+    await env.client.delete(uses_url(doomed))
+
+    assert await stored(env, job_id) == (None, None)
+    source = (await env.client.get(f"/api/v1/jobs/{job_id}/interview")).json()["source"]
+    assert source == {"kind": "hiring_firm", "firm_name": "Firm"}  # the rest of the notes stay
+    assert await last_choice(env) == other  # a different last choice is not touched
+
+
+async def test_FR009_clearing_a_file_nothing_uses_is_fine(env: Env) -> None:
+    unused = await add_file(env, "Unused.pdf")
+
+    for file_id in (unused, UUID("00000000-0000-4000-8000-0000000000aa")):
+        assert (await env.client.delete(uses_url(file_id))).status_code == 204
+
+
+async def test_FR011_removing_a_job_removes_its_resume(env: Env) -> None:
+    job_id = await add_job(env)
+    file_id = await add_file(env, "Backend_2025.pdf")
+    await env.client.post(f"/api/v1/jobs/{job_id}/applied", json={"resume_file_id": str(file_id)})
+    assert await stored(env, job_id) == (file_id, "Backend_2025.pdf")
+
+    removed = await env.client.delete(f"/api/v1/jobs/{job_id}")
+
+    assert removed.status_code == 204
+    assert await stored(env, job_id) == (None, None)  # not even a removed note remains

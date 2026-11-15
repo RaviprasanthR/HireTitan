@@ -36,7 +36,9 @@ from hiretitan.search.infra.models import (
     InterviewRoundRow,
     JobRow,
     PipelineDetailsRow,
+    PipelineSettingsRow,
 )
+from hiretitan.search.infra.pipeline_settings_repo import PipelineSettingsRepo
 from hiretitan.search.infra.repos import CompaniesRepo, JobsRepo, RuleSetsRepo
 from hiretitan.setup.api.data import DataApiDeps, create_data_router
 from hiretitan.setup.api.onboarding import OnboardingApiDeps, create_onboarding_router
@@ -388,3 +390,38 @@ async def test_SC004_delete_all_removes_interview_data(env: Env) -> None:
     async with env.sessions() as session:
         for table in (PipelineDetailsRow, InterviewRoundRow, InterviewQuestionRow):
             assert (await session.scalars(select(table))).all() == []
+
+
+async def test_SC005_delete_all_removes_resume_choices_and_last_choice(env: Env) -> None:
+    async with env.sessions() as session:
+        file_id = (
+            await session.execute(
+                text(
+                    "INSERT INTO app.resume_files (id, kind, original_name, size_bytes, sha256, "
+                    "parse_status) VALUES (gen_random_uuid(), 'upload_pdf', 'Backend_2025.pdf', "
+                    "1000, :sha, 'parsed') RETURNING id"
+                ),
+                {"sha": "a" * 64},
+            )
+        ).scalar_one()
+        job = await JobsRepo(session).add(
+            company_id=None,
+            company_name="Acme",
+            title="With a resume",
+            first_seen_at=datetime(2026, 11, 7, tzinfo=UTC),
+            last_seen_at=datetime(2026, 11, 7, tzinfo=UTC),
+            description="d",
+            state="applied",
+            applied_on=date(2026, 11, 7),
+        )
+        await InterviewsRepo(session).set_resume(
+            job.id, file_id, "Backend_2025.pdf", date(2026, 10, 2)
+        )
+        await PipelineSettingsRepo(session).set_last_choice(file_id)
+        await session.commit()
+
+    assert (await env.client.post(URL, json={"confirm": "DELETE"})).status_code == 204
+
+    async with env.sessions() as session:
+        assert (await session.scalars(select(PipelineDetailsRow))).all() == []  # no name, no note
+        assert (await session.scalars(select(PipelineSettingsRow))).all() == []  # no last choice

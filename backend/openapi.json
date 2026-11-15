@@ -6873,6 +6873,43 @@
         ]
       }
     },
+    "/api/v1/pipeline/resumes/{file_id}/uses": {
+      "delete": {
+        "description": "Forget a stored file on every job and as the last choice, names included. Used before\nthe file is removed when the person wants nothing of it left (feature 002f, FR-009).",
+        "operationId": "clear_uses_api_v1_pipeline_resumes__file_id__uses_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "file_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "File Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Clear Uses",
+        "tags": [
+          "pipeline"
+        ]
+      }
+    },
     "/api/v1/preferences": {
       "get": {
         "operationId": "read_preferences_api_v1_preferences_get",

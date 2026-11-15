@@ -136,6 +136,22 @@ class InterviewsRepo:
         )
         return {job_id: choice_from(file_id, name, day) for job_id, file_id, name, day in rows}
 
+    async def clear_resume_everywhere(self, file_id: UUID) -> None:
+        """Forget a stored file on every job that uses it, so removing the file leaves no name
+        behind (feature 002f, FR-009); a details row left empty is dropped."""
+        rows = (
+            await self._session.scalars(
+                select(PipelineDetailsRow)
+                .where(PipelineDetailsRow.resume_file_id == file_id)
+                .with_for_update()
+            )
+        ).all()
+        for row in rows:
+            row.resume_file_id = row.resume_name = row.resume_added_on = None
+        await self._session.flush()
+        for row in rows:
+            await self._prune(row.job_id)
+
     async def usage(self) -> dict[UUID, int]:
         """How many jobs point at each stored file (a removed note points at none)."""
         rows = await self._session.execute(

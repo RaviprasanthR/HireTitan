@@ -14,6 +14,7 @@ from typing import Any
 
 import grimp
 import pytest
+from sqlalchemy import text
 from tests.fakes.search_env import Env, add_company, go, new_search, posting
 
 from hiretitan.platform.llm.port import LlmRequest, LlmResult, Usage
@@ -21,6 +22,7 @@ from hiretitan.search.application.ports import ScanOk
 from hiretitan.search.domain.contacts import ContactFields
 from hiretitan.search.domain.interviews import check_contact
 from hiretitan.search.infra.interviews_repo import InterviewsRepo
+from hiretitan.search.infra.pipeline_settings_repo import PipelineSettingsRepo
 from hiretitan.search.infra.repos import ContactsRepo, JobsRepo, NotesRepo
 
 REPO = Path(__file__).parents[3]
@@ -43,6 +45,8 @@ INTERVIEW_MARKERS = (
     "leak-check answer about sharding",
     "leak-check feedback from the panel",
 )
+# and for the resume a person used and the one they chose last (feature 002f)
+RESUME_MARKER = "leak-check-resume-marker.pdf"
 PLACEHOLDER_SLUG = re.compile(r"example|placeholder|your-|sample|jane-|john-", re.IGNORECASE)
 LINKEDIN_PROFILE = re.compile(r"linkedin\.com/in/([A-Za-z0-9_%\-]+)", re.IGNORECASE)
 
@@ -144,6 +148,54 @@ async def test_SC003_no_interview_text_in_ai_calls(env: Env) -> None:
         sent = request.prompt.system + "\n" + request.prompt.user
         for marker in INTERVIEW_MARKERS:
             assert marker not in sent, f"{marker!r} reached the model"
+
+
+async def test_SC005_no_resume_name_in_ai_calls(env: Env) -> None:
+    ref = await add_company(env, "Acme")
+    async with env.sessions() as session:
+        now = datetime(2026, 11, 6, 9, tzinfo=UTC)
+        file_id = (
+            await session.execute(
+                text(
+                    "INSERT INTO app.resume_files (id, kind, original_name, size_bytes, sha256, "
+                    "parse_status) VALUES (gen_random_uuid(), 'upload_pdf', :name, 1000, :sha, "
+                    "'parsed') RETURNING id"
+                ),
+                {"name": RESUME_MARKER, "sha": "a" * 64},
+            )
+        ).scalar_one()
+        job = await JobsRepo(session).add(
+            company_id=ref.company_id,
+            company_name="Acme",
+            title="Platform Engineer",
+            first_seen_at=now,
+            last_seen_at=now,
+            description="d",
+            state="applied",
+            applied_on=date(2026, 11, 6),
+        )
+        await InterviewsRepo(session).set_resume(job.id, file_id, RESUME_MARKER, date(2026, 10, 2))
+        await PipelineSettingsRepo(session).set_last_choice(file_id)
+        await session.commit()
+    llm = RecordingLlm()
+    assert env.deps.judge is not None
+    env.deps.judge.llm = llm
+    env.career_ops.script(
+        ref,
+        ScanOk(
+            [
+                posting("Platform Engineer", company="acme"),
+                posting("Backend Engineer", company="acme"),
+            ]
+        ),
+    )
+
+    await go(env, await new_search(env, mode="rules_and_ai"))
+
+    assert llm.requests, "the search made no AI call, so this test proved nothing"
+    for request in llm.requests:
+        sent = request.prompt.system + "\n" + request.prompt.user
+        assert RESUME_MARKER not in sent, "a resume name reached the model"
 
 
 def test_FR022_workflows_cannot_import_contacts() -> None:
