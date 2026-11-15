@@ -128,27 +128,14 @@ describe('ExplorePage', () => {
     expect(await screen.findByText(/Finish setup first/)).toBeInTheDocument()
   })
 
-  it('US1_AS11_setup_checklist_first', async () => {
+  it('never_shows_the_setup_checklist_on_explore', async () => {
     renderPage({
       status: {
         ...STATUS,
         checklist: { ...STATUS.checklist, rules_approved: false },
       },
     })
-    const checklist = await screen.findByRole('list', {
-      name: 'Setup checklist',
-    })
-    const jobs = screen.queryByRole('list', { name: 'Jobs' })
-    expect(checklist).toBeInTheDocument()
-    if (jobs)
-      expect(
-        checklist.compareDocumentPosition(jobs) & Node.DOCUMENT_POSITION_FOLLOWING,
-      ).toBeTruthy()
-  })
-
-  it('hides_the_checklist_once_setup_is_done', async () => {
-    renderPage({ jobs: [card('1', 'Backend Engineer')] })
-    await screen.findByRole('list', { name: 'Jobs' })
+    await screen.findByText(/Finish setup first/)
     expect(screen.queryByRole('list', { name: 'Setup checklist' })).not.toBeInTheDocument()
   })
 
