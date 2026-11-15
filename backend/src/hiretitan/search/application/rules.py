@@ -86,6 +86,13 @@ class RulesService:
         )
         return _view(row)
 
+    async def propose_from_approved(self) -> RuleSetView:
+        """Open a draft that is a copy of the approved rules, to change by hand (not rebuilt)."""
+        approved = await self._store.approved()
+        if approved is None:
+            raise RulesNotApprovedError
+        return _view(await self._store.propose(dict(approved.rules), dict(approved.based_on)))
+
     async def edit_proposal(self, rules: SearchRules) -> RuleSetView:
         rules.validate()
         row = await self._store.update_proposed(rules_to_dict(rules))

@@ -78,8 +78,8 @@ describe('ExplorePage', () => {
     expect(screen.queryByLabelText('Link to the job')).not.toBeInTheDocument()
   })
 
-  it('US1 AS1 explore is the default tab', async () => {
-    renderPage()
+  it('US1 AS1 the Explore tab is lit on its own page', async () => {
+    renderPage({ url: '/explore' })
 
     const tabs = await screen.findByRole('navigation', { name: 'Home tabs' })
 

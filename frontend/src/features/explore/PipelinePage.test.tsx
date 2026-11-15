@@ -28,7 +28,12 @@ function applied(id: string, title: string, day: string) {
 }
 
 function inquired(id: string, title: string, day: string) {
-  return { ...applied(id, title, day), state: 'inquired', applied_on: null, inquired_on: day }
+  return {
+    ...applied(id, title, day),
+    state: 'inquired',
+    applied_on: null,
+    inquired_on: day,
+  }
 }
 
 function renderPage() {
@@ -93,12 +98,21 @@ describe('PipelinePage', () => {
           city: 'Pune',
           country: 'IN',
           skills_found: ['Python'],
-          sources: [{ kind: 'company_board', url: 'https://jobs.example.com/1', label: null }],
+          sources: [
+            {
+              kind: 'company_board',
+              url: 'https://jobs.example.com/1',
+              label: null,
+            },
+          ],
           decision_history: [],
           injection_flags: [],
         }
       if (call.path.startsWith('/jobs?'))
-        return { items: [applied('a', 'Newest', '2026-11-05')], next_cursor: null }
+        return {
+          items: [applied('a', 'Newest', '2026-11-05')],
+          next_cursor: null,
+        }
       return undefined
     })
     render(
@@ -108,7 +122,9 @@ describe('PipelinePage', () => {
         </MemoryRouter>
       </QueryClientProvider>,
     )
-    const toggle = await screen.findByRole('button', { name: 'Details for Newest (Python) - Pune' })
+    const toggle = await screen.findByRole('button', {
+      name: 'Details for Newest (Python) - Pune',
+    })
     expect(toggle).toHaveAttribute('aria-expanded', 'false')
     expect(screen.queryByText('Build services with Python.')).toBeNull()
 
@@ -128,7 +144,13 @@ describe('PipelinePage', () => {
           job_id: 'a',
           can_edit: true,
           can_add_round: true,
-          contact: { name: 'Asha Rao', role: null, email: null, phone: null, linkedin_url: null },
+          contact: {
+            name: 'Asha Rao',
+            role: null,
+            email: null,
+            phone: null,
+            linkedin_url: null,
+          },
           source: { kind: 'hiring_firm', firm_name: 'TalentBridge' },
           rounds: [],
           status: { state: 'applied', round: null },
@@ -140,12 +162,21 @@ describe('PipelinePage', () => {
           city: 'Pune',
           country: 'IN',
           skills_found: [],
-          sources: [{ kind: 'company_board', url: 'https://jobs.example.com/1', label: null }],
+          sources: [
+            {
+              kind: 'company_board',
+              url: 'https://jobs.example.com/1',
+              label: null,
+            },
+          ],
           decision_history: [],
           injection_flags: [],
         }
       if (call.path.startsWith('/jobs?'))
-        return { items: [applied('a', 'Newest', '2026-11-05')], next_cursor: null }
+        return {
+          items: [applied('a', 'Newest', '2026-11-05')],
+          next_cursor: null,
+        }
       return undefined
     })
     render(
@@ -156,7 +187,9 @@ describe('PipelinePage', () => {
       </QueryClientProvider>,
     )
     await user.click(
-      await screen.findByRole('button', { name: 'Details for Newest (Python) - Pune' }),
+      await screen.findByRole('button', {
+        name: 'Details for Newest (Python) - Pune',
+      }),
     )
 
     expect(await screen.findByLabelText('Contact name')).toHaveValue('Asha Rao')
@@ -164,12 +197,111 @@ describe('PipelinePage', () => {
     expect(screen.getByRole('radio', { name: 'Through a hiring firm' })).toBeChecked()
   })
 
-  it('the_edit_icon_opens_the_job_where_the_date_can_be_changed_or_undone', async () => {
-    renderPage()
-    const table = await screen.findByRole('table', { name: 'Pipeline jobs' })
-    const [, newest] = within(table).getAllByRole('row')
-    if (!newest) throw new Error('expected a first row')
-    expect(within(newest).getByRole('link', { name: /^Edit / })).toHaveAttribute('href', '/jobs/a')
+  it('an opened row sets the location, description, sources and job page apart, with icons', async () => {
+    const user = userEvent.setup()
+    stubApi((call) => {
+      if (call.path === '/jobs/a')
+        return {
+          ...applied('a', 'Newest', '2026-11-05'),
+          description: 'Build services with Python.',
+          sources: [
+            {
+              kind: 'company_board',
+              url: 'https://jobs.example.com/1',
+              label: null,
+            },
+          ],
+          decision_history: [],
+          injection_flags: [],
+        }
+      if (call.path.startsWith('/jobs?'))
+        return {
+          items: [applied('a', 'Newest', '2026-11-05')],
+          next_cursor: null,
+        }
+      return undefined
+    })
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter>
+          <PipelinePage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+
+    await user.click(
+      await screen.findByRole('button', {
+        name: 'Details for Newest (Python) - Pune',
+      }),
+    )
+
+    const place = await screen.findByLabelText('Location')
+    expect(place).toHaveTextContent('Pune, India')
+    expect(place.querySelector('svg')).not.toBeNull()
+    expect(screen.getByLabelText('Work mode')).toHaveTextContent('remote')
+    expect(screen.getByRole('heading', { name: 'Description' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Where it was found' })).toBeInTheDocument()
+    const source = screen.getByRole('link', { name: /jobs\.example\.com\/1/ })
+    expect(source.querySelector('svg')).not.toBeNull()
+    const page = screen.getByRole('link', { name: 'Open the full job page' })
+    expect(page.querySelector('svg')).not.toBeNull()
+  })
+
+  it('the edit icon opens a card over a blurred page, with the date, Undo and the details', async () => {
+    const user = userEvent.setup()
+    stubApi((call) => {
+      if (call.path === '/jobs/a') {
+        return {
+          ...applied('a', 'Newest', '2026-11-05'),
+          description: 'd',
+          canonical_url: null,
+          injection_flags: [],
+          decision_history: [],
+          first_search_id: null,
+          company_id: null,
+          location_text: null,
+        }
+      }
+      if (call.path === '/jobs/a/interview') {
+        return {
+          job_id: 'a',
+          can_edit: true,
+          can_add_round: true,
+          contact: null,
+          source: null,
+          rounds: [],
+          status: { state: 'applied', round: null },
+        }
+      }
+      if (call.path.startsWith('/jobs?'))
+        return {
+          items: [applied('a', 'Newest', '2026-11-05')],
+          next_cursor: null,
+        }
+      return undefined
+    })
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter>
+          <PipelinePage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+
+    await user.click(await screen.findByRole('button', { name: /^Edit / }))
+
+    const card = await screen.findByRole('dialog', {
+      name: 'Edit Newest (Python) - Pune',
+    })
+    expect(card).toHaveAttribute('aria-modal', 'true')
+    expect(screen.getByTestId('modal-backdrop')).toHaveClass('backdrop-blur-sm')
+    expect(await within(card).findByText('Applied on 5 Nov 2026')).toBeInTheDocument()
+    expect(within(card).getByRole('button', { name: 'Undo' })).toBeInTheDocument()
+    expect(await within(card).findByLabelText('Contact name')).toBeInTheDocument()
+
+    await user.keyboard('{Escape}')
+
+    expect(screen.queryByRole('dialog', { name: /^Edit / })).not.toBeInTheDocument()
   })
 
   it('shows_the_short_role_with_the_full_title_on_hover', async () => {
@@ -205,13 +337,13 @@ describe('PipelinePage', () => {
     expect(tag).toHaveClass('ht-pill-blue')
   })
 
-  it('US1 AS3 the tab is in the address, and AS1 explore is the default tab', async () => {
+  it('US1 AS3 the tab is in the address, and AS1 In pipeline is the default tab', async () => {
     stubApi((call) =>
       call.path.startsWith('/jobs?') ? { items: [], next_cursor: null } : undefined,
     )
     render(
       <QueryClientProvider client={new QueryClient()}>
-        <MemoryRouter initialEntries={['/pipeline']}>
+        <MemoryRouter initialEntries={['/']}>
           <PipelinePage />
         </MemoryRouter>
       </QueryClientProvider>,
@@ -219,9 +351,9 @@ describe('PipelinePage', () => {
 
     const tabs = await screen.findByRole('navigation', { name: 'Home tabs' })
 
-    expect(within(tabs).getByRole('link', { name: 'Explore' })).toHaveAttribute('href', '/')
+    expect(within(tabs).getByRole('link', { name: 'Explore' })).toHaveAttribute('href', '/explore')
     const pipeline = within(tabs).getByRole('link', { name: 'In pipeline' })
-    expect(pipeline).toHaveAttribute('href', '/pipeline')
+    expect(pipeline).toHaveAttribute('href', '/')
     expect(pipeline).toHaveAttribute('aria-current', 'page')
   })
 
@@ -259,7 +391,9 @@ describe('PipelinePage', () => {
 
 describe('PipelinePage status column', () => {
   function renderWith(rows: unknown[]) {
-    stubApi((call) => (call.path.startsWith('/jobs?') ? { items: rows, next_cursor: null } : undefined))
+    stubApi((call) =>
+      call.path.startsWith('/jobs?') ? { items: rows, next_cursor: null } : undefined,
+    )
     render(
       <QueryClientProvider client={new QueryClient()}>
         <MemoryRouter>
@@ -277,15 +411,26 @@ describe('PipelinePage status column', () => {
   }
 
   it('US2 AS1 status reads Round 1 scheduled', async () => {
-    renderWith([{ ...applied('a', 'Backend', '2026-11-05'), interview: { state: 'scheduled', round: 1 } }])
+    renderWith([
+      {
+        ...applied('a', 'Backend', '2026-11-05'),
+        interview: { state: 'scheduled', round: 1 },
+      },
+    ])
 
     expect(await statusOf('Backend')).toHaveTextContent('Round 1 scheduled')
   })
 
   it('shows the latest round cleared, and a failed round wins', async () => {
     renderWith([
-      { ...applied('a', 'Cleared one', '2026-11-05'), interview: { state: 'cleared', round: 2 } },
-      { ...applied('b', 'Failed one', '2026-11-04'), interview: { state: 'failed', round: 3 } },
+      {
+        ...applied('a', 'Cleared one', '2026-11-05'),
+        interview: { state: 'cleared', round: 2 },
+      },
+      {
+        ...applied('b', 'Failed one', '2026-11-04'),
+        interview: { state: 'failed', round: 3 },
+      },
     ])
 
     expect(await statusOf('Cleared one')).toHaveTextContent('Round 2 cleared')
@@ -304,9 +449,18 @@ describe('PipelinePage status column', () => {
 
   it('each status has its own colour and the words stay visible', async () => {
     renderWith([
-      { ...applied('a', 'One', '2026-11-05'), interview: { state: 'scheduled', round: 1 } },
-      { ...applied('b', 'Two', '2026-11-04'), interview: { state: 'cleared', round: 1 } },
-      { ...applied('c', 'Three', '2026-11-03'), interview: { state: 'failed', round: 1 } },
+      {
+        ...applied('a', 'One', '2026-11-05'),
+        interview: { state: 'scheduled', round: 1 },
+      },
+      {
+        ...applied('b', 'Two', '2026-11-04'),
+        interview: { state: 'cleared', round: 1 },
+      },
+      {
+        ...applied('c', 'Three', '2026-11-03'),
+        interview: { state: 'failed', round: 1 },
+      },
     ])
 
     const tones = await Promise.all(
@@ -319,13 +473,12 @@ describe('PipelinePage status column', () => {
   })
 })
 
-
 describe('PipelinePage unsaved edits', () => {
   const interview = {
     job_id: 'a',
     can_edit: true,
     can_add_round: true,
-    contact: null,
+    contact: { name: 'Asha', role: null, email: null, phone: null, linkedin_url: null },
     source: null,
     rounds: [],
     status: { state: 'applied', round: null },
@@ -334,7 +487,10 @@ describe('PipelinePage unsaved edits', () => {
   function renderOpenable() {
     stubApi((call) => {
       if (call.path.startsWith('/jobs?')) {
-        return { items: [applied('a', 'Backend', '2026-11-05')], next_cursor: null }
+        return {
+          items: [applied('a', 'Backend', '2026-11-05')],
+          next_cursor: null,
+        }
       }
       if (call.path === '/jobs/a') {
         return {
@@ -355,77 +511,38 @@ describe('PipelinePage unsaved edits', () => {
     )
   }
 
-  it('FR013 collapse with unsaved edits asks first', async () => {
+  it('an opened row only shows the details; changes are made from the edit card', async () => {
     const user = userEvent.setup()
     renderOpenable()
     await user.click(await screen.findByRole('button', { name: /Details for/ }))
-    await user.type(await screen.findByLabelText('Contact name'), 'Asha')
 
-    await user.click(screen.getByRole('button', { name: /Details for/ }))
-
-    expect(screen.getByRole('alertdialog', { name: 'Unsaved changes' })).toBeInTheDocument()
-    expect(screen.getByLabelText('Contact name')).toHaveValue('Asha')
-
-    await user.click(screen.getByRole('button', { name: 'Keep editing' }))
-    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
-    expect(screen.getByLabelText('Contact name')).toHaveValue('Asha')
-
-    await user.click(screen.getByRole('button', { name: /Details for/ }))
-    await user.click(screen.getByRole('button', { name: 'Close and lose them' }))
-    expect(screen.queryByLabelText('Contact name')).not.toBeInTheDocument()
-  })
-
-  it('FR013 no question when nothing changed', async () => {
-    const user = userEvent.setup()
-    renderOpenable()
-    await user.click(await screen.findByRole('button', { name: /Details for/ }))
-    await screen.findByLabelText('Contact name')
-
-    await user.click(screen.getByRole('button', { name: /Details for/ }))
-
-    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
-    expect(screen.queryByLabelText('Contact name')).not.toBeInTheDocument()
-  })
-
-  it('FR013 typing a letter and removing it is not a change', async () => {
-    const user = userEvent.setup()
-    renderOpenable()
-    await user.click(await screen.findByRole('button', { name: /Details for/ }))
     const name = await screen.findByLabelText('Contact name')
-    await user.type(name, 'A')
-    await user.clear(name)
+    expect(name.hasAttribute('readonly') || name.hasAttribute('disabled')).toBe(true)
+    expect(screen.queryByRole('button', { name: /^(Save|Add)/ })).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /Details for/ }))
-
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Contact name')).not.toBeInTheDocument()
   })
 
-  it('FR013 a typed new question counts as unsaved', async () => {
+  it('an opened row with nothing recorded says "Nothing yet." instead of empty fields', async () => {
     const user = userEvent.setup()
     stubApi((call) => {
       if (call.path.startsWith('/jobs?')) {
-        return { items: [applied('a', 'Backend', '2026-11-05')], next_cursor: null }
+        return {
+          items: [applied('a', 'Backend', '2026-11-05')],
+          next_cursor: null,
+        }
       }
       if (call.path === '/jobs/a') {
-        return { ...applied('a', 'Backend', '2026-11-05'), description: 'd', sources: [] }
+        return {
+          ...applied('a', 'Backend', '2026-11-05'),
+          description: 'd',
+          sources: [],
+        }
       }
       if (call.path === '/jobs/a/interview') {
-        return {
-          ...interview,
-          rounds: [
-            {
-              id: 'r1',
-              number: 1,
-              kind: 'technical',
-              state: 'scheduled',
-              scheduled_at: null,
-              interviewers: null,
-              feedback: null,
-              questions: [],
-            },
-          ],
-        }
+        return { ...interview, contact: null, source: null, rounds: [] }
       }
       return undefined
     })
@@ -437,10 +554,8 @@ describe('PipelinePage unsaved edits', () => {
       </QueryClientProvider>,
     )
     await user.click(await screen.findByRole('button', { name: /Details for/ }))
-    await user.type(await screen.findByLabelText('New question'), 'Why us?')
 
-    await user.click(screen.getByRole('button', { name: /Details for/ }))
-
-    expect(screen.getByRole('alertdialog', { name: 'Unsaved changes' })).toBeInTheDocument()
+    expect(await screen.findByText('Nothing yet.')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Contact name')).not.toBeInTheDocument()
   })
 })

@@ -28,9 +28,10 @@ export const routes: RouteObject[] = [
       {
         element: <Shell />,
         children: [
-          { path: '/', element: <ExplorePage /> },
-          { path: '/pipeline', element: <PipelinePage /> },
-          { path: '/applied', element: <Navigate to="/pipeline" replace /> },
+          { path: '/', element: <PipelinePage /> },
+          { path: '/explore', element: <ExplorePage /> },
+          { path: '/pipeline', element: <Navigate to="/" replace /> },
+          { path: '/applied', element: <Navigate to="/" replace /> },
           {
             element: <ProfileTabsLayout />,
             children: [

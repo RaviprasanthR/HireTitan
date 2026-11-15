@@ -53,6 +53,27 @@ describe('Shell', () => {
     ])
   })
 
+  it('Home opens on the In pipeline tab, and Explore lives at /explore with Home still lit', async () => {
+    renderAt('/')
+    const tabs = await screen.findByRole('navigation', { name: 'Home tabs' })
+    expect(within(tabs).getByRole('link', { name: 'In pipeline' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+    expect(within(tabs).getByRole('link', { name: 'Explore' })).toHaveAttribute('href', '/explore')
+  })
+
+  it('the Explore tab keeps Home active in the menu', async () => {
+    renderAt('/explore')
+    const tabs = await screen.findByRole('navigation', { name: 'Home tabs' })
+    expect(within(tabs).getByRole('link', { name: 'Explore' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+    const main = screen.getByRole('navigation', { name: 'Main' })
+    expect(within(main).getByRole('link', { name: 'Home' })).toHaveAttribute('aria-current', 'page')
+  })
+
   it('US1 AS4 an old applied link opens the pipeline tab', async () => {
     renderAt('/applied')
 

@@ -227,7 +227,8 @@ button[data-variant="secondary"]:hover:not(:disabled) {
 }
 
 /* Applied table: a header that stands apart from the rows, coloured tags, icon buttons. */
-.ht-thead th {
+.ht-thead th,
+.ht-thead-row {
   background: rgb(255 255 255 / 0.06);
   color: var(--ht-muted);
   font-size: 0.75rem;
@@ -235,6 +236,15 @@ button[data-variant="secondary"]:hover:not(:disabled) {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   border-bottom: 1px solid var(--ht-divider);
+}
+.ht-thead-row {
+  border-radius: 0.5rem 0.5rem 0 0;
+}
+/* Sort buttons in the header take the header's type, not the browser's button defaults. */
+.ht-thead-row button {
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
 }
 .ht-row {
   transition: background-color 140ms ease;
@@ -280,9 +290,126 @@ button[data-variant="secondary"]:hover:not(:disabled) {
   background: rgb(240 163 94 / 0.14);
   border-color: rgb(240 163 94 / 0.55);
 }
+/* An opened pipeline row: each kind of detail is its own card with its own accent. */
+.ht-fact {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--ht-divider);
+  background: rgb(255 255 255 / 0.04);
+  font-weight: 500;
+}
+.ht-detail-card {
+  --accent: var(--ht-accent);
+  padding: 0.75rem 1rem 0.9rem;
+  border-radius: 0.6rem;
+  border: 1px solid var(--ht-divider);
+  border-left: 4px solid var(--accent);
+  background: rgb(255 255 255 / 0.035);
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.04) inset;
+}
+.ht-detail-description { --accent: #4cc9f0; }
+.ht-detail-sources { --accent: #56d4dd; }
+.ht-detail-interview { --accent: #a371f7; }
+.ht-pref-looking { --accent: #f0a35e; }
+.ht-pref-where { --accent: #4cc9f0; }
+.ht-pref-pay { --accent: #3fb950; }
+.ht-pref-companies { --accent: #a371f7; }
+.ht-rules-titles { --accent: #f0a35e; }
+.ht-rules-avoid { --accent: #f85149; }
+.ht-rules-skip { --accent: #d29922; }
+.ht-rules-age { --accent: #56d4dd; }
+.ht-rules-skills { --accent: #3fb950; }
+.ht-rules-places { --accent: #a371f7; }
+.ht-detail-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.ht-detail-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgb(240 163 94 / 0.55);
+  background: rgb(240 163 94 / 0.12);
+  color: var(--ht-accent);
+  font-weight: 600;
+  transition:
+    background-color 140ms ease,
+    transform 140ms ease;
+}
+.ht-detail-open:hover,
+.ht-detail-open:focus-visible {
+  background: rgb(240 163 94 / 0.26);
+  transform: translateY(-1px);
+}
 @media (prefers-reduced-motion: reduce) {
   .ht-row,
-  .ht-icon-button {
+  .ht-icon-button,
+  .ht-detail-open {
     transition: none;
+    transform: none;
+  }
+}
+
+/* Drop-down lists (every <select>): dark list, light text, and a clear highlight under the pointer.
+   The plain rules work in every browser; browsers that can style the open list get the full look. */
+select {
+  color-scheme: dark;
+  background-color: var(--ht-background);
+  color: var(--ht-text);
+}
+select option,
+select optgroup {
+  background-color: var(--ht-surface);
+  color: var(--ht-text);
+}
+select option:checked {
+  background-color: var(--ht-hover-tint);
+  color: var(--ht-accent);
+}
+select:disabled {
+  color: var(--ht-muted);
+}
+@supports (appearance: base-select) {
+  select,
+  select::picker(select) {
+    appearance: base-select;
+  }
+  select::picker(select) {
+    background: var(--ht-surface);
+    color: var(--ht-text);
+    border: 1px solid var(--ht-slate);
+    border-radius: 0.5rem;
+    padding: 0.25rem;
+    box-shadow: 0 8px 24px rgb(0 0 0 / 0.45);
+  }
+  select option {
+    padding: 0.4rem 0.7rem;
+    border-radius: 0.35rem;
+    cursor: pointer;
+  }
+  select option:hover,
+  select option:focus-visible {
+    background-color: rgb(240 163 94 / 0.22);
+    color: var(--ht-heading);
+  }
+  select option:checked {
+    background-color: var(--ht-hover-tint);
+    color: var(--ht-accent);
+    font-weight: 600;
+  }
+  select option::checkmark {
+    color: var(--ht-accent);
   }
 }

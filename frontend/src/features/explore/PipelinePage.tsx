@@ -1,12 +1,23 @@
 import { Fragment, useState } from 'react'
 import { Link } from 'react-router'
-import { ChevronRight, Pencil } from 'lucide-react'
+import {
+  ArrowUpRight,
+  ChevronRight,
+  ExternalLink,
+  FileText,
+  Laptop,
+  Link2,
+  MapPin,
+  Pencil,
+  Users,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ReviewNotice } from '@/features/home/ReviewNotice'
 import { InterviewPanel } from '@/features/jobs/interview/InterviewPanel'
 import { LeaveGuard } from '@/features/jobs/interview/LeaveGuard'
 import { roundStatus } from '@/features/jobs/interview/roundStatus'
 import { useUnsavedRegistry, type UnsavedRegistry } from '@/features/jobs/interview/unsaved'
+import { EditJobDialog } from '@/features/jobs/EditJobDialog'
 import { HomeTabs } from './HomeTabs'
 import { formatDay, sourceLabel, usePipelineJobs, useJob, type JobCard } from './api'
 
@@ -36,44 +47,79 @@ const SOURCE_TONE: Record<string, Tone> = {
 const COLUMNS = ['Company', 'Role', 'Date', 'Status', 'Source'] as const
 
 /** What is known about the job when the row is opened: description, places, where it came from. */
-function Details({
-  id,
-  colSpan,
-  registry,
-}: {
-  id: string
-  colSpan: number
-  registry: UnsavedRegistry
-}) {
+function Details({ id, colSpan }: { id: string; colSpan: number }) {
   const job = useJob(id)
   let content
   if (job.isPending) content = <p>Loading…</p>
   else if (job.isError) content = <p role="alert">Could not load this job.</p>
   else {
-    const place = [job.data.location_text, job.data.work_mode].filter(Boolean).join(' · ')
+    const { location_text: location, work_mode: mode } = job.data
     content = (
-      <div className="space-y-2 text-sm">
-        {place && <p className="text-muted-small">{place}</p>}
-        <p className="whitespace-pre-wrap">{job.data.description}</p>
-        <ul aria-label="Where it was found" className="list-disc pl-5">
-          {job.data.sources.map((source) => (
-            <li key={`${source.kind}-${source.url}`}>
-              {sourceLabel(source.kind)}:{' '}
-              <a
-                href={source.url}
-                target="_blank"
-                rel="noreferrer noopener"
-                className="text-link underline"
-              >
-                {source.url}
-              </a>
-            </li>
-          ))}
-        </ul>
-        <Link to={`/jobs/${id}`} className="text-link underline">
+      <div className="space-y-3 text-sm">
+        {(location || mode) && (
+          <div className="flex flex-wrap gap-2">
+            {location && (
+              <span aria-label="Location" className="ht-fact">
+                <MapPin aria-hidden className="size-4 text-[#f0a35e]" />
+                {location}
+              </span>
+            )}
+            {mode && (
+              <span aria-label="Work mode" className="ht-fact">
+                <Laptop aria-hidden className="size-4 text-[#4cc9f0]" />
+                {mode}
+              </span>
+            )}
+          </div>
+        )}
+
+        <section className="ht-detail-card ht-detail-description">
+          <h3 className="ht-detail-heading">
+            <FileText aria-hidden className="size-4" />
+            Description
+          </h3>
+          <p className="max-h-56 overflow-y-auto whitespace-pre-wrap pr-2">
+            {job.data.description}
+          </p>
+        </section>
+
+        <section className="ht-detail-card ht-detail-sources">
+          <h3 className="ht-detail-heading">
+            <Link2 aria-hidden className="size-4" />
+            Where it was found
+          </h3>
+          <ul aria-label="Where it was found" className="space-y-1.5">
+            {job.data.sources.map((source) => (
+              <li key={`${source.kind}-${source.url}`} className="flex flex-wrap items-center gap-2">
+                <Pill tone={SOURCE_TONE[sourceLabel(source.kind).toLowerCase()] ?? 'grey'}>
+                  {sourceLabel(source.kind)}
+                </Pill>
+                <a
+                  href={source.url}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="inline-flex min-w-0 items-center gap-1.5 text-link underline"
+                >
+                  <ExternalLink aria-hidden className="size-3.5 shrink-0" />
+                  <span className="truncate">{source.url}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <Link to={`/jobs/${id}`} className="ht-detail-open">
+          <ArrowUpRight aria-hidden className="size-4" />
           Open the full job page
         </Link>
-        <InterviewPanel jobId={id} scope={id} registry={registry} />
+
+        <section className="ht-detail-card ht-detail-interview">
+          <h3 className="ht-detail-heading">
+            <Users aria-hidden className="size-4" />
+            Interview tracking
+          </h3>
+          <InterviewPanel jobId={id} readOnly />
+        </section>
       </div>
     )
   }
@@ -88,7 +134,7 @@ function Details({
 
 function Row({ job, registry }: { job: JobCard; registry: UnsavedRegistry }) {
   const [open, setOpen] = useState(false)
-  const [asking, setAsking] = useState(false)
+  const [editing, setEditing] = useState(false)
   const source = job.sources[0]
   // the latest round when there is one (a failed round wins), else Applied or Inquired (FR-007)
   const status = job.interview
@@ -98,6 +144,14 @@ function Row({ job, registry }: { job: JobCard; registry: UnsavedRegistry }) {
       : { label: 'Applied', tone: STATUS_TONE.Applied }
   return (
     <Fragment>
+      {editing && (
+        <EditJobDialog
+          jobId={job.id}
+          title={job.title}
+          registry={registry}
+          onClose={() => setEditing(false)}
+        />
+      )}
       <tr className="ht-row border-t border-divider align-top">
         <td className="px-3 py-2">{job.company_name}</td>
         <td className="px-3 py-2">
@@ -130,61 +184,26 @@ function Row({ job, registry }: { job: JobCard; registry: UnsavedRegistry }) {
               aria-expanded={open}
               aria-label={`Details for ${job.title}`}
               title={open ? 'Hide details' : 'Show details'}
-              onClick={() => {
-                // closing a row that holds unsaved edits asks first (FR-013)
-                if (open && registry.anyIn(job.id)) setAsking(true)
-                else setOpen(!open)
-              }}
+              onClick={() => setOpen(!open)}
             >
               <ChevronRight
                 aria-hidden
                 className={`size-4 transition-transform ${open ? 'rotate-90' : ''}`}
               />
             </button>
-            <Link
-              to={`/jobs/${job.id}`}
+            <button
+              type="button"
               className="ht-icon-button"
               aria-label={`Edit ${job.title}`}
-              title="Edit (change the date or undo)"
+              title="Edit (change the date, undo, or record the interviews)"
+              onClick={() => setEditing(true)}
             >
               <Pencil aria-hidden className="size-4" />
-            </Link>
+            </button>
           </div>
         </td>
       </tr>
-      {open && asking && registry.anyIn(job.id) && (
-        <tr>
-          <td colSpan={COLUMNS.length + 1} className="bg-surface px-4 py-3">
-            <div
-              role="alertdialog"
-              aria-label="Unsaved changes"
-              aria-describedby={`${job.id}-ask`}
-              className="space-y-2"
-            >
-              <p id={`${job.id}-ask`} className="text-sm">
-                You have changes that are not saved. Close the details and lose them?
-              </p>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  autoFocus
-                  onClick={() => {
-                    setAsking(false)
-                    setOpen(false)
-                  }}
-                >
-                  Close and lose them
-                </Button>
-                <Button type="button" variant="ghost" size="sm" onClick={() => setAsking(false)}>
-                  Keep editing
-                </Button>
-              </div>
-            </div>
-          </td>
-        </tr>
-      )}
-      {open && <Details id={job.id} colSpan={COLUMNS.length + 1} registry={registry} />}
+      {open && <Details id={job.id} colSpan={COLUMNS.length + 1} />}
     </Fragment>
   )
 }

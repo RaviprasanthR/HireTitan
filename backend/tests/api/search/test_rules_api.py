@@ -212,3 +212,41 @@ async def test_FR006_changed_preferences_make_approved_rules_stale(
 
     got = (await client.get(RULES)).json()
     assert got["stale"] is True
+
+
+async def test_edit_approved_opens_a_draft_copied_from_the_approved_rules(
+    client: httpx.AsyncClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    await ready(sessions)
+    proposal = (await client.post(f"{RULES}/proposal")).json()
+    await client.put(
+        f"{RULES}/proposal",
+        json=with_changes(proposal["rules"], title_avoid=[{"text": "intern", "origin": "user"}]),
+    )
+    approved = (await client.post(f"{RULES}/proposal/approve")).json()
+    # the profile moves on, so a fresh proposal would differ from what was approved
+    await save_preferences(
+        sessions, roles=("Data Engineer",), saved_at=datetime(2026, 11, 6, tzinfo=UTC)
+    )
+
+    draft = await client.post(f"{RULES}/proposal/from-approved")
+
+    assert draft.status_code == 201
+    body = draft.json()
+    assert body["status"] == "proposed"
+    assert body["rules"] == approved["rules"]
+    assert body["based_on"] == approved["based_on"]
+    got = (await client.get(RULES)).json()
+    assert got["approved"]["id"] == approved["id"]
+    assert got["proposal"]["id"] == body["id"]
+
+
+async def test_edit_approved_without_approved_rules_409(
+    client: httpx.AsyncClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    await ready(sessions)
+
+    draft = await client.post(f"{RULES}/proposal/from-approved")
+
+    assert draft.status_code == 409
+    assert draft.json()["reason"] == "rules_not_approved"

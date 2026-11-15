@@ -1,4 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  Briefcase,
+  CalendarClock,
+  type LucideIcon,
+  MapPin,
+  MapPinOff,
+  Pencil,
+  RotateCcw,
+  Sparkles,
+  Wrench,
+  Ban,
+} from 'lucide-react'
 import { type ReactNode, useState } from 'react'
 import { ApiError, apiFetch } from '@/api/client'
 import type { components } from '@/api/schema'
@@ -27,9 +39,18 @@ function effectLabel(effect: string | null | undefined): string {
 }
 
 function Badge({ children, tone }: { children: ReactNode; tone: 'skips' | 'guides' | 'origin' }) {
-  const colour =
-    tone === 'skips' ? 'text-warning' : tone === 'guides' ? 'text-link' : 'text-muted-small'
-  return <span className={`text-xs ${colour}`}>{children}</span>
+  const colour = tone === 'skips' ? 'yellow' : tone === 'guides' ? 'blue' : 'grey'
+  return <span className={`ht-pill ht-pill-${colour}`}>{children}</span>
+}
+
+/** Each group of rules has its own icon and colour, like the cards on the edit and preferences pages. */
+const LOOKS: Record<string, { Icon: LucideIcon; tone: string }> = {
+  'Job titles': { Icon: Briefcase, tone: 'rules-titles' },
+  'Words to avoid in titles': { Icon: Ban, tone: 'rules-avoid' },
+  'Places to skip': { Icon: MapPinOff, tone: 'rules-skip' },
+  'How old a job may be': { Icon: CalendarClock, tone: 'rules-age' },
+  Skills: { Icon: Wrench, tone: 'rules-skills' },
+  'Places you prefer': { Icon: MapPin, tone: 'rules-places' },
 }
 
 function Section({
@@ -43,9 +64,13 @@ function Section({
   error?: string
   children: ReactNode
 }) {
+  const look = LOOKS[title] ?? { Icon: Sparkles, tone: 'rules-titles' }
   return (
-    <section aria-label={title} className="space-y-2 rounded-lg bg-surface p-4">
-      <h2 className="text-base font-semibold">{title}</h2>
+    <section aria-label={title} className={`ht-detail-card ht-${look.tone} space-y-2`}>
+      <h2 className="ht-detail-heading">
+        <look.Icon aria-hidden className="size-4" />
+        {title}
+      </h2>
       {hint && <p className="text-sm text-muted-small">{hint}</p>}
       {children}
       {error && (
@@ -74,7 +99,13 @@ function ItemRow({
       <Badge tone="origin">{originLabel(origin)}</Badge>
       <Badge tone={effect === 'skips' ? 'skips' : 'guides'}>{effectLabel(effect)}</Badge>
       {onRemove && (
-        <Button type="button" variant="ghost" size="xs" aria-label={`Remove ${text}`} onClick={onRemove}>
+        <Button
+          type="button"
+          variant="ghost"
+          size="xs"
+          aria-label={`Remove ${text}`}
+          onClick={onRemove}
+        >
           Remove
         </Button>
       )}
@@ -239,86 +270,85 @@ function RulesView({
   errors?: ApiError | null
   onChange?: (rules: Rules) => void
 }) {
-  const set = <K extends keyof Rules>(key: K, value: Rules[K]) => onChange?.({ ...rules, [key]: value })
+  const set = <K extends keyof Rules>(key: K, value: Rules[K]) =>
+    onChange?.({ ...rules, [key]: value })
   const editable = onChange !== undefined
   const fieldError = (name: string) => errors?.fieldError(name)
   return (
-    <div className="space-y-4">
-      <WordList
-        title="Job titles"
-        hint="A job is skipped when its title matches none of these."
-        items={rules.title_words}
-        effect="skips"
-        addLabel="Add a job title"
-        addButton="Add job title"
-        error={fieldError('title_words')}
-        onChange={editable ? (value) => set('title_words', value) : undefined}
-      />
-      <WordList
-        title="Words to avoid in titles"
-        hint="A job is skipped when its title contains one of these."
-        items={rules.title_avoid}
-        effect="skips"
-        addLabel="Add a word to avoid"
-        addButton="Add avoid word"
-        error={fieldError('title_avoid')}
-        onChange={editable ? (value) => set('title_avoid', value) : undefined}
-      />
-      <PlaceList
-        title="Places to skip"
-        hint="Jobs in these places are skipped."
-        items={rules.blocked_locations}
-        effect="skips"
-        addButton="Add place to skip"
-        error={fieldError('blocked_locations')}
-        onChange={editable ? (value) => set('blocked_locations', value) : undefined}
-      />
-      <Section title="How old a job may be" error={fieldError('max_age_days')}>
-        <label className="flex items-center gap-2 text-sm">
-          Skip jobs posted more than
-          <input
-            type="number"
-            min={1}
-            max={365}
-            className={`${input} w-24`}
-            value={rules.max_age_days}
-            disabled={!editable}
-            onChange={(event) => set('max_age_days', Number(event.target.value))}
-          />
-          days ago
-        </label>
-        <p className="text-xs text-muted-small">A job with no date is never skipped for its age.</p>
-      </Section>
-      <WordList
-        title="Skills"
-        hint="The AI uses these to judge whether a job suits you."
-        items={rules.stack_keywords}
-        effect="guides_ai"
-        addLabel="Add a skill"
-        addButton="Add skill"
-        error={fieldError('stack_keywords')}
-        onChange={editable ? (value) => set('stack_keywords', value) : undefined}
-      />
-      <PlaceList
-        title="Places you prefer"
-        items={rules.preferred_locations}
-        effect="guides_ai"
-        addButton="Add preferred place"
-        error={fieldError('preferred_locations')}
-        onChange={editable ? (value) => set('preferred_locations', value) : undefined}
-      />
+    <div className="space-y-5">
+      <div className="grid items-stretch gap-5 lg:grid-cols-2">
+        <WordList
+          title="Job titles"
+          hint="A job is skipped when its title matches none of these."
+          items={rules.title_words}
+          effect="skips"
+          addLabel="Add a job title"
+          addButton="Add job title"
+          error={fieldError('title_words')}
+          onChange={editable ? (value) => set('title_words', value) : undefined}
+        />
+        <WordList
+          title="Words to avoid in titles"
+          hint="A job is skipped when its title contains one of these."
+          items={rules.title_avoid}
+          effect="skips"
+          addLabel="Add a word to avoid"
+          addButton="Add avoid word"
+          error={fieldError('title_avoid')}
+          onChange={editable ? (value) => set('title_avoid', value) : undefined}
+        />
+        <PlaceList
+          title="Places to skip"
+          hint="Jobs in these places are skipped."
+          items={rules.blocked_locations}
+          effect="skips"
+          addButton="Add place to skip"
+          error={fieldError('blocked_locations')}
+          onChange={editable ? (value) => set('blocked_locations', value) : undefined}
+        />
+        <Section title="How old a job may be" error={fieldError('max_age_days')}>
+          <label className="flex items-center gap-2 text-sm">
+            Skip jobs posted more than
+            <input
+              type="number"
+              min={1}
+              max={365}
+              className={`${input} w-24`}
+              value={rules.max_age_days}
+              disabled={!editable}
+              onChange={(event) => set('max_age_days', Number(event.target.value))}
+            />
+            days ago
+          </label>
+          <p className="text-xs text-muted-small">
+            A job with no date is never skipped for its age.
+          </p>
+        </Section>
+        <WordList
+          title="Skills"
+          hint="The AI uses these to judge whether a job suits you."
+          items={rules.stack_keywords}
+          effect="guides_ai"
+          addLabel="Add a skill"
+          addButton="Add skill"
+          error={fieldError('stack_keywords')}
+          onChange={editable ? (value) => set('stack_keywords', value) : undefined}
+        />
+        <PlaceList
+          title="Places you prefer"
+          items={rules.preferred_locations}
+          effect="guides_ai"
+          addButton="Add preferred place"
+          error={fieldError('preferred_locations')}
+          onChange={editable ? (value) => set('preferred_locations', value) : undefined}
+        />
+      </div>
       <Summary rules={rules} />
     </div>
   )
 }
 
-function ProposalEditor({
-  proposal,
-  onApproved,
-}: {
-  proposal: RuleSet
-  onApproved: () => void
-}) {
+function ProposalEditor({ proposal, onApproved }: { proposal: RuleSet; onApproved: () => void }) {
   const client = useQueryClient()
   const [draft, setDraft] = useState<Rules>(proposal.rules)
 
@@ -369,12 +399,21 @@ export function SearchRulesPage() {
     queryFn: () => apiFetch<RulesState>('/search/rules'),
   })
   const [justApproved, setJustApproved] = useState(false)
-  const propose = useMutation({
-    mutationFn: () => apiFetch<RuleSet>('/search/rules/proposal', { method: 'POST' }),
+  const opened = {
     onSuccess: () => {
       setJustApproved(false)
       return client.invalidateQueries({ queryKey: QUERY_KEY })
     },
+  }
+  // a fresh draft built from the profile and preferences (replaces nothing until approved)
+  const suggest = useMutation({
+    mutationFn: () => apiFetch<RuleSet>('/search/rules/proposal', { method: 'POST' }),
+    ...opened,
+  })
+  // a draft that starts as a copy of the approved rules, to change by hand
+  const edit = useMutation({
+    mutationFn: () => apiFetch<RuleSet>('/search/rules/proposal/from-approved', { method: 'POST' }),
+    ...opened,
   })
 
   if (query.isPending) return <p className="text-sm text-muted-small">Loading your search rules…</p>
@@ -387,10 +426,11 @@ export function SearchRulesPage() {
   }
 
   const { approved, proposal, stale } = query.data
-  const proposeError = propose.error instanceof ApiError ? propose.error.detail : null
+  const failed = [suggest.error, edit.error].find((e) => e instanceof ApiError)
+  const proposeError = failed instanceof ApiError ? failed.detail : null
 
   return (
-    <section className="max-w-3xl space-y-4">
+    <section className="max-w-6xl space-y-4">
       <h1 className="text-2xl font-semibold">Search rules</h1>
       {stale && !proposal && (
         <p className="rounded-lg bg-surface p-3 text-sm text-warning">
@@ -398,7 +438,11 @@ export function SearchRulesPage() {
         </p>
       )}
       {proposal ? (
-        <ProposalEditor key={proposal.id} proposal={proposal} onApproved={() => setJustApproved(true)} />
+        <ProposalEditor
+          key={proposal.id}
+          proposal={proposal}
+          onApproved={() => setJustApproved(true)}
+        />
       ) : (
         <div className="space-y-4">
           {approved ? (
@@ -420,9 +464,32 @@ export function SearchRulesPage() {
               {proposeError}
             </p>
           )}
-          <Button disabled={propose.isPending} onClick={() => propose.mutate()}>
-            {approved ? 'Propose new rules' : 'Propose rules'}
-          </Button>
+          <div className="flex flex-wrap gap-3">
+            {approved ? (
+              <>
+                <Button
+                  disabled={edit.isPending || suggest.isPending}
+                  onClick={() => edit.mutate()}
+                >
+                  <Pencil aria-hidden className="size-4" />
+                  Edit rules
+                </Button>
+                <Button
+                  variant="outline"
+                  disabled={edit.isPending || suggest.isPending}
+                  title="Start over from the rules suggested for your profile and preferences"
+                  onClick={() => suggest.mutate()}
+                >
+                  <RotateCcw aria-hidden className="size-4" />
+                  Reset to suggested
+                </Button>
+              </>
+            ) : (
+              <Button disabled={suggest.isPending} onClick={() => suggest.mutate()}>
+                Suggest rules
+              </Button>
+            )}
+          </div>
         </div>
       )}
     </section>

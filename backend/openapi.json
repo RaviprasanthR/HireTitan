@@ -7451,6 +7451,27 @@
         ]
       }
     },
+    "/api/v1/search/rules/proposal/from-approved": {
+      "post": {
+        "operationId": "make_proposal_from_approved_api_v1_search_rules_proposal_from_approved_post",
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleSetOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Make Proposal From Approved",
+        "tags": [
+          "search"
+        ]
+      }
+    },
     "/api/v1/search/runs": {
       "get": {
         "operationId": "history_api_v1_search_runs_get",

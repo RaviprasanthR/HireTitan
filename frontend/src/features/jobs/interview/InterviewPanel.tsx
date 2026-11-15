@@ -300,8 +300,11 @@ export function InterviewPanel({
   hideWhenEmpty = false,
   registry,
   scope = '',
+  readOnly = false,
 }: {
   jobId: string
+  /** Show the details to read only (the pipeline row); changes are made from the edit card. */
+  readOnly?: boolean
   /** A title above the panel (the job page has one; the pipeline row does not). */
   heading?: string
   /** Show nothing for a job outside the pipeline that has no details to read. */
@@ -324,7 +327,8 @@ export function InterviewPanel({
 
   if (interview.isPending) return <p>Loading…</p>
   // A failed refresh keeps what was loaded: swapping the forms for an error would drop edits.
-  const data = interview.data
+  const loaded = interview.data
+  const data = loaded && readOnly ? { ...loaded, can_edit: false } : loaded
   if (data === undefined) {
     // a job outside the pipeline with nothing to show stays quiet
     return hideWhenEmpty ? null : <p role="alert">Could not load the details.</p>
@@ -336,25 +340,35 @@ export function InterviewPanel({
     <UnsavedContext.Provider value={scoped}>
       <section aria-label="Interview details" className="space-y-4 border-t border-divider pt-3">
         {heading && <h2 className="text-lg font-semibold">{heading}</h2>}
-        {!data.can_edit && (
+        {!data.can_edit && !readOnly && (
           <p className="text-sm text-muted-small">
             This job is not in your pipeline, so details can only be read. Mark it applied or
             inquired to change them.
           </p>
         )}
-        <ContactSection
-          key={`contact-${JSON.stringify(data.contact)}-${saveContact.isSuccess ? saveContact.submittedAt : 0}`}
-          contact={data.contact}
-          save={saveContact}
-          editable={data.can_edit}
-        />
-        <SourceSection
-          key={`source-${JSON.stringify(data.source)}-${saveSource.isSuccess ? saveSource.submittedAt : 0}`}
-          source={data.source}
-          save={saveSource}
-          editable={data.can_edit}
-        />
-        <RoundsSection jobId={jobId} data={data} />
+        {readOnly && !data.contact && !data.source && data.rounds.length === 0 ? (
+          <p className="text-sm text-muted-small">Nothing yet.</p>
+        ) : (
+          <>
+            {(!readOnly || data.contact) && (
+              <ContactSection
+                key={`contact-${JSON.stringify(data.contact)}-${saveContact.isSuccess ? saveContact.submittedAt : 0}`}
+                contact={data.contact}
+                save={saveContact}
+                editable={data.can_edit}
+              />
+            )}
+            {(!readOnly || data.source) && (
+              <SourceSection
+                key={`source-${JSON.stringify(data.source)}-${saveSource.isSuccess ? saveSource.submittedAt : 0}`}
+                source={data.source}
+                save={saveSource}
+                editable={data.can_edit}
+              />
+            )}
+            {(!readOnly || data.rounds.length > 0) && <RoundsSection jobId={jobId} data={data} />}
+          </>
+        )}
       </section>
     </UnsavedContext.Provider>
   )
