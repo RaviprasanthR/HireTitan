@@ -7,16 +7,29 @@ is tested further down.
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import UTC, date, datetime
 from uuid import UUID
 
+import pytest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 from tests.integration.search.test_schema import job, rejected, run, uid
 
+from hiretitan.search.application.interviews import (
+    InterviewInputError,
+    JobNotFoundError,
+    NotInPipelineError,
+)
+from hiretitan.search.application.resume_choice import (
+    choose_for_job,
+    clear_for_job,
+    record_on_mark,
+)
 from hiretitan.search.domain.resume_choice import choice_from
 from hiretitan.search.infra.interviews_repo import InterviewsRepo
 from hiretitan.search.infra.pipeline_settings_repo import PipelineSettingsRepo
+from hiretitan.search.infra.repos import JobsRepo
+from hiretitan.search_wiring import SqlResumeLookup
 
 FILE = (
     "INSERT INTO app.resume_files (id, kind, original_name, size_bytes, sha256, parse_status) "
@@ -242,3 +255,187 @@ async def test_FR009_a_removed_file_shows_as_a_removed_note_through_the_repo(
     assert row is not None
     choice = choice_from(row.resume_file_id, row.resume_name, row.resume_added_on)
     assert (choice.state, choice.name, choice.added_on) == ("removed", "Backend_2024.pdf", ADDED)
+
+
+# --- the use cases and the file lookup -------------------------------------------------------
+
+
+async def test_sql_resume_lookup_reads_name_day_and_offerable(db_session: AsyncSession) -> None:
+    lookup = SqlResumeLookup(db_session)
+    good = UUID(await a_file(db_session, "Backend_2025.pdf", "parsed"))
+    reading = UUID(await a_file(db_session, "New.pdf", "pending"))
+    letter = UUID(await a_file(db_session, "Letter.pdf", "not_resume"))
+
+    found = await lookup.get(good)
+    assert found is not None
+    assert (found.name, found.offerable) == ("Backend_2025.pdf", True)
+    assert found.added_on == datetime.now(UTC).date()  # the day the row was created (UTC)
+    still_reading = await lookup.get(reading)
+    assert still_reading is not None
+    assert still_reading.offerable  # FR-012: only not_resume is out
+    refused = await lookup.get(letter)
+    assert refused is not None
+    assert not refused.offerable
+    assert await lookup.get(UUID(uid())) is None
+
+
+async def test_FR001_choose_for_job_records_the_file(db_session: AsyncSession) -> None:
+    repo, jobs, lookup = (
+        InterviewsRepo(db_session),
+        JobsRepo(db_session),
+        SqlResumeLookup(db_session),
+    )
+    job_id = UUID(await a_job(db_session))
+    file_id = UUID(await a_file(db_session, "Backend_2025.pdf"))
+
+    choice = await choose_for_job(jobs, lookup, repo, job_id, file_id)
+
+    assert (choice.state, choice.resume_file_id, choice.name) == (
+        "chosen",
+        file_id,
+        "Backend_2025.pdf",
+    )
+    row = (await repo.details(job_id)).details
+    assert row is not None
+    assert row.resume_name == "Backend_2025.pdf"
+
+
+async def test_FR001_unknown_file_is_a_field_error(db_session: AsyncSession) -> None:
+    repo, jobs, lookup = (
+        InterviewsRepo(db_session),
+        JobsRepo(db_session),
+        SqlResumeLookup(db_session),
+    )
+    job_id = UUID(await a_job(db_session))
+
+    with pytest.raises(InterviewInputError) as raised:
+        await choose_for_job(jobs, lookup, repo, job_id, UUID(uid()))
+
+    assert [e.field for e in raised.value.errors] == ["resume_file_id"]
+    assert (await repo.details(job_id)).details is None  # nothing was saved
+
+
+async def test_FR012_not_a_resume_file_is_refused(db_session: AsyncSession) -> None:
+    repo, jobs, lookup = (
+        InterviewsRepo(db_session),
+        JobsRepo(db_session),
+        SqlResumeLookup(db_session),
+    )
+    job_id = UUID(await a_job(db_session))
+    letter = UUID(await a_file(db_session, "Letter.pdf", "not_resume"))
+
+    with pytest.raises(InterviewInputError) as raised:
+        await choose_for_job(jobs, lookup, repo, job_id, letter)
+
+    assert [e.field for e in raised.value.errors] == ["resume_file_id"]
+
+
+async def test_choose_and_clear_need_a_pipeline_job(db_session: AsyncSession) -> None:
+    repo, jobs, lookup = (
+        InterviewsRepo(db_session),
+        JobsRepo(db_session),
+        SqlResumeLookup(db_session),
+    )
+    explore = UUID(await job(db_session))  # not applied or inquired
+    file_id = UUID(await a_file(db_session))
+
+    with pytest.raises(NotInPipelineError):
+        await choose_for_job(jobs, lookup, repo, explore, file_id)
+    with pytest.raises(NotInPipelineError):
+        await clear_for_job(jobs, repo, explore)
+    with pytest.raises(JobNotFoundError):
+        await clear_for_job(jobs, repo, UUID(uid()))
+
+
+async def test_clear_for_job_forgets_the_resume(db_session: AsyncSession) -> None:
+    repo, jobs, lookup = (
+        InterviewsRepo(db_session),
+        JobsRepo(db_session),
+        SqlResumeLookup(db_session),
+    )
+    job_id = UUID(await a_job(db_session))
+    file_id = UUID(await a_file(db_session))
+    await choose_for_job(jobs, lookup, repo, job_id, file_id)
+
+    await clear_for_job(jobs, repo, job_id)
+
+    assert (await repo.details(job_id)).details is None
+
+
+async def test_record_on_mark_absent_changes_nothing(db_session: AsyncSession) -> None:
+    repo, jobs, lookup = (
+        InterviewsRepo(db_session),
+        JobsRepo(db_session),
+        SqlResumeLookup(db_session),
+    )
+    settings = PipelineSettingsRepo(db_session)
+    job_id = UUID(await a_job(db_session))
+    mine = UUID(await a_file(db_session, "Mine.pdf"))
+    last = UUID(await a_file(db_session, "Last.pdf"))
+    await choose_for_job(jobs, lookup, repo, job_id, mine)
+    await settings.set_last_choice(last)
+
+    await record_on_mark(jobs, lookup, repo, settings, job_id, provided=False, file_id=None)
+
+    row = (await repo.details(job_id)).details
+    assert row is not None
+    assert row.resume_file_id == mine  # inquired to applied keeps it (FR-003)
+    assert await settings.last_choice() == last
+
+
+async def test_record_on_mark_with_a_file_sets_the_job_and_the_last_choice(
+    db_session: AsyncSession,
+) -> None:
+    repo, jobs, lookup = (
+        InterviewsRepo(db_session),
+        JobsRepo(db_session),
+        SqlResumeLookup(db_session),
+    )
+    settings = PipelineSettingsRepo(db_session)
+    job_id = UUID(await a_job(db_session))
+    file_id = UUID(await a_file(db_session, "Backend_2025.pdf"))
+
+    await record_on_mark(jobs, lookup, repo, settings, job_id, provided=True, file_id=file_id)
+
+    row = (await repo.details(job_id)).details
+    assert row is not None
+    assert row.resume_file_id == file_id
+    assert await settings.last_choice() == file_id
+
+
+async def test_record_on_mark_null_sets_none(db_session: AsyncSession) -> None:
+    repo, jobs, lookup = (
+        InterviewsRepo(db_session),
+        JobsRepo(db_session),
+        SqlResumeLookup(db_session),
+    )
+    settings = PipelineSettingsRepo(db_session)
+    job_id = UUID(await a_job(db_session))
+    file_id = UUID(await a_file(db_session))
+    await choose_for_job(jobs, lookup, repo, job_id, file_id)
+    await settings.set_last_choice(file_id)
+
+    await record_on_mark(jobs, lookup, repo, settings, job_id, provided=True, file_id=None)
+
+    assert (await repo.details(job_id)).details is None  # the job's resume is cleared
+    assert await settings.last_choice() is None  # and None is what the next mark starts on
+
+
+async def test_record_on_mark_with_a_bad_file_saves_nothing(db_session: AsyncSession) -> None:
+    repo, jobs, lookup = (
+        InterviewsRepo(db_session),
+        JobsRepo(db_session),
+        SqlResumeLookup(db_session),
+    )
+    settings = PipelineSettingsRepo(db_session)
+    job_id = UUID(await a_job(db_session))
+    last = UUID(await a_file(db_session))
+    await settings.set_last_choice(last)
+
+    with pytest.raises(InterviewInputError):
+        await record_on_mark(
+            jobs, lookup, repo, settings, job_id, provided=True, file_id=UUID(uid())
+        )
+
+    assert (await repo.details(job_id)).details is None
+    assert await settings.last_choice() == last

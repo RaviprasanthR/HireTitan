@@ -9,17 +9,20 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Awaitable, Callable
 from pathlib import Path
+from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from hiretitan.platform.config.settings import Settings
 from hiretitan.preferences.infra.repo import PreferencesRepo
-from hiretitan.profile.infra.repos import VersionsRepo
+from hiretitan.profile.infra.repos import ResumeFilesRepo, VersionsRepo
 from hiretitan.search.application.ports import CareerOpsPort, ProposalFacts
+from hiretitan.search.application.resume_choice import ResumeFacts
 from hiretitan.search.application.rules import RulesUnavailableError
 from hiretitan.search.application.seed import SeedResult, load_seed
 from hiretitan.search.domain.cards import ProfileCard
 from hiretitan.search.domain.proposer import PlaceInput, ProposalInput
+from hiretitan.search.domain.resume_choice import offerable
 from hiretitan.search.infra.careerops.adapter import CareerOpsAdapter
 from hiretitan.search.infra.careerops.fake import FileCareerOps
 from hiretitan.search.infra.repos import CompaniesRepo
@@ -116,4 +119,22 @@ class ProfileAndPreferencesSource:
             ),
             profile_version_id=version.id,
             preferences_saved_at=stored.saved_at,
+        )
+
+
+class SqlResumeLookup:
+    """Answers the search module's one question about stored resume files: what is this file called,
+    when was it added, and may it be chosen for a job (feature 002f). It reads the profile's own
+    repository, because ``search`` may not import the profile module."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._files = ResumeFilesRepo(session)
+
+    async def get(self, file_id: UUID) -> ResumeFacts | None:
+        found = await self._files.get(file_id)
+        if found is None:
+            return None
+        # "the day it was added" is the UTC day; the file keeps no other date
+        return ResumeFacts(
+            found.original_name, found.created_at.date(), offerable(found.parse_status)
         )

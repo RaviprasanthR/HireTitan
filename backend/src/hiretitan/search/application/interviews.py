@@ -222,7 +222,7 @@ class InterviewsWriter(Protocol):
     async def lock_job(self, job_id: UUID) -> None: ...
 
 
-async def _writable_job(jobs: JobsLookup, job_id: UUID) -> StoredJob:
+async def writable_job(jobs: JobsLookup, job_id: UUID) -> StoredJob:
     job = await jobs.get(job_id)
     if job is None or job.state == "deleted":
         raise JobNotFoundError(str(job_id))
@@ -246,7 +246,7 @@ async def save_contact(
 ) -> None:
     """Replace the point of contact; email, phone and link are checked (FR-002)."""
     await store.lock_job(job_id)  # so a delete or merge cannot slip in between check and write
-    await _writable_job(jobs, job_id)
+    await writable_job(jobs, job_id)
     fields, issues = check_contact(
         name=name, role=role, email=email, phone=phone, linkedin_url=linkedin_url
     )
@@ -257,7 +257,7 @@ async def save_contact(
 
 async def remove_contact(jobs: JobsLookup, store: InterviewsWriter, job_id: UUID) -> None:
     await store.lock_job(job_id)
-    await _writable_job(jobs, job_id)
+    await writable_job(jobs, job_id)
     await store.clear_contact(job_id)
 
 
@@ -271,7 +271,7 @@ async def save_source(
 ) -> None:
     """How the job came: direct, through a hiring firm (with its name) or not set (FR-003)."""
     await store.lock_job(job_id)
-    await _writable_job(jobs, job_id)
+    await writable_job(jobs, job_id)
     checked, issues = check_source(kind, firm_name)
     if checked is None:
         raise InterviewInputError(issues)
@@ -360,7 +360,7 @@ async def add_round(
 ) -> None:
     """The next round of the job, numbered by the store and starting ``scheduled`` (FR-004)."""
     await store.lock_job(job_id)  # the checks below and the insert happen under one lock
-    await _writable_job(jobs, job_id)
+    await writable_job(jobs, job_id)
     checked, issues = _round_text_checks(
         {"kind": kind, "scheduled_at": scheduled_at, "interviewers": interviewers}
     )
@@ -390,7 +390,7 @@ async def _round_in_pipeline(
     found = await store.get_round(round_id)
     if found is None:
         raise RoundNotFoundError(str(round_id))
-    await _writable_job(jobs, found.job_id)
+    await writable_job(jobs, found.job_id)
     return found
 
 

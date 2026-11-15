@@ -148,4 +148,5 @@ forbidden_modules =
     hiretitan.search.application.interviews
     hiretitan.search.infra.interviews_repo
     hiretitan.search.domain.resume_choice
+    hiretitan.search.application.resume_choice
     hiretitan.search.infra.pipeline_settings_repo

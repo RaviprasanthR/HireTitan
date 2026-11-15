@@ -156,6 +156,7 @@ def test_FR022_workflows_cannot_import_contacts() -> None:
         "hiretitan.search.application.interviews",
         "hiretitan.search.infra.interviews_repo",
         "hiretitan.search.domain.resume_choice",
+        "hiretitan.search.application.resume_choice",
         "hiretitan.search.infra.pipeline_settings_repo",
     )
     found = [
