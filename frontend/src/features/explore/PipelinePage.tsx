@@ -133,13 +133,21 @@ function Details({ id, colSpan }: { id: string; colSpan: number }) {
   )
 }
 
-/** The resume used: its name, cut to fit with the whole name on hover, or a dash. */
+/** The resume used: its name, cut to fit with the whole name on hover, or a dash. A removed
+ *  file's name is followed by a "(removed)" marker that is never cut off. */
 function ResumeCell({ resume }: { resume: JobCard['resume'] }) {
   const name = resumeName(resume)
   if (name === '') return <>—</>
+  if (resume?.state !== 'removed')
+    return (
+      <span title={name} className="block max-w-[12rem] truncate">
+        {name}
+      </span>
+    )
   return (
-    <span title={name} className="block max-w-[12rem] truncate">
-      {name}
+    <span title={name} className="flex max-w-[14rem] items-baseline gap-1">
+      <span className="min-w-0 truncate">{resume.name}</span>{' '}
+      <span className="shrink-0 text-muted-small">(removed)</span>
     </span>
   )
 }

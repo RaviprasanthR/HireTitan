@@ -7,12 +7,13 @@ from datetime import date, datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from hiretitan.search.domain.resume_choice import ResumeChoice
 from hiretitan.search.domain.role import short_role
+from hiretitan.search.infra.interviews_repo import InterviewsRepo
 from hiretitan.search.infra.models import JobRow, JobSourceRow, RelevanceDecisionRow
 
 
@@ -71,7 +72,8 @@ class JobCardOut(BaseModel):
     applied_on: date | None
     inquired_on: date | None
     interview: InterviewSummaryOut | None = None  # filled for the pipeline list only
-    resume: ResumeChoiceOut = ResumeChoiceOut()  # the pipeline list, a job's page and a mark
+    # the pipeline list, a job's page, a mark and a possible duplicate (feature 002f)
+    resume: ResumeChoiceOut = Field(default_factory=ResumeChoiceOut)
 
 
 class JobCardPage(BaseModel):
@@ -122,3 +124,11 @@ async def job_cards(session: AsyncSession, rows: Sequence[JobRow]) -> list[JobCa
         )
         for row in rows
     ]
+
+
+async def with_resumes(session: AsyncSession, cards: Sequence[JobCardOut]) -> None:
+    """Show each pipeline job's resume (feature 002f): one query for the whole set of cards."""
+    found = await InterviewsRepo(session).resume_choices([card.id for card in cards])
+    for card in cards:
+        if card.id in found:
+            card.resume = resume_out(found[card.id])

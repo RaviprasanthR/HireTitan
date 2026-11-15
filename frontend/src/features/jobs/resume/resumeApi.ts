@@ -16,7 +16,9 @@ export function resumeName(resume: ResumeChoice | undefined): string {
 /** The name and the day the file was added, for the details of a job. */
 export function resumeDetail(resume: ResumeChoice): string {
   const name = resumeName(resume)
-  return name === '' ? 'None' : `${name} · added ${formatDay(resume.added_on)}`
+  if (name === '') return 'None'
+  const day = formatDay(resume.added_on)
+  return day === '' ? name : `${name} · added ${day}`
 }
 
 /**

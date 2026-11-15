@@ -550,4 +550,20 @@ describe('JobDetailPage unsaved edits', () => {
 
     expect(select).toHaveValue('f1') // not the last choice, f2
   })
+
+  it('US2 AS3 the job page shows the resume name and the day it was added', async () => {
+    renderPage(detail({ state: 'applied', applied_on: '2026-11-03' }), {
+      job_id: 'j1',
+      can_edit: true,
+      can_add_round: true,
+      contact: null,
+      source: null,
+      rounds: [],
+      status: { state: 'applied', round: null },
+      resume: { state: 'chosen', resume_file_id: 'f1', name: 'Own.pdf', added_on: '2025-03-14' },
+    })
+
+    expect(await screen.findByText('Own.pdf · added 14 Mar 2025')).toBeInTheDocument()
+  })
 })
+

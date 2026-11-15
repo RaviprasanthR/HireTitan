@@ -296,9 +296,12 @@ function RoundsSection({ jobId, data }: { jobId: string; data: Interview }) {
 
 /** The resume used for the job: its name and the day it was added (feature 002f). */
 function ResumeSection({ resume }: { resume: Interview['resume'] }) {
+  const headingId = useId()
   return (
-    <section aria-label="Resume used" className="space-y-1">
-      <h3 className="text-sm font-semibold">Resume used</h3>
+    <section aria-labelledby={headingId} className="space-y-1">
+      <h3 id={headingId} className="text-sm font-semibold">
+        Resume used
+      </h3>
       <p className="text-sm">{resumeDetail(resume)}</p>
     </section>
   )

@@ -116,7 +116,10 @@ export function EditJobDialog({
               <PipelineControl
                 id={data.id}
                 state={data.state}
-                ownResumeId={data.resume?.resume_file_id ?? null}
+                ownResumeId={
+                  data.resume === undefined ? undefined : (data.resume.resume_file_id ?? null)
+                }
+                ownRemoved={data.resume?.state === 'removed'}
               />
             )}
           </div>

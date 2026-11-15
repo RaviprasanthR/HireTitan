@@ -25,10 +25,14 @@ export function PipelineControl({
   id,
   state,
   ownResumeId,
+  ownRemoved = false,
 }: {
   id: string
   state: string
+  /** The job's own resume file, `null` for none; left out while it is not known. */
   ownResumeId?: string | null
+  /** The job's resume file was removed and only its name is left as a note. */
+  ownRemoved?: boolean
 }) {
   const [custom, setCustom] = useState(false)
   const [date, setDate] = useState(today)
@@ -48,11 +52,16 @@ export function PipelineControl({
   // The last choice failing to load must not take the choice away: it then starts on None.
   const startKnown = pipeline.isSuccess || pipeline.isError
   const showResume = ownKnown && files.isSuccess && startKnown && offered.length > 0
-  const start = stillStored(ownResumeId) ?? stillStored(pipeline.data?.last_choice) ?? ''
+  // A removed file's note is the job's resume until the person chooses: the choice starts on
+  // None rather than on the last choice, and untouched it sends nothing, so the note stays.
+  const start = ownRemoved
+    ? ''
+    : (stillStored(ownResumeId) ?? stillStored(pipeline.data?.last_choice) ?? '')
   // A picked file that has been removed since is no longer sent: the select shows the start again.
   const resumeValue = picked === '' || stillStored(picked) ? (picked ?? start) : start
   // not shown: leave the field out, so the server changes nothing about the resume
-  const resume = showResume ? resumeValue || null : undefined
+  const keepsNote = ownRemoved && picked === undefined
+  const resume = showResume && !keepsNote ? resumeValue || null : undefined
 
   // The default day is left out so the server's own "today" is used.
   const day = custom && date !== today() ? date : undefined

@@ -607,6 +607,20 @@ describe('PipelinePage unsaved edits', () => {
       expect(name).toHaveClass('truncate')
     })
 
+    it('FR009 keeps the removed marker visible when a long name is cut short', async () => {
+      const long = `${'Backend_Engineer_Resume_'.repeat(6)}2024.pdf`
+      const [row] = await rowsFor({
+        state: 'removed',
+        resume_file_id: null,
+        name: long,
+        added_on: '2025-03-14',
+      })
+
+      const cell = resumeCell(row as HTMLElement)
+      expect(within(cell).getByText(long)).toHaveClass('truncate')
+      expect(within(cell).getByText('(removed)')).not.toHaveClass('truncate')
+    })
+
     it('FR009 shows a removed file as its name marked removed', async () => {
       const [row] = await rowsFor({
         state: 'removed',
@@ -618,4 +632,50 @@ describe('PipelinePage unsaved edits', () => {
       expect(resumeCell(row as HTMLElement)).toHaveTextContent('Backend_2024.pdf (removed)')
     })
   })
+
+  describe('the resume in the opened row (feature 002f)', () => {
+    it('US2 AS3 shows the name and the day it was added', async () => {
+      const user = userEvent.setup()
+      const job = {
+        ...applied('j0', 'Job 0', '2026-11-05'),
+        resume: {
+          state: 'chosen',
+          resume_file_id: 'f1',
+          name: 'Backend_2025.pdf',
+          added_on: '2026-10-02',
+        },
+      }
+      stubApi((call) => {
+        if (call.path === '/jobs/j0')
+          return { ...job, description: 'd', city: null, country: null, skills_found: [] }
+        if (call.path === '/jobs/j0/interview')
+          return {
+            job_id: 'j0',
+            can_edit: true,
+            can_add_round: true,
+            contact: null,
+            source: null,
+            rounds: [],
+            status: { state: 'applied', round: null },
+            resume: job.resume,
+          }
+        if (call.path.startsWith('/jobs?')) return { items: [job], next_cursor: null }
+        return undefined
+      })
+      render(
+        <QueryClientProvider
+          client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+        >
+          <MemoryRouter>
+            <PipelinePage />
+          </MemoryRouter>
+        </QueryClientProvider>,
+      )
+
+      await user.click(await screen.findByRole('button', { name: /Details for/ }))
+
+      expect(await screen.findByText('Backend_2025.pdf · added 2 Oct 2026')).toBeInTheDocument()
+    })
+  })
 })
+

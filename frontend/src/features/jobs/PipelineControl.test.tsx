@@ -32,6 +32,7 @@ function renderControl(
     last?: string | null
     state?: string
     ownResumeId?: string | null
+    ownRemoved?: boolean
     lastFails?: boolean
     markFails?: boolean
   } = {},
@@ -41,6 +42,7 @@ function renderControl(
     last = null,
     state = 'explore',
     ownResumeId,
+    ownRemoved = false,
     lastFails = false,
     markFails = false,
   } = opts
@@ -55,7 +57,7 @@ function renderControl(
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   render(
     <QueryClientProvider client={client}>
-      <PipelineControl id="j1" state={state} ownResumeId={ownResumeId} />
+      <PipelineControl id="j1" state={state} ownResumeId={ownResumeId} ownRemoved={ownRemoved} />
     </QueryClientProvider>,
   )
   return Object.assign(calls, { client })
@@ -228,5 +230,49 @@ describe('PipelineControl resume choice', () => {
     await waitFor(() =>
       expect(calls.filter((c) => c.path === '/pipeline/resumes').length).toBeGreaterThan(before),
     )
+  })
+
+  describe('an inquired job whose resume file was removed', () => {
+    it('FR003 starts on None, not on the last choice, and one click keeps the note', async () => {
+      const user = userEvent.setup()
+      const calls = renderControl({
+        state: 'inquired',
+        last: 'f2',
+        ownResumeId: null,
+        ownRemoved: true,
+      })
+
+      const select = await screen.findByRole('combobox', { name: 'Resume used' })
+      expect(select).toHaveValue('')
+      await user.click(screen.getByRole('button', { name: 'I applied' }))
+
+      await waitFor(() => expect(marks(calls)).toHaveLength(1))
+      expect(marks(calls)[0]?.body).toBeUndefined() // the server keeps the note
+    })
+
+    it('choosing a file replaces the note', async () => {
+      const user = userEvent.setup()
+      const calls = renderControl({ state: 'inquired', ownResumeId: null, ownRemoved: true })
+      const select = await screen.findByRole('combobox', { name: 'Resume used' })
+
+      await user.selectOptions(select, 'f1')
+      await user.click(screen.getByRole('button', { name: 'I applied' }))
+
+      await waitFor(() => expect(marks(calls)).toHaveLength(1))
+      expect(marks(calls)[0]?.body).toEqual({ resume_file_id: 'f1' })
+    })
+
+    it('choosing None on purpose is sent, so the note is cleared', async () => {
+      const user = userEvent.setup()
+      const calls = renderControl({ state: 'inquired', ownResumeId: null, ownRemoved: true })
+      const select = await screen.findByRole('combobox', { name: 'Resume used' })
+
+      await user.selectOptions(select, 'f1')
+      await user.selectOptions(select, 'None')
+      await user.click(screen.getByRole('button', { name: 'I applied' }))
+
+      await waitFor(() => expect(marks(calls)).toHaveLength(1))
+      expect(marks(calls)[0]?.body).toEqual({ resume_file_id: null })
+    })
   })
 })

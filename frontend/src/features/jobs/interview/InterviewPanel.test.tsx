@@ -442,6 +442,12 @@ describe('InterviewPanel resume used (feature 002f)', () => {
     expect(await screen.findByText('Gone.pdf (removed) · added 14 Mar 2025')).toBeInTheDocument()
   })
 
+  it('a resume without a known day shows just its name', async () => {
+    renderPanel(() => interview({ resume: { ...chosen, added_on: null } }), true)
+
+    expect(await screen.findByText('Backend_2025.pdf')).toBeInTheDocument()
+  })
+
   it('read-only with nothing recorded still says "Nothing yet."', async () => {
     renderPanel(() => interview(), true)
 
