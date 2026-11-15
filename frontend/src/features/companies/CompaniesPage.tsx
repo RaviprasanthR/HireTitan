@@ -2,14 +2,16 @@ import {
   ArrowDown,
   ArrowUp,
   BadgeCheck,
-  Briefcase,
+  Building2,
   ChevronDown,
   ChevronUp,
   Eye,
   EyeOff,
+  Globe,
   MessageCircleQuestion,
   Pencil,
   Plus,
+  Radar,
   Search,
   StickyNote,
   Trash2,
@@ -20,6 +22,7 @@ import { ApiError } from '@/api/client'
 import { Button } from '@/components/ui/button'
 import { formatDay } from '@/features/explore/api'
 import { AddCompanyDialog } from './AddCompanyDialog'
+import { IconButton } from './IconButton'
 import { BOARD_STATUS, useCompanies, useDeleteCompany, useEditCompany, type Company } from './api'
 import { CompanyPanel } from './CompanyPanel'
 import { Field, inputClass } from './Field'
@@ -53,33 +56,6 @@ function PipelineChip({ company }: { company: Company }) {
 }
 
 /** A small round icon button; each action has its own colour and a tooltip. */
-function IconButton({
-  title,
-  label,
-  tone,
-  children,
-  ...props
-}: {
-  title: string
-  label: string
-  tone: string
-  children: React.ReactNode
-} & Omit<React.ComponentProps<typeof Button>, 'title' | 'aria-label' | 'children'>) {
-  return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon-sm"
-      title={title}
-      aria-label={label}
-      className={tone}
-      {...props}
-    >
-      {children}
-    </Button>
-  )
-}
-
 function EditForm({ company, onDone }: { company: Company; onDone: () => void }) {
   const edit = useEditCompany()
   const [values, setValues] = useState({
@@ -119,10 +95,10 @@ function EditForm({ company, onDone }: { company: Company; onDone: () => void })
         </p>
       )}
       <div className="flex gap-2 sm:col-span-2">
-        <Button type="submit" size="sm" disabled={edit.isPending}>
+        <Button type="submit" size="sm" disabled={edit.isPending} variant="success">
           Save
         </Button>
-        <Button type="button" variant="ghost" size="sm" onClick={onDone}>
+        <Button type="button" variant="cancel" size="sm" onClick={onDone}>
           Cancel
         </Button>
       </div>
@@ -174,8 +150,45 @@ function Details({ company, checked }: { company: Company; checked: string | nul
   ]
   if (company.last_check_error) rows.push(['Last problem', company.last_check_error])
   rows.push(['Visibility', company.hidden ? 'Hidden from the list' : 'Shown'])
+  // the rows split into two cards, in the look of the Preferences and Search rules pages
+  const whereLabels = ['Location', 'Pipeline', 'Website', 'Careers page']
+  const where = rows.filter(([label]) => whereLabels.includes(label))
+  const source = rows.filter(([label]) => !where.some(([w]) => w === label))
   return (
-    <section aria-label={`Details for ${company.name}`}>
+    <section aria-label={`Details for ${company.name}`} className="grid gap-3 md:grid-cols-2">
+      <DetailCard
+        title="Company"
+        icon={<Building2 aria-hidden className="size-4" />}
+        tone="ht-company-where"
+        rows={where}
+      />
+      <DetailCard
+        title="Job source"
+        icon={<Radar aria-hidden className="size-4" />}
+        tone="ht-company-source"
+        rows={source}
+      />
+    </section>
+  )
+}
+
+function DetailCard({
+  title,
+  icon,
+  tone,
+  rows,
+}: {
+  title: string
+  icon: React.ReactNode
+  tone: string
+  rows: [string, React.ReactNode][]
+}) {
+  return (
+    <div className={`ht-detail-card ${tone}`}>
+      <h3 className="ht-detail-heading">
+        {icon}
+        {title}
+      </h3>
       <dl className="grid gap-x-6 gap-y-1 text-sm sm:grid-cols-[max-content_1fr]">
         {rows.map(([label, value]) => (
           <div key={label} className="contents">
@@ -184,7 +197,7 @@ function Details({ company, checked }: { company: Company; checked: string | nul
           </div>
         ))}
       </dl>
-    </section>
+    </div>
   )
 }
 
@@ -206,14 +219,17 @@ function CompanyRow({ company }: { company: Company }) {
   return (
     <li
       aria-label={company.name}
-      className="relative space-y-2 rounded-lg px-3 py-1.5 transition-colors duration-200 after:absolute after:inset-x-3 after:bottom-0 after:h-px after:bg-border hover:bg-[#9c4f37]/25 motion-reduce:transition-none"
+      className={`relative space-y-2 px-3 py-1.5 transition-colors duration-200 after:absolute after:inset-x-3 after:bottom-0 after:h-px after:bg-border motion-reduce:transition-none ${
+        // the tint is for a resting row: an open, edited or about-to-go row is not an orange block
+        showPanel || editing || confirming ? '' : 'hover:bg-[#9c4f37]/25'
+      }`}
     >
       <div className={`flex min-h-8 flex-wrap items-center gap-x-4 gap-y-1 ${COLUMNS}`}>
         <div className="min-w-0">
           <h2 className="min-w-0 truncate font-semibold">
-            {company.website ? (
+            {company.careers_url ? (
               <a
-                href={company.website}
+                href={company.careers_url}
                 target="_blank"
                 rel="noreferrer noopener"
                 className="hover:text-orange-300 hover:underline"
@@ -225,11 +241,6 @@ function CompanyRow({ company }: { company: Company }) {
             )}
             {company.hidden && <span className="ml-2 text-sm text-muted-small">(hidden)</span>}
           </h2>
-          {company.website && (
-            <p data-testid="company-host" className="truncate text-xs text-muted-small">
-              {shortUrl(company.website)}
-            </p>
-          )}
         </div>
         <span className="min-w-0 truncate text-sm text-muted-small">{company.city ?? ''}</span>
         <PipelineChip company={company} />
@@ -266,7 +277,7 @@ function CompanyRow({ company }: { company: Company }) {
               >
                 {showPanel ? <ChevronUp aria-hidden /> : <ChevronDown aria-hidden />}
               </IconButton>
-              {company.careers_url ? (
+              {company.website ? (
                 <Button
                   asChild
                   variant="ghost"
@@ -274,13 +285,13 @@ function CompanyRow({ company }: { company: Company }) {
                   className="text-violet-300 hover:bg-violet-500/20 hover:text-violet-200"
                 >
                   <a
-                    href={company.careers_url}
+                    href={company.website}
                     target="_blank"
                     rel="noreferrer noopener"
-                    title="Careers page"
-                    aria-label={`Open ${company.name} careers page`}
+                    title="Company site"
+                    aria-label={`Open ${company.name} website`}
                   >
-                    <Briefcase aria-hidden />
+                    <Globe aria-hidden />
                   </a>
                 </Button>
               ) : (
@@ -327,7 +338,7 @@ function CompanyRow({ company }: { company: Company }) {
       )}
       {editing && <EditForm company={company} onDone={() => setEditing(false)} />}
       {showPanel && (
-        <div className="space-y-4 border-t border-white/10 pt-3 pb-2">
+        <div className="space-y-3 pt-2 pb-2">
           <Details company={company} checked={checked} />
           <CompanyPanel companyId={company.id} companyName={company.name} />
         </div>
@@ -347,10 +358,10 @@ function CompanyRow({ company }: { company: Company }) {
               size="sm"
               disabled={remove.isPending}
               onClick={() => remove.mutate(company.id)}
-            >
+             variant="danger">
               Yes, delete
             </Button>
-            <Button type="button" variant="ghost" size="sm" onClick={() => setConfirming(false)}>
+            <Button type="button" variant="cancel" size="sm" onClick={() => setConfirming(false)}>
               Keep it
             </Button>
           </div>

@@ -59,6 +59,85 @@ describe('CompanyPanel', () => {
     expect(screen.getByLabelText('Note about Example Co')).toHaveValue('Spoke to HR on Monday.')
   })
 
+  it('shows the contacts and the note as accent cards, like Preferences and Search rules', async () => {
+    renderIt(list)
+
+    const contacts = await screen.findByRole('heading', { name: 'Contacts' })
+    const note = screen.getByRole('heading', { name: 'Note' })
+
+    const contactsCard = contacts.closest('.ht-detail-card') as HTMLElement
+    const noteCard = note.closest('.ht-detail-card') as HTMLElement
+    expect(contactsCard).not.toBeNull()
+    expect(noteCard).not.toBeNull()
+    expect(contactsCard).not.toBe(noteCard)
+    expect(within(contactsCard).getByText('Jane Example')).toBeInTheDocument()
+    expect(within(contactsCard).getByRole('button', { name: 'Add a contact' })).toBeInTheDocument()
+    expect(within(noteCard).getByLabelText('Note about Example Co')).toBeInTheDocument()
+  })
+
+  describe('how a contact looks', () => {
+    const contactCard = async () => {
+      renderIt(list)
+      const contacts = await screen.findByRole('list', { name: 'Contacts at Example Co' })
+      return within(contacts).getAllByRole('listitem')[0] as HTMLElement
+    }
+
+    it('shows the role and the confidence as pills, the confidence in its own colour', async () => {
+      const card = await contactCard()
+
+      expect(within(card).getByText('Recruiter')).toHaveClass('ht-pill')
+      const confidence = within(card).getByText('high confidence')
+      expect(confidence).toHaveClass('ht-pill')
+      expect(confidence).toHaveClass('ht-pill-green')
+    })
+
+    it.each([
+      ['medium', 'ht-pill-yellow'],
+      ['low', 'ht-pill-red'],
+    ])('colours %s confidence', async (level, tone) => {
+      renderIt((call) =>
+        call.path === `/companies/${COMPANY}/contacts` && call.method === 'GET'
+          ? { ...PANEL, items: [{ ...JANE, confidence: level }] }
+          : undefined,
+      )
+
+      expect(await screen.findByText(`${level} confidence`)).toHaveClass(tone)
+    })
+
+    it('shows the email, the phone and the LinkedIn link as chips with icons', async () => {
+      const card = await contactCard()
+
+      for (const text of ['jane@example.com', '+91 98765 43210']) {
+        const chip = within(card).getByText(text).closest('.ht-fact') as HTMLElement
+        expect(chip).not.toBeNull()
+        expect(chip.querySelector('svg')).not.toBeNull()
+      }
+      const link = within(card).getByRole('link', { name: /LinkedIn.*Jane Example/ })
+      expect(link.closest('.ht-fact')).not.toBeNull()
+      expect(link.closest('.ht-fact')?.querySelector('svg')).not.toBeNull()
+    })
+
+    it('shows the note as a quote', async () => {
+      const card = await contactCard()
+
+      expect(within(card).getByText('Replies fast.').closest('blockquote')).not.toBeNull()
+    })
+
+    it('has edit and delete as icon buttons, named as before', async () => {
+      const card = await contactCard()
+
+      for (const [name, title] of [
+        ['Edit Jane Example', 'Edit'],
+        ['Delete Jane Example', 'Delete'],
+      ]) {
+        const button = within(card).getByRole('button', { name })
+        expect(button).toHaveAttribute('title', title)
+        expect(button.querySelector('svg')).not.toBeNull()
+        expect(button.textContent).toBe('') // an icon, no words
+      }
+    })
+  })
+
   it('shows an empty state when there are no contacts', async () => {
     renderIt(() => ({ items: [], note: null }))
 

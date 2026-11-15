@@ -1,3 +1,4 @@
+import { Link2, Mail, Pencil, Phone, StickyNote, Trash2, Users } from 'lucide-react'
 import { useState } from 'react'
 import { ApiError } from '@/api/client'
 import { Button } from '@/components/ui/button'
@@ -11,6 +12,7 @@ import {
   type ContactInput,
 } from './api'
 import { Field, inputClass } from './Field'
+import { IconButton } from './IconButton'
 
 const EMPTY: ContactInput = {
   name: '',
@@ -113,16 +115,19 @@ function ContactForm({
         </p>
       )}
       <div className="flex gap-2 sm:col-span-2">
-        <Button type="submit" size="sm" disabled={pending}>
+        <Button type="submit" size="sm" disabled={pending} variant="success">
           Save contact
         </Button>
-        <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
+        <Button type="button" variant="cancel" size="sm" onClick={onCancel}>
           Cancel
         </Button>
       </div>
     </form>
   )
 }
+
+// how sure the person is about a contact: a pill in a matching colour
+const CONFIDENCE_TONE: Record<string, string> = { high: 'green', medium: 'yellow', low: 'red' }
 
 function ContactItem({ contact, companyId }: { contact: Contact; companyId: string }) {
   const [editing, setEditing] = useState(false)
@@ -149,57 +154,81 @@ function ContactItem({ contact, companyId }: { contact: Contact; companyId: stri
     )
   }
   return (
-    <li className="space-y-1 rounded-md border border-muted-foreground p-3">
+    <li className="space-y-2 rounded-lg border border-white/10 bg-white/[0.035] p-3">
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <p className="font-medium">{contact.name}</p>
-          <p className="text-sm text-muted-small">
-            {[contact.role, contact.confidence ? `${contact.confidence} confidence` : null]
-              .filter(Boolean)
-              .join(' · ')}
-          </p>
+        <div className="min-w-0 space-y-1">
+          <p className="font-semibold text-heading">{contact.name}</p>
+          {(contact.role || contact.confidence) && (
+            <p className="flex flex-wrap gap-1.5">
+              {contact.role && <span className="ht-pill ht-pill-blue">{contact.role}</span>}
+              {contact.confidence && (
+                <span
+                  className={`ht-pill ht-pill-${CONFIDENCE_TONE[contact.confidence] ?? 'grey'}`}
+                >
+                  {contact.confidence} confidence
+                </span>
+              )}
+            </p>
+          )}
         </div>
         {!confirming && (
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              aria-label={`Edit ${contact.name}`}
+          <div className="flex gap-1">
+            <IconButton
+              title="Edit"
+              label={`Edit ${contact.name}`}
+              tone="text-emerald-300 hover:bg-emerald-500/20 hover:text-emerald-200"
               onClick={() => setEditing(true)}
             >
-              Edit
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              aria-label={`Delete ${contact.name}`}
+              <Pencil aria-hidden />
+            </IconButton>
+            <IconButton
+              title="Delete"
+              label={`Delete ${contact.name}`}
+              tone="text-rose-300 hover:bg-rose-500/20 hover:text-rose-200"
               onClick={() => setConfirming(true)}
             >
-              Delete
-            </Button>
+              <Trash2 aria-hidden />
+            </IconButton>
           </div>
         )}
       </div>
-      {contact.linkedin_url && (
-        <p className="text-sm">
-          <a
-            href={contact.linkedin_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={`LinkedIn profile of ${contact.name}`}
-            className="text-link underline"
-          >
-            LinkedIn
-          </a>
-        </p>
+      {(contact.linkedin_url || contact.email || contact.phone) && (
+        <div className="flex flex-wrap gap-2 text-sm">
+          {contact.linkedin_url && (
+            <span className="ht-fact">
+              <Link2 aria-hidden className="size-4 text-sky-300" />
+              <a
+                href={contact.linkedin_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`LinkedIn profile of ${contact.name}`}
+                className="text-link underline"
+              >
+                LinkedIn
+              </a>
+            </span>
+          )}
+          {contact.email && (
+            <span className="ht-fact">
+              <Mail aria-hidden className="size-4 text-amber-300" />
+              {contact.email}
+            </span>
+          )}
+          {contact.phone && (
+            <span className="ht-fact">
+              <Phone aria-hidden className="size-4 text-emerald-300" />
+              {contact.phone}
+            </span>
+          )}
+        </div>
       )}
-      {contact.email && <p className="text-sm">Email: {contact.email}</p>}
-      {contact.phone && <p className="text-sm">Phone: {contact.phone}</p>}
-      {contact.note && <p className="whitespace-pre-line text-sm">{contact.note}</p>}
+      {contact.note && (
+        <blockquote className="border-l-2 border-amber-300/60 pl-3 text-sm whitespace-pre-line text-amber-100/90">
+          {contact.note}
+        </blockquote>
+      )}
       {confirming && (
-        <div className="space-y-2">
+        <div className="space-y-2 rounded-md border border-rose-400/40 bg-rose-500/10 p-2">
           <p className="text-sm">Delete {contact.name}? This cannot be undone.</p>
           <div className="flex gap-2">
             <Button
@@ -207,10 +236,10 @@ function ContactItem({ contact, companyId }: { contact: Contact; companyId: stri
               size="sm"
               disabled={remove.isPending}
               onClick={() => remove.mutate(contact.id)}
-            >
+             variant="danger">
               Yes, delete
             </Button>
-            <Button type="button" variant="ghost" size="sm" onClick={() => setConfirming(false)}>
+            <Button type="button" variant="cancel" size="sm" onClick={() => setConfirming(false)}>
               Keep it
             </Button>
           </div>
@@ -254,7 +283,7 @@ function NoteEditor({
           {apiError.message}
         </p>
       )}
-      <Button type="button" size="sm" disabled={save.isPending} onClick={() => save.mutate(body)}>
+      <Button type="button" size="sm" disabled={save.isPending} onClick={() => save.mutate(body)} variant="success">
         Save note
       </Button>
       {save.isSuccess && (
@@ -282,38 +311,53 @@ export function CompanyPanel({
   if (panel.isError) return <p role="alert">Could not load the contacts.</p>
   const { items, note } = panel.data
   return (
-    <section aria-label={`Contacts and note for ${companyName}`} className="space-y-4">
-      {items.length === 0 ? (
-        <p className="text-sm">No contacts yet.</p>
-      ) : (
-        <ul aria-label={`Contacts at ${companyName}`} className="space-y-2">
-          {items.map((contact) => (
-            <ContactItem key={contact.id} contact={contact} companyId={companyId} />
-          ))}
-        </ul>
-      )}
-      {adding ? (
-        <ContactForm
-          initial={EMPTY}
-          pending={add.isPending}
-          error={add.error}
-          onCancel={() => {
-            add.reset()
-            setAdding(false)
-          }}
-          onSubmit={(values) => add.mutate(values, { onSuccess: () => setAdding(false) })}
+    <section
+      aria-label={`Contacts and note for ${companyName}`}
+      className="grid gap-3 md:grid-cols-2"
+    >
+      <div className="ht-detail-card ht-company-contacts space-y-3">
+        <h3 className="ht-detail-heading">
+          <Users aria-hidden className="size-4" />
+          Contacts
+        </h3>
+        {items.length === 0 ? (
+          <p className="text-sm">No contacts yet.</p>
+        ) : (
+          <ul aria-label={`Contacts at ${companyName}`} className="space-y-2">
+            {items.map((contact) => (
+              <ContactItem key={contact.id} contact={contact} companyId={companyId} />
+            ))}
+          </ul>
+        )}
+        {adding ? (
+          <ContactForm
+            initial={EMPTY}
+            pending={add.isPending}
+            error={add.error}
+            onCancel={() => {
+              add.reset()
+              setAdding(false)
+            }}
+            onSubmit={(values) => add.mutate(values, { onSuccess: () => setAdding(false) })}
+          />
+        ) : (
+          <Button type="button" size="sm" variant="outline" onClick={() => setAdding(true)}>
+            Add a contact
+          </Button>
+        )}
+      </div>
+      <div className="ht-detail-card ht-company-note space-y-3">
+        <h3 className="ht-detail-heading">
+          <StickyNote aria-hidden className="size-4" />
+          Note
+        </h3>
+        <NoteEditor
+          key={note?.updated_at ?? 'none'}
+          companyId={companyId}
+          companyName={companyName}
+          initial={note?.body ?? ''}
         />
-      ) : (
-        <Button type="button" size="sm" variant="outline" onClick={() => setAdding(true)}>
-          Add a contact
-        </Button>
-      )}
-      <NoteEditor
-        key={note?.updated_at ?? 'none'}
-        companyId={companyId}
-        companyName={companyName}
-        initial={note?.body ?? ''}
-      />
+      </div>
     </section>
   )
 }

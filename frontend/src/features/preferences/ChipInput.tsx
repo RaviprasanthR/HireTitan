@@ -48,7 +48,7 @@ export function ChipInput({
               <button
                 type="button"
                 aria-label={`Remove ${item}`}
-                className="rounded-full p-0.5 hover:bg-background"
+                className="ht-close-button rounded-full p-0.5"
                 onClick={() => onChange(value.filter((v) => v !== item))}
               >
                 <X className="size-3" aria-hidden />

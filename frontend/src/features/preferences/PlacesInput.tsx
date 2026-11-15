@@ -45,7 +45,7 @@ export function PlacesInput({
               <button
                 type="button"
                 aria-label={`Remove ${describe(p)}`}
-                className="rounded-full p-0.5 hover:bg-background"
+                className="ht-close-button rounded-full p-0.5"
                 onClick={() => onChange(value.filter((v) => v !== p))}
               >
                 <X className="size-3" aria-hidden />

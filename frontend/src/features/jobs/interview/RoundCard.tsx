@@ -179,10 +179,10 @@ export function RoundCard({
         </div>
         {editable && !confirming && (
           <div className="flex flex-wrap items-center gap-3">
-            <Button type="submit" size="sm" disabled={update.isPending}>
+            <Button type="submit" size="sm" disabled={update.isPending} variant="success">
               Save round {round.number}
             </Button>
-            <Button type="button" variant="ghost" size="sm" onClick={() => setConfirming(true)}>
+            <Button type="button" variant="danger" size="sm" onClick={() => setConfirming(true)}>
               Delete round {round.number}
             </Button>
             <Message
@@ -203,12 +203,12 @@ export function RoundCard({
                 size="sm"
                 disabled={remove.isPending}
                 onClick={() => remove.mutate(round.id)}
-              >
+               variant="danger">
                 Yes, delete
               </Button>
               <Button
                 type="button"
-                variant="ghost"
+                variant="cancel"
                 size="sm"
                 onClick={() => {
                   remove.reset()

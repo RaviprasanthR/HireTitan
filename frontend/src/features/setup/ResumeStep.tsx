@@ -89,7 +89,7 @@ export function ResumeStep({ onboarding, onBack }: { onboarding: Onboarding; onB
               <Button type="button" disabled={busy} onClick={() => void typeItIn(true)}>
                 Yes, stop and type it in
               </Button>
-              <Button type="button" variant="outline" onClick={() => setConfirming(false)}>
+              <Button type="button" variant="cancel" onClick={() => setConfirming(false)}>
                 Keep reading
               </Button>
             </div>

@@ -101,7 +101,7 @@ function ItemRow({
       {onRemove && (
         <Button
           type="button"
-          variant="ghost"
+          variant="danger"
           size="xs"
           aria-label={`Remove ${text}`}
           onClick={onRemove}

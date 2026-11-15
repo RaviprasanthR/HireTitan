@@ -366,7 +366,7 @@ function ReviewForm({
               <Button type="button" variant="danger" onClick={() => void discard()} disabled={busy}>
                 Yes, discard
               </Button>
-              <Button type="button" variant="outline" onClick={() => setConfirmingDiscard(false)}>
+              <Button type="button" variant="cancel" onClick={() => setConfirmingDiscard(false)}>
                 Keep editing
               </Button>
             </div>

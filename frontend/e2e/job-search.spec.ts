@@ -128,7 +128,7 @@ test('SC002_job_search_journey', async ({ page, request }) => {
   await page.getByRole('link', { name: 'In pipeline' }).click()
   // the row's details are read-only; the interview records are changed in the edit card
   await page.getByRole('button', { name: /^Edit / }).first().click()
-  const card = page.getByRole('dialog', { name: /^Edit / })
+  const card = page.getByRole('region', { name: /^Edit / })
   const details = card.getByRole('region', { name: 'Interview details' })
   await expect(details).toBeVisible()
 
@@ -176,7 +176,7 @@ test('SC002_job_search_journey', async ({ page, request }) => {
   const withResume = page.getByRole('row').filter({ hasText: fileName })
   await expect(withResume).toHaveCount(1) // only the job marked with it
   await withResume.getByRole('button', { name: /^Edit / }).click()
-  const resumeCard = page.getByRole('dialog', { name: /^Edit / })
+  const resumeCard = page.getByRole('region', { name: /^Edit / })
   await resumeCard.getByRole('combobox', { name: 'Resume file' }).selectOption('')
   await resumeCard.getByRole('button', { name: 'Save resume' }).click()
   await expect(resumeCard.getByText('Resume saved.')).toBeVisible()
@@ -196,7 +196,7 @@ test('SC002_job_search_journey', async ({ page, request }) => {
   const removedNote = page.getByRole('row').filter({ hasText: '(removed)' })
   await expect(removedNote).toHaveCount(1)
   await removedNote.getByRole('button', { name: /^Edit / }).click()
-  const noteCard = page.getByRole('dialog', { name: /^Edit / })
+  const noteCard = page.getByRole('region', { name: /^Edit / })
   await noteCard.getByRole('button', { name: 'Clear' }).click()
   await expect(noteCard.getByText('(removed)')).toBeHidden()
   await page.keyboard.press('Escape')

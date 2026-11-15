@@ -44,7 +44,7 @@ export function DeleteAllData() {
         Removes your profile, preferences, resume files and AI usage log, and takes you back to the
         first setup step. Your API key in <code>.env</code> is not touched.
       </p>
-      <Button variant="outline" className="ht-danger-button" onClick={() => change(true)}>
+      <Button variant="danger" className="ht-danger-button" onClick={() => change(true)}>
         Delete all my data
       </Button>
 
@@ -83,11 +83,11 @@ export function DeleteAllData() {
                   event.preventDefault() // stay open until the server answers
                   wipe.mutate()
                 }}
-              >
+               variant="danger">
                 Delete everything
               </Button>
               <AlertDialog.Cancel asChild>
-                <Button variant="secondary">Cancel</Button>
+                <Button variant="cancel">Cancel</Button>
               </AlertDialog.Cancel>
             </div>
           </AlertDialog.Content>

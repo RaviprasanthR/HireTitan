@@ -295,18 +295,30 @@ describe('PipelinePage', () => {
 
     await user.click(await screen.findByRole('button', { name: /^Edit / }))
 
-    const card = await screen.findByRole('dialog', {
+    const card = await screen.findByRole('region', {
       name: 'Edit Newest (Python) - Pune',
     })
-    expect(card).toHaveAttribute('aria-modal', 'true')
-    expect(screen.getByTestId('modal-backdrop')).toHaveClass('backdrop-blur-sm')
+    // inline under its job, like the Companies list: no dialog, no blurred backdrop
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('modal-backdrop')).not.toBeInTheDocument()
+    const jobRow = screen.getByRole('link', { name: /Newest/ }).closest('tr') as HTMLElement
+    expect(jobRow.nextElementSibling).toContainElement(card)
     expect(await within(card).findByText('Applied on 5 Nov 2026')).toBeInTheDocument()
     expect(within(card).getByRole('button', { name: 'Undo' })).toBeInTheDocument()
     expect(await within(card).findByLabelText('Contact name')).toBeInTheDocument()
 
+    // each part is an accent card with an icon heading, like Preferences and Search rules
+    for (const name of ['Point of contact', 'How the job came', 'Interview rounds']) {
+      const part = within(card).getByRole(name === 'Interview rounds' ? 'region' : 'form', { name })
+      expect(part).toHaveClass('ht-detail-card')
+      expect(within(part).getByRole('heading', { name })).toHaveClass('ht-detail-heading')
+    }
+    // the close cross turns red under the pointer
+    expect(within(card).getByRole('button', { name: 'Close' })).toHaveClass('ht-close-button')
+
     await user.keyboard('{Escape}')
 
-    expect(screen.queryByRole('dialog', { name: /^Edit / })).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: /^Edit / })).not.toBeInTheDocument()
   })
 
   it('shows_the_short_role_with_the_full_title_on_hover', async () => {
@@ -736,7 +748,7 @@ describe('the edit card resume guard (feature 002f)', () => {
       </QueryClientProvider>,
     )
     await user.click(await screen.findByRole('button', { name: /^Edit / }))
-    const card = await screen.findByRole('dialog', { name: /^Edit / })
+    const card = await screen.findByRole('region', { name: /^Edit / })
     await user.selectOptions(await within(card).findByRole('combobox', { name: 'Resume file' }), 'f1')
 
     await user.click(within(card).getByRole('button', { name: 'Close' }))
@@ -799,7 +811,7 @@ describe('the edit card resume guard (feature 002f)', () => {
       </QueryClientProvider>,
     )
     await user.click(await screen.findByRole('button', { name: /^Edit / }))
-    const card = await screen.findByRole('dialog', { name: /^Edit / })
+    const card = await screen.findByRole('region', { name: /^Edit / })
     await user.selectOptions(await within(card).findByRole('combobox', { name: 'Resume file' }), 'f1')
     await user.click(within(card).getByRole('button', { name: 'Save resume' }))
     await within(card).findByText(/Backend_2025.pdf \(removed\)/)
@@ -807,7 +819,7 @@ describe('the edit card resume guard (feature 002f)', () => {
     await user.click(within(card).getByRole('button', { name: 'Close' }))
 
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.queryByRole('region', { name: /^Edit / })).not.toBeInTheDocument())
   })
 })
 

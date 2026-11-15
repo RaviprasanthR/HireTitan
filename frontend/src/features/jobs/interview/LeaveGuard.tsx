@@ -35,10 +35,10 @@ function RouterBlocker({ when }: { when: boolean }) {
         You have changes that are not saved. Leave this page and lose them?
       </p>
       <div className="flex gap-2">
-        <Button type="button" size="sm" autoFocus onClick={() => blocker.proceed()}>
+        <Button type="button" size="sm" autoFocus onClick={() => blocker.proceed()} variant="danger">
           Leave and lose them
         </Button>
-        <Button type="button" variant="ghost" size="sm" onClick={() => blocker.reset()}>
+        <Button type="button" variant="cancel" size="sm" onClick={() => blocker.reset()}>
           Stay on this page
         </Button>
       </div>

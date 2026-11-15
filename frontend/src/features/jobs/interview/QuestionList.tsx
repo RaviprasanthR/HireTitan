@@ -105,12 +105,12 @@ function QuestionItem({
         </div>
         {editable && !confirming && (
           <div className="flex flex-wrap items-center gap-3">
-            <Button type="submit" size="sm" disabled={update.isPending || text.trim() === ''}>
+            <Button type="submit" size="sm" disabled={update.isPending || text.trim() === ''} variant="success">
               Save question {n}
             </Button>
             <Button
               type="button"
-              variant="ghost"
+              variant="danger"
               size="sm"
               disabled={remove.isPending}
               onClick={() => setConfirming(true)}
@@ -133,12 +133,12 @@ function QuestionItem({
                 size="sm"
                 disabled={remove.isPending}
                 onClick={() => remove.mutate(question.id)}
-              >
+               variant="danger">
                 Yes, delete
               </Button>
               <Button
                 type="button"
-                variant="ghost"
+                variant="cancel"
                 size="sm"
                 onClick={() => {
                   remove.reset()

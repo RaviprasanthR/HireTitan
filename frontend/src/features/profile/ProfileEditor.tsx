@@ -66,7 +66,7 @@ function EditorForm({ initial, hasCurrent }: { initial: ApiContent; hasCurrent: 
           {formError}
         </p>
       )}
-      <Button type="submit" disabled={busy}>
+      <Button type="submit" disabled={busy} variant="success">
         Save profile
       </Button>
     </form>
