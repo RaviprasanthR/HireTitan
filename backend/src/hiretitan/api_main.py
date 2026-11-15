@@ -43,12 +43,14 @@ from hiretitan.search.api.contacts import SearchContactsApiDeps, create_contacts
 from hiretitan.search.api.duplicates import SearchDuplicatesApiDeps, create_duplicates_router
 from hiretitan.search.api.interviews import SearchInterviewsApiDeps, create_interviews_router
 from hiretitan.search.api.jobs import SearchJobsApiDeps, create_search_jobs_router
+from hiretitan.search.api.pipeline import PipelineApiDeps, create_pipeline_router
 from hiretitan.search.api.rules import SearchRulesApiDeps, create_search_rules_router
 from hiretitan.search.api.runs import SearchRunsApiDeps, create_search_runs_router
 from hiretitan.search.application.synonyms_seed import load_title_synonyms
 from hiretitan.search_wiring import (
     ProfileAndPreferencesSource,
     SetupFinishedGate,
+    SqlResumeLookup,
     build_career_ops,
     seed_companies,
 )
@@ -238,8 +240,14 @@ def build_app(settings: Settings | None = None) -> FastAPI:
         create_contacts_router(SearchContactsApiDeps(sessions=deps.sessions)),
         create_interviews_router(SearchInterviewsApiDeps(sessions=deps.sessions)),
         create_search_jobs_router(
-            SearchJobsApiDeps(sessions=deps.sessions, queue=deps.queue, clock=clock)
+            SearchJobsApiDeps(
+                sessions=deps.sessions,
+                queue=deps.queue,
+                clock=clock,
+                resume_lookup=SqlResumeLookup,
+            )
         ),
+        create_pipeline_router(PipelineApiDeps(sessions=deps.sessions)),
         create_runs_router(deps.sessions, deps.queue),
         create_status_router(
             StatusApiDeps(

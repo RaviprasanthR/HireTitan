@@ -546,6 +546,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/pipeline/resumes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Pipeline Resumes
+         * @description The resume the person chose the last time they marked a job (the choice starts on it),
+         *     and how many pipeline jobs use each stored file.
+         */
+        get: operations["pipeline_resumes_api_v1_pipeline_resumes_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/preferences": {
         parameters: {
             query?: never;
@@ -1026,6 +1047,8 @@ export interface components {
         AppliedIn: {
             /** Applied On */
             applied_on?: string | null;
+            /** Resume File Id */
+            resume_file_id?: string | null;
         };
         /** Body_upload_resume_api_v1_resumes_post */
         Body_upload_resume_api_v1_resumes_post: {
@@ -1400,6 +1423,8 @@ export interface components {
         InquiredIn: {
             /** Inquired On */
             inquired_on?: string | null;
+            /** Resume File Id */
+            resume_file_id?: string | null;
         };
         /** InterviewOut */
         InterviewOut: {
@@ -1707,6 +1732,13 @@ export interface components {
             /** Role */
             role: string | null;
         };
+        /** PipelineResumesOut */
+        PipelineResumesOut: {
+            /** Last Choice */
+            last_choice: string | null;
+            /** Usage */
+            usage: components["schemas"]["ResumeUsageOut"][];
+        };
         /** PlaceModel */
         PlaceModel: {
             /** City */
@@ -1909,6 +1941,16 @@ export interface components {
             parse_status: string;
             /** Size Bytes */
             size_bytes: number;
+        };
+        /** ResumeUsageOut */
+        ResumeUsageOut: {
+            /** Jobs */
+            jobs: number;
+            /**
+             * Resume File Id
+             * Format: uuid
+             */
+            resume_file_id: string;
         };
         /** ReviewItemOut */
         ReviewItemOut: {
@@ -3706,6 +3748,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pipeline_resumes_api_v1_pipeline_resumes_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PipelineResumesOut"];
                 };
             };
         };

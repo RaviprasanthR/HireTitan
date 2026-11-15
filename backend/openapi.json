@@ -77,6 +77,18 @@
               }
             ],
             "title": "Applied On"
+          },
+          "resume_file_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resume File Id"
           }
         },
         "title": "AppliedIn",
@@ -1272,6 +1284,18 @@
               }
             ],
             "title": "Inquired On"
+          },
+          "resume_file_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resume File Id"
           }
         },
         "title": "InquiredIn",
@@ -2435,6 +2459,35 @@
         "title": "PipelineContactOut",
         "type": "object"
       },
+      "PipelineResumesOut": {
+        "properties": {
+          "last_choice": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Choice"
+          },
+          "usage": {
+            "items": {
+              "$ref": "#/components/schemas/ResumeUsageOut"
+            },
+            "title": "Usage",
+            "type": "array"
+          }
+        },
+        "required": [
+          "last_choice",
+          "usage"
+        ],
+        "title": "PipelineResumesOut",
+        "type": "object"
+      },
       "PlaceModel": {
         "additionalProperties": false,
         "properties": {
@@ -3149,6 +3202,25 @@
           "open_review_id"
         ],
         "title": "ResumeFileOut",
+        "type": "object"
+      },
+      "ResumeUsageOut": {
+        "properties": {
+          "jobs": {
+            "title": "Jobs",
+            "type": "integer"
+          },
+          "resume_file_id": {
+            "format": "uuid",
+            "title": "Resume File Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "resume_file_id",
+          "jobs"
+        ],
+        "title": "ResumeUsageOut",
         "type": "object"
       },
       "ReviewItemOut": {
@@ -6601,6 +6673,28 @@
         "summary": "Write Name",
         "tags": [
           "onboarding"
+        ]
+      }
+    },
+    "/api/v1/pipeline/resumes": {
+      "get": {
+        "description": "The resume the person chose the last time they marked a job (the choice starts on it),\nand how many pipeline jobs use each stored file.",
+        "operationId": "pipeline_resumes_api_v1_pipeline_resumes_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PipelineResumesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Pipeline Resumes",
+        "tags": [
+          "pipeline"
         ]
       }
     },
