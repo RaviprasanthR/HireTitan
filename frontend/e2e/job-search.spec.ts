@@ -161,6 +161,47 @@ test('SC002_job_search_journey', async ({ page, request }) => {
   await expect(card).toBeHidden()
   await expect(page.getByText('Round 2 scheduled', { exact: true }).first()).toBeVisible()
 
+  // 7c. Resume picker (feature 002f): the setup resume is a stored file. Choose it while marking a
+  // job applied, see it in the Resume column, change it in the edit card, then remove the file:
+  // the name stays as a removed note until it is cleared.
+  const stored = await (await request.get('/api/v1/resumes')).json()
+  const fileName: string = stored[0].original_name
+  await page.goto('/explore')
+  const resumeChoice = page.getByRole('combobox', { name: 'Resume used' }).first()
+  await expect(resumeChoice).toBeVisible()
+  await resumeChoice.selectOption(stored[0].id)
+  await page.getByRole('button', { name: 'I applied' }).first().click()
+  await expect.poll(async () => (await exploreJobs(request)).length).toBe(1)
+  await page.getByRole('link', { name: 'In pipeline' }).click()
+  const withResume = page.getByRole('row').filter({ hasText: fileName })
+  await expect(withResume).toHaveCount(1) // only the job marked with it
+  await withResume.getByRole('button', { name: /^Edit / }).click()
+  const resumeCard = page.getByRole('dialog', { name: /^Edit / })
+  await resumeCard.getByRole('combobox', { name: 'Resume file' }).selectOption('')
+  await resumeCard.getByRole('button', { name: 'Save resume' }).click()
+  await expect(resumeCard.getByText('Resume saved.')).toBeVisible()
+  await resumeCard.getByRole('combobox', { name: 'Resume file' }).selectOption(stored[0].id)
+  await resumeCard.getByRole('button', { name: 'Save resume' }).click()
+  await expect(resumeCard.getByText(`${fileName} · added`, { exact: false }).first()).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(resumeCard).toBeHidden()
+
+  await page.goto('/profile')
+  await page.getByRole('button', { name: `Delete ${fileName}` }).click()
+  const removal = page.getByRole('alertdialog')
+  await expect(removal).toContainText('Used on 1 job.')
+  await removal.getByRole('button', { name: 'Delete file' }).click()
+  await expect(removal).toBeHidden()
+  await page.goto('/')
+  const removedNote = page.getByRole('row').filter({ hasText: '(removed)' })
+  await expect(removedNote).toHaveCount(1)
+  await removedNote.getByRole('button', { name: /^Edit / }).click()
+  const noteCard = page.getByRole('dialog', { name: /^Edit / })
+  await noteCard.getByRole('button', { name: 'Clear' }).click()
+  await expect(noteCard.getByText('(removed)')).toBeHidden()
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('row').filter({ hasText: '(removed)' })).toHaveCount(0)
+
   // 8. No page talks about AI cost or a budget (SC-005). "$" is not checked: pay can use it.
   const cost = /AI cost|cost so far|budget|\bspend\b|\bspent\b/i
   for (const path of [
