@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from hiretitan.search.domain.contacts import ContactFields
 from hiretitan.search.domain.interviews import RoundSummary, status_summary
+from hiretitan.search.domain.resume_choice import ResumeChoice, choice_from
 from hiretitan.search.infra.models import (
     InterviewQuestionRow,
     InterviewRoundRow,
@@ -117,6 +118,23 @@ class InterviewsRepo:
             return
         row.resume_file_id = row.resume_name = row.resume_added_on = None
         await self._prune(job_id)
+
+    async def resume_choices(self, job_ids: list[UUID]) -> dict[UUID, ResumeChoice]:
+        """The resume shown for each of these jobs that has one (chosen, or a removed note), in
+        one query; a job missing from the answer has none."""
+        if not job_ids:
+            return {}
+        rows = await self._session.execute(
+            select(
+                PipelineDetailsRow.job_id,
+                PipelineDetailsRow.resume_file_id,
+                PipelineDetailsRow.resume_name,
+                PipelineDetailsRow.resume_added_on,
+            ).where(
+                PipelineDetailsRow.job_id.in_(job_ids), PipelineDetailsRow.resume_name.is_not(None)
+            )
+        )
+        return {job_id: choice_from(file_id, name, day) for job_id, file_id, name, day in rows}
 
     async def usage(self) -> dict[UUID, int]:
         """How many jobs point at each stored file (a removed note points at none)."""

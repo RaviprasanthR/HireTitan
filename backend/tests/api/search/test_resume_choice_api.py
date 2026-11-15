@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from hiretitan.api_main import create_app
 from hiretitan.platform.clock import FakeClock
 from hiretitan.platform.config.settings import Settings
+from hiretitan.search.api.interviews import SearchInterviewsApiDeps, create_interviews_router
 from hiretitan.search.api.jobs import SearchJobsApiDeps, create_search_jobs_router
 from hiretitan.search.api.pipeline import PipelineApiDeps, create_pipeline_router
 from hiretitan.search.infra.interviews_repo import InterviewsRepo
@@ -49,6 +50,7 @@ async def env(sessions: async_sessionmaker[AsyncSession], tmp_path: Path) -> Asy
         routers=[
             create_search_jobs_router(deps),
             create_pipeline_router(PipelineApiDeps(sessions)),
+            create_interviews_router(SearchInterviewsApiDeps(sessions=sessions)),
         ],
     )
     async with httpx.AsyncClient(
@@ -85,8 +87,8 @@ async def add_file(env: Env, name: str, status: str = "parsed") -> UUID:
             await session.execute(
                 text(
                     "INSERT INTO app.resume_files (id, kind, original_name, size_bytes, sha256, "
-                    "parse_status) VALUES (gen_random_uuid(), 'upload_pdf', :name, 1000, :sha, "
-                    ":status) RETURNING id"
+                    "parse_status, created_at) VALUES (gen_random_uuid(), 'upload_pdf', :name, "
+                    "1000, :sha, :status, '2025-03-14T09:00:00+00:00') RETURNING id"
                 ),
                 {"name": name, "sha": "a" * 64, "status": status},
             )
@@ -264,3 +266,74 @@ async def test_a_file_being_chosen_cannot_be_removed_until_the_mark_ends(env: En
                     text("DELETE FROM app.resume_files WHERE id = :id"), {"id": file_id}
                 )
         await marking.rollback()
+
+
+# --- the resume on cards and details (US2) ---------------------------------------------------
+
+CHOSEN = {"state": "chosen", "name": "Backend_2025.pdf", "added_on": "2025-03-14"}
+NONE = {"state": "none", "resume_file_id": None, "name": None, "added_on": None}
+
+
+async def pipeline_cards(env: Env) -> dict[str, dict]:
+    items = (await env.client.get("/api/v1/jobs?list=pipeline")).json()["items"]
+    return {card["title"]: card for card in items}
+
+
+async def test_FR004_pipeline_cards_carry_the_resume(env: Env) -> None:
+    with_resume = await add_job(env, "With resume")
+    without = await add_job(env, "Without resume")
+    file_id = await add_file(env, "Backend_2025.pdf")
+    await env.client.post(
+        f"/api/v1/jobs/{with_resume}/applied", json={"resume_file_id": str(file_id)}
+    )
+    await env.client.post(f"/api/v1/jobs/{without}/applied")
+
+    cards = await pipeline_cards(env)
+
+    assert cards["With resume"]["resume"] == {**CHOSEN, "resume_file_id": str(file_id)}
+    assert cards["Without resume"]["resume"] == NONE
+
+
+async def test_FR005_interview_details_and_job_detail_carry_the_resume(env: Env) -> None:
+    job_id = await add_job(env)
+    file_id = await add_file(env, "Backend_2025.pdf")
+    marked = await env.client.post(
+        f"/api/v1/jobs/{job_id}/applied", json={"resume_file_id": str(file_id)}
+    )
+    expected = {**CHOSEN, "resume_file_id": str(file_id)}
+
+    interview = await env.client.get(f"/api/v1/jobs/{job_id}/interview")
+    detail = await env.client.get(f"/api/v1/jobs/{job_id}")
+
+    assert marked.json()["resume"] == expected  # the mark's own response already shows it
+    assert interview.json()["resume"] == expected
+    assert detail.json()["resume"] == expected
+
+
+async def test_FR006_jobs_before_the_feature_have_none(env: Env) -> None:
+    explore = await add_job(env, "Still in Explore")
+    applied = await add_job(env, "Applied as before")
+    await env.client.post(f"/api/v1/jobs/{applied}/applied", json={})
+
+    assert (await env.client.get(f"/api/v1/jobs/{explore}")).json()["resume"] == NONE
+    assert (await pipeline_cards(env))["Applied as before"]["resume"] == NONE
+    assert (await env.client.get(f"/api/v1/jobs/{applied}/interview")).json()["resume"] == NONE
+
+
+async def test_FR009_a_removed_file_shows_as_a_removed_note(env: Env) -> None:
+    job_id = await add_job(env)
+    file_id = await add_file(env, "Backend_2025.pdf")
+    await env.client.post(f"/api/v1/jobs/{job_id}/applied", json={"resume_file_id": str(file_id)})
+
+    async with env.sessions() as session:
+        await session.execute(text("DELETE FROM app.resume_files WHERE id = :id"), {"id": file_id})
+        await session.commit()
+
+    note = {
+        "state": "removed",
+        "resume_file_id": None,
+        "name": "Backend_2025.pdf",
+        "added_on": "2025-03-14",
+    }
+    assert (await pipeline_cards(env))["Backend Engineer"]["resume"] == note
+    assert (await env.client.get(f"/api/v1/jobs/{job_id}/interview")).json()["resume"] == note

@@ -1326,6 +1326,9 @@
             "title": "Job Id",
             "type": "string"
           },
+          "resume": {
+            "$ref": "#/components/schemas/ResumeChoiceOut"
+          },
           "rounds": {
             "items": {
               "$ref": "#/components/schemas/RoundOut"
@@ -1354,7 +1357,8 @@
           "contact",
           "source",
           "rounds",
-          "status"
+          "status",
+          "resume"
         ],
         "title": "InterviewOut",
         "type": "object"
@@ -1514,6 +1518,12 @@
           "restored": {
             "title": "Restored",
             "type": "boolean"
+          },
+          "resume": {
+            "$ref": "#/components/schemas/ResumeChoiceOut",
+            "default": {
+              "state": "none"
+            }
           },
           "role": {
             "title": "Role",
@@ -1759,6 +1769,12 @@
           "restored": {
             "title": "Restored",
             "type": "boolean"
+          },
+          "resume": {
+            "$ref": "#/components/schemas/ResumeChoiceOut",
+            "default": {
+              "state": "none"
+            }
           },
           "role": {
             "title": "Role",
@@ -2230,6 +2246,12 @@
           "restored": {
             "title": "Restored",
             "type": "boolean"
+          },
+          "resume": {
+            "$ref": "#/components/schemas/ResumeChoiceOut",
+            "default": {
+              "state": "none"
+            }
           },
           "role": {
             "title": "Role",
@@ -3119,6 +3141,58 @@
           }
         },
         "title": "QuestionPatch",
+        "type": "object"
+      },
+      "ResumeChoiceOut": {
+        "description": "The resume used for a pipeline job (feature 002f): ``chosen`` (a stored file), ``removed``\n(the file is gone and its name stays as a note), or ``none``.",
+        "properties": {
+          "added_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Added On"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "resume_file_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resume File Id"
+          },
+          "state": {
+            "default": "none",
+            "enum": [
+              "chosen",
+              "removed",
+              "none"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "title": "ResumeChoiceOut",
         "type": "object"
       },
       "ResumeFileOut": {

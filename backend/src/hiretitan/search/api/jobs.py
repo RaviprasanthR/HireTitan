@@ -26,6 +26,7 @@ from hiretitan.search.api.models import (
     JobCardOut,
     JobCardPage,
     job_cards,
+    resume_out,
 )
 from hiretitan.search.application.interviews import InterviewInputError
 from hiretitan.search.application.paste import PasteError, PasteInput, paste_job
@@ -131,6 +132,14 @@ def _decode(token: str) -> Cursor:
         raise ProblemError(422, "That page marker is not valid.") from error
 
 
+async def _with_resumes(session: AsyncSession, cards: list[JobCardOut]) -> None:
+    """Show each pipeline job's resume (feature 002f): one query for the whole page."""
+    found = await InterviewsRepo(session).resume_choices([card.id for card in cards])
+    for card in cards:
+        if card.id in found:
+            card.resume = resume_out(found[card.id])
+
+
 def _not_found() -> ProblemError:
     return ProblemError(404, "That job does not exist.")
 
@@ -161,7 +170,9 @@ def create_search_jobs_router(deps: SearchJobsApiDeps) -> APIRouter:
         )
 
     async def detail(session: AsyncSession, row: JobRow) -> JobDetailOut:
-        (card,) = await job_cards(session, [row])
+        cards = await job_cards(session, [row])
+        await _with_resumes(session, cards)
+        (card,) = cards
         history = [
             DecisionHistoryOut(
                 outcome=d.outcome,
@@ -220,6 +231,7 @@ def create_search_jobs_router(deps: SearchJobsApiDeps) -> APIRouter:
             )
             cards = await job_cards(session, page.items)
             if list == "pipeline":
+                await _with_resumes(session, cards)
                 latest = await InterviewsRepo(session).summaries([card.id for card in cards])
                 for card in cards:
                     if card.id in latest:

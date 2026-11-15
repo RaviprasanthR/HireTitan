@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Protocol
 from uuid import UUID
 
@@ -29,6 +29,7 @@ from hiretitan.search.domain.interviews import (
     check_source,
     status_summary,
 )
+from hiretitan.search.domain.resume_choice import ResumeChoice, choice_from
 
 PIPELINE_STATES = ("applied", "inquired")
 
@@ -54,6 +55,9 @@ class StoredDetails(Protocol):
     contact_linkedin: str | None
     source: str | None
     firm_name: str | None
+    resume_file_id: UUID | None
+    resume_name: str | None
+    resume_added_on: date | None
 
 
 class StoredRound(Protocol):
@@ -143,6 +147,7 @@ class InterviewView:
     source: SourceView | None
     rounds: list[RoundView]
     status: StatusView
+    resume: ResumeChoice
 
 
 async def read_interview(
@@ -189,6 +194,11 @@ async def read_interview(
         if details is not None and details.source is not None
         else None
     )
+    resume = (
+        choice_from(details.resume_file_id, details.resume_name, details.resume_added_on)
+        if details is not None
+        else choice_from(None, None, None)
+    )
     return InterviewView(
         job_id=job_id,
         can_edit=in_pipeline,
@@ -197,6 +207,7 @@ async def read_interview(
         source=source,
         rounds=rounds,
         status=StatusView(state=state, round=number),
+        resume=resume,
     )
 
 

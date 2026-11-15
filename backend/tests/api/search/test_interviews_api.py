@@ -79,6 +79,8 @@ async def test_read_empty_details(env: Env) -> None:
         "source": None,
         "rounds": [],
         "status": {"state": "applied", "round": None},
+        # feature 002f: no resume is recorded for the job yet
+        "resume": {"state": "none", "resume_file_id": None, "name": None, "added_on": None},
     }
 
 

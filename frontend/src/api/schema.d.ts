@@ -1438,6 +1438,7 @@ export interface components {
              * Format: uuid
              */
             job_id: string;
+            resume: components["schemas"]["ResumeChoiceOut"];
             /** Rounds */
             rounds: components["schemas"]["RoundOut"][];
             source: components["schemas"]["hiretitan__search__api__interviews__SourceOut"] | null;
@@ -1493,6 +1494,12 @@ export interface components {
             posted_at: string | null;
             /** Restored */
             restored: boolean;
+            /**
+             * @default {
+             *       "state": "none"
+             *     }
+             */
+            resume: components["schemas"]["ResumeChoiceOut"];
             /** Role */
             role: string;
             /** Sources */
@@ -1557,6 +1564,12 @@ export interface components {
             posted_at: string | null;
             /** Restored */
             restored: boolean;
+            /**
+             * @default {
+             *       "state": "none"
+             *     }
+             */
+            resume: components["schemas"]["ResumeChoiceOut"];
             /** Role */
             role: string;
             /** Skills Found */
@@ -1682,6 +1695,12 @@ export interface components {
             posted_at: string | null;
             /** Restored */
             restored: boolean;
+            /**
+             * @default {
+             *       "state": "none"
+             *     }
+             */
+            resume: components["schemas"]["ResumeChoiceOut"];
             /** Role */
             role: string;
             /** Skills Found */
@@ -1910,6 +1929,25 @@ export interface components {
             answer?: string | null;
             /** Question */
             question?: string | null;
+        };
+        /**
+         * ResumeChoiceOut
+         * @description The resume used for a pipeline job (feature 002f): ``chosen`` (a stored file), ``removed``
+         *     (the file is gone and its name stays as a note), or ``none``.
+         */
+        ResumeChoiceOut: {
+            /** Added On */
+            added_on?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Resume File Id */
+            resume_file_id?: string | null;
+            /**
+             * State
+             * @default none
+             * @enum {string}
+             */
+            state: "chosen" | "removed" | "none";
         };
         /** ResumeFileOut */
         ResumeFileOut: {

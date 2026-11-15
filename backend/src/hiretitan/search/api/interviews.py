@@ -16,6 +16,7 @@ from pydantic import AwareDatetime, BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from hiretitan.platform.web.problems import ProblemError, problem
+from hiretitan.search.api.models import ResumeChoiceOut
 from hiretitan.search.application.interviews import (
     InterviewInputError,
     InterviewView,
@@ -89,6 +90,7 @@ class InterviewOut(BaseModel):
     source: SourceOut | None
     rounds: list[RoundOut]
     status: InterviewStatusOut
+    resume: ResumeChoiceOut
 
 
 class ContactIn(BaseModel):
