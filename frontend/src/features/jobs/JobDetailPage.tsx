@@ -90,7 +90,13 @@ export function JobDetailPage() {
           >
             Undo
           </Button>
-          {data.state === 'inquired' && <PipelineControl id={data.id} state={data.state} />}
+          {data.state === 'inquired' && (
+            <PipelineControl
+              id={data.id}
+              state={data.state}
+              ownResumeId={data.resume?.resume_file_id ?? null}
+            />
+          )}
         </div>
       ) : (
         data.state !== 'deleted' && <PipelineControl id={data.id} state={data.state} />

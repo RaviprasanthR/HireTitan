@@ -18,6 +18,7 @@ import { LeaveGuard } from '@/features/jobs/interview/LeaveGuard'
 import { roundStatus } from '@/features/jobs/interview/roundStatus'
 import { useUnsavedRegistry, type UnsavedRegistry } from '@/features/jobs/interview/unsaved'
 import { EditJobDialog } from '@/features/jobs/EditJobDialog'
+import { resumeName } from '@/features/jobs/resume/resumeApi'
 import { HomeTabs } from './HomeTabs'
 import { formatDay, sourceLabel, usePipelineJobs, useJob, type JobCard } from './api'
 
@@ -44,7 +45,7 @@ const SOURCE_TONE: Record<string, Tone> = {
   'job site': 'blue',
 }
 
-const COLUMNS = ['Company', 'Role', 'Date', 'Status', 'Source'] as const
+const COLUMNS = ['Company', 'Role', 'Date', 'Status', 'Resume', 'Source'] as const
 
 /** What is known about the job when the row is opened: description, places, where it came from. */
 function Details({ id, colSpan }: { id: string; colSpan: number }) {
@@ -132,6 +133,17 @@ function Details({ id, colSpan }: { id: string; colSpan: number }) {
   )
 }
 
+/** The resume used: its name, cut to fit with the whole name on hover, or a dash. */
+function ResumeCell({ resume }: { resume: JobCard['resume'] }) {
+  const name = resumeName(resume)
+  if (name === '') return <>—</>
+  return (
+    <span title={name} className="block max-w-[12rem] truncate">
+      {name}
+    </span>
+  )
+}
+
 function Row({ job, registry }: { job: JobCard; registry: UnsavedRegistry }) {
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -166,6 +178,9 @@ function Row({ job, registry }: { job: JobCard; registry: UnsavedRegistry }) {
         <td className="px-3 py-2">{formatDay(job.applied_on ?? job.inquired_on)}</td>
         <td className="px-3 py-2">
           <Pill tone={status.tone ?? 'grey'}>{status.label}</Pill>
+        </td>
+        <td className="px-3 py-2">
+          <ResumeCell resume={job.resume} />
         </td>
         <td className="px-3 py-2">
           {source ? (

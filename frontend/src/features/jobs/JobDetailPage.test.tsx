@@ -64,8 +64,14 @@ function detail(over: Record<string, unknown> = {}) {
   }
 }
 
-function renderPage(job = detail(), interview: unknown = undefined) {
+function renderPage(
+  job = detail(),
+  interview: unknown = undefined,
+  extra?: (call: Call) => unknown,
+) {
   const calls = stubApi((call) => {
+    const more = extra?.(call)
+    if (more !== undefined) return more
     if (call.path === '/jobs/j1/interview')
       return typeof interview === 'function' ? interview() : interview
     if (call.path === '/jobs/j1/recheck')
@@ -295,6 +301,7 @@ describe('JobDetailPage', () => {
       source: { kind: 'direct', firm_name: null },
       rounds: [],
       status: { state: 'applied', round: null },
+      resume: { state: 'none', resume_file_id: null, name: null, added_on: null },
     })
 
     expect(await screen.findByRole('heading', { name: 'Interview details' })).toBeInTheDocument()
@@ -316,6 +323,7 @@ describe('JobDetailPage', () => {
         source: null,
         rounds: [],
         status: { state: marked ? 'applied' : 'explore', round: null },
+        resume: { state: 'none', resume_file_id: null, name: null, added_on: null },
       }
     }
     calls = renderPage(detail({ state: 'explore' }), answer)
@@ -335,6 +343,7 @@ describe('JobDetailPage', () => {
       source: null,
       rounds: [],
       status: { state: 'explore', round: null },
+      resume: { state: 'none', resume_file_id: null, name: null, added_on: null },
     })
 
     expect(await screen.findByLabelText('Contact name')).toBeDisabled()
@@ -350,6 +359,7 @@ describe('JobDetailPage', () => {
       source: null,
       rounds: [],
       status: { state: 'explore', round: null },
+      resume: { state: 'none', resume_file_id: null, name: null, added_on: null },
     })
     await screen.findByRole('heading', { name: 'Description' })
 
@@ -449,6 +459,7 @@ describe('JobDetailPage unsaved edits', () => {
           source: null,
           rounds: [],
           status: { state: 'applied', round: null },
+          resume: { state: 'none', resume_file_id: null, name: null, added_on: null },
         }
       }
       return undefined
@@ -502,5 +513,41 @@ describe('JobDetailPage unsaved edits', () => {
 
     expect(await screen.findByText('Another page')).toBeInTheDocument()
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+  })
+
+  it('US1 AS2 an inquired job starts the resume choice on its own resume', async () => {
+    const file = (id: string, name: string, at: string) => ({
+      id,
+      kind: 'upload_pdf',
+      original_name: name,
+      size_bytes: 1000,
+      page_count: 1,
+      parse_status: 'parsed',
+      parse_result: null,
+      created_at: at,
+      has_open_review: false,
+      open_review_id: null,
+    })
+    renderPage(
+      detail({
+        state: 'inquired',
+        inquired_on: '2026-11-03',
+        resume: { state: 'chosen', resume_file_id: 'f1', name: 'Own.pdf', added_on: '2025-03-14' },
+      }),
+      undefined,
+      (call) => {
+        if (call.path === '/resumes')
+          return [
+            file('f1', 'Own.pdf', '2025-03-14T09:00:00Z'),
+            file('f2', 'Last.pdf', '2026-10-02T09:00:00Z'),
+          ]
+        if (call.path === '/pipeline/resumes') return { last_choice: 'f2', usage: [] }
+        return undefined
+      },
+    )
+
+    const select = await screen.findByRole('combobox', { name: 'Resume used' })
+
+    expect(select).toHaveValue('f1') // not the last choice, f2
   })
 })

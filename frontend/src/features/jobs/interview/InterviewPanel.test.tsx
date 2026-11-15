@@ -14,11 +14,12 @@ function interview(overrides: Record<string, unknown> = {}) {
     source: null,
     rounds: [],
     status: { state: 'applied', round: null },
+    resume: { state: 'none', resume_file_id: null, name: null, added_on: null },
     ...overrides,
   }
 }
 
-function renderPanel(handler: (call: Call) => unknown) {
+function renderPanel(handler: (call: Call) => unknown, readOnly = false) {
   const calls = stubApi((call) => {
     if (call.method === 'GET' && call.path === '/jobs/a/interview') return handler(call)
     return handler(call)
@@ -27,7 +28,7 @@ function renderPanel(handler: (call: Call) => unknown) {
     <QueryClientProvider
       client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
     >
-      <InterviewPanel jobId="a" />
+      <InterviewPanel jobId="a" readOnly={readOnly} />
     </QueryClientProvider>,
   )
   return calls
@@ -395,5 +396,63 @@ describe('InterviewPanel rounds', () => {
 
     expect(await screen.findByRole('heading', { name: /Round 1/ })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Add round' })).not.toBeInTheDocument()
+  })
+})
+
+describe('InterviewPanel resume used (feature 002f)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  const chosen = {
+    state: 'chosen',
+    resume_file_id: 'f1',
+    name: 'Backend_2025.pdf',
+    added_on: '2026-10-02',
+  }
+
+  it('US2 AS3 shows the resume name and the day it was added', async () => {
+    renderPanel(() => interview({ resume: chosen }), true)
+
+    expect(await screen.findByRole('heading', { name: 'Resume used' })).toBeInTheDocument()
+    expect(screen.getByText('Backend_2025.pdf · added 2 Oct 2026')).toBeInTheDocument()
+  })
+
+  it('a job with only a resume is not shown as "Nothing yet."', async () => {
+    renderPanel(() => interview({ resume: chosen }), true)
+
+    await screen.findByText('Backend_2025.pdf · added 2 Oct 2026')
+    expect(screen.queryByText('Nothing yet.')).not.toBeInTheDocument()
+  })
+
+  it('FR009 shows a removed file by its name, marked removed', async () => {
+    renderPanel(
+      () =>
+        interview({
+          resume: {
+            state: 'removed',
+            resume_file_id: null,
+            name: 'Gone.pdf',
+            added_on: '2025-03-14',
+          },
+        }),
+      true,
+    )
+
+    expect(await screen.findByText('Gone.pdf (removed) · added 14 Mar 2025')).toBeInTheDocument()
+  })
+
+  it('read-only with nothing recorded still says "Nothing yet."', async () => {
+    renderPanel(() => interview(), true)
+
+    expect(await screen.findByText('Nothing yet.')).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Resume used' })).not.toBeInTheDocument()
+  })
+
+  it('an editable panel shows the section even with no resume', async () => {
+    renderPanel(() => interview())
+
+    expect(await screen.findByRole('heading', { name: 'Resume used' })).toBeInTheDocument()
+    expect(screen.getByText('None')).toBeInTheDocument()
   })
 })

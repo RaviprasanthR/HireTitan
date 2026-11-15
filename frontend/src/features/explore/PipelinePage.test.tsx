@@ -36,8 +36,11 @@ function inquired(id: string, title: string, day: string) {
   }
 }
 
-function renderPage() {
-  let rows = [applied('a', 'Newest', '2026-11-05'), inquired('b', 'Older', '2026-10-01')]
+function renderPage(initial?: unknown[]) {
+  let rows = (initial as ReturnType<typeof applied>[] | undefined) ?? [
+    applied('a', 'Newest', '2026-11-05'),
+    inquired('b', 'Older', '2026-10-01'),
+  ]
   const calls = stubApi((call) => {
     if (call.method === 'DELETE' && call.path === '/jobs/a/applied') {
       rows = rows.filter((row) => row.id !== 'a')
@@ -74,7 +77,7 @@ describe('PipelinePage', () => {
       within(table)
         .getAllByRole('columnheader')
         .map((header) => header.textContent),
-    ).toEqual(['Company', 'Role', 'Date', 'Status', 'Source', ''])
+    ).toEqual(['Company', 'Role', 'Date', 'Status', 'Resume', 'Source', ''])
     const [, newest, older] = within(table).getAllByRole('row')
     if (!newest || !older) throw new Error('expected two rows')
     expect(within(newest).getByRole('link', { name: 'Newest' })).toBeInTheDocument()
@@ -154,6 +157,7 @@ describe('PipelinePage', () => {
           source: { kind: 'hiring_firm', firm_name: 'TalentBridge' },
           rounds: [],
           status: { state: 'applied', round: null },
+          resume: { state: 'none', resume_file_id: null, name: null, added_on: null },
         }
       if (call.path === '/jobs/a')
         return {
@@ -271,6 +275,7 @@ describe('PipelinePage', () => {
           source: null,
           rounds: [],
           status: { state: 'applied', round: null },
+          resume: { state: 'none', resume_file_id: null, name: null, added_on: null },
         }
       }
       if (call.path.startsWith('/jobs?'))
@@ -482,6 +487,7 @@ describe('PipelinePage unsaved edits', () => {
     source: null,
     rounds: [],
     status: { state: 'applied', round: null },
+    resume: { state: 'none', resume_file_id: null, name: null, added_on: null },
   }
 
   function renderOpenable() {
@@ -557,5 +563,59 @@ describe('PipelinePage unsaved edits', () => {
 
     expect(await screen.findByText('Nothing yet.')).toBeInTheDocument()
     expect(screen.queryByLabelText('Contact name')).not.toBeInTheDocument()
+  })
+
+  describe('the resume column (feature 002f)', () => {
+    const chosen = {
+      state: 'chosen',
+      resume_file_id: 'f1',
+      name: 'Backend_2025.pdf',
+      added_on: '2026-10-02',
+    }
+    const none = { state: 'none', resume_file_id: null, name: null, added_on: null }
+    const resumeCell = (row: HTMLElement) => within(row).getAllByRole('cell')[4] as HTMLElement
+
+    async function rowsFor(...resumes: (unknown | undefined)[]) {
+      const jobs = resumes.map((resume, i) => ({
+        ...applied(`j${i}`, `Job ${i}`, '2026-11-05'),
+        ...(resume === undefined ? {} : { resume }),
+      }))
+      renderPage(jobs)
+      const table = await screen.findByRole('table', { name: 'Pipeline jobs' })
+      return within(table).getAllByRole('row').slice(1)
+    }
+
+    it('US2 AS1 shows the name of the resume used', async () => {
+      const [row] = await rowsFor(chosen)
+
+      expect(resumeCell(row as HTMLElement)).toHaveTextContent('Backend_2025.pdf')
+    })
+
+    it('US2 AS2 shows a dash without a resume', async () => {
+      const [withNone, withoutField] = await rowsFor(none, undefined)
+
+      expect(resumeCell(withNone as HTMLElement)).toHaveTextContent('—')
+      expect(resumeCell(withoutField as HTMLElement)).toHaveTextContent('—')
+    })
+
+    it('US2 AS4 shortens a long name and keeps the full name in a title', async () => {
+      const long = `${'Backend_Engineer_Resume_'.repeat(6)}2025.pdf`
+      const [row] = await rowsFor({ ...chosen, name: long })
+
+      const name = within(resumeCell(row as HTMLElement)).getByText(long)
+      expect(name).toHaveAttribute('title', long)
+      expect(name).toHaveClass('truncate')
+    })
+
+    it('FR009 shows a removed file as its name marked removed', async () => {
+      const [row] = await rowsFor({
+        state: 'removed',
+        resume_file_id: null,
+        name: 'Backend_2024.pdf',
+        added_on: '2025-03-14',
+      })
+
+      expect(resumeCell(row as HTMLElement)).toHaveTextContent('Backend_2024.pdf (removed)')
+    })
   })
 })

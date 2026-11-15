@@ -13,6 +13,7 @@ import {
   useSaveContact,
   useSaveSource,
 } from './interviewApi'
+import { resumeDetail } from '@/features/jobs/resume/resumeApi'
 import { RoundCard } from './RoundCard'
 import {
   UnsavedContext,
@@ -293,6 +294,16 @@ function RoundsSection({ jobId, data }: { jobId: string; data: Interview }) {
   )
 }
 
+/** The resume used for the job: its name and the day it was added (feature 002f). */
+function ResumeSection({ resume }: { resume: Interview['resume'] }) {
+  return (
+    <section aria-label="Resume used" className="space-y-1">
+      <h3 className="text-sm font-semibold">Resume used</h3>
+      <p className="text-sm">{resumeDetail(resume)}</p>
+    </section>
+  )
+}
+
 /** What the person recorded about one pipeline job; shown in the pipeline row and on the job page. */
 export function InterviewPanel({
   jobId,
@@ -333,7 +344,15 @@ export function InterviewPanel({
     // a job outside the pipeline with nothing to show stays quiet
     return hideWhenEmpty ? null : <p role="alert">Could not load the details.</p>
   }
-  if (hideWhenEmpty && !data.can_edit && !data.contact && !data.source && data.rounds.length === 0)
+  const hasResume = data.resume.state !== 'none'
+  if (
+    hideWhenEmpty &&
+    !data.can_edit &&
+    !data.contact &&
+    !data.source &&
+    data.rounds.length === 0 &&
+    !hasResume
+  )
     return null
 
   return (
@@ -346,7 +365,7 @@ export function InterviewPanel({
             inquired to change them.
           </p>
         )}
-        {readOnly && !data.contact && !data.source && data.rounds.length === 0 ? (
+        {readOnly && !data.contact && !data.source && data.rounds.length === 0 && !hasResume ? (
           <p className="text-sm text-muted-small">Nothing yet.</p>
         ) : (
           <>
@@ -366,6 +385,7 @@ export function InterviewPanel({
                 editable={data.can_edit}
               />
             )}
+            {(!readOnly || hasResume) && <ResumeSection resume={data.resume} />}
             {(!readOnly || data.rounds.length > 0) && <RoundsSection jobId={jobId} data={data} />}
           </>
         )}
