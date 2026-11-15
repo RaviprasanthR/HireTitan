@@ -104,15 +104,18 @@ describe('Shell', () => {
     }
   })
 
-  it('FR022 the app name is plain text at the top of the sidebar, with no logo', async () => {
+  it('FR022 the logo and the app name are at the top of the sidebar', async () => {
     renderAt('/')
     const nav = await screen.findByRole('navigation', { name: 'Main' })
     const sidebar = nav.closest('aside') as HTMLElement
 
     expect(within(sidebar).getAllByText('HireTitan')).toHaveLength(1)
     expect(sidebar.firstElementChild).toHaveTextContent('HireTitan')
-    // the only graphics in the sidebar are the eight menu icons
-    expect(sidebar.querySelectorAll('svg')).toHaveLength(within(nav).getAllByRole('link').length)
+    expect(sidebar.firstElementChild?.querySelector('svg[data-logo]')).not.toBeNull()
+    // the other graphics in the sidebar are the menu icons
+    expect(sidebar.querySelectorAll('svg:not([data-logo])')).toHaveLength(
+      within(nav).getAllByRole('link').length,
+    )
     expect(sidebar.querySelector('img')).toBeNull()
   })
 

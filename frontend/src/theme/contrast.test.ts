@@ -55,6 +55,18 @@ describe('theme', () => {
     expect(css.toLowerCase()).not.toContain('glow')
   })
 
+  it('the_brand_gradient_and_glow_are_confined_to_the_logo_and_the_name', () => {
+    // theme.css stays flat; brand.css is the one place for gradients and glows, and it may only
+    // style the logo and the wordmark.
+    const css = readFileSync(resolve(process.cwd(), 'src/theme/brand.css'), 'utf8')
+    const selectors = [...css.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{/g)].map((m) =>
+      m[1].trim(),
+    )
+    expect(selectors.sort()).toEqual(['.ht-logo', '.ht-wordmark'])
+    const main = readFileSync(resolve(process.cwd(), 'src/main.tsx'), 'utf8')
+    expect(main).toContain("import './theme/brand.css'")
+  })
+
   it('colour_utilities_are_declared_where_tailwind_reads_them', () => {
     // theme.css is imported next to the Tailwind entry file, not through it, so an @theme
     // block there is never processed. These colours are used as text-success, text-danger,

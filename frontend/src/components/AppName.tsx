@@ -1,10 +1,12 @@
+import { Logo } from '@/components/Logo'
 import { cn } from '@/lib/utils'
 
-/** The app name, plain text: there is no logo or other graphic. */
+/** The logo and the app name. */
 export function AppName({ className }: { className?: string }) {
   return (
-    <span className={cn('text-xl font-semibold tracking-tight text-heading', className)}>
-      HireTitan
+    <span className={cn('inline-flex items-center gap-2', className)}>
+      <Logo className="h-[1.5em]" />
+      <span className="ht-wordmark text-xl font-bold tracking-tight">HireTitan</span>
     </span>
   )
 }

@@ -1,4 +1,6 @@
 
+<p align="center"><img src="docs/assets/logo.svg" alt="HireTitan logo" width="64"></p>
+
 # HireTitan
 
 **An open-source, self-hosted AI job-search assistant.** Upload your resume, set your preferences, and HireTitan finds relevant jobs from permitted sources, tracks your applications, drafts outreach and tailors your resume for each job. It never sends anything on your behalf: every AI output is a draft you approve.
