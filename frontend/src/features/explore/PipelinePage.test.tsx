@@ -1,9 +1,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { stubApi } from '@/test/api'
+import { problem, stubApi } from '@/test/api'
 import { UndoToast } from '@/features/jobs/UndoToast'
 import { PipelinePage } from './PipelinePage'
 
@@ -733,10 +733,77 @@ describe('the edit card resume guard (feature 002f)', () => {
     )
     await user.click(await screen.findByRole('button', { name: /^Edit / }))
     const card = await screen.findByRole('dialog', { name: /^Edit / })
-    await user.selectOptions(await within(card).findByRole('combobox', { name: 'Resume used' }), 'f1')
+    await user.selectOptions(await within(card).findByRole('combobox', { name: 'Resume file' }), 'f1')
 
     await user.click(within(card).getByRole('button', { name: 'Close' }))
 
     expect(await screen.findByRole('alertdialog')).toBeInTheDocument()
   })
+
+  it('after a refused save the form is clean, so closing the card does not ask', async () => {
+    const user = userEvent.setup()
+    const removed = {
+      state: 'removed',
+      resume_file_id: null,
+      name: 'Backend_2025.pdf',
+      added_on: '2026-10-02',
+    }
+    let refused = false
+    stubApi((call) => {
+      if (call.path === '/resumes') return [file]
+      if (call.path === '/pipeline/resumes') return { last_choice: null, usage: [] }
+      if (call.path === '/jobs/a/interview/resume') {
+        refused = true
+        return problem(422, 'Choose one of your stored resume files.', {
+          errors: [{ field: 'resume_file_id', message: 'Choose one of your stored resume files.' }],
+        })
+      }
+      if (call.path === '/jobs/a')
+        return {
+          ...applied('a', 'Newest', '2026-11-05'),
+          description: 'd',
+          canonical_url: null,
+          injection_flags: [],
+          decision_history: [],
+          first_search_id: null,
+          company_id: null,
+          location_text: null,
+        }
+      if (call.path === '/jobs/a/interview')
+        return {
+          job_id: 'a',
+          can_edit: true,
+          can_add_round: true,
+          contact: null,
+          source: null,
+          rounds: [],
+          status: { state: 'applied', round: null },
+          // the file was removed meanwhile: a read after the refusal shows the note
+          resume: refused
+            ? removed
+            : { state: 'none', resume_file_id: null, name: null, added_on: null },
+        }
+      if (call.path.startsWith('/jobs?'))
+        return { items: [applied('a', 'Newest', '2026-11-05')], next_cursor: null }
+      return undefined
+    })
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter>
+          <PipelinePage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+    await user.click(await screen.findByRole('button', { name: /^Edit / }))
+    const card = await screen.findByRole('dialog', { name: /^Edit / })
+    await user.selectOptions(await within(card).findByRole('combobox', { name: 'Resume file' }), 'f1')
+    await user.click(within(card).getByRole('button', { name: 'Save resume' }))
+    await within(card).findByText(/Backend_2025.pdf \(removed\)/)
+
+    await user.click(within(card).getByRole('button', { name: 'Close' }))
+
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  })
 })
+

@@ -316,9 +316,18 @@ function ResumeSection({
   const [picked, setPicked] = useState(stored)
   // after an edit the last result (saved, or a refusal) no longer describes the form
   const [dirty, setDirty] = useState(false)
+  // The stored resume can change under the form (a save, a refresh, a file removed elsewhere).
+  // The form follows it unless the person has an edit in progress, which is never thrown away.
+  const identity = `${resume.state}|${resume.resume_file_id ?? ''}|${resume.name ?? ''}`
+  const [seen, setSeen] = useState(identity)
+  if (seen !== identity) {
+    setSeen(identity)
+    if (!dirty) setPicked(stored)
+  }
   const result = dirty ? null : save
   const changed = picked !== stored
-  useReportUnsaved(editable && (changed || save.isPending || save.isError))
+  // a refused save is shown as a message; it is only unsaved while the pick still differs
+  useReportUnsaved(editable && (changed || save.isPending))
 
   return (
     <form
@@ -338,6 +347,7 @@ function ResumeSection({
         <>
           <div className="flex flex-wrap items-end gap-2">
             <ResumeSelect
+              label="Resume file"
               files={files.data ?? []}
               value={picked}
               disabled={save.isPending}
@@ -461,7 +471,6 @@ export function InterviewPanel({
             )}
             {(!readOnly || hasResume) && (
               <ResumeSection
-                key={`resume-${JSON.stringify(data.resume)}-${saveResume.isSuccess ? saveResume.submittedAt : 0}`}
                 resume={data.resume}
                 editable={data.can_edit}
                 save={saveResume}

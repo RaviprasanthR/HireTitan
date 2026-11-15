@@ -81,7 +81,7 @@ description: "Task list for 002f-resume-picker"
 
 - [x] T010 [US3] Backend: routes `PUT /jobs/{job_id}/interview/resume` (`{ "resume_file_id": uuid }` → 200 `ResumeChoiceOut`; 404 job unknown or not in the pipeline; 422 unknown or not-offerable file) and `DELETE /jobs/{job_id}/interview/resume` (204) in `search/api/interviews.py`; neither writes the last choice (FR-014); `npm run gen:api`. Tests first in `backend/tests/api/search/test_resume_choice_api.py`: `test_FR006_edit_card_sets_changes_and_clears`, `test_FR014_last_choice_follows_marks_not_edit_card`, `test_edit_card_resume_not_in_pipeline_404`, `test_edit_card_resume_of_a_removed_file_is_refused` (422, field `resume_file_id`).
 - [x] T011 [US3] Frontend: the editable `InterviewPanel` (shown in `features/jobs/EditJobDialog.tsx`) gets a Resume section with `ResumeSelect` starting on the job's current choice and its own **Save**, registered with the `unsaved.ts` registry (unsaved = different from the stored choice, or a save in flight or failed). Tests first in `features/jobs/interview/InterviewPanel.test.tsx` and `features/jobs/EditJobDialog.test.tsx`: `US3 AS1 choose a resume and save`, `US3 AS2 change and clear`, `US3 AS3 closing with an unsaved resume change asks first`, `saving a resume removed meanwhile shows a message and the removed note`.
-- [ ] T011r [US3] Story review: python/FastAPI and React reviewer agents over the US3 diff; fix the findings; note them in `docs/CONTEXT.md`.
+- [x] T011r [US3] Story review: python/FastAPI and React reviewer agents over the US3 diff; fix the findings; note them in `docs/CONTEXT.md`.
 
 **Checkpoint**: Ravi reviews.
 

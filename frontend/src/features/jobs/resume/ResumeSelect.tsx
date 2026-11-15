@@ -11,17 +11,20 @@ export function ResumeSelect({
   onChange,
   disabled,
   id,
+  label = 'Resume used',
 }: {
   files: ResumeFile[]
   value: string
   onChange: (value: string) => void
   disabled?: boolean
   id?: string
+  /** The name of the choice; the mark control and the edit card are on one page and differ. */
+  label?: string
 }) {
   if (files.length === 0) return null
   return (
     <label className="flex flex-col gap-1 text-sm">
-      Resume used
+      {label}
       <select
         id={id}
         value={value}
