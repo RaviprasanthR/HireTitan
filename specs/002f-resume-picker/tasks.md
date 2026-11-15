@@ -28,7 +28,7 @@ description: "Task list for 002f-resume-picker"
 
 **Purpose**: a known-green baseline.
 
-- [ ] T001 Confirm `002f-resume-picker` is cut from the current `master` (it holds 0018 from 002e) and record the baseline: backend suite, `ruff`, `mypy --strict`, `lint-imports`; frontend `tsc`, `eslint`, `npm test`, `npm run build`. Write the counts under a new 002f entry in `docs/CONTEXT.md`. No code change.
+- [x] T001 Confirm `002f-resume-picker` is cut from the current `master` (it holds 0018 from 002e) and record the baseline: backend suite, `ruff`, `mypy --strict`, `lint-imports`; frontend `tsc`, `eslint`, `npm test`, `npm run build`. Write the counts under a new 002f entry in `docs/CONTEXT.md`. No code change.
 
 ---
 
