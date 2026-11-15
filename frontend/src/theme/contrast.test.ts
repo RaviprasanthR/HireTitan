@@ -59,8 +59,8 @@ describe('theme', () => {
     // theme.css stays flat; brand.css is the one place for gradients and glows, and it may only
     // style the logo and the wordmark.
     const css = readFileSync(resolve(process.cwd(), 'src/theme/brand.css'), 'utf8')
-    const selectors = [...css.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{/g)].map((m) =>
-      m[1].trim(),
+    const selectors = [...css.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{/g)].map(
+      (m) => m[1]?.trim() ?? '',
     )
     expect(selectors.sort()).toEqual(['.ht-logo', '.ht-wordmark'])
     const main = readFileSync(resolve(process.cwd(), 'src/main.tsx'), 'utf8')
