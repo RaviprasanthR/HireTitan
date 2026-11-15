@@ -222,7 +222,7 @@ export function AddCompanyDialog({ onClose }: { onClose: () => void }) {
               <Button type="submit" size="sm" disabled={add.isPending}>
                 Find job board
               </Button>
-              <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+              <Button type="button" variant="cancel" size="sm" onClick={onClose}>
                 Cancel
               </Button>
             </div>

@@ -103,7 +103,7 @@ export function ResumeFiles() {
               {new Date(f.created_at).toLocaleDateString('en-GB')}
             </span>
             <Button
-              variant="outline"
+              variant="danger"
               className="ml-auto"
               aria-label={`Delete ${f.original_name}`}
               onClick={() => {
@@ -176,6 +176,7 @@ export function ResumeFiles() {
             )}
             <div className="flex gap-3">
               <Button
+                variant="danger"
                 disabled={remove.isPending || checking || checkFailed}
                 onClick={(event) => {
                   event.preventDefault() // stay open until the server answers
@@ -185,7 +186,7 @@ export function ResumeFiles() {
                 Delete file
               </Button>
               <AlertDialog.Cancel asChild>
-                <Button variant="secondary" disabled={remove.isPending}>
+                <Button variant="cancel" disabled={remove.isPending}>
                   Cancel
                 </Button>
               </AlertDialog.Cancel>

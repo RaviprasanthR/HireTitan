@@ -97,7 +97,9 @@ describe('PreferencesPage', () => {
 
     await user.click(suggestion)
 
-    expect(screen.getByRole('button', { name: 'Remove Backend Engineer' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Remove Backend Engineer' })).toHaveClass(
+      'ht-close-button',
+    ) // the cross turns red under the pointer
     expect(screen.queryByRole('button', { name: "Add 'Backend Engineer'" })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: "Add 'Python'" })).toBeInTheDocument()
   })

@@ -170,10 +170,10 @@ export function PasteJobDialog({ onClose }: { onClose: () => void }) {
           </p>
         )}
         <div className="flex gap-2">
-          <Button type="submit" size="sm" disabled={paste.isPending}>
+          <Button type="submit" size="sm" disabled={paste.isPending} variant="success">
             Save job
           </Button>
-          <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+          <Button type="button" variant="cancel" size="sm" onClick={onClose}>
             Cancel
           </Button>
         </div>

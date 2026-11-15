@@ -164,14 +164,6 @@ function Row({ job, registry }: { job: JobCard; registry: UnsavedRegistry }) {
       : { label: 'Applied', tone: STATUS_TONE.Applied }
   return (
     <Fragment>
-      {editing && (
-        <EditJobDialog
-          jobId={job.id}
-          title={job.title}
-          registry={registry}
-          onClose={() => setEditing(false)}
-        />
-      )}
       <tr className="ht-row border-t border-divider align-top">
         <td className="px-3 py-2">{job.company_name}</td>
         <td className="px-3 py-2">
@@ -226,6 +218,15 @@ function Row({ job, registry }: { job: JobCard; registry: UnsavedRegistry }) {
           </div>
         </td>
       </tr>
+      {editing && (
+        <EditJobDialog
+          jobId={job.id}
+          title={job.title}
+          registry={registry}
+          colSpan={COLUMNS.length + 1}
+          onClose={() => setEditing(false)}
+        />
+      )}
       {open && <Details id={job.id} colSpan={COLUMNS.length + 1} />}
     </Fragment>
   )

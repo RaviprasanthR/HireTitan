@@ -9,19 +9,21 @@ import { PipelineControl } from './PipelineControl'
 import { useUndoPipeline } from './pipelineApi'
 
 /**
- * A job's pipeline details in a card over the page, with the page behind it blurred: the date,
- * Undo, the contact, the source, the rounds and the questions. Closing with edits that are not
- * saved asks first (FR-013).
+ * A job's pipeline details in a row under the job, like the Companies list: the date, Undo, the
+ * contact, the source, the rounds and the questions. Closing with edits that are not saved asks
+ * first (FR-013).
  */
 export function EditJobDialog({
   jobId,
   title,
   registry,
+  colSpan,
   onClose,
 }: {
   jobId: string
   title: string
   registry: UnsavedRegistry
+  colSpan: number
   onClose: () => void
 }) {
   const scope = `edit-${jobId}`
@@ -29,7 +31,7 @@ export function EditJobDialog({
   const undoApplied = useUndoPipeline('applied')
   const undoInquired = useUndoPipeline('inquired')
   const [asking, setAsking] = useState(false)
-  const card = useRef<HTMLDivElement>(null)
+  const card = useRef<HTMLElement>(null)
 
   const requestClose = () => {
     if (registry.anyIn(scope)) setAsking(true)
@@ -53,26 +55,19 @@ export function EditJobDialog({
   const undo = data?.state === 'applied' ? undoApplied : undoInquired
 
   return (
-    <div
-      data-testid="modal-backdrop"
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-6 backdrop-blur-sm"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) requestClose()
-      }}
-    >
-      <div
+    <tr>
+      <td colSpan={colSpan} className="bg-surface px-4 py-3">
+      <section
         ref={card}
-        role="dialog"
-        aria-modal="true"
         aria-label={`Edit ${title}`}
         tabIndex={-1}
-        className="my-auto w-full max-w-2xl space-y-4 rounded-xl bg-surface p-6 shadow-2xl outline-none"
+        className="space-y-4 pb-2 outline-none"
       >
         <div className="flex items-start justify-between gap-4">
           <h2 className="text-lg font-semibold">{title}</h2>
           <button
             type="button"
-            className="ht-icon-button"
+            className="ht-icon-button ht-close-button"
             aria-label="Close"
             title="Close"
             onClick={requestClose}
@@ -85,10 +80,10 @@ export function EditJobDialog({
           <div role="alertdialog" aria-label="Unsaved changes" className="space-y-2">
             <p className="text-sm">You have changes that are not saved. Close and lose them?</p>
             <div className="flex gap-2">
-              <Button type="button" size="sm" autoFocus onClick={onClose}>
+              <Button type="button" size="sm" autoFocus onClick={onClose} variant="danger">
                 Close and lose them
               </Button>
-              <Button type="button" variant="ghost" size="sm" onClick={() => setAsking(false)}>
+              <Button type="button" variant="cancel" size="sm" onClick={() => setAsking(false)}>
                 Keep editing
               </Button>
             </div>
@@ -130,7 +125,8 @@ export function EditJobDialog({
         <Link to={`/jobs/${jobId}`} className="inline-block text-sm text-link underline">
           Open the full job page
         </Link>
-      </div>
-    </div>
+      </section>
+      </td>
+    </tr>
   )
 }

@@ -115,23 +115,28 @@ describe('CompaniesPage', () => {
     ).toBeTruthy()
   })
 
-  it('an icon opens the careers page in a new tab, and a company without one has none', async () => {
+  it('an icon opens the company site in a new tab, and a company without one has none', async () => {
     renderPage((call) =>
       call.path.startsWith('/companies')
-        ? { items: [ACME, company('n', 'Nolink', { careers_url: null })] }
+        ? {
+            items: [
+              company('a', 'Acme', { website: 'https://acme.example.com' }),
+              company('n', 'Nolink', { website: null }),
+            ],
+          }
         : undefined,
     )
     const acme = await screen.findByRole('listitem', { name: 'Acme' })
 
     const link = within(acme).getByRole('link', {
-      name: 'Open Acme careers page',
+      name: 'Open Acme website',
     })
-    expect(link).toHaveAttribute('href', 'https://acme.example.com/careers')
+    expect(link).toHaveAttribute('href', 'https://acme.example.com')
     expect(link).toHaveAttribute('target', '_blank')
     expect(link).toHaveAttribute('rel', 'noreferrer noopener')
-    expect(link).toHaveAttribute('title', 'Careers page')
+    expect(link).toHaveAttribute('title', 'Company site')
     const nolink = screen.getByRole('listitem', { name: 'Nolink' })
-    expect(within(nolink).queryByRole('link', { name: /careers page/i })).toBeNull()
+    expect(within(nolink).queryByRole('link', { name: /website/i })).toBeNull()
   })
 
   it('US3_AS4_hide_company', async () => {
@@ -407,39 +412,56 @@ describe('CompaniesPage', () => {
   describe('company site and careers page', () => {
     const acme = company('a', 'Acme', { website: 'https://acme.example.com' })
     const nosite = company('n', 'Nosite', { website: null, careers_url: null })
+    const siteOnly = company('s', 'Siteonly', {
+      website: 'https://siteonly.example.com',
+      careers_url: null,
+    })
     const list = (call: Call) =>
-      call.path.startsWith('/companies') ? { items: [acme, nosite] } : undefined
+      call.path.startsWith('/companies') ? { items: [acme, nosite, siteOnly] } : undefined
 
-    it('the company name opens the company site in a new tab', async () => {
+    it('the company name opens the careers page in a new tab', async () => {
       renderPage(list)
       const row = await screen.findByRole('listitem', { name: 'Acme' })
 
       const link = within(row).getByRole('link', { name: 'Acme' })
 
-      expect(link).toHaveAttribute('href', 'https://acme.example.com')
+      expect(link).toHaveAttribute('href', 'https://acme.example.com/careers')
       expect(link).toHaveAttribute('target', '_blank')
       expect(link).toHaveAttribute('rel', 'noreferrer noopener')
       expect(within(row).getByRole('heading', { level: 2 })).toHaveTextContent('Acme')
     })
 
-    it('a company with no website is plain text, not a link', async () => {
+    it('a company with no careers page link is plain text, not a link', async () => {
       renderPage(list)
       const row = await screen.findByRole('listitem', { name: 'Nosite' })
+      const siteOnlyRow = await screen.findByRole('listitem', { name: 'Siteonly' })
 
       expect(within(row).queryByRole('link')).toBeNull()
       expect(within(row).getByRole('heading', { level: 2 })).toHaveTextContent('Nosite')
+      // a website alone does not make the name a link: the name opens the careers page only
+      expect(within(siteOnlyRow).queryByRole('link', { name: 'Siteonly' })).toBeNull()
     })
 
-    it('the company name opens the site, so only the careers page has an icon', async () => {
+    it('the name opens the careers page, so only the company site has an icon', async () => {
       renderPage(list)
       const row = await screen.findByRole('listitem', { name: 'Acme' })
 
-      expect(within(row).queryByRole('link', { name: 'Open Acme website' })).toBeNull()
-      const careers = within(row).getByRole('link', { name: 'Open Acme careers page' })
-      expect(careers).toHaveAttribute('href', 'https://acme.example.com/careers')
-      expect(careers).toHaveAttribute('title', 'Careers page')
-      expect(careers).toHaveAttribute('target', '_blank')
-      expect(careers.querySelector('svg')).not.toBeNull()
+      expect(within(row).queryByRole('link', { name: 'Open Acme careers page' })).toBeNull()
+      const site = within(row).getByRole('link', { name: 'Open Acme website' })
+      expect(site).toHaveAttribute('href', 'https://acme.example.com')
+      expect(site).toHaveAttribute('title', 'Company site')
+      expect(site).toHaveAttribute('target', '_blank')
+      expect(site.querySelector('svg')).not.toBeNull()
+    })
+
+    it('a company with only a website still has the icon', async () => {
+      renderPage(list)
+      const row = await screen.findByRole('listitem', { name: 'Siteonly' })
+
+      expect(within(row).getByRole('link', { name: 'Open Siteonly website' })).toHaveAttribute(
+        'href',
+        'https://siteonly.example.com',
+      )
     })
 
     it('a missing link leaves no icon', async () => {
@@ -450,30 +472,20 @@ describe('CompaniesPage', () => {
       expect(within(row).queryByRole('link', { name: /careers page/i })).toBeNull()
     })
 
-    it('FR023 the website is a second line under the name', async () => {
+    it('the row shows no address under the name, the site is behind its icon', async () => {
       renderPage(list)
       const row = await screen.findByRole('listitem', { name: 'Acme' })
 
-      const host = within(row).getByText('acme.example.com')
-
-      expect(host).toHaveClass('text-xs')
-      expect(host).toHaveClass('text-muted-small')
-      expect(within(row).getByRole('heading', { level: 2 })).not.toContainElement(host)
-    })
-
-    it('FR023 no second line without a website', async () => {
-      renderPage(list)
-      const row = await screen.findByRole('listitem', { name: 'Nosite' })
-
+      expect(within(row).queryByText('acme.example.com')).not.toBeInTheDocument()
       expect(row.querySelector('[data-testid="company-host"]')).toBeNull()
+      expect(within(row).getByRole('link', { name: 'Open Acme website' })).toBeInTheDocument()
     })
 
-    it('FR023 a row is a plain line with a divider and curved corners, not a card', async () => {
+    it('FR023 a row is a plain line with a divider and square corners, not a card', async () => {
       renderPage(list)
       const row = await screen.findByRole('listitem', { name: 'Acme' })
 
       expect(row).toHaveClass('after:bg-border') // the divider
-      expect(row).toHaveClass('rounded-lg') // curved corners for the hover tint
       expect(row).not.toHaveClass('bg-surface')
     })
 
@@ -488,10 +500,71 @@ describe('CompaniesPage', () => {
           }),
         ).toHaveClass(colour)
       tone('Details for Acme', 'text-slate-300')
-      tone('Open Acme careers page', 'text-violet-300')
+      tone('Open Acme website', 'text-violet-300')
       tone('Hide Acme', 'text-yellow-300')
       tone('Edit Acme', 'text-emerald-300')
       tone('Delete Acme', 'text-rose-300')
+    })
+
+    it('an opened row has no orange tint, so the details are not highlighted', async () => {
+      const user = userEvent.setup()
+      renderPage(list)
+      const row = await screen.findByRole('listitem', { name: 'Acme' })
+      expect(row).toHaveClass('hover:bg-[#9c4f37]/25') // closed: the tint under the pointer
+
+      await user.click(within(row).getByRole('button', { name: 'Details for Acme' }))
+
+      expect(row).not.toHaveClass('hover:bg-[#9c4f37]/25')
+      await user.click(within(row).getByRole('button', { name: 'Details for Acme' }))
+      expect(row).toHaveClass('hover:bg-[#9c4f37]/25') // closed again: the tint is back
+    })
+
+    it('a row being edited or asked about deleting has no orange tint', async () => {
+      const user = userEvent.setup()
+      renderPage(list)
+      const row = await screen.findByRole('listitem', { name: 'Acme' })
+
+      await user.click(within(row).getByRole('button', { name: 'Edit Acme' }))
+      expect(row).not.toHaveClass('hover:bg-[#9c4f37]/25')
+      await user.click(within(row).getByRole('button', { name: 'Cancel' }))
+      expect(row).toHaveClass('hover:bg-[#9c4f37]/25')
+
+      await user.click(within(row).getByRole('button', { name: 'Delete Acme' }))
+      expect(row).not.toHaveClass('hover:bg-[#9c4f37]/25')
+    })
+
+    it('the edit form saves in green, cancels in orange; the delete question is red', async () => {
+      const user = userEvent.setup()
+      renderPage(list)
+      const row = await screen.findByRole('listitem', { name: 'Acme' })
+
+      await user.click(within(row).getByRole('button', { name: 'Edit Acme' }))
+      expect(within(row).getByRole('button', { name: 'Save' })).toHaveClass('ht-success-button')
+      expect(within(row).getByRole('button', { name: 'Cancel' })).toHaveClass('ht-cancel-button')
+      await user.click(within(row).getByRole('button', { name: 'Cancel' }))
+
+      await user.click(within(row).getByRole('button', { name: 'Delete Acme' }))
+      expect(within(row).getByRole('button', { name: 'Yes, delete' })).toHaveClass('ht-danger-button')
+      expect(within(row).getByRole('button', { name: 'Keep it' })).toHaveClass('ht-cancel-button')
+    })
+
+    it('the opened details are accent cards, like Preferences and Search rules', async () => {
+      const user = userEvent.setup()
+      renderPage(list)
+      const row = await screen.findByRole('listitem', { name: 'Acme' })
+
+      await user.click(within(row).getByRole('button', { name: 'Details for Acme' }))
+
+      const details = await within(row).findByRole('region', { name: 'Details for Acme' })
+      for (const [title, shows] of [
+        ['Company', 'Location'],
+        ['Job source', 'Job board'],
+      ] as const) {
+        const heading = within(details).getByRole('heading', { name: title })
+        const card = heading.closest('.ht-detail-card') as HTMLElement
+        expect(card).not.toBeNull()
+        expect(card).toHaveTextContent(shows)
+      }
     })
 
     it('FR024 the row hover tint is see-through', async () => {
@@ -509,6 +582,13 @@ describe('CompaniesPage', () => {
       const header = button.parentElement as HTMLElement
 
       expect(header).toHaveClass('ht-thead-row')
+    })
+
+    it('the rows are square like the In pipeline rows, so they fit under the header', async () => {
+      renderPage(list)
+      const row = await screen.findByRole('listitem', { name: 'Acme' })
+
+      expect(row.className).not.toMatch(/rounded/)
     })
   })
 

@@ -1,3 +1,4 @@
+import { BriefcaseBusiness, FileText, ListChecks, UserRound } from 'lucide-react'
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Field, inputClass } from '@/features/companies/Field'
@@ -66,14 +67,17 @@ function ContactSection({
   return (
     <form
       aria-label="Point of contact"
-      className="space-y-2"
+      className="ht-detail-card ht-edit-contact space-y-2"
       onSubmit={(event) => {
         event.preventDefault()
         setDirty(false)
         save.mutate({ name, role, email, phone, linkedin_url: link })
       }}
     >
-      <h3 className="text-sm font-semibold">Point of contact</h3>
+      <h3 className="ht-detail-heading">
+        <UserRound aria-hidden className="size-4" />
+        Point of contact
+      </h3>
       <div className="grid gap-2 sm:grid-cols-2">
         <Field label="Contact name" error={error?.fieldError('name')}>
           {(props) => (
@@ -138,7 +142,7 @@ function ContactSection({
       </div>
       {editable && (
         <div className="flex items-center gap-3">
-          <Button type="submit" size="sm" disabled={save.isPending}>
+          <Button type="submit" size="sm" disabled={save.isPending} variant="success">
             Save contact
           </Button>
           <Message
@@ -181,14 +185,17 @@ function SourceSection({
   return (
     <form
       aria-label="How the job came"
-      className="space-y-2"
+      className="ht-detail-card ht-edit-source space-y-2"
       onSubmit={(event) => {
         event.preventDefault()
         setDirty(false)
         save.mutate(kind === 'hiring_firm' ? { kind, firm_name: firm } : { kind })
       }}
     >
-      <h3 className="text-sm font-semibold">How the job came</h3>
+      <h3 className="ht-detail-heading">
+        <BriefcaseBusiness aria-hidden className="size-4" />
+        How the job came
+      </h3>
       <div role="radiogroup" aria-label="Source" className="flex flex-wrap gap-4 text-sm">
         {choices.map((choice) => (
           <label key={choice.label} className="flex items-center gap-2">
@@ -230,7 +237,7 @@ function SourceSection({
       )}
       {editable && (
         <div className="flex items-center gap-3">
-          <Button type="submit" size="sm" disabled={save.isPending}>
+          <Button type="submit" size="sm" disabled={save.isPending} variant="success">
             Save source
           </Button>
           <Message
@@ -250,8 +257,11 @@ function RoundsSection({ jobId, data }: { jobId: string; data: Interview }) {
   const reason = useId()
   const blocked = data.can_edit && !data.can_add_round
   return (
-    <section aria-label="Interview rounds" className="space-y-3">
-      <h3 className="text-sm font-semibold">Interview rounds</h3>
+    <section aria-label="Interview rounds" className="ht-detail-card ht-edit-rounds space-y-3">
+      <h3 className="ht-detail-heading">
+        <ListChecks aria-hidden className="size-4" />
+        Interview rounds
+      </h3>
       {data.rounds.length === 0 && <p className="text-sm text-muted-small">No rounds yet.</p>}
       {data.rounds.map((round) => (
         <RoundCard key={round.id} jobId={jobId} round={round} editable={data.can_edit} />
@@ -338,14 +348,15 @@ function ResumeSection({
   return (
     <form
       aria-labelledby={headingId}
-      className="space-y-2"
+      className="ht-detail-card ht-edit-resume space-y-2"
       onSubmit={(event) => {
         event.preventDefault()
         setDirty(false)
         save.mutate(picked === '' ? null : picked)
       }}
     >
-      <h3 id={headingId} className="text-sm font-semibold">
+      <h3 id={headingId} className="ht-detail-heading">
+        <FileText aria-hidden className="size-4" />
         Resume used
       </h3>
       <p className="text-sm">{resumeDetail(resume)}</p>
@@ -378,7 +389,7 @@ function ResumeSection({
             )}
           </div>
           <div className="flex items-center gap-3">
-            <Button type="submit" size="sm" disabled={save.isPending || !changed}>
+            <Button type="submit" size="sm" disabled={save.isPending || !changed} variant="success">
               Save resume
             </Button>
             <Message

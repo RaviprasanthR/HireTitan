@@ -183,8 +183,23 @@ h3 {
   color: var(--ht-background);
   border-color: #f85149;
 }
+/* Cancel: orange, the colour of the brand accent. */
+.ht-cancel-button {
+  background: transparent;
+  color: #f0a35e;
+  border: 1px solid #f0a35e;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease;
+}
+.ht-cancel-button:hover:not(:disabled) {
+  background-color: #f0a35e;
+  color: var(--ht-background);
+  border-color: #f0a35e;
+}
 @media (prefers-reduced-motion: reduce) {
-  .ht-danger-button {
+  .ht-danger-button,
+  .ht-cancel-button {
     transition: none;
   }
 }
@@ -293,6 +308,25 @@ button[data-variant="secondary"]:hover:not(:disabled) {
   background: rgb(240 163 94 / 0.14);
   border-color: rgb(240 163 94 / 0.55);
 }
+/* Close crosses (X): muted at rest, red under the pointer. */
+.ht-close-button {
+  color: var(--ht-muted);
+  transition:
+    background-color 140ms ease,
+    color 140ms ease,
+    border-color 140ms ease;
+}
+.ht-close-button:hover,
+.ht-close-button:focus-visible {
+  color: var(--ht-danger);
+  background: rgb(248 81 73 / 0.15);
+  border-color: rgb(248 81 73 / 0.55);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ht-close-button {
+    transition: none;
+  }
+}
 /* An opened pipeline row: each kind of detail is its own card with its own accent. */
 .ht-fact {
   display: inline-flex;
@@ -326,6 +360,14 @@ button[data-variant="secondary"]:hover:not(:disabled) {
 .ht-rules-age { --accent: #56d4dd; }
 .ht-rules-skills { --accent: #3fb950; }
 .ht-rules-places { --accent: #a371f7; }
+.ht-edit-contact { --accent: #4cc9f0; }
+.ht-edit-source { --accent: #a371f7; }
+.ht-edit-resume { --accent: #3fb950; }
+.ht-edit-rounds { --accent: #f0a35e; }
+.ht-company-where { --accent: #4cc9f0; }
+.ht-company-source { --accent: #a371f7; }
+.ht-company-contacts { --accent: #f0a35e; }
+.ht-company-note { --accent: #d29922; }
 .ht-detail-heading {
   display: flex;
   align-items: center;
@@ -415,4 +457,14 @@ select:disabled {
   select option::checkmark {
     color: var(--ht-accent);
   }
+}
+
+/* Scrollbars: thin, slate, and drawn only while an area is scrolling. `scrollbars.ts` marks the
+   scrolled element with `data-scrolling` and removes the mark a moment after the last movement. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+[data-scrolling] {
+  scrollbar-color: rgb(139 148 158 / 0.55) transparent;
 }

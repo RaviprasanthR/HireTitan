@@ -4,6 +4,9 @@ import { App } from '@/app/App'
 import './index.css'
 import './theme/theme.css'
 import './theme/brand.css'
+import { installAutoHideScrollbars } from './theme/scrollbars'
+
+installAutoHideScrollbars()
 
 const root = document.getElementById('root')
 if (!root) throw new Error('Root element #root not found')

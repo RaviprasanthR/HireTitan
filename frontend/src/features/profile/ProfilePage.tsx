@@ -377,7 +377,7 @@ export function ProfilePage({
               <Button onClick={() => conflict && void submit(conflict.again, true)}>
                 Replace it
               </Button>
-              <Button variant="secondary" onClick={() => setConflict(null)}>
+              <Button variant="cancel" onClick={() => setConflict(null)}>
                 Cancel
               </Button>
             </div>
