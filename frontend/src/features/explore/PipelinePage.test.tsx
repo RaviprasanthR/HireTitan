@@ -679,3 +679,64 @@ describe('PipelinePage unsaved edits', () => {
   })
 })
 
+describe('the edit card resume guard (feature 002f)', () => {
+  const file = {
+    id: 'f1',
+    kind: 'upload_pdf',
+    original_name: 'Backend_2025.pdf',
+    size_bytes: 1000,
+    page_count: 1,
+    parse_status: 'parsed',
+    parse_result: null,
+    created_at: '2026-10-02T09:00:00Z',
+    has_open_review: false,
+    open_review_id: null,
+  }
+
+  it('US3 AS3 closing the card with an unsaved resume change asks first', async () => {
+    const user = userEvent.setup()
+    stubApi((call) => {
+      if (call.path === '/resumes') return [file]
+      if (call.path === '/pipeline/resumes') return { last_choice: null, usage: [] }
+      if (call.path === '/jobs/a')
+        return {
+          ...applied('a', 'Newest', '2026-11-05'),
+          description: 'd',
+          canonical_url: null,
+          injection_flags: [],
+          decision_history: [],
+          first_search_id: null,
+          company_id: null,
+          location_text: null,
+        }
+      if (call.path === '/jobs/a/interview')
+        return {
+          job_id: 'a',
+          can_edit: true,
+          can_add_round: true,
+          contact: null,
+          source: null,
+          rounds: [],
+          status: { state: 'applied', round: null },
+          resume: { state: 'none', resume_file_id: null, name: null, added_on: null },
+        }
+      if (call.path.startsWith('/jobs?'))
+        return { items: [applied('a', 'Newest', '2026-11-05')], next_cursor: null }
+      return undefined
+    })
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter>
+          <PipelinePage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+    await user.click(await screen.findByRole('button', { name: /^Edit / }))
+    const card = await screen.findByRole('dialog', { name: /^Edit / })
+    await user.selectOptions(await within(card).findByRole('combobox', { name: 'Resume used' }), 'f1')
+
+    await user.click(within(card).getByRole('button', { name: 'Close' }))
+
+    expect(await screen.findByRole('alertdialog')).toBeInTheDocument()
+  })
+})
