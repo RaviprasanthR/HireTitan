@@ -45,10 +45,12 @@ export function SetupLayout({
                   aria-valuemin={1}
                   aria-valuemax={STEPS}
                   aria-valuenow={step}
-                  className="h-1.5 w-full overflow-hidden rounded-full bg-divider"
+                  data-tone="accent"
+                  className="ht-progress"
                 >
                   <div
-                    className="h-full rounded-full bg-primary"
+                    data-testid="progress-fill"
+                    className="ht-progress-fill"
                     style={{ width: `${(step / STEPS) * 100}%` }}
                   />
                 </div>
