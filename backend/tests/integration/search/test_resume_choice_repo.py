@@ -494,3 +494,50 @@ async def test_FR010_merge_carries_a_removed_note_too(db_session: AsyncSession) 
     row = (await repo.details(keep)).details
     assert row is not None
     assert (row.resume_file_id, row.resume_name) == (None, "Gone.pdf")
+
+
+# --- clearing a file everywhere (FR-009) -----------------------------------------------------
+
+
+async def test_FR009_clear_everywhere_drops_a_row_that_held_only_the_resume(
+    db_session: AsyncSession,
+) -> None:
+    repo = InterviewsRepo(db_session)
+    file_id = UUID(await a_file(db_session, "Doomed.pdf"))
+    alone, with_source = UUID(await a_job(db_session)), UUID(await a_job(db_session))
+    for job_id in (alone, with_source):
+        await repo.set_resume(job_id, file_id, "Doomed.pdf", ADDED)
+    await repo.set_source(with_source, "direct", None)
+
+    await repo.clear_resume_everywhere(file_id)
+    db_session.expire_all()
+
+    count = (
+        await db_session.execute(
+            text("SELECT count(*) FROM app.job_pipeline_details WHERE job_id = :id"),
+            {"id": alone},
+        )
+    ).scalar_one()
+    assert count == 0  # the row is gone, not just emptied
+    kept = (await repo.details(with_source)).details
+    assert kept is not None
+    assert kept.source == "direct"
+    assert (kept.resume_file_id, kept.resume_name) == (None, None)
+
+
+async def test_FR009_clear_everywhere_leaves_a_removed_note_of_another_file_alone(
+    db_session: AsyncSession,
+) -> None:
+    repo = InterviewsRepo(db_session)
+    gone = UUID(await a_file(db_session, "Gone.pdf"))
+    doomed = UUID(await a_file(db_session, "Doomed.pdf"))
+    noted = UUID(await a_job(db_session))
+    await repo.set_resume(noted, gone, "Gone.pdf", ADDED)
+    await run(db_session, "DELETE FROM app.resume_files WHERE id = :id", id=gone)  # now a note
+    db_session.expire_all()
+
+    await repo.clear_resume_everywhere(doomed)
+
+    row = (await repo.details(noted)).details
+    assert row is not None
+    assert (row.resume_file_id, row.resume_name) == (None, "Gone.pdf")
