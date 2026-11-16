@@ -139,9 +139,14 @@ class CareersPageFetcher:
                         body += chunk
                         if len(body) > cap:
                             raise _TooLargeError
+                    # aiter_bytes() already decoded the body, so the headers that describe
+                    # the compressed bytes must go, or httpx decodes it a second time.
+                    decoded = httpx.Headers(response.headers)
+                    for stale in ("content-encoding", "content-length", "transfer-encoding"):
+                        decoded.pop(stale, None)
                     return httpx.Response(
                         response.status_code,
-                        headers=response.headers,
+                        headers=decoded,
                         content=bytes(body),
                         request=response.request,
                     )

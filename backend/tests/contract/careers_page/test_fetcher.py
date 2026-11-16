@@ -58,6 +58,28 @@ def robots(
     return mock.get(f"https://{host}/robots.txt").respond(200, text=text)
 
 
+async def test_a_gzip_page_and_gzip_robots_are_read(fetcher: CareersPageFetcher) -> None:
+    """Most real sites compress; the decoded body must not be decoded a second time."""
+    import gzip
+
+    with respx.mock(assert_all_called=False) as mock:
+        mock.get("https://careers.example.com/robots.txt").respond(
+            200,
+            content=gzip.compress(ROBOTS_OPEN.encode()),
+            headers={"content-encoding": "gzip", "content-type": "text/plain"},
+        )
+        mock.get(PAGE).respond(
+            200,
+            content=gzip.compress(HTML.encode()),
+            headers={**HTML_HEADERS, "content-encoding": "gzip"},
+        )
+
+        result = await fetcher.fetch(PAGE)
+
+    assert result.status == "ok"
+    assert result.body == HTML
+
+
 async def test_a_page_is_read_and_returned_as_text(fetcher: CareersPageFetcher) -> None:
     with respx.mock(assert_all_called=False) as mock:
         robots(mock)
