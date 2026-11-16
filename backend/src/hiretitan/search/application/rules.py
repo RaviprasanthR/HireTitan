@@ -15,10 +15,11 @@ from uuid import UUID
 
 from hiretitan.search.application.ports import ProposalSource, RuleSetStore, StoredRuleSet
 from hiretitan.search.domain.proposer import propose_rules
-from hiretitan.search.domain.rules import SearchRules
+from hiretitan.search.domain.rules import RulesInvalidError, SearchRules
 from hiretitan.search.domain.rules_serialization import rules_from_dict, rules_to_dict
 
 UnavailableReason = Literal["no_confirmed_profile", "no_preferences"]
+FirstRulesOutcome = Literal["approved", "already", "not_possible"]
 
 
 class RulesUnavailableError(Exception):
@@ -115,6 +116,28 @@ class RulesService:
             raise NoProposalError
         rules_from_dict(proposed.rules).validate()
         return _view(await self._store.approve(proposed.id))
+
+    async def approve_first(self) -> FirstRulesOutcome:
+        """Approve the rules proposed from the profile and preferences, once (feature 002i).
+
+        Nothing is done when rules were ever approved, so a later change never replaces the
+        person's own rules. The lock makes a double Finish (or Finish and start-up) approve one
+        set. The caller owns the transaction; errors are reported, not raised, so setup can finish.
+        """
+        await self._store.lock_first_approval()
+        if await self._store.ever_approved():
+            return "already"
+        try:
+            facts = await self._source.read()
+            rules = propose_rules(facts.source, self._synonyms)
+            rules.validate()
+        except (RulesUnavailableError, RulesInvalidError):
+            return "not_possible"
+        row = await self._store.propose(
+            rules_to_dict(rules), _basis(facts.profile_version_id, facts.preferences_saved_at)
+        )
+        await self._store.approve(row.id, approved_by="auto")
+        return "approved"
 
     async def discard_proposal(self) -> None:
         await self._store.discard_proposed()
