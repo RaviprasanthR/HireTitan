@@ -39,9 +39,10 @@ export function JobDetails({
   const undoInquired = useUndoPipeline('inquired')
   const ownRegistry = useUnsavedRegistry()
   const unsaved = registry ?? ownRegistry
-  if (job.isPending) return <p>Loading…</p>
+  if (job.isPending) return <p role="status">Loading…</p>
   if (job.isError) return <p role="alert">Could not load this job.</p>
   const data = job.data
+  const Heading = actions ? 'h2' : 'h3' // in an Explore row the sections sit below the list, not beside the page's own
   const original = safeLink(data.canonical_url) ?? safeLink(data.sources[0]?.url)
 
   return (
@@ -144,18 +145,18 @@ export function JobDetails({
 
       {data.company_id && (
         <section className="space-y-2">
-          <h2 className="text-lg font-semibold">People at {data.company_name}</h2>
+          <Heading className="text-lg font-semibold">People at {data.company_name}</Heading>
           <CompanyPanel companyId={data.company_id} companyName={data.company_name} />
         </section>
       )}
 
       <section className="space-y-2">
-        <h2 className="text-lg font-semibold">Description</h2>
+        <Heading className="text-lg font-semibold">Description</Heading>
         <p className="whitespace-pre-wrap">{data.description}</p>
       </section>
 
       <section className="space-y-2">
-        <h2 className="text-lg font-semibold">Sources</h2>
+        <Heading className="text-lg font-semibold">Sources</Heading>
         <ul aria-label="Sources" className="space-y-1 text-sm">
           {data.sources.map((source) => {
             const href = safeLink(source.url)
@@ -181,7 +182,7 @@ export function JobDetails({
       </section>
 
       <section className="space-y-2">
-        <h2 className="text-lg font-semibold">Decision history</h2>
+        <Heading className="text-lg font-semibold">Decision history</Heading>
         <ul aria-label="Decision history" className="space-y-1 text-sm">
           {data.decision_history.map((decision) => (
             <li key={`${decision.created_at}:${decision.decided_by}`}>

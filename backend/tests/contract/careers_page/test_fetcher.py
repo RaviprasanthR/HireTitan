@@ -388,6 +388,9 @@ PRIVATE_LINKS = [
     "http://[::1]/",
     "http://[fd00::1]/",
     "http://[::ffff:127.0.0.1]/",
+    "http://[::127.0.0.1]/",
+    "http://[64:ff9b::a9fe:a9fe]/",
+    "http://[2002:7f00:1::]/",
 ]
 
 
@@ -493,3 +496,19 @@ async def test_SSRF_a_public_address_is_read_as_before(fetcher: CareersPageFetch
         result = await fetcher.fetch(PAGE)
 
     assert result.status == "ok"
+
+
+@pytest.mark.parametrize(
+    ("address", "public"),
+    [
+        ("64:ff9b::a9fe:a9fe", False),  # NAT64 of 169.254.169.254
+        ("64:ff9b::808:808", True),  # NAT64 of 8.8.8.8
+        ("2002:7f00:1::", False),  # 6to4 of 127.0.0.1
+        ("2002:808:808::", True),  # 6to4 of 8.8.8.8
+        ("::127.0.0.1", False),  # IPv4-compatible
+    ],
+)
+def test_SSRF_embedded_ipv4_is_judged_as_the_ipv4_it_hides(address: str, public: bool) -> None:
+    from hiretitan.search.infra.careers_page.fetcher import is_public_address
+
+    assert is_public_address(address) is public

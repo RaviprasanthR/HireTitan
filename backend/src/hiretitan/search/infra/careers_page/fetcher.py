@@ -61,9 +61,28 @@ def is_public_address(address: str) -> bool:
         ip = ipaddress.ip_address(address.split("%")[0])
     except ValueError:
         return False
-    if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped is not None:
-        ip = ip.ipv4_mapped
+    if isinstance(ip, ipaddress.IPv6Address):
+        embedded = _embedded_ipv4(ip)
+        if embedded is not None:
+            ip = embedded
+        elif ip in _NO_V6_TRANSITION:  # a transition form that hides an address we cannot judge
+            return False
     return ip.is_global and not ip.is_multicast
+
+
+_NO_V6_TRANSITION = ipaddress.ip_network("::/96")  # IPv4-compatible (deprecated), so refused
+
+
+def _embedded_ipv4(ip: ipaddress.IPv6Address) -> ipaddress.IPv4Address | None:
+    """The IPv4 address hidden in an IPv6 one: mapped (::ffff:a.b.c.d), NAT64 (64:ff9b::/96) or
+    6to4 (2002::/16). A name that resolves to one of these must not reach a private host."""
+    if ip.ipv4_mapped is not None:
+        return ip.ipv4_mapped
+    if ip in ipaddress.ip_network("64:ff9b::/96"):
+        return ipaddress.IPv4Address(int(ip) & 0xFFFFFFFF)
+    if ip.sixtofour is not None:
+        return ip.sixtofour
+    return None
 
 
 class CareersPageFetcher:

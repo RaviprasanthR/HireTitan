@@ -48,7 +48,10 @@ test('SC002_job_search_journey', async ({ page, request }) => {
   await page.getByRole('button', { name: 'Finish setup' }).click()
   await expect(page.getByRole('heading', { name: 'Jobs', level: 1 })).toBeVisible()
   // Home opens on In pipeline (empty at first); the search lives in Explore.
-  await expect(page.getByRole('link', { name: 'In pipeline' })).toHaveAttribute('aria-current', 'page')
+  await expect(page.getByRole('link', { name: 'In pipeline' })).toHaveAttribute(
+    'aria-current',
+    'page',
+  )
   await page.getByRole('link', { name: 'Explore' }).click()
 
   // 1. Explore does not show the setup checklist.
@@ -61,8 +64,12 @@ test('SC002_job_search_journey', async ({ page, request }) => {
   await expect(page.getByRole('region', { name: 'Jobs we keep' })).toBeVisible()
   const leaveOut = page.getByRole('region', { name: 'Jobs we leave out' })
   await expect(leaveOut.getByText('frontend', { exact: true })).toBeVisible()
-  await expect(page.getByRole('region', { name: 'What helps rank a job' }).getByText('Back end')).toBeVisible()
-  expect(await page.locator('main').innerText()).not.toMatch(/Skips jobs|Guides the AI|Similar title/)
+  await expect(
+    page.getByRole('region', { name: 'What helps rank a job' }).getByText('Back end'),
+  ).toBeVisible()
+  expect(await page.locator('main').innerText()).not.toMatch(
+    /Skips jobs|Guides the AI|Similar title/,
+  )
 
   // 3. Search now: the run finishes and the jobs are listed.
   await page.goto('/explore')
@@ -79,13 +86,21 @@ test('SC002_job_search_journey', async ({ page, request }) => {
 
   // 4a. A row opens in place (002i US5): the posting's own text, read from its link (the listing
   // had none), and the title links to the posting in a new tab.
-  const withReadText = page.getByRole('listitem').filter({ hasText: 'Senior Backend Engineer' })
-  await withReadText.getByRole('button', { name: /show details of senior backend engineer/i }).click()
+  const withReadText = page
+    .getByRole('list', { name: 'Jobs' })
+    .getByRole('listitem')
+    .filter({ hasText: 'Senior Backend Engineer' })
+    .first()
+  await withReadText
+    .getByRole('button', { name: /show details of senior backend engineer/i })
+    .click()
   await expect(withReadText.getByText(/Mentor engineers and own reliability/)).toBeVisible()
   const titleLink = withReadText.getByRole('link', { name: 'Senior Backend Engineer' })
   await expect(titleLink).toHaveAttribute('target', '_blank')
   await expect(titleLink).toHaveAttribute('href', /alpha\.example\.test\/jobs\/102/)
-  await withReadText.getByRole('button', { name: /hide details of senior backend engineer/i }).click()
+  await withReadText
+    .getByRole('button', { name: /hide details of senior backend engineer/i })
+    .click()
   await expect(withReadText.getByText(/Mentor engineers/)).toHaveCount(0)
 
   // 4b. The Java posting is left out by the rules, with its reason on the summary (002i US6).
@@ -147,7 +162,10 @@ test('SC002_job_search_journey', async ({ page, request }) => {
   await expect.poll(async () => (await exploreJobs(request)).length).toBe(2)
   await page.getByRole('link', { name: 'In pipeline' }).click()
   // the row's details are read-only; the interview records are changed in the edit card
-  await page.getByRole('button', { name: /^Edit / }).first().click()
+  await page
+    .getByRole('button', { name: /^Edit / })
+    .first()
+    .click()
   const card = page.getByRole('region', { name: /^Edit / })
   const details = card.getByRole('region', { name: 'Interview details' })
   await expect(details).toBeVisible()
