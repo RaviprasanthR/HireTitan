@@ -30,6 +30,7 @@ from hiretitan.platform.untrusted.screen import screen
 from hiretitan.search.application.ports import (
     BoardRef,
     CareerOpsPort,
+    DescriptionPort,
     PageFetcherPort,
     ScanError,
     ScanOk,
@@ -52,6 +53,7 @@ from hiretitan.search.domain.vendors import ENABLED_VENDORS
 from hiretitan.search.infra.models import JobRow, SearchRunRow
 from hiretitan.search.infra.repos import CompaniesRepo, RuleSetsRepo, SearchRunsRepo
 from hiretitan.search.infra.search_store import SearchStore
+from hiretitan.search.workflow.describe import describe_job
 from hiretitan.search.workflow.judge import JudgeDeps, judge_jobs, with_decision
 from hiretitan.search.workflow.pages import read_careers_page
 from hiretitan.search.workflow.stops import FINISHED, STOPPED_BY_USER, Stop
@@ -77,6 +79,7 @@ class SearchDeps:
     clock: ClockPort
     synonyms: Mapping[str, tuple[str, ...]]
     tech_names: TechTable = ()  # languages and frameworks a title may name (002i); () = no rule
+    descriptions: DescriptionPort | None = None  # reads a kept job's own text (002i); None = never
     publish: Publish | None = None
     batch_size: int = BATCH_SIZE
     judge: JudgeDeps | None = None  # None: no AI step at all (rules only)
@@ -411,6 +414,7 @@ async def dedup(deps: SearchDeps, state: State) -> State:
                     injection_flags=cast(list[dict[str, Any]], item.flags),
                     decision=DecisionInput("shown", "rules_only_fallback", FALLBACK_REASON),
                     candidates=others,
+                    description_status="read" if item.description.strip() else "none",
                 )
             )
     return {"new": _dump(_NEW, new), "seen": _dump(_SEEN, seen)}
@@ -433,6 +437,33 @@ async def apply_rules(deps: SearchDeps, state: State) -> State:
         if isinstance(verdict, Skip):
             decision = DecisionInput("skipped", "rule", verdict.reason, rule_key=verdict.rule_key)
             job = with_decision(job, decision)
+        jobs.append(job)
+    return {"new": _dump(_NEW, jobs)}
+
+
+async def read_descriptions(deps: SearchDeps, state: State) -> State:
+    """Read the own text of each job the free rules kept, before the AI looks at it (002i FR-029).
+
+    Only in searches with the AI check on, and only for jobs that came without text. A Stop
+    pressed meanwhile is seen before the next read; jobs already read are kept as they are.
+    """
+    if deps.descriptions is None:
+        return {}
+    async with deps.sessions() as session:
+        run = await _run(session, state)
+        mode = run.mode
+        keywords = tuple(i.text for i in (await _rules(session, run)).stack_keywords)
+    if mode != "rules_and_ai":
+        return {}
+    jobs: list[NewJob] = []
+    stopping = False
+    for job in _NEW.validate_python(state["new"]):
+        if job.decision.decided_by == "rules_only_fallback" and job.description_status != "read":
+            if not stopping:
+                async with deps.sessions() as session:
+                    stopping = (await _run(session, state)).stop_requested
+            if not stopping:
+                job = await describe_job(deps.descriptions, job, keywords)
         jobs.append(job)
     return {"new": _dump(_NEW, jobs)}
 
@@ -530,6 +561,7 @@ def build_graph(deps: SearchDeps) -> StateGraph[Any]:
         ("normalize", normalize),
         ("dedup", dedup),
         ("apply_rules", apply_rules),
+        ("read_descriptions", read_descriptions),
         ("judge_relevance", judge_relevance),
         ("store_batch", store_batch_node),
         ("finish", finish),
@@ -543,7 +575,8 @@ def build_graph(deps: SearchDeps) -> StateGraph[Any]:
     graph.add_edge("fetch_batch", "normalize")
     graph.add_edge("normalize", "dedup")
     graph.add_edge("dedup", "apply_rules")
-    graph.add_edge("apply_rules", "judge_relevance")
+    graph.add_edge("apply_rules", "read_descriptions")
+    graph.add_edge("read_descriptions", "judge_relevance")
     graph.add_edge("judge_relevance", "store_batch")
     graph.add_conditional_edges(
         "store_batch", after_store, {"next_batch": "next_batch", "finish": "finish"}

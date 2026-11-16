@@ -102,6 +102,16 @@ def _skills(stack_keywords: tuple[str, ...], *texts: str) -> tuple[str, ...]:
     return tuple(found)
 
 
+def skills_in(stack_keywords: tuple[str, ...], *texts: str) -> tuple[str, ...]:
+    """The person's skills a text mentions (whole words, case-insensitive)."""
+    return _skills(stack_keywords, *texts)
+
+
+def years_in(description: str) -> Decimal | None:
+    """The years of experience a description asks for, when it says so."""
+    return _years(description)
+
+
 def _years(description: str) -> Decimal | None:
     match = _YEARS.search(description)
     return Decimal(match.group(1)) if match else None

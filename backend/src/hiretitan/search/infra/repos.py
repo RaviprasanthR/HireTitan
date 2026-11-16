@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime
+from decimal import Decimal
 from typing import Any, Literal
 from uuid import UUID
 
@@ -357,6 +358,28 @@ class JobsRepo:
         if row is not None:
             await self._session.refresh(row)
         return row
+
+    async def set_description(
+        self,
+        job_id: UUID,
+        *,
+        description: str,
+        skills_found: tuple[str, ...],
+        years_found: Decimal | None,
+        injection_flags: list[dict[str, Any]],
+    ) -> None:
+        """Store the posting's own text, read after the job was first found (002i)."""
+        await self._session.execute(
+            update(JobRow)
+            .where(JobRow.id == job_id)
+            .values(
+                description=description,
+                skills_found=list(skills_found),
+                years_found=years_found,
+                injection_flags=injection_flags,
+            )
+        )
+        await self._session.flush()
 
     async def set_role_short(self, job_id: UUID, role: str | None) -> None:
         await self._session.execute(

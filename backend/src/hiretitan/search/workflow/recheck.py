@@ -15,13 +15,16 @@ from uuid import UUID
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from hiretitan.platform.runtime.infra.runs_repo import Run
 from hiretitan.platform.runtime.runner import WorkflowDef
 from hiretitan.search.application.search import DecisionInput, NewJob
 from hiretitan.search.domain.job_state import JobState
+from hiretitan.search.domain.rules_serialization import rules_from_dict
 from hiretitan.search.infra.models import JobRow
-from hiretitan.search.infra.repos import DecisionsRepo, JobsRepo
+from hiretitan.search.infra.repos import DecisionsRepo, JobsRepo, RuleSetsRepo
+from hiretitan.search.workflow.describe import describe_job
 from hiretitan.search.workflow.graph import FALLBACK_REASON, SearchDeps
 from hiretitan.search.workflow.judge import judge_jobs
 
@@ -52,7 +55,16 @@ def _as_new_job(row: JobRow) -> NewJob:
         source_url="",
         injection_flags=list(row.injection_flags),
         decision=DecisionInput("shown", "rules_only_fallback", FALLBACK_REASON),
+        description_status="read" if row.description.strip() else "none",
     )
+
+
+async def _stack_keywords(session: AsyncSession) -> list[str]:
+    """The skills of the approved rules (what a description is searched for)."""
+    approved = await RuleSetsRepo(session).approved()
+    if approved is None:
+        return []
+    return [i.text for i in rules_from_dict(approved.rules).stack_keywords]
 
 
 async def recheck(deps: SearchDeps, state: dict[str, Any]) -> dict[str, Any]:
@@ -67,6 +79,19 @@ async def recheck(deps: SearchDeps, state: dict[str, Any]) -> dict[str, Any]:
         if current.decided_by != "rules_only_fallback":
             return {}  # someone already decided it
         job = _as_new_job(row)
+        keywords = tuple(await _stack_keywords(session))
+    if deps.descriptions is not None and job.description_status != "read":
+        job = await describe_job(deps.descriptions, job, keywords)
+        if job.description_status == "read":  # keep the text: the person sees it on the job
+            async with deps.sessions() as session:
+                await JobsRepo(session).set_description(
+                    job_id,
+                    description=job.description,
+                    skills_found=job.skills_found,
+                    years_found=job.years_found,
+                    injection_flags=job.injection_flags,
+                )
+                await session.commit()
     judged = await judge_jobs(
         deps.judge,
         [job],

@@ -161,3 +161,28 @@ class ProposalSource(Protocol):
     """
 
     async def read(self) -> ProposalFacts: ...
+
+
+@dataclass(frozen=True, slots=True)
+class DescribeRequest:
+    """One posting whose own text should be read: its link, and the board it came from (if any)."""
+
+    url: str
+    ats_vendor: str | None = None
+    requisition_id: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class DescriptionResult:
+    status: Literal["read", "unreadable"]
+    text: str | None = None
+    error: str | None = None
+
+
+class DescriptionPort(Protocol):
+    """Reads a posting's description from its source (public job-board APIs or its own page).
+
+    Never raises for a posting that cannot be read: it answers ``unreadable``.
+    """
+
+    async def read(self, job: DescribeRequest) -> DescriptionResult: ...

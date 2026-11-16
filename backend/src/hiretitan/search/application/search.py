@@ -85,6 +85,8 @@ class NewJob:
     decision: DecisionInput
     candidates: tuple[tuple[UUID, float], ...] = ()  # (existing job id, similarity)
     source_kind: str = "company_board"
+    # whether the posting's own text is in ``description``: read, a read failed, or none was tried
+    description_status: Literal["read", "unreadable", "none"] = "none"
 
 
 @dataclass(frozen=True, slots=True)
