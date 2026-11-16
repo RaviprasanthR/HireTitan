@@ -29,7 +29,7 @@ from hiretitan.platform.storage.local import LocalFileStorage
 from hiretitan.preferences.infra.repo import default_country_provider
 from hiretitan.profile.workflow.graph import WORKFLOW_NAME, IngestDeps, profile_ingest_workflow
 from hiretitan.search.application.synonyms_seed import load_title_synonyms
-from hiretitan.search.application.tables_seed import check_seed_tables
+from hiretitan.search.application.tables_seed import check_seed_tables, load_tech_names
 from hiretitan.search.infra.careers_page.fetcher import CareersPageFetcher
 from hiretitan.search.workflow.graph import WORKFLOW_NAME as SEARCH_WORKFLOW_NAME
 from hiretitan.search.workflow.graph import SearchDeps, job_search_workflow
@@ -79,6 +79,7 @@ async def run_worker(settings: Settings, *, wait: bool = True) -> None:
         career_ops=build_career_ops(settings),
         clock=SystemClock(),
         synonyms=load_title_synonyms(SEED_DIR / "title_synonyms.yaml"),
+        tech_names=load_tech_names(SEED_DIR / "tech_names.yaml"),
         publish=publisher.publish,
         pages=CareersPageFetcher(settings.data_dir / "cache" / "careers_pages"),
         page_ai=True,  # T053 eval passed 2026-11-08 (precision and recall 100%, 0 off-site links)

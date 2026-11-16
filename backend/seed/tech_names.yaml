@@ -8,8 +8,9 @@
 # name:    how the reason shows it.
 # aliases: other ways to write it; the name itself is always matched too.
 # kind:    language | framework.
-# context: only for names that are also ordinary words (Go): the entry matches only next to one of
-#          these words, as in "Go developer".
+# context: only for names that are also ordinary words (Go, Swift, Rust, Spring): the name itself
+#          (not its aliases) matches only right next to one of these words, as in "Go developer", so "Spring 2027 Intern"
+#          and "Swift Logistics" are not technologies.
 technologies:
   - {name: Java, kind: language, aliases: [core java, java8, java 8, j2ee, jvm]}
   - {name: JavaScript, kind: language, aliases: [js, ecmascript]}
@@ -21,15 +22,15 @@ technologies:
   - {name: Ruby, kind: language, aliases: [ruby on rails, rails]}
   - {name: PHP, kind: language, aliases: [laravel, symfony, codeigniter]}
   - {name: Kotlin, kind: language, aliases: []}
-  - {name: Swift, kind: language, aliases: [swiftui]}
+  - {name: Swift, kind: language, aliases: [swiftui], context: [developer, engineer, programmer, ios, lang, language]}
   - {name: Scala, kind: language, aliases: []}
-  - {name: Rust, kind: language, aliases: []}
+  - {name: Rust, kind: language, aliases: [], context: [developer, engineer, programmer, lang, language]}
   - {name: Elixir, kind: language, aliases: [erlang]}
   - {name: Perl, kind: language, aliases: []}
   - {name: React, kind: framework, aliases: [reactjs, react js, react native]}
   - {name: Angular, kind: framework, aliases: [angularjs, angular js]}
   - {name: Vue, kind: framework, aliases: [vuejs, vue js]}
-  - {name: Node.js, kind: framework, aliases: [node js, nodejs, node, express]}
+  - {name: Node.js, kind: framework, aliases: [node js, nodejs, node]}
   - {name: Django, kind: framework, aliases: []}
-  - {name: Spring, kind: framework, aliases: [spring boot, springboot]}
+  - {name: Spring, kind: framework, aliases: [spring boot, springboot], context: [boot, developer, engineer, framework, java]}
   - {name: Flutter, kind: framework, aliases: []}

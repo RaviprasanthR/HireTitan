@@ -47,6 +47,7 @@ from hiretitan.search.domain.dedup import DedupJob, exact_match, fuzzy_candidate
 from hiretitan.search.domain.normalize import NormalizedJob, normalize_job
 from hiretitan.search.domain.rules import SearchRules
 from hiretitan.search.domain.rules_serialization import rules_from_dict
+from hiretitan.search.domain.tech_names import TechTable
 from hiretitan.search.domain.vendors import ENABLED_VENDORS
 from hiretitan.search.infra.models import JobRow, SearchRunRow
 from hiretitan.search.infra.repos import CompaniesRepo, RuleSetsRepo, SearchRunsRepo
@@ -75,6 +76,7 @@ class SearchDeps:
     career_ops: CareerOpsPort
     clock: ClockPort
     synonyms: Mapping[str, tuple[str, ...]]
+    tech_names: TechTable = ()  # languages and frameworks a title may name (002i); () = no rule
     publish: Publish | None = None
     batch_size: int = BATCH_SIZE
     judge: JudgeDeps | None = None  # None: no AI step at all (rules only)
@@ -426,6 +428,7 @@ async def apply_rules(deps: SearchDeps, state: State) -> State:
             rules,
             now,
             deps.synonyms,
+            deps.tech_names,
         )
         if isinstance(verdict, Skip):
             decision = DecisionInput("skipped", "rule", verdict.reason, rule_key=verdict.rule_key)

@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+from pathlib import Path
+
 from sqlalchemy import func, select, update
 from tests.fakes.career_ops import FakeCareerOps  # noqa: F401
 from tests.fakes.search_env import (
@@ -16,6 +19,8 @@ from tests.fakes.search_env import (
 )
 
 from hiretitan.search.application.ports import ScanError, ScanOk
+from hiretitan.search.application.tables_seed import load_tech_names
+from hiretitan.search.domain.rules import RuleItem
 from hiretitan.search.infra.models import (
     JobRow,
     RelevanceDecisionRow,
@@ -23,6 +28,8 @@ from hiretitan.search.infra.models import (
     SearchRunRow,
 )
 from hiretitan.search.infra.repos import CompaniesRepo, SearchRunsRepo
+
+TECH_NAMES = Path(__file__).resolve().parents[3] / "seed" / "tech_names.yaml"
 
 
 async def test_US1_AS1_relevant_jobs_added_after_each_batch(env: Env) -> None:
@@ -167,3 +174,33 @@ async def test_US1_AS3_skipped_jobs_kept_with_reason(env: Env) -> None:
     }
     assert run is not None
     assert run.skipped_by_rules == 2
+
+
+async def test_FR032_FR036_a_job_for_another_stack_is_skipped_with_its_reason(env: Env) -> None:
+    """002i: a Java title is left out for a Python person; the reason is stored and shown."""
+    from tests.fakes.search_env import RULES
+
+    env.deps.tech_names = load_tech_names(TECH_NAMES)
+    ref = await add_company(env, "Acme")
+    env.career_ops.script(
+        ref,
+        ScanOk(
+            [
+                posting("Backend Engineer (Python)"),
+                posting("Backend Engineer (Java)"),
+            ]
+        ),
+    )
+    rules = replace(RULES, stack_keywords=(RuleItem("Python", "user"),))
+
+    await go(env, await new_search(env, rules=rules))
+
+    assert await titles(env, "explore") == {"Backend Engineer (Python)"}
+    assert await titles(env, "skipped") == {"Backend Engineer (Java)"}
+    async with env.sessions() as session:
+        decision = await session.scalar(
+            select(RelevanceDecisionRow).where(RelevanceDecisionRow.outcome == "skipped")
+        )
+    assert decision is not None
+    assert decision.reason == "needs Java, which is not in your skills"
+    assert decision.rule_key == "stack_in_title"
