@@ -27,6 +27,11 @@ export function resumeDetail(resume: ResumeChoice): string {
  * the person uploaded it as a resume (spec FR-012). The server checks again on every write.
  */
 export function offeredResumes(files: ResumeFile[]): ResumeFile[] {
+  // This runs as the query's `select`, and a `select` that throws makes TanStack Query stamp every
+  // result with the current time, so the component re-renders without end whenever a render takes
+  // a millisecond ("Maximum update depth exceeded", seen under a heavy parallel test run). Anything
+  // that is not a list is therefore an empty list.
+  if (!Array.isArray(files)) return []
   return files
     .filter((file) => file.parse_status !== 'not_resume')
     .sort((a, b) => b.created_at.localeCompare(a.created_at))
