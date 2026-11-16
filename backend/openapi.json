@@ -3858,6 +3858,14 @@
       "SearchRulesModel-Input": {
         "additionalProperties": false,
         "properties": {
+          "areas": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Areas",
+            "type": "array"
+          },
           "blocked_locations": {
             "items": {
               "$ref": "#/components/schemas/PlaceRuleModel"
@@ -3943,6 +3951,14 @@
       "SearchRulesModel-Output": {
         "additionalProperties": false,
         "properties": {
+          "areas": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Areas",
+            "type": "array"
+          },
           "blocked_locations": {
             "items": {
               "$ref": "#/components/schemas/PlaceRuleModel"

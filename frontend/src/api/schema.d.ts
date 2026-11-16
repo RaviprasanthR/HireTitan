@@ -2217,6 +2217,11 @@ export interface components {
         };
         /** SearchRulesModel */
         "SearchRulesModel-Input": {
+            /**
+             * Areas
+             * @default []
+             */
+            areas: string[];
             /** Blocked Locations */
             blocked_locations: components["schemas"]["PlaceRuleModel"][];
             /** Max Age Days */
@@ -2238,6 +2243,11 @@ export interface components {
         };
         /** SearchRulesModel */
         "SearchRulesModel-Output": {
+            /**
+             * Areas
+             * @default []
+             */
+            areas: string[];
             /** Blocked Locations */
             blocked_locations: components["schemas"]["PlaceRuleModel"][];
             /** Max Age Days */

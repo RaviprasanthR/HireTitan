@@ -27,6 +27,12 @@ EFFECTS: Final[dict[str, Effect]] = {
 }
 
 WORK_MODES: Final = frozenset({"onsite", "hybrid", "remote"})
+# the person's area of work (feature 002i); a reviewed table of title words per area is in
+# ``backend/seed/work_areas.yaml``
+AREAS: Final = frozenset(
+    {"back_end", "front_end", "full_stack", "mobile", "data", "qa", "devops", "other"}
+)
+AREAS_MAX: Final = 4
 DEFAULT_MAX_AGE_DAYS: Final = 30
 
 TITLE_WORDS_MAX: Final = 30
@@ -77,6 +83,7 @@ class SearchRules:
     work_modes: frozenset[str] = field(default_factory=frozenset)
     seniority: tuple[str, ...] = ()
     years_experience: Decimal | None = None
+    areas: tuple[str, ...] = ()
 
     def validate(self) -> None:
         """Raise ``RulesInvalidError`` listing every problem, so the page can show them all."""
@@ -91,6 +98,14 @@ class SearchRules:
         low, high = MAX_AGE_RANGE
         if not low <= self.max_age_days <= high:
             errors.append(FieldError("max_age_days", f"Use a number from {low} to {high}."))
+        if (
+            not set(self.areas) <= AREAS
+            or len(set(self.areas)) != len(self.areas)
+            or len(self.areas) > AREAS_MAX
+        ):
+            errors.append(
+                FieldError("areas", f"Pick up to {AREAS_MAX} different areas from the list.")
+            )
         if not self.work_modes <= WORK_MODES:
             errors.append(FieldError("work_modes", "Use onsite, hybrid or remote."))
         if self.years_experience is not None and not (

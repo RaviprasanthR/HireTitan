@@ -65,6 +65,7 @@ class SearchRulesModel(BaseModel):
     work_modes: list[str]
     seniority: list[str]
     years_experience: Decimal | None
+    areas: list[str] = []  # the person's area of work (002i); older callers may leave it out
 
     @classmethod
     def from_domain(cls, rules: SearchRules) -> SearchRulesModel:
@@ -91,6 +92,7 @@ class SearchRulesModel(BaseModel):
             work_modes=sorted(rules.work_modes),
             seniority=list(rules.seniority),
             years_experience=rules.years_experience,
+            areas=list(rules.areas),
         )
 
     def to_domain(self) -> SearchRules:
@@ -108,6 +110,7 @@ class SearchRulesModel(BaseModel):
             work_modes=frozenset(self.work_modes),
             seniority=tuple(self.seniority),
             years_experience=self.years_experience,
+            areas=tuple(self.areas),
         )
 
 

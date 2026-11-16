@@ -27,6 +27,7 @@ def rules_to_dict(rules: SearchRules) -> dict[str, Any]:
         "work_modes": sorted(rules.work_modes),
         "seniority": list(rules.seniority),
         "years_experience": None if years is None else str(years),
+        "areas": list(rules.areas),
     }
 
 
@@ -44,6 +45,7 @@ def rules_from_dict(data: dict[str, Any]) -> SearchRules:
             work_modes=frozenset(str(m) for m in data.get("work_modes", [])),
             seniority=tuple(str(s) for s in data.get("seniority", [])),
             years_experience=None if years is None else Decimal(str(years)),
+            areas=tuple(str(a) for a in data.get("areas", [])),
         )
     except (KeyError, TypeError, ValueError, InvalidOperation, AttributeError) as error:
         raise RulesInvalidError(
