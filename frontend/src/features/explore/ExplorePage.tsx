@@ -4,7 +4,7 @@ import { useStatus } from '@/api/useStatus'
 import { Button } from '@/components/ui/button'
 import { PipelineControl } from '@/features/jobs/PipelineControl'
 import { PasteJobDialog } from '@/features/jobs/PasteJobDialog'
-import { setupIsDone } from '@/features/home/setup'
+import { firstMissingStep, setupIsDone } from '@/features/home/setup'
 import { DuplicatesPanel } from './DuplicatesPanel'
 import { ReviewNotice } from '@/features/home/ReviewNotice'
 import { HomeTabs } from './HomeTabs'
@@ -123,6 +123,20 @@ function Filters({ value, onChange }: { value: JobFilters; onChange: (next: JobF
   )
 }
 
+/** Why there are no jobs yet: the first thing still to do, with a link to do it (FR-006). */
+function MissingStep({ checklist }: { checklist: Parameters<typeof firstMissingStep>[0] }) {
+  const step = firstMissingStep(checklist)
+  if (!step) return <p>No jobs yet.</p>
+  return (
+    <p>
+      No jobs yet. {step.missing}{' '}
+      <Link to={step.to} className="text-link underline">
+        {step.action}
+      </Link>
+    </p>
+  )
+}
+
 export function ExplorePage() {
   const status = useStatus()
   const [params, setParams] = useSearchParams()
@@ -149,7 +163,7 @@ export function ExplorePage() {
     ) : setupDone ? (
       <p>No jobs fetched yet. Search now.</p>
     ) : (
-      <p>No jobs yet. Finish setup first.</p>
+      <MissingStep checklist={status.data?.checklist} />
     )
   } else {
     list = (

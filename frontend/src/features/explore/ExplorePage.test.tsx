@@ -118,14 +118,54 @@ describe('ExplorePage', () => {
     expect(screen.getByText(/Search now\./)).toBeInTheDocument()
   })
 
-  it('US1_AS10_empty_state_asks_to_finish_setup_first', async () => {
+  it('FR006_names_the_missing_search_rules_step_with_a_link', async () => {
     renderPage({
       status: {
         ...STATUS,
         checklist: { ...STATUS.checklist, rules_approved: false },
       },
     })
-    expect(await screen.findByText(/Finish setup first/)).toBeInTheDocument()
+    expect(await screen.findByText(/search rules are not approved yet/i)).toBeInTheDocument()
+    expect(screen.queryByText(/Finish setup first/)).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Review your search rules' })).toHaveAttribute(
+      'href',
+      '/profile/search-rules',
+    )
+  })
+
+  it('FR006_names_the_missing_ai_key_first', async () => {
+    renderPage({
+      status: {
+        ...STATUS,
+        checklist: { ...STATUS.checklist, key_ok: false, rules_approved: false },
+      },
+    })
+    expect(await screen.findByText(/AI key is not working yet/i)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Check the AI key' })).toHaveAttribute(
+      'href',
+      '/settings',
+    )
+    // only the first missing step is named
+    expect(screen.queryByRole('link', { name: 'Review your search rules' })).not.toBeInTheDocument()
+  })
+
+  it('FR006_names_the_missing_preferences_step', async () => {
+    renderPage({
+      status: {
+        ...STATUS,
+        checklist: { ...STATUS.checklist, preferences_saved: false, rules_approved: false },
+      },
+    })
+    expect(await screen.findByRole('link', { name: 'Set your preferences' })).toHaveAttribute(
+      'href',
+      '/profile/preferences',
+    )
+  })
+
+  it('US1_AS1_shows_search_now_once_rules_are_approved', async () => {
+    renderPage({ jobs: [] })
+    expect(await screen.findByRole('button', { name: 'Search now' })).toBeInTheDocument()
+    expect(screen.queryByText(/Finish setup first/)).not.toBeInTheDocument()
   })
 
   it('never_shows_the_setup_checklist_on_explore', async () => {
@@ -135,7 +175,7 @@ describe('ExplorePage', () => {
         checklist: { ...STATUS.checklist, rules_approved: false },
       },
     })
-    await screen.findByText(/Finish setup first/)
+    await screen.findByText(/search rules are not approved yet/i)
     expect(screen.queryByRole('list', { name: 'Setup checklist' })).not.toBeInTheDocument()
   })
 

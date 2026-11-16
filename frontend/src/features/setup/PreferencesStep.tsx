@@ -12,6 +12,9 @@ export function PreferencesStep() {
     setError(null)
     try {
       await apiFetch('/onboarding/complete', { method: 'POST' })
+      // the first search rules are approved when setup finishes: Explore and Search rules re-read
+      await queryClient.invalidateQueries({ queryKey: ['status'] })
+      await queryClient.invalidateQueries({ queryKey: ['search-rules'] })
       await queryClient.invalidateQueries({ queryKey: ['onboarding'] })
     } catch (e) {
       setError(e instanceof ApiError ? e.detail : 'Something went wrong. Please try again.')

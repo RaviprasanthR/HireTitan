@@ -448,6 +448,12 @@ export function SearchRulesPage() {
           {approved ? (
             <>
               {justApproved && <p className="text-sm text-success">Rules approved.</p>}
+              {approved.approved_by === 'auto' && (
+                <p className="text-sm text-muted-small">
+                  HireTitan set these up from your profile and preferences. Change anything you
+                  like.
+                </p>
+              )}
               <p className="text-sm text-muted-small">
                 These are the rules your searches use (version {approved.version}).
               </p>

@@ -88,6 +88,29 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('SearchRulesPage', () => {
+  it('US1_AS2_FR020_says_the_rules_were_set_up_automatically', async () => {
+    state = {
+      approved: ruleSet('approved', { approved_by: 'auto' }),
+      proposal: null,
+      stale: false,
+    }
+    renderPage()
+    expect(
+      await screen.findByText(/HireTitan set these up from your profile and preferences/i),
+    ).toBeInTheDocument()
+  })
+
+  it('FR020_says_nothing_about_rules_the_person_approved', async () => {
+    state = {
+      approved: ruleSet('approved', { approved_by: 'person' }),
+      proposal: null,
+      stale: false,
+    }
+    renderPage()
+    await screen.findByText(/These are the rules your searches use/i)
+    expect(screen.queryByText(/HireTitan set these up/i)).not.toBeInTheDocument()
+  })
+
   it('US2_AS1_shows_origin_and_effect', async () => {
     renderPage()
 
