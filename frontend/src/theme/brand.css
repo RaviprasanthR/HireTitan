@@ -13,3 +13,39 @@
   color: #f4f6f5; /* shown if background-clip: text is not supported */
   filter: drop-shadow(0 0 10px rgb(240 163 94 / 0.3));
 }
+
+/* The logo has thickness: flat copies of the shape sit behind the front face in 3D, so a turn
+   shows a solid edge. The front face carries the glow; the copies are a darker, flat rust. */
+.ht-logo-3d {
+  position: relative;
+  display: inline-block;
+  transform-style: preserve-3d;
+}
+.ht-logo-edge, .ht-logo-back {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  width: 100%;
+  fill: #b34724;
+}
+
+/* Hovering the logo or the name turns the logo once around its vertical axis; while a progress ring
+   or a setup step is on screen (html[data-working]) it keeps turning. Not for people who ask for
+   less motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .ht-logo-3d {
+    transition: transform 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: perspective(300px) rotateY(0deg);
+  }
+  .ht-appname:hover .ht-logo-3d {
+    transform: perspective(300px) rotateY(360deg);
+  }
+  html[data-working] .ht-logo-3d {
+    animation: ht-logo-spin 2s linear infinite;
+  }
+  @keyframes ht-logo-spin {
+    to {
+      transform: perspective(300px) rotateY(360deg);
+    }
+  }
+}

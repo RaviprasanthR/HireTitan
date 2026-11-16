@@ -17,7 +17,7 @@ describe('AppName', () => {
     const logo = container.querySelector('svg[data-logo]')
     expect(logo).not.toBeNull()
     expect(logo).toHaveAttribute('aria-hidden', 'true')
-    expect(container.firstElementChild?.firstElementChild).toBe(logo)
+    expect(container.firstElementChild?.firstElementChild).toBe(logo?.closest('.ht-logo-3d'))
   })
 
   it('the logo is filled with its own gradient', () => {
