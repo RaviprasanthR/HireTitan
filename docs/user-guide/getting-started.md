@@ -32,7 +32,7 @@ Without a working key the app does not fail: AI tasks wait ("paused") and carry 
 
 ## 3. First-run setup
 
-On a new install four cards guide you: your name, your resume, a review of the profile the AI extracted (edit anything, then confirm), and your job preferences. You can close the tab at any point and come back to the same card. The defaults for preferences are listed in [preference-defaults.md](preference-defaults.md).
+On a new install four cards guide you: your name, your resume, a review of the profile the AI extracted (edit anything, then confirm), and your job preferences. You can close the tab at any point and come back to the same card. The defaults for preferences are listed in [preference-defaults.md](preference-defaults.md). When you press **Finish setup**, HireTitan also sets up your search rules from your profile and preferences, so the **Search now** button on Explore is ready at once. You can check and change the rules on the Search rules tab of Profile (see [job-search.md](job-search.md)).
 
 Your confirmed profile is the only source of facts about you. The AI never adds experience you did not confirm.
 

@@ -16,11 +16,27 @@ A company is listed there when HireTitan cannot read its jobs by the rules above
 
 ## 3. What the search rules do
 
-On the **Search rules** tab of Profile, HireTitan proposes rules from your profile and preferences: the job titles you want (with close variants), places, how old a posting may be, and words that rule a job out. You edit them and press **Approve**. Rules come first: a job that breaks a rule is skipped before any AI is used. A skipped job is never deleted. Open the search summary, find it under **Skipped** and press **Restore**.
+When you finish setup, HireTitan sets up your search rules from your profile and preferences, so **Search now** is ready on Explore straight away. You can check and change them any time on the **Search rules** tab of Profile; nothing is hidden there.
+
+The page shows the rules in three plain groups:
+
+- **Jobs we keep:** the job titles you want (with close variants).
+- **Jobs we leave out:** words to avoid in titles, places to skip, and how old a job may be. A job whose title names a language or framework you do not list (for example "Java Developer" when your skills are Python and Go) is left out too, with the reason "needs Java, which is not in your skills". A job that goes with a language you do have is kept: "Java / Python Developer" stays for a Python person, and a Django title is for a Python person.
+- **What helps rank a job:** your area of work (back end, front end and so on), your skills and the places you prefer. When the AI check is on, it uses these to decide whether a job suits you. Work mode, seniority and years of experience come from Preferences.
+
+HireTitan guesses your **area of work** from your roles, your latest job titles and your skills, and adds title words to avoid for areas that clearly differ (for a back end person: "frontend", "android", "QA" and similar). Remove any word you do not want, or change the area.
+
+To change the rules press **Edit rules**, make your changes and press **Save rules**; they become the rules your searches use at once. **Cancel** changes nothing. **Start over with suggested rules** fills the editor with what your profile and preferences suggest now (nothing is saved until you press Save). If you change your profile or preferences, a note offers **Update from my profile**.
+
+Rules come first: a job that breaks a rule is skipped before any AI is used. A skipped job is never deleted. Open the search summary, find it under **Skipped** and press **Restore**.
 
 ## 4. How a search runs and how to stop it
 
 Jobs that pass the rules are judged in groups of 10 by the efficient (`fast`) model, which keeps only the ones that are relevant for your profile and gives a short reason for each. A job already judged is not judged again, so a repeat search only looks at what is new.
+
+**Reading each job first.** Most job boards list only a title, a place and a link. Before the AI looks at a job that passed the rules, HireTitan reads the job's own text from where it was posted: the public job API of the board (Greenhouse, Lever, Ashby, Workday and Recruitee) or the posting's own page, using the same politeness rules as the rest of the search (robots.txt, spacing between requests, never a private address). The AI then judges the job on what it says, against your area of work, your skills and your years of experience: a front end role, or a Java role for a Python and Go person, is left out. If a job's text cannot be read, the AI decides on the title alone and keeps a plain title such as "Software Engineer"; the reason then ends with "Description could not be read." Open the job to see its text, and **Check again** reads it again.
+
+**While it runs.** The panel says "Searching your companies…" with a moving bar from the first second. Once the first company is read it adds "Checked 8 of 44 companies · 3 new jobs so far".
 
 - **Stop.** Press **Stop** at any time. The batch being processed is stored, and **Continue searching** starts with the companies not yet read.
 - **Rules only.** Turn on **Rules only** to run with no AI at all. Jobs that pass the rules are then listed as "not checked by AI". **Check again** on a job asks the AI later.
@@ -28,6 +44,10 @@ Jobs that pass the rules are judged in groups of 10 by the efficient (`fast`) mo
 ## 5. "Out of credit"
 
 If the AI provider says your account has no credit left, the search stops after storing the batch it was on, and the page shows the provider's own message. Add credit on the provider's site, press **Check again** in the banner or in Settings, and start the search again. Nothing already found is lost.
+
+## 5b. The Explore list
+
+Click a job in Explore and it opens in place to show its place, why it is listed, the text of the posting, where it was found and how it was decided. The **job title** is a link to the posting itself on the company's site (it opens in a new tab). Opening the row does not leave the list.
 
 ## 6. Applied and inquired
 
