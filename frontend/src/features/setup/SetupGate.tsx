@@ -39,8 +39,10 @@ export function SetupGate() {
       </SetupLayout>
     )
   }
+  // Review and Preferences hold a lot, so their card is wide; the name and resume steps are not
+  const wide = !renaming && (step === 3 || step === 4)
   return (
-    <SetupLayout step={renaming ? 1 : step}>
+    <SetupLayout step={renaming ? 1 : step} wide={wide}>
       <StepCard onboarding={query.data} renaming={renaming} setRenaming={setRenaming} />
     </SetupLayout>
   )

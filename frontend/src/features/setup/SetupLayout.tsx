@@ -10,9 +10,12 @@ const STEPS = 4
 export function SetupLayout({
   step,
   closeTo,
+  wide = false,
   children,
 }: {
   step?: number
+  /** A wide card, for the steps that hold a lot (Review and Preferences). */
+  wide?: boolean
   /** Shows a red cross at the card's top right that returns here (used by Settings). */
   closeTo?: string
   children: ReactNode
@@ -21,7 +24,9 @@ export function SetupLayout({
     <div className="flex min-h-screen flex-col text-foreground">
       <AiBanner />
       <main className="flex flex-1 items-center justify-center px-4 py-8">
-        <div className="bg-surface relative w-full max-w-2xl space-y-6 rounded-2xl p-6 sm:p-8">
+        <div
+          className={`bg-surface relative w-full ${wide ? 'max-w-6xl' : 'max-w-2xl'} space-y-6 rounded-2xl p-6 sm:p-8`}
+        >
           {closeTo && (
             <Link
               to={closeTo}

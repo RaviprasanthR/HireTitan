@@ -116,7 +116,7 @@ description: "Task list for 002i-setup-and-search-polish"
 
 - [x] T019 [P] [US5] Extract `features/jobs/JobDetails.tsx` from `features/jobs/JobDetailPage.tsx` (place, work mode, posted date, decision and reason, decision history, sources, description, injection warning, duplicate notice, actions: I applied, I inquired, Check again, Restore, Delete) and use it in `JobDetailPage`. Tests: the existing `features/jobs/JobDetailPage.test.tsx` stays green unchanged (behaviour-preserving refactor); add `features/jobs/JobDetails.test.tsx` `renders the description and sources`.
 - [x] T020 [US5] Explore rows in `features/explore/ExplorePage.tsx`: `JobCardItem` becomes an expandable row (expand button with `aria-expanded` and `aria-controls`, Enter/Space toggle, row click outside the title and buttons toggles), the expanded part loads `GET /jobs/{id}` and renders `JobDetails`; the title is `<a href={first source url} target="_blank" rel="noopener noreferrer">` and plain text when there is no link; check (in the API or `search/infra/repos.py`) that `sources` come oldest first and pin it with a test. Tests first in `features/explore/ExplorePage.test.tsx`: `US5 AS1 row expands and collapses in place`, `US5 AS2 title opens the posting in a new tab`, `US5 AS3 first-found source is the title link`, `US5 AS4 no link means plain text`, `US5 AS5 keyboard toggles and announces`, `US5 AS6 actions work in the expanded row`, `FR028 Explore no longer links to the job page`; backend `backend/tests/api/search/test_jobs_api.py` `test_sources_oldest_first`.
-- [ ] T020r [US5] Story review: React reviewer over T019–T020 (nested interactive elements, focus, keyboard); fix the findings; note them in `docs/CONTEXT.md`.
+- [x] T020r [US5] Story review: React reviewer over T019–T020 (nested interactive elements, focus, keyboard); fix the findings; note them in `docs/CONTEXT.md`.
 
 **Checkpoint**: Ravi reviews.
 
@@ -128,7 +128,7 @@ description: "Task list for 002i-setup-and-search-polish"
 
 **Independent Test**: at 1280 px the Preferences groups sit in two columns; at phone width one column, no sideways scroll.
 
-- [ ] T021 [US4] `features/setup/SetupLayout.tsx` takes `width?: 'narrow' | 'wide'` (`max-w-2xl` / `max-w-6xl`); `SetupGate` passes `wide` for the review and preferences steps; check the embedded Preferences grid reaches two columns at `lg`. Take before and after screenshots at 1280 × 800 for SC-005 (record the scroll heights in `docs/CONTEXT.md`). Tests first in `features/setup/SetupGate.test.tsx`: `FR021 preferences step uses the wide card`, `FR021 name and resume steps stay narrow`; `features/setup/PreferencesStep.test.tsx` `FR022 collects the same fields`.
+- [x] T021 [US4] `features/setup/SetupLayout.tsx` takes `width?: 'narrow' | 'wide'` (`max-w-2xl` / `max-w-6xl`); `SetupGate` passes `wide` for the review and preferences steps; check the embedded Preferences grid reaches two columns at `lg`. Take before and after screenshots at 1280 × 800 for SC-005 (record the scroll heights in `docs/CONTEXT.md`). Tests first in `features/setup/SetupGate.test.tsx`: `FR021 preferences step uses the wide card`, `FR021 name and resume steps stay narrow`; `features/setup/PreferencesStep.test.tsx` `FR022 collects the same fields`.
 - [ ] T021r [US4] Story review: React reviewer over T021 (layout at 1280 px and phone width, no sideways scroll, focus order unchanged); fix the findings; note them in `docs/CONTEXT.md`.
 
 **Checkpoint**: Ravi reviews.

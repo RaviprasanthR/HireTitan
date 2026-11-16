@@ -45,7 +45,7 @@ export function JobDetails({
   const original = safeLink(data.canonical_url) ?? safeLink(data.sources[0]?.url)
 
   return (
-    <div className="space-y-4">
+    <div role="group" aria-label={`Details of ${data.title}`} className="space-y-4">
       <InjectionWarning flags={data.injection_flags as InjectionFlag[]} />
 
       {data.decision && (
@@ -118,6 +118,9 @@ export function JobDetails({
           heading="Interview details"
           registry={unsaved}
           hideWhenEmpty={data.state !== 'applied' && data.state !== 'inquired'}
+          // in a list row the details are for reading: editing them happens on the job page, where
+          // leaving with unsaved edits is asked about
+          readOnly={!actions}
         />
       )}
 

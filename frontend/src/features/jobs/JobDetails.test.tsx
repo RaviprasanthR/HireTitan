@@ -35,10 +35,14 @@ function detail(over: Record<string, unknown> = {}) {
   }
 }
 
-function renderDetails(actions?: boolean) {
+function renderDetails(
+  actions?: boolean,
+  jobOver: Record<string, unknown> = {},
+  interview?: unknown,
+) {
   stubApi((call) => {
-    if (call.path === '/jobs/j1') return detail()
-    if (call.path === '/jobs/j1/interview') return undefined
+    if (call.path === '/jobs/j1') return detail(jobOver)
+    if (call.path === '/jobs/j1/interview') return interview
     if (call.path === '/pipeline/resumes') return { last_choice: null, usage: [] }
     if (call.path === '/resumes') return []
     return undefined
@@ -82,5 +86,32 @@ describe('JobDetails', () => {
     await screen.findByText('Build APIs with Python.')
     expect(screen.queryByRole('button', { name: 'Check again' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /I applied/i })).not.toBeInTheDocument()
+  })
+
+  it('FR025_an_applied_job_in_a_row_shows_its_interview_details_for_reading_only', async () => {
+    const interview = {
+      job_id: 'j1',
+      can_edit: true,
+      can_add_round: true,
+      contact: { name: 'Asha Rao', role: null, email: null, phone: null, linkedin_url: null },
+      source: { kind: 'direct', firm_name: null },
+      rounds: [],
+      status: { state: 'applied', round: null },
+      resume: { state: 'none', resume_file_id: null, name: null, added_on: null },
+    }
+    renderDetails(false, { state: 'applied', applied_on: '2026-11-06' }, interview)
+
+    const name = await screen.findByLabelText('Contact name')
+    expect(name).toHaveValue('Asha Rao')
+    // shown to read, not to change: editing happens on the job page, which asks before leaving
+    expect(name).toBeDisabled()
+    expect(screen.queryByRole('button', { name: /save/i })).not.toBeInTheDocument()
+  })
+
+  it('FR027_the_details_are_a_labelled_group', async () => {
+    renderDetails(false)
+    expect(
+      await screen.findByRole('group', { name: 'Details of Backend Engineer' }),
+    ).toBeInTheDocument()
   })
 })
