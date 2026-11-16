@@ -29,7 +29,7 @@ from hiretitan.platform.storage.local import LocalFileStorage
 from hiretitan.preferences.infra.repo import default_country_provider
 from hiretitan.profile.workflow.graph import WORKFLOW_NAME, IngestDeps, profile_ingest_workflow
 from hiretitan.search.application.synonyms_seed import load_title_synonyms
-from hiretitan.search.application.tables_seed import check_seed_tables, load_tech_names
+from hiretitan.search.application.tables_seed import load_seed_tables
 from hiretitan.search.infra.careers_page.fetcher import CareersPageFetcher
 from hiretitan.search.workflow.graph import WORKFLOW_NAME as SEARCH_WORKFLOW_NAME
 from hiretitan.search.workflow.graph import SearchDeps, job_search_workflow
@@ -73,20 +73,20 @@ async def run_worker(settings: Settings, *, wait: bool = True) -> None:
         publish=publisher.publish,
         default_country=default_country_provider(sessions),
     )
-    check_seed_tables(SEED_DIR)  # the area and technology tables (002i); a bad file stops start-up
+    tables = load_seed_tables(SEED_DIR)  # area and technology tables; a bad file stops start-up
     search_deps = SearchDeps(
         sessions=sessions,
         career_ops=build_career_ops(settings),
         clock=SystemClock(),
         synonyms=load_title_synonyms(SEED_DIR / "title_synonyms.yaml"),
-        tech_names=load_tech_names(SEED_DIR / "tech_names.yaml"),
+        tech_names=tables.tech_names,
         publish=publisher.publish,
         pages=CareersPageFetcher(settings.data_dir / "cache" / "careers_pages"),
         page_ai=True,  # T053 eval passed 2026-11-08 (precision and recall 100%, 0 off-site links)
         judge=JudgeDeps(
             sessions=sessions,
             llm=built.llm,
-            profile_card=profile_card_source(sessions),
+            profile_card=profile_card_source(sessions, tables.tech_names),
             prompts=ingest_deps.prompts,
             provider=provider,
         ),

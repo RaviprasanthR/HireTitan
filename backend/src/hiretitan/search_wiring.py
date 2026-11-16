@@ -29,9 +29,11 @@ from hiretitan.search.application.rules import (
     RulesUnavailableError,
 )
 from hiretitan.search.application.seed import SeedResult, load_seed
-from hiretitan.search.domain.cards import ProfileCard
+from hiretitan.search.domain.cards import ProfileCard, main_skills
 from hiretitan.search.domain.proposer import PlaceInput, ProposalInput
 from hiretitan.search.domain.resume_choice import offerable
+from hiretitan.search.domain.rules_serialization import rules_from_dict
+from hiretitan.search.domain.tech_names import TechTable
 from hiretitan.search.domain.work_areas import WorkAreaTable
 from hiretitan.search.infra.careerops.adapter import CareerOpsAdapter
 from hiretitan.search.infra.careerops.fake import FileCareerOps
@@ -59,9 +61,16 @@ async def seed_companies(
 
 
 def profile_card_source(
-    sessions: async_sessionmaker[AsyncSession],
+    sessions: async_sessionmaker[AsyncSession], tech_names: TechTable = ()
 ) -> Callable[[], Awaitable[ProfileCard | None]]:
-    """The profile card the relevance check reads: confirmed profile and saved preferences only."""
+    """The profile card the relevance check reads: confirmed profile, saved preferences and the
+    approved rules' area and skills.
+
+    The skills come from the person's own approved skill list (which starts from the profile's
+    skills and the preferences' key skills, and the person may edit); without approved rules,
+    from the profile and preferences directly. The card used to hold only the skills typed in
+    Preferences, which are often none (002i, 2026-11-16).
+    """
 
     async def read() -> ProfileCard | None:
         async with sessions() as session:
@@ -69,17 +78,25 @@ def profile_card_source(
                 facts = await ProfileAndPreferencesSource(session).read()
             except RulesUnavailableError:
                 return None
+            approved = await RuleSetsRepo(session).approved()
         source = facts.source
+        rules = rules_from_dict(approved.rules) if approved is not None else None
+        if rules is not None and rules.stack_keywords:
+            skills = main_skills([i.text for i in rules.stack_keywords], (), tech_names)
+        else:
+            skills = main_skills(source.key_skills, source.profile_skills, tech_names)
         return ProfileCard(
             target_roles=tuple(source.target_roles),
             seniority=tuple(source.seniority_levels),
             years_experience=source.years_experience,
-            key_skills=tuple(source.key_skills),
+            key_skills=skills,
             preferred_locations=tuple(
                 ", ".join(part for part in (p.city, p.country) if part)
                 for p in source.preferred_locations
             ),
             work_modes=tuple(sorted(source.work_modes)),
+            areas=rules.areas if rules is not None else (),
+            recent_titles=source.recent_titles,
         )
 
     return read

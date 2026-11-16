@@ -99,3 +99,9 @@ def stack_skip_reason(title: str, skills: Sequence[str], table: TechTable) -> st
         return None
     verb = "is" if len(named) == 1 else "are"
     return f"needs {_list(named)}, which {verb} not in your skills"
+
+
+def is_technology(skill: str, table: TechTable) -> bool:
+    """True when the skill is a language or framework in the table (or mentions one)."""
+    wanted = normalize_phrase(skill)
+    return any(wanted in _forms(tech) for tech in table) or bool(names_in(skill, table))

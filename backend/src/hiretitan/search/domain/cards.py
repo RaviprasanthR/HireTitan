@@ -9,11 +9,17 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import Any, Final
+from typing import Any, Final, Literal
+
+from hiretitan.search.domain.tech_names import TechTable, is_technology
 
 EXCERPT_MAX: Final = 1200
 JOBS_PER_CALL_MAX: Final = 10
 KEY_SKILLS_MAX: Final = 30
+RECENT_TITLES_MAX: Final = 3
+
+# whether the posting's own text was read: it was, a read failed, or none was tried (002i)
+DescriptionStatus = Literal["read", "unreadable", "none"]
 
 _SPACES = re.compile(r"\s+")
 
@@ -26,9 +32,13 @@ class ProfileCard:
     key_skills: tuple[str, ...]
     preferred_locations: tuple[str, ...]
     work_modes: tuple[str, ...]
+    # 002i: the person's area of work and latest job titles; left out of the card when empty,
+    # so older prompt versions see the card exactly as before
+    areas: tuple[str, ...] = ()
+    recent_titles: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        card: dict[str, Any] = {
             "target_roles": list(self.target_roles),
             "seniority": list(self.seniority),
             "years_experience": None
@@ -38,6 +48,31 @@ class ProfileCard:
             "preferred_locations": list(self.preferred_locations),
             "work_modes": list(self.work_modes),
         }
+        if self.areas:
+            card["areas"] = list(self.areas)
+        if self.recent_titles:
+            card["recent_titles"] = list(self.recent_titles[:RECENT_TITLES_MAX])
+        return card
+
+
+def main_skills(
+    key_skills: tuple[str, ...] | list[str],
+    profile_skills: tuple[str, ...] | list[str],
+    table: TechTable,
+) -> tuple[str, ...]:
+    """The person's skills for the card: no repeats, languages and frameworks first, then tools.
+
+    The order within each group is the order given (preferences first, then the profile).
+    """
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for skill in (*key_skills, *profile_skills):
+        text = skill.strip()
+        if text and text.lower() not in seen:
+            seen.add(text.lower())
+            ordered.append(text)
+    techs = [s for s in ordered if is_technology(s, table)]
+    return tuple(techs + [s for s in ordered if s not in techs])
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,6 +84,7 @@ class JobCardInput:
     skills_found: tuple[str, ...]
     years_found: Decimal | None
     description: str
+    description_status: DescriptionStatus = "none"
 
 
 def excerpt(description: str) -> str:
@@ -70,6 +106,7 @@ def job_cards(jobs: list[JobCardInput]) -> tuple[list[dict[str, Any]], list[str]
             "work_mode": job.work_mode,
             "skills_found": list(job.skills_found),
             "years_found": None if job.years_found is None else str(job.years_found),
+            "description_status": job.description_status,
             "excerpt": excerpt(job.description),
         }
         for index, job in enumerate(jobs, start=1)
