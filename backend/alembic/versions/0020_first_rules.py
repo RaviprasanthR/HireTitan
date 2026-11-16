@@ -27,7 +27,9 @@ CHECK = "ck_search_rule_sets_approved_by_values"
 
 def upgrade() -> None:
     op.add_column(T, sa.Column("approved_by", sa.Text()), schema=S)
-    op.execute(f"UPDATE {S}.{T} SET approved_by = 'person' WHERE approved_at IS NOT NULL")
+    op.execute(
+        "UPDATE app.search_rule_sets SET approved_by = 'person' WHERE approved_at IS NOT NULL"
+    )
     op.create_check_constraint(
         CHECK, T, "approved_by IS NULL OR approved_by IN ('person', 'auto')", schema=S
     )
