@@ -17,7 +17,17 @@ _LINK: Final = re.compile(
     r"\b[a-z0-9-]+\.(?:com|net|org|io|in|co|dev|app|ai|xyz|info|biz|me|ly|cc)\b",
     re.IGNORECASE,
 )
+# Names of technologies that look like web addresses ("ASP.NET", "Socket.IO") and are not.
+_TECH_NAMES: Final = re.compile(
+    r"\b(?:asp\.net|vb\.net|socket\.io|node\.js|vue\.js|next\.js|nuxt\.js|chart\.js|three\.js)\b",
+    re.IGNORECASE,
+)
 _WORDS: Final = re.compile(r"\w+")
+
+
+def has_link(text: str) -> bool:
+    """True when the text holds a web link, an address or a bare domain name."""
+    return bool(_LINK.search(_TECH_NAMES.sub(" ", text)))
 
 
 def role_words_outside(role: str, title: str) -> list[str]:
@@ -41,7 +51,7 @@ def rule_errors(expected_refs: list[str], titles: list[str]) -> Callable[[Any], 
             elif count > 1:
                 errors.append(f"Answer {ref} exactly once.")
         for decision in output.decisions:
-            if _LINK.search(decision.reason):
+            if has_link(decision.reason):
                 errors.append(f"The reason for {decision.ref} must not contain a link or address.")
             if decision.role is not None and decision.ref in title_of:
                 extra = role_words_outside(decision.role, title_of[decision.ref])

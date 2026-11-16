@@ -132,3 +132,59 @@ def test_the_schema_and_user_template_are_v2s(v3: LoadedPrompt) -> None:
     bad = {"decisions": [{"ref": "j1", "relevant": True, "reason": "x", "extra": 1}]}
     with pytest.raises(ValueError):
         v3.output_schema.model_validate(bad)
+
+
+def _v3_checks():  # type: ignore[no-untyped-def]
+    """v3's checks module, from the candidate folder or (once moved) the active prompts."""
+    import importlib.util
+
+    for root in (CANDIDATES, ACTIVE):
+        path = root / "judge_relevance" / "v3" / "checks.py"
+        if path.exists():
+            spec = importlib.util.spec_from_file_location("judge_relevance_v3_checks", path)
+            assert spec is not None
+            assert spec.loader is not None
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            return module
+    raise AssertionError("v3 checks not found")
+
+
+@pytest.mark.parametrize(
+    "reason",
+    [
+        "Needs ASP.NET, which is not among your skills.",
+        "Node.js and Socket.IO role; you use Python.",
+        "Needs C# and ASP.NET Core.",
+    ],
+)
+def test_a_technology_name_is_not_mistaken_for_a_web_address(reason: str) -> None:
+    """2026-11-16: "ASP.NET" in a reason made a whole batch of ten unusable."""
+    assert not _v3_checks().has_link(reason)
+
+
+@pytest.mark.parametrize(
+    "reason",
+    [
+        "See example.com for details",
+        "Apply at https://x.io/jobs",
+        "Mail jobs@acme.co",
+        "www.acme.in",
+    ],
+)
+def test_real_links_and_addresses_are_still_refused(reason: str) -> None:
+    assert _v3_checks().has_link(reason)
+
+
+def test_the_checks_ask_for_a_repair_when_a_reason_holds_an_address() -> None:
+    from types import SimpleNamespace
+
+    errors = _v3_checks().rule_errors(["j1"], ["Software Engineer"])
+    answer = SimpleNamespace(
+        decisions=[SimpleNamespace(ref="j1", reason="See acme.com", role=None)]
+    )
+    assert any("link" in e for e in errors(answer))
+    fine = SimpleNamespace(
+        decisions=[SimpleNamespace(ref="j1", reason="Needs ASP.NET.", role=None)]
+    )
+    assert errors(fine) == []

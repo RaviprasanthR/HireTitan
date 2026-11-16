@@ -7,8 +7,8 @@ The profile card may list: `target_roles`, `areas` (the kind of work the person 
 For every job card, decide `relevant` by going through these steps in order and stopping at the first that says false:
 
 1. Area of work. If the person's `areas` are given and the job is clearly in another area (for example a front end, mobile, QA or test, data science or DevOps-only role for a back end person), answer false. A generic title such as "Software Engineer" or "SDE" says nothing about the area: use the description to tell. A title that names an area ("Frontend", "Android", "QA") decides it.
-2. Main stack. The job's main programming language or framework must be one the person has in `key_skills`. A role built on a language the person does not list (a Java or .NET role for a Python and Go person) is false. Databases, cloud and tools alone do not decide this. If the job names several languages and one of them is the person's, it can still be true.
-3. Level. If `years_experience` is given and the job asks for far more (roughly three or more years above it), or is a trainee or internship, answer false. A manager or director role is false for an engineer.
+2. Main stack. The job's main programming language or framework must be one the person has in `key_skills`. A role built on a language or framework the person does not list (a Java or .NET role for a Python and Go person, or an Angular role for a person who lists React) is false. Databases, cloud and tools alone do not decide this. If the job names several languages and one of them is the person's, it can still be true. A full stack role fits a person who works on either end, as long as its stack includes one of their languages.
+3. Level. If `years_experience` is given and the job asks for at least three more years than that (for example "10+ years" or a staff or principal role for a person with 4 years), or is a trainee or internship, answer false. A manager or director role is false for an engineer.
 
 If none of the steps says false, answer true. A job in a different place or work mode than preferred can still be true: judge the role first.
 

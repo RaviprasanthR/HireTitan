@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SearchRulesPage } from './SearchRulesPage'
 
@@ -15,7 +16,7 @@ function rules(overrides: Record<string, unknown> = {}) {
       { text: 'Backend Engineer', origin: 'preference:target_roles[0]', effect: 'skips' },
       { text: 'backend developer', origin: 'synonym_table', effect: 'skips' },
     ] as Item[],
-    title_avoid: [] as Item[],
+    title_avoid: [{ text: 'frontend', origin: 'area:front_end', effect: 'skips' }] as Item[],
     blocked_locations: [
       { city: 'Pune', country: 'IN', origin: 'preference:blocked_locations[0]', effect: 'skips' },
     ],
@@ -24,19 +25,21 @@ function rules(overrides: Record<string, unknown> = {}) {
     preferred_locations: [],
     work_modes: ['remote'],
     seniority: [],
-    years_experience: null,
+    years_experience: '4.5',
+    areas: ['back_end'],
     ...overrides,
   }
 }
 
-function ruleSet(status: 'proposed' | 'approved', over: Record<string, unknown> = {}) {
+function approvedSet(over: Record<string, unknown> = {}) {
   return {
-    id: status === 'proposed' ? 'p1' : 'a1',
-    version: status === 'proposed' ? 2 : 1,
-    status,
+    id: 'a1',
+    version: 1,
+    status: 'approved',
     rules: rules(),
     based_on: {},
-    approved_at: status === 'approved' ? '2026-11-05T10:00:00Z' : null,
+    approved_at: '2026-11-05T10:00:00Z',
+    approved_by: 'person',
     ...over,
   }
 }
@@ -44,7 +47,8 @@ function ruleSet(status: 'proposed' | 'approved', over: Record<string, unknown> 
 type State = { approved: unknown; proposal: unknown; stale: boolean }
 let state: State
 let calls: { method: string; path: string; body?: string }[]
-let reply: (method: string, path: string) => Response | undefined
+let suggested: ReturnType<typeof rules>
+let saveReply: (() => Response) | null
 
 function serve() {
   vi.stubGlobal(
@@ -53,19 +57,20 @@ function serve() {
       const method = init?.method ?? 'GET'
       const path = url.replace('/api/v1', '')
       calls.push({ method, path, body: init?.body as string | undefined })
-      const custom = reply(method, path)
-      if (custom) return custom
-      if (method === 'GET') return json(state)
-      if (path.endsWith('/approve')) {
-        state = { approved: ruleSet('approved'), proposal: null, stale: false }
-        return json(ruleSet('approved'))
+      if (method === 'GET' && path === '/search/rules/suggested') return json(suggested)
+      if (method === 'GET' && path === '/search/rules') return json(state)
+      if (method === 'PUT' && path === '/search/rules/approved') {
+        if (saveReply) return saveReply()
+        const sent = JSON.parse(init?.body as string)
+        const next = approvedSet({ id: 'a2', version: 2, rules: sent })
+        state = { approved: next, proposal: null, stale: false }
+        return json(next)
       }
-      if (method === 'POST') {
-        state = { ...state, proposal: ruleSet('proposed') }
-        return json(ruleSet('proposed'), 201)
+      if (method === 'DELETE' && path === '/search/rules/proposal') {
+        state = { ...state, proposal: null }
+        return new Response(null, { status: 204 })
       }
-      if (method === 'PUT') return json(ruleSet('proposed'))
-      return new Response(null, { status: 204 })
+      return new Response(null, { status: 404 })
     }),
   )
 }
@@ -74,26 +79,64 @@ function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
     <QueryClientProvider client={client}>
-      <SearchRulesPage />
+      <MemoryRouter>
+        <SearchRulesPage />
+      </MemoryRouter>
     </QueryClientProvider>,
   )
 }
 
 beforeEach(() => {
-  state = { approved: null, proposal: ruleSet('proposed'), stale: false }
+  state = { approved: approvedSet(), proposal: null, stale: false }
+  suggested = rules({ title_words: [{ text: 'Suggested Engineer', origin: 'user', effect: 'skips' }] })
+  saveReply = null
   calls = []
-  reply = () => undefined
   serve()
 })
 afterEach(() => vi.unstubAllGlobals())
 
+const OLD_TAGS = [
+  'Skips jobs',
+  'Guides the AI',
+  'Similar title',
+  'From your preferences',
+  'From your profile',
+  'Added by you',
+]
+
+async function openEditor(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByRole('button', { name: /edit rules/i }))
+}
+
 describe('SearchRulesPage', () => {
+  it('US3_AS1_shows_the_three_groups_in_plain_language', async () => {
+    renderPage()
+
+    const keep = await screen.findByRole('region', { name: 'Jobs we keep' })
+    expect(within(keep).getByText('Backend Engineer')).toBeInTheDocument()
+    const leave = screen.getByRole('region', { name: 'Jobs we leave out' })
+    expect(within(leave).getByText('frontend')).toBeInTheDocument()
+    expect(within(leave).getByText('Pune, IN')).toBeInTheDocument()
+    expect(within(leave).getByText('30 days')).toBeInTheDocument()
+    const rank = screen.getByRole('region', { name: 'What helps rank a job' })
+    expect(within(rank).getByText('Back end')).toBeInTheDocument() // the area, as a person says it
+    expect(within(rank).getByText('Python')).toBeInTheDocument()
+    expect(within(rank).getByText(/Years of experience: 4\.5/)).toBeInTheDocument()
+    expect(within(rank).getByRole('link', { name: /change these in preferences/i })).toHaveAttribute(
+      'href',
+      '/profile/preferences',
+    )
+  })
+
+  it('SC003_shows_none_of_the_old_tag_texts', async () => {
+    renderPage()
+    await screen.findByRole('region', { name: 'Jobs we keep' })
+    for (const tag of OLD_TAGS) expect(document.body.textContent).not.toContain(tag)
+    expect(document.body.textContent).not.toMatch(/area:front_end|synonym_table|preference:/)
+  })
+
   it('US1_AS2_FR020_says_the_rules_were_set_up_automatically', async () => {
-    state = {
-      approved: ruleSet('approved', { approved_by: 'auto' }),
-      proposal: null,
-      stale: false,
-    }
+    state = { approved: approvedSet({ approved_by: 'auto' }), proposal: null, stale: false }
     renderPage()
     expect(
       await screen.findByText(/HireTitan set these up from your profile and preferences/i),
@@ -101,145 +144,181 @@ describe('SearchRulesPage', () => {
   })
 
   it('FR020_says_nothing_about_rules_the_person_approved', async () => {
-    state = {
-      approved: ruleSet('approved', { approved_by: 'person' }),
-      proposal: null,
-      stale: false,
-    }
     renderPage()
     await screen.findByText(/These are the rules your searches use/i)
     expect(screen.queryByText(/HireTitan set these up/i)).not.toBeInTheDocument()
   })
 
-  it('US2_AS1_shows_origin_and_effect', async () => {
-    renderPage()
-
-    const roles = await screen.findByRole('region', { name: /job titles/i })
-    const first = within(roles).getByText('Backend Engineer').closest('li') as HTMLElement
-    expect(within(first).getByText(/from your preferences/i)).toBeInTheDocument()
-    expect(within(first).getByText(/skips jobs/i)).toBeInTheDocument()
-    const synonym = within(roles).getByText('backend developer').closest('li') as HTMLElement
-    expect(within(synonym).getByText(/similar title/i)).toBeInTheDocument()
-
-    const skills = screen.getByRole('region', { name: /skills/i })
-    const python = within(skills).getByText('Python').closest('li') as HTMLElement
-    expect(within(python).getByText(/from your profile/i)).toBeInTheDocument()
-    expect(within(python).getByText(/guides the ai/i)).toBeInTheDocument()
-  })
-
-  it('US2_AS2_edit_then_approve', async () => {
+  it('US3_AS3_edit_and_save_makes_a_new_version', async () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.type(await screen.findByLabelText(/add a word to avoid/i), 'manager')
-    await user.click(screen.getByRole('button', { name: /add avoid word/i }))
-    await user.click(screen.getByRole('button', { name: /approve/i }))
+    await openEditor(user)
+    await user.type(screen.getByLabelText('Job titles'), 'Platform Engineer{Enter}')
+    await user.click(screen.getByRole('button', { name: 'Save rules' }))
 
-    await waitFor(() => expect(calls.some((c) => c.path.endsWith('/approve'))).toBe(true))
-    const put = calls.findIndex((c) => c.method === 'PUT')
-    const approve = calls.findIndex((c) => c.path.endsWith('/approve'))
-    expect(put).toBeGreaterThan(-1)
-    expect(put).toBeLessThan(approve)
-    const sent = JSON.parse(calls[put]?.body as string)
-    expect(sent.title_avoid).toEqual([{ text: 'manager', origin: 'user' }])
-    expect(await screen.findByText(/rules approved/i)).toBeInTheDocument()
+    expect(await screen.findByText('Rules saved.')).toBeInTheDocument()
+    const put = calls.find((c) => c.method === 'PUT')
+    expect(put?.path).toBe('/search/rules/approved')
+    const sent = JSON.parse(put?.body as string)
+    expect(sent.title_words.map((i: Item) => i.text)).toEqual([
+      'Backend Engineer',
+      'backend developer',
+      'Platform Engineer',
+    ])
+    // the person's untouched rules keep their origin; the new one is the person's own
+    expect(sent.title_words[0].origin).toBe('preference:target_roles[0]')
+    expect(sent.title_words[2].origin).toBe('user')
+    expect(screen.getByText(/version 2/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Save rules' })).not.toBeInTheDocument()
   })
 
-  it('US2_AS4_stale_notice_offers_a_reset_to_suggested', async () => {
+  it('SC004_changing_a_title_takes_three_clicks_or_fewer', async () => {
     const user = userEvent.setup()
-    state = { approved: ruleSet('approved'), proposal: null, stale: true }
+    renderPage()
+    let clicks = 0
+    document.addEventListener('click', () => (clicks += 1), true)
+
+    await openEditor(user) // click 1 (Edit)
+    await user.type(screen.getByLabelText('Job titles'), 'Platform Engineer{Enter}')
+    await user.click(screen.getByRole('button', { name: 'Save rules' })) // click 2 (Save)
+
+    await screen.findByText('Rules saved.')
+    expect(clicks).toBeLessThanOrEqual(3)
+  })
+
+  it('US3_AS4_cancel_changes_nothing', async () => {
+    const user = userEvent.setup()
     renderPage()
 
-    expect(await screen.findByText(/your profile or preferences changed/i)).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: /reset to suggested/i }))
+    await openEditor(user)
+    await user.type(screen.getByLabelText('Job titles'), 'Platform Engineer{Enter}')
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(calls.some((c) => c.method === 'PUT')).toBe(false)
+    const keep = await screen.findByRole('region', { name: 'Jobs we keep' })
+    expect(within(keep).queryByText('Platform Engineer')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /edit rules/i })).toBeInTheDocument()
+  })
+
+  it('US3_AS5_invalid_save_shows_the_error_next_to_its_group', async () => {
+    const user = userEvent.setup()
+    saveReply = () =>
+      json(
+        {
+          title: 'Some fields are not valid.',
+          status: 422,
+          errors: [
+            { field: 'title_words', message: 'Add at least 1.' },
+            { field: 'max_age_days', message: 'Use a number from 1 to 365.' },
+          ],
+        },
+        422,
+        'application/problem+json',
+      )
+    renderPage()
+
+    await openEditor(user)
+    await user.click(screen.getByRole('button', { name: 'Save rules' }))
+
+    const keep = await screen.findByRole('region', { name: 'Jobs we keep' })
+    expect(await within(keep).findByRole('alert')).toHaveTextContent('Add at least one job title.')
+    const leave = screen.getByRole('region', { name: 'Jobs we leave out' })
+    expect(within(leave).getByRole('alert')).toHaveTextContent('Use a number of days from 1 to 365.')
+    expect(screen.getByRole('button', { name: 'Save rules' })).toBeEnabled() // still editing
+  })
+
+  it('US3_AS6_update_from_my_profile_opens_suggested_rules_unsaved', async () => {
+    const user = userEvent.setup()
+    state = { approved: approvedSet(), proposal: null, stale: true }
+    renderPage()
+
+    expect(await screen.findByText(/changed since these rules were set/i)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Update from my profile' }))
+
+    expect(await screen.findByText('Suggested Engineer')).toBeInTheDocument() // in the editor
+    expect(screen.getByRole('button', { name: 'Save rules' })).toBeInTheDocument()
+    expect(calls.some((c) => c.method === 'PUT')).toBe(false) // nothing changed yet
+  })
+
+  it('US3_AS7_start_over_fills_the_editor_with_suggested_rules_unsaved', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await openEditor(user)
+    await user.click(screen.getByRole('button', { name: /start over with suggested rules/i }))
+
+    expect(await screen.findByText('Suggested Engineer')).toBeInTheDocument()
+    expect(screen.queryByText('Backend Engineer')).not.toBeInTheDocument()
+    expect(calls.some((c) => c.method === 'PUT')).toBe(false)
+  })
+
+  it('US3_AS8_asks_before_leaving_with_unsaved_edits', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await openEditor(user)
+
+    const untouched = new Event('beforeunload', { cancelable: true })
+    window.dispatchEvent(untouched)
+    expect(untouched.defaultPrevented).toBe(false) // nothing changed: no question
+
+    await user.type(screen.getByLabelText('Job titles'), 'Platform Engineer{Enter}')
+    const changed = new Event('beforeunload', { cancelable: true })
+    window.dispatchEvent(changed)
+    expect(changed.defaultPrevented).toBe(true)
+  })
+
+  it('leftover_proposal_opens_in_the_editor_and_cancel_discards_it', async () => {
+    const user = userEvent.setup()
+    state = {
+      approved: approvedSet(),
+      proposal: approvedSet({
+        id: 'p1',
+        version: 2,
+        status: 'proposed',
+        approved_at: null,
+        approved_by: null,
+        rules: rules({ title_words: [{ text: 'Half Done', origin: 'user', effect: 'skips' }] }),
+      }),
+      stale: false,
+    }
+    renderPage()
+
+    expect(await screen.findByText('Half Done')).toBeInTheDocument()
+    expect(screen.getByText(/you had changes in progress/i)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
 
     await waitFor(() =>
-      expect(calls.some((c) => c.method === 'POST' && c.path === '/search/rules/proposal')).toBe(
+      expect(calls.some((c) => c.method === 'DELETE' && c.path === '/search/rules/proposal')).toBe(
         true,
       ),
     )
-    expect(await screen.findByRole('button', { name: /approve/i })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /edit rules/i })).toBeInTheDocument()
   })
 
-  it('FR002_limit_errors_shown', async () => {
+  it('areas_can_be_picked_up_to_four', async () => {
     const user = userEvent.setup()
-    reply = (method) =>
-      method === 'PUT'
-        ? json(
-            {
-              status: 422,
-              detail: 'Some fields are not valid.',
-              errors: [{ field: 'title_words', message: 'Add at least 1.' }],
-            },
-            422,
-            'application/problem+json',
-          )
-        : undefined
+    state = { approved: approvedSet({ rules: rules({ areas: ['back_end'] }) }), proposal: null, stale: false }
     renderPage()
+    await openEditor(user)
 
-    await screen.findByRole('region', { name: /job titles/i })
-    for (const remove of screen.getAllByRole('button', {
-      name: /remove (backend engineer|backend developer)/i,
-    })) {
-      await user.click(remove)
+    for (const name of ['Front end', 'Mobile', 'Data']) {
+      await user.click(screen.getByRole('checkbox', { name }))
     }
-    await user.click(screen.getByRole('button', { name: /approve/i }))
 
-    const roles = screen.getByRole('region', { name: /job titles/i })
-    expect(await within(roles).findByRole('alert')).toHaveTextContent('Add at least 1.')
-    expect(calls.some((c) => c.path.endsWith('/approve'))).toBe(false)
+    expect(screen.getByRole('checkbox', { name: 'QA and testing' })).toBeDisabled() // a fifth
+    expect(screen.getByRole('checkbox', { name: 'Back end' })).toBeEnabled() // can be unchecked
   })
 
-  it('offers a first proposal when there are no rules yet', async () => {
+  it('without_approved_rules_the_person_can_get_suggestions_and_save', async () => {
+    const user = userEvent.setup()
     state = { approved: null, proposal: null, stale: false }
-    const user = userEvent.setup()
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: /suggest rules/i }))
+    await user.click(await screen.findByRole('button', { name: 'Suggest rules' }))
+    expect(await screen.findByText('Suggested Engineer')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Save rules' }))
 
-    expect(await screen.findByRole('button', { name: /approve/i })).toBeInTheDocument()
-  })
-
-  it('shows why a proposal cannot be made yet', async () => {
-    state = { approved: null, proposal: null, stale: false }
-    reply = (method) =>
-      method === 'POST'
-        ? json(
-            { status: 409, detail: 'Confirm your profile first.', reason: 'no_confirmed_profile' },
-            409,
-            'application/problem+json',
-          )
-        : undefined
-    const user = userEvent.setup()
-    renderPage()
-
-    await user.click(await screen.findByRole('button', { name: /suggest rules/i }))
-
-    expect(await screen.findByRole('alert')).toHaveTextContent('Confirm your profile first.')
-  })
-
-  it('discard removes the proposal and keeps the approved rules', async () => {
-    const user = userEvent.setup()
-    state = { approved: ruleSet('approved'), proposal: ruleSet('proposed'), stale: false }
-    renderPage()
-
-    await user.click(await screen.findByRole('button', { name: /discard/i }))
-
-    await waitFor(() => expect(calls.some((c) => c.method === 'DELETE')).toBe(true))
-  })
-
-  it('Edit rules opens a draft copied from the approved rules', async () => {
-    const user = userEvent.setup()
-    state = { approved: ruleSet('approved'), proposal: null, stale: false }
-    renderPage()
-
-    await user.click(await screen.findByRole('button', { name: /edit rules/i }))
-
-    await waitFor(() =>
-      expect(
-        calls.some((c) => c.method === 'POST' && c.path === '/search/rules/proposal/from-approved'),
-      ).toBe(true),
-    )
-    expect(await screen.findByRole('button', { name: /approve/i })).toBeInTheDocument()
+    await waitFor(() => expect(calls.some((c) => c.method === 'PUT')).toBe(true))
   })
 })
