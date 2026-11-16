@@ -72,7 +72,7 @@ function renderStep() {
     active_run_id: null,
   }
   const invalidate = vi.spyOn(client, 'invalidateQueries')
-  render(
+  const rendered = render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
         <GateProbe />
@@ -80,7 +80,7 @@ function renderStep() {
       </MemoryRouter>
     </QueryClientProvider>,
   )
-  return { invalidate }
+  return { invalidate, rendered }
 }
 
 describe('PreferencesStep', () => {
@@ -125,6 +125,15 @@ describe('PreferencesStep', () => {
       expect(keys).toContain(JSON.stringify(['status']))
       expect(keys).toContain(JSON.stringify(['search-rules']))
     })
+  })
+
+  it('FR021_the_cards_flow_in_two_columns_in_setup_so_the_step_is_shorter', async () => {
+    const { container } = renderStep().rendered
+    await screen.findByRole('button', { name: 'Finish setup' }) // the form has loaded
+    const layout = container.querySelector('[data-layout]')
+    expect(layout).toHaveAttribute('data-layout', 'flow')
+    expect(layout?.className).toContain('lg:columns-2')
+    expect(layout?.className).not.toContain('auto-rows-fr') // no forced equal heights
   })
 
   it('finish_is_refused_until_the_form_is_valid', async () => {

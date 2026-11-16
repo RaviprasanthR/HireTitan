@@ -38,4 +38,8 @@ against the compose stack with scripted AI and fake job boards (all three pass).
 
 ## Measurements
 
-- **SC-005**: to be added after the before and after screenshots at 1280 × 800.
+- **SC-005** (2026-11-16, Chromium at 1280 × 800, the same Preferences step with the same data; scroll distance = page height minus the 800 px window):
+  - **Before** (the layout on `master`: a 672 px card, two equal-height cards per row): **926 px** of scrolling.
+  - Wide card only: 638 px (31% less, short of the 40% target). The equal-height rows left a tall, mostly empty Companies card.
+  - **After** (a 1152 px card and the four cards flowing in two balanced columns in setup): **506 px** (**45% less**; the target of 40% is met). The Preferences page itself keeps its equal-height layout; only the setup step changed.
+  - This reverses a 2026-11-15 choice of Ravi's ("four equal-height accent cards") for the setup step only; the page is unchanged. Easy to undo if he prefers equal heights (then the saving is 31%).
