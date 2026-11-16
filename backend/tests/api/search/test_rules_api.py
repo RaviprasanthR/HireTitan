@@ -19,9 +19,11 @@ from hiretitan.profile.domain.content import Contact, ProfileContent
 from hiretitan.profile.infra.repos import VersionsRepo
 from hiretitan.search.api.rules import SearchRulesApiDeps, create_search_rules_router
 from hiretitan.search.application.synonyms_seed import load_title_synonyms
+from hiretitan.search.application.tables_seed import load_work_areas
 from hiretitan.search_wiring import ProfileAndPreferencesSource
 
 SEED = Path(__file__).resolve().parents[3] / "seed" / "title_synonyms.yaml"
+AREAS_SEED = Path(__file__).resolve().parents[3] / "seed" / "work_areas.yaml"
 RULES = "/api/v1/search/rules"
 
 
@@ -33,6 +35,7 @@ async def client(
         sessions=sessions,
         source=ProfileAndPreferencesSource,
         synonyms=load_title_synonyms(SEED),
+        work_areas=load_work_areas(AREAS_SEED),
     )
     app = create_app(
         Settings(), frontend_dist=tmp_path / "none", routers=[create_search_rules_router(deps)]
@@ -145,6 +148,18 @@ async def test_approve_records_person(
     approved = (await client.post(f"{RULES}/proposal/approve")).json()
     assert approved["approved_by"] == "person"
     assert (await client.get(RULES)).json()["approved"]["approved_by"] == "person"
+
+
+async def test_FR030_FR031_proposal_has_the_area_and_avoid_words(
+    client: httpx.AsyncClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    await ready(sessions)
+
+    proposal = (await client.post(f"{RULES}/proposal")).json()
+
+    assert proposal["rules"]["areas"] == ["back_end"]
+    avoid = {i["text"] for i in proposal["rules"]["title_avoid"]}
+    assert {"frontend", "front end", "android"} <= avoid
 
 
 async def test_FR002_limits_return_field_errors(

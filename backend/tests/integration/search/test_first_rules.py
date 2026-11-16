@@ -15,11 +15,13 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from hiretitan.search.application.ports import ProposalFacts
 from hiretitan.search.application.rules import RulesService, RulesUnavailableError
+from hiretitan.search.application.tables_seed import load_work_areas
 from hiretitan.search.domain.proposer import PlaceInput, ProposalInput
 from hiretitan.search.infra.models import SearchRuleSetRow
 from hiretitan.search.infra.repos import RuleSetsRepo
 from hiretitan.setup_wiring import SqlDeleteAllStore
 
+WORK_AREAS = load_work_areas(Path(__file__).resolve().parents[3] / "seed" / "work_areas.yaml")
 T0 = datetime(2026, 11, 5, tzinfo=UTC)
 SYNONYMS = {"backend engineer": ("backend developer",)}
 
@@ -51,7 +53,9 @@ def make_facts(**changes: object) -> ProposalFacts:
 
 
 def service(session: AsyncSession, facts: ProposalFacts | None = None) -> RulesService:
-    return RulesService(RuleSetsRepo(session), FakeSource(facts or make_facts()), SYNONYMS)
+    return RulesService(
+        RuleSetsRepo(session), FakeSource(facts or make_facts()), SYNONYMS, WORK_AREAS
+    )
 
 
 async def count_rows(session: AsyncSession) -> int:
@@ -69,6 +73,7 @@ async def test_FR001_first_rules_are_approved(db_session: AsyncSession) -> None:
     assert approved.version == 1
     titles = [item["text"] for item in approved.rules["title_words"]]
     assert "Backend Engineer" in titles  # the proposal built from the preferences
+    assert approved.rules["areas"] == ["back_end"]  # and the area guessed from it (002i)
 
 
 async def test_FR002_existing_approval_is_never_replaced(db_session: AsyncSession) -> None:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -91,7 +92,19 @@ def load_tech_names(path: Path) -> TechTable:
     return tuple(table)
 
 
+@dataclass(frozen=True, slots=True)
+class SeedTables:
+    work_areas: WorkAreaTable
+    tech_names: TechTable
+
+
+def load_seed_tables(seed_dir: Path) -> SeedTables:
+    """Read both tables, failing at start-up with a clear message when one is wrong."""
+    return SeedTables(
+        load_work_areas(seed_dir / "work_areas.yaml"), load_tech_names(seed_dir / "tech_names.yaml")
+    )
+
+
 def check_seed_tables(seed_dir: Path) -> None:
     """Fail at start-up, with a clear message, when a shipped table is wrong."""
-    load_work_areas(seed_dir / "work_areas.yaml")
-    load_tech_names(seed_dir / "tech_names.yaml")
+    load_seed_tables(seed_dir)

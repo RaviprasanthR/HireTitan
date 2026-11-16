@@ -18,12 +18,14 @@ from hiretitan.search.domain.rules import (
     ITEM_TEXT_MAX,
     PREFERRED_LOCATIONS_MAX,
     STACK_KEYWORDS_MAX,
+    TITLE_AVOID_MAX,
     TITLE_WORDS_MAX,
     LocationRule,
     RuleItem,
     SearchRules,
 )
 from hiretitan.search.domain.synonyms import expand, normalize_phrase
+from hiretitan.search.domain.work_areas import WorkAreaTable, avoid_with_area, guess_areas
 
 
 @dataclass(frozen=True, slots=True)
@@ -44,12 +46,21 @@ class ProposalInput:
     preferred_locations: tuple[PlaceInput, ...] = ()
     blocked_locations: tuple[PlaceInput, ...] = ()
     work_modes: frozenset[str] = frozenset()
+    # job titles from the confirmed profile, newest first (guides the guess of the area of work)
+    recent_titles: tuple[str, ...] = ()
 
 
-def propose_rules(source: ProposalInput, synonyms: Mapping[str, tuple[str, ...]]) -> SearchRules:
+def propose_rules(
+    source: ProposalInput,
+    synonyms: Mapping[str, tuple[str, ...]],
+    work_areas: WorkAreaTable | None = None,
+) -> SearchRules:
+    areas = _areas(source, work_areas)
     return SearchRules(
         title_words=_title_words(source.target_roles, synonyms),
-        title_avoid=(),  # FR-005: only the person adds avoid words
+        # 002i FR-031: words that mark a clearly different area (002 FR-005 left this to the person)
+        title_avoid=_avoid(areas, work_areas),
+        areas=areas,
         blocked_locations=_places(
             source.blocked_locations, "blocked_locations", BLOCKED_LOCATIONS_MAX
         ),
@@ -62,6 +73,23 @@ def propose_rules(source: ProposalInput, synonyms: Mapping[str, tuple[str, ...]]
         seniority=source.seniority_levels,
         years_experience=source.years_experience,
     )
+
+
+def _areas(source: ProposalInput, table: WorkAreaTable | None) -> tuple[str, ...]:
+    if table is None:
+        return ()
+    skills = tuple(
+        dict.fromkeys(s.strip().lower() for s in (*source.key_skills, *source.profile_skills))
+    )
+    return guess_areas(source.target_roles, source.recent_titles, skills, table)
+
+
+def _avoid(areas: tuple[str, ...], table: WorkAreaTable | None) -> tuple[RuleItem, ...]:
+    if table is None:
+        return ()
+    return tuple(RuleItem(word, f"area:{area}") for word, area in avoid_with_area(areas, table))[
+        :TITLE_AVOID_MAX
+    ]
 
 
 def _title_words(

@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from hiretitan.platform.config.settings import Settings
 from hiretitan.preferences.infra.repo import PreferencesRepo
+from hiretitan.profile.domain.content import Experience, ProfileContent
 from hiretitan.profile.infra.models import ResumeFileRow
 from hiretitan.profile.infra.repos import VersionsRepo
 from hiretitan.search.application.ports import CareerOpsPort, ProposalFacts, ProposalSource
@@ -31,6 +32,7 @@ from hiretitan.search.application.seed import SeedResult, load_seed
 from hiretitan.search.domain.cards import ProfileCard
 from hiretitan.search.domain.proposer import PlaceInput, ProposalInput
 from hiretitan.search.domain.resume_choice import offerable
+from hiretitan.search.domain.work_areas import WorkAreaTable
 from hiretitan.search.infra.careerops.adapter import CareerOpsAdapter
 from hiretitan.search.infra.careerops.fake import FileCareerOps
 from hiretitan.search.infra.repos import CompaniesRepo, RuleSetsRepo
@@ -90,11 +92,15 @@ async def approve_first_rules(
     sessions: async_sessionmaker[AsyncSession],
     synonyms: Mapping[str, tuple[str, ...]],
     source: Callable[[AsyncSession], ProposalSource] | None = None,
+    work_areas: WorkAreaTable | None = None,
 ) -> FirstRulesOutcome:
     """Approve the first search rules in a session of their own (002i FR-001)."""
     async with sessions() as session:
         outcome = await RulesService(
-            RuleSetsRepo(session), (source or ProfileAndPreferencesSource)(session), synonyms
+            RuleSetsRepo(session),
+            (source or ProfileAndPreferencesSource)(session),
+            synonyms,
+            work_areas,
         ).approve_first()
         await session.commit()
     if outcome == "not_possible":
@@ -108,17 +114,20 @@ def first_rules_callback(
     sessions: async_sessionmaker[AsyncSession],
     synonyms: Mapping[str, tuple[str, ...]],
     source: Callable[[AsyncSession], ProposalSource] | None = None,
+    work_areas: WorkAreaTable | None = None,
 ) -> Callable[[], Awaitable[None]]:
     """What finishing setup runs: approve the first rules, nothing else."""
 
     async def run() -> None:
-        await approve_first_rules(sessions, synonyms, source)
+        await approve_first_rules(sessions, synonyms, source, work_areas)
 
     return run
 
 
 async def approve_first_rules_at_start(
-    sessions: async_sessionmaker[AsyncSession], synonyms: Mapping[str, tuple[str, ...]]
+    sessions: async_sessionmaker[AsyncSession],
+    synonyms: Mapping[str, tuple[str, ...]],
+    work_areas: WorkAreaTable | None = None,
 ) -> None:
     """At API start: an install that finished setup without ever approving rules gets them
     (002i FR-003). Never raises; the API must start either way."""
@@ -126,7 +135,7 @@ async def approve_first_rules_at_start(
         async with sessions() as session:
             finished = await SetupFinishedGate(session).setup_complete()
         if finished:
-            await approve_first_rules(sessions, synonyms)
+            await approve_first_rules(sessions, synonyms, work_areas=work_areas)
     except Exception:
         log.exception("Could not approve the first search rules at start-up")
 
@@ -140,6 +149,25 @@ class SetupFinishedGate:
     async def setup_complete(self) -> bool:
         record = await SettingsRepo(self._session).read_onboarding()
         return record.setup_completed_at is not None
+
+
+RECENT_TITLES_MAX = 3
+RECENT_TITLE_LENGTH = 80
+
+
+def _recent_titles(profile: ProfileContent) -> tuple[str, ...]:
+    """Up to three job titles from the confirmed profile, newest first (a current job first)."""
+
+    def newest(job: Experience) -> tuple[bool, tuple[int, int]]:
+        point = job.end or job.start
+        return (job.current, (point.year, point.month or 1) if point else (0, 0))
+
+    titles = (
+        job.title.strip()[:RECENT_TITLE_LENGTH]
+        for job in sorted(profile.experience, key=newest, reverse=True)
+        if job.title.strip()
+    )
+    return tuple(dict.fromkeys(titles))[:RECENT_TITLES_MAX]
 
 
 class ProfileAndPreferencesSource:
@@ -172,6 +200,7 @@ class ProfileAndPreferencesSource:
                     PlaceInput(p.city, p.country) for p in prefs.blocked_locations
                 ),
                 work_modes=prefs.work_modes,
+                recent_titles=_recent_titles(profile),
             ),
             profile_version_id=version.id,
             preferences_saved_at=stored.saved_at,

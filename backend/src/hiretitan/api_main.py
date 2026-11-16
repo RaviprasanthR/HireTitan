@@ -47,7 +47,7 @@ from hiretitan.search.api.pipeline import PipelineApiDeps, create_pipeline_route
 from hiretitan.search.api.rules import SearchRulesApiDeps, create_search_rules_router
 from hiretitan.search.api.runs import SearchRunsApiDeps, create_search_runs_router
 from hiretitan.search.application.synonyms_seed import load_title_synonyms
-from hiretitan.search.application.tables_seed import check_seed_tables
+from hiretitan.search.application.tables_seed import load_seed_tables
 from hiretitan.search_wiring import (
     ProfileAndPreferencesSource,
     SetupFinishedGate,
@@ -201,17 +201,17 @@ def build_app(settings: Settings | None = None) -> FastAPI:
         await runtime.app.configure_task(CHECK_PROVIDER_KEY_TASK).defer_async()
 
     synonyms = load_title_synonyms(SEED_DIR / "title_synonyms.yaml")
+    seed_tables = load_seed_tables(SEED_DIR)  # area and technology tables; a bad file stops start
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         await seed_companies(deps.sessions, SEED_DIR / "companies.yaml")
         # an install that finished setup before 002i, or whose approval failed, gets its rules
-        await approve_first_rules_at_start(deps.sessions, synonyms)
+        await approve_first_rules_at_start(deps.sessions, synonyms, seed_tables.work_areas)
         async with runtime.app.open_async():  # the job queue connection, to defer jobs
             yield
         await engine.dispose()
 
-    check_seed_tables(SEED_DIR)  # the area and technology tables (002i); a bad file stops start-up
     routers = [
         create_resumes_router(deps),
         create_reviews_router(deps),
@@ -226,6 +226,7 @@ def build_app(settings: Settings | None = None) -> FastAPI:
                 sessions=deps.sessions,
                 source=ProfileAndPreferencesSource,
                 synonyms=synonyms,
+                work_areas=seed_tables.work_areas,
             )
         ),
         create_search_runs_router(
@@ -272,7 +273,9 @@ def build_app(settings: Settings | None = None) -> FastAPI:
                 sessions=deps.sessions,
                 clock=clock,
                 facts=RepoFacts,
-                on_completed=first_rules_callback(deps.sessions, synonyms),
+                on_completed=first_rules_callback(
+                    deps.sessions, synonyms, work_areas=seed_tables.work_areas
+                ),
             )
         ),
         create_review_items_router(ReviewItemsApiDeps(sessions=deps.sessions, facts=RepoFacts)),

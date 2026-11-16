@@ -29,6 +29,7 @@ from hiretitan.search.domain.rules import (
     RulesInvalidError,
     SearchRules,
 )
+from hiretitan.search.domain.work_areas import WorkAreaTable
 from hiretitan.search.infra.repos import RuleSetsRepo
 
 
@@ -37,6 +38,7 @@ class SearchRulesApiDeps:
     sessions: async_sessionmaker[AsyncSession]
     source: Callable[[AsyncSession], ProposalSource]
     synonyms: Mapping[str, tuple[str, ...]]
+    work_areas: WorkAreaTable | None = None  # the reviewed table behind areas and avoid words
 
 
 class RuleItemModel(BaseModel):
@@ -154,7 +156,9 @@ def create_search_rules_router(deps: SearchRulesApiDeps) -> APIRouter:
     router = APIRouter(prefix="/search/rules", tags=["search"])
 
     def service(session: AsyncSession) -> RulesService:
-        return RulesService(RuleSetsRepo(session), deps.source(session), deps.synonyms)
+        return RulesService(
+            RuleSetsRepo(session), deps.source(session), deps.synonyms, deps.work_areas
+        )
 
     async def render(session: AsyncSession, view: RuleSetView) -> RuleSetOut:
         row = await RuleSetsRepo(session).get(view.id)

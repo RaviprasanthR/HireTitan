@@ -45,13 +45,13 @@ ITEM_TEXT_MAX: Final = 60
 MAX_AGE_RANGE: Final = (1, 365)
 YEARS_RANGE: Final = (Decimal(0), Decimal(50))
 
-_ORIGIN = re.compile(r"(preference|profile):[a-z_]+(\[\d+\])?|synonym_table|user")
+_ORIGIN = re.compile(r"(preference|profile):[a-z_]+(\[\d+\])?|area:[a-z_]+|synonym_table|user")
 
 
 @dataclass(frozen=True, slots=True)
 class RuleItem:
     text: str
-    origin: str  # preference:<field> | profile:<field> | synonym_table | user
+    origin: str  # preference:<field> | profile:<field> | area:<name> | synonym_table | user
 
 
 @dataclass(frozen=True, slots=True)

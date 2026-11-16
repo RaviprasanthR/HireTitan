@@ -17,6 +17,7 @@ from hiretitan.search.application.ports import ProposalSource, RuleSetStore, Sto
 from hiretitan.search.domain.proposer import propose_rules
 from hiretitan.search.domain.rules import RulesInvalidError, SearchRules
 from hiretitan.search.domain.rules_serialization import rules_from_dict, rules_to_dict
+from hiretitan.search.domain.work_areas import WorkAreaTable
 
 UnavailableReason = Literal["no_confirmed_profile", "no_preferences"]
 FirstRulesOutcome = Literal["approved", "already", "not_possible"]
@@ -72,10 +73,12 @@ class RulesService:
         store: RuleSetStore,
         source: ProposalSource,
         synonyms: Mapping[str, tuple[str, ...]],
+        work_areas: WorkAreaTable | None = None,
     ) -> None:
         self._store = store
         self._source = source
         self._synonyms = synonyms
+        self._work_areas = work_areas
 
     async def current(self) -> tuple[RuleSetView | None, RuleSetView | None]:
         """``(approved, proposed)``; either may be missing."""
@@ -89,7 +92,7 @@ class RulesService:
     async def propose(self) -> RuleSetView:
         """Build a fresh proposal from the profile and preferences. The approved set stays."""
         facts = await self._source.read()
-        rules = propose_rules(facts.source, self._synonyms)
+        rules = propose_rules(facts.source, self._synonyms, self._work_areas)
         row = await self._store.propose(
             rules_to_dict(rules), _basis(facts.profile_version_id, facts.preferences_saved_at)
         )
@@ -131,7 +134,7 @@ class RulesService:
             return "already"
         try:
             facts = await self._source.read()
-            rules = propose_rules(facts.source, self._synonyms)
+            rules = propose_rules(facts.source, self._synonyms, self._work_areas)
             rules.validate()
         except (RulesUnavailableError, RulesInvalidError):
             return "not_possible"
