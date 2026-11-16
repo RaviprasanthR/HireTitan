@@ -84,3 +84,23 @@ def test_pairs_are_ordered_by_id_whichever_job_is_new() -> None:
 def test_a_job_is_not_its_own_candidate() -> None:
     one = job(1)
     assert fuzzy_candidates(one, [one]) == []
+
+
+def _job(title: str, city: str | None = "Pune", company: str = "Acme") -> DedupJob:
+    return DedupJob(UUID(int=1), company, city, title, None, None, None)
+
+
+def test_same_posting_again_needs_company_city_and_a_near_identical_title() -> None:
+    from hiretitan.search.domain.dedup import same_posting_again
+
+    base = _job("Backend Engineer")
+    assert same_posting_again(_job("Backend Engineer"), base)
+    assert same_posting_again(_job("Backend  Engineer."), base)  # punctuation only
+    assert not same_posting_again(_job("Senior Backend Engineer"), base)  # another level
+    assert not same_posting_again(_job("Backend Engineer", city="Chennai"), base)
+    assert not same_posting_again(_job("Backend Engineer", city=None), base)  # city unknown
+    assert not same_posting_again(_job("Backend Engineer", company="Other"), base)
+    # the two roles that looked alike in the real data
+    assert not same_posting_again(
+        _job("Senior Software Engineer-Frontend"), _job("Senior Software Engineer-Systems")
+    )

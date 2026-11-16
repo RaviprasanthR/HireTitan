@@ -16,6 +16,8 @@ from rapidfuzz import fuzz
 from hiretitan.search.domain.places import key, same_city
 
 TITLE_SIMILARITY_MIN: Final = 92
+# Stricter than a candidate: a title that differs by a word (a level, a team) is another job.
+SAME_POSTING_TITLE_MIN: Final = 95
 
 
 @dataclass(frozen=True, slots=True)
@@ -70,3 +72,12 @@ def fuzzy_candidates(found: DedupJob, existing: Iterable[DedupJob]) -> list[Dupl
             first, second = sorted((found.id, other.id))
             pairs.append(DuplicatePair(first, second, score))
     return sorted(pairs, key=lambda p: (p.first, p.second))
+
+
+def same_posting_again(found: DedupJob, other: DedupJob) -> bool:
+    """True when ``found`` is almost certainly the posting ``other`` already is: the same company,
+    the same known city and a title that is the same but for punctuation or a letter. Used only to
+    keep a job already in the pipeline from being listed a second time under another link."""
+    if key(found.company_name) != key(other.company_name) or not same_city(found.city, other.city):
+        return False
+    return fuzz.ratio(key(found.title), key(other.title)) >= SAME_POSTING_TITLE_MIN

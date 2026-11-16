@@ -36,10 +36,10 @@ Jobs that pass the rules are judged in groups of 10 by the efficient (`fast`) mo
 
 **Reading each job first.** Most job boards list only a title, a place and a link. Before the AI looks at a job that passed the rules, HireTitan reads the job's own text from where it was posted: the public job API of the board (Greenhouse, Lever, Ashby, Workday and Recruitee) or the posting's own page, using the same politeness rules as the rest of the search (robots.txt, spacing between requests, never a private address). The AI then judges the job on what it says, against your area of work, your skills and your years of experience: a front end role, or a Java role for a Python and Go person, is left out. If a job's text cannot be read, the AI decides on the title alone and keeps a plain title such as "Software Engineer"; the reason then ends with "Description could not be read." Open the job to see its text, and **Check again** reads it again.
 
-**While it runs.** The panel says "Searching your companies…" with a moving bar from the first second. Once the first company is read it adds "Checked 8 of 44 companies · 3 new jobs so far".
+**While it runs.** The panel says "Searching your companies…" with a spinning ring and a changing light phrase from the first second; the ring fills as companies are checked. Once the first company is read it adds "Checked 8 of 44 companies · 3 new jobs so far".
 
 - **Stop.** Press **Stop** at any time. The batch being processed is stored, and **Continue searching** starts with the companies not yet read.
-- **Rules only.** Turn on **Rules only** to run with no AI at all. Jobs that pass the rules are then listed as "not checked by AI". **Check again** on a job asks the AI later.
+- **Always with the AI.** Every search uses the AI to judge the jobs. If the AI is not working (no key, or no credit), jobs that pass the rules are listed as "not checked by AI", and **Check again** on a job asks the AI later.
 
 ## 5. "Out of credit"
 

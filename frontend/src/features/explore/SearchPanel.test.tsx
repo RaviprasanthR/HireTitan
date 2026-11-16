@@ -77,17 +77,16 @@ describe('SearchPanel', () => {
     )
   })
 
-  it('US1_AS7_rules_only_toggle_sends_rules_only', async () => {
+  it('the_ai_is_always_used_there_is_no_rules_only_choice', async () => {
     const user = userEvent.setup()
     const calls = renderPanel(null)
 
-    await user.click(await screen.findByRole('checkbox', { name: /rules only/i }))
+    await screen.findByRole('button', { name: 'Search now' })
+    expect(screen.queryByRole('checkbox', { name: /rules only/i })).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Search now' }))
 
     await waitFor(() =>
-      expect(calls.find((c) => c.method === 'POST')?.body).toEqual({
-        mode: 'rules_only',
-      }),
+      expect(calls.find((c) => c.method === 'POST')?.body).toEqual({ mode: 'rules_and_ai' }),
     )
   })
 

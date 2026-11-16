@@ -44,7 +44,12 @@ from hiretitan.search.application.search import (
     store_batch,
 )
 from hiretitan.search.domain.apply_rules import RuleJob, Skip, apply
-from hiretitan.search.domain.dedup import DedupJob, exact_match, fuzzy_candidates
+from hiretitan.search.domain.dedup import (
+    DedupJob,
+    exact_match,
+    fuzzy_candidates,
+    same_posting_again,
+)
 from hiretitan.search.domain.normalize import NormalizedJob, normalize_job
 from hiretitan.search.domain.rules import SearchRules
 from hiretitan.search.domain.rules_serialization import rules_from_dict
@@ -393,6 +398,25 @@ async def dedup(deps: SearchDeps, state: State) -> State:
             others = tuple(
                 (p.second if p.first == candidate.id else p.first, p.similarity) for p in pairs
             )
+            in_pipeline = next(
+                (
+                    r
+                    for r in same_company
+                    if r.state in ("applied", "inquired")
+                    and same_posting_again(candidate, _dedup_job(r))
+                ),
+                None,
+            )
+            decision = (
+                DecisionInput(
+                    "skipped",
+                    "rule",
+                    f"Already in your pipeline as {in_pipeline.title}.",
+                    rule_key="already_in_pipeline",
+                )
+                if in_pipeline is not None
+                else DecisionInput("shown", "rules_only_fallback", FALLBACK_REASON)
+            )
             new.append(
                 NewJob(
                     company_id=item.company_id,
@@ -412,7 +436,7 @@ async def dedup(deps: SearchDeps, state: State) -> State:
                     source_url=item.source_url,
                     source_kind=item.source_kind,
                     injection_flags=cast(list[dict[str, Any]], item.flags),
-                    decision=DecisionInput("shown", "rules_only_fallback", FALLBACK_REASON),
+                    decision=decision,
                     candidates=others,
                     description_status="read" if item.description.strip() else "none",
                 )

@@ -102,7 +102,6 @@ export function SearchPanel() {
   const latest = useLatestRun()
   const start = useStartSearch()
   const stop = useStopSearch()
-  const [rulesOnly, setRulesOnly] = useState(false)
   // The run that was the latest when "Search now" was pressed. Until a different run shows up (or
   // the start fails, or the server has answered and the latest run is read again) the panel is
   // already searching, so there is no moment that looks idle or shows "0 of 0" (US2 AS1).
@@ -122,7 +121,7 @@ export function SearchPanel() {
 
   const begin = () => {
     setClicked({ base: run?.id ?? null })
-    start.mutate(rulesOnly ? 'rules_only' : 'rules_and_ai')
+    start.mutate('rules_and_ai') // the AI always judges; without a working key the jobs say so
   }
 
   // One status line that is always on the page, so a screen reader announces each change of it
@@ -136,7 +135,7 @@ export function SearchPanel() {
       : ''
 
   return (
-    <section aria-label="Search" className="space-y-3 rounded-lg bg-surface p-4">
+    <section aria-label="Search" className="ht-search-panel space-y-3">
       <p role="status" aria-live="polite" className="font-medium empty:hidden">
         {message}
       </p>
@@ -150,14 +149,6 @@ export function SearchPanel() {
           <Button type="button" variant="success" disabled={start.isPending} onClick={begin}>
             {resumable ? 'Continue searching' : 'Search now'}
           </Button>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={rulesOnly}
-              onChange={(e) => setRulesOnly(e.target.checked)}
-            />
-            Rules only (no AI)
-          </label>
         </div>
       )}
       {start.isError && (
