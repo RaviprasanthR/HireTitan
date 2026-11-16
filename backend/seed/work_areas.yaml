@@ -1,0 +1,44 @@
+# Areas of work (feature 002i, research R5). Role-level facts only; nothing about any person.
+#
+# signals:         words in a person's roles, job titles and skills that suggest they work in
+#                  this area. Used to propose the person's areas.
+# avoid_in_titles: title words that mark a job as being in this area. They are proposed as words
+#                  to avoid for a person who does not work in this area (or one it goes with).
+# compatible:      areas that go with this one, so their avoid words are NOT proposed
+#                  (a back end person is not put off by a full stack or data title).
+#
+# Every phrase is matched as whole words, case-insensitively, with punctuation ignored, so
+# "front-end" and "front end" are the same phrase but "frontend" is a separate entry.
+areas:
+  back_end:
+    signals: [backend, back end, server side, api, apis, microservices, rest, grpc, postgresql, mysql, redis, kafka, django, fastapi, flask, spring, golang, go, java, python, erlang, elixir, ruby, rails, php, laravel, nodejs, node js, dotnet]
+    avoid_in_titles: [backend, back end, server side, api developer]
+    compatible: [full_stack, data, devops]
+  front_end:
+    signals: [frontend, front end, ui, react, angular, vue, svelte, javascript, typescript, css, html, tailwind, nextjs, next js, redux, webpack, vite]
+    avoid_in_titles: [frontend, front end, ui developer, ui engineer, web developer, react developer, angular developer, vue developer]
+    compatible: [full_stack, mobile]
+  full_stack:
+    signals: [full stack, fullstack]
+    avoid_in_titles: []
+    compatible: [back_end, front_end, data, devops]
+  mobile:
+    signals: [android, ios, mobile, flutter, react native, kotlin, swift, swiftui, jetpack compose]
+    avoid_in_titles: [android, ios, mobile, flutter, react native, swift developer, kotlin developer]
+    compatible: [front_end]
+  data:
+    signals: [data engineer, data pipeline, etl, elt, dbt, airflow, spark, warehouse, data scientist, machine learning, ml, analytics, bi]
+    avoid_in_titles: [data scientist, data analyst, machine learning, ml engineer, bi developer, business intelligence, analytics engineer]
+    compatible: [back_end]
+  qa:
+    signals: [qa, quality assurance, test automation, selenium, cypress, playwright, sdet, tester]
+    avoid_in_titles: [qa, quality assurance, test engineer, sdet, tester, automation tester, manual tester]
+    compatible: []
+  devops:
+    signals: [devops, sre, site reliability, kubernetes, terraform, ansible, ci cd, jenkins, infrastructure, platform engineer, cloud engineer]
+    avoid_in_titles: [devops, site reliability, sre, cloud engineer, platform engineer, infrastructure engineer]
+    compatible: [back_end]
+  other:
+    signals: []
+    avoid_in_titles: []
+    compatible: []

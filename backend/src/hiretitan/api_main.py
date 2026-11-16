@@ -47,6 +47,7 @@ from hiretitan.search.api.pipeline import PipelineApiDeps, create_pipeline_route
 from hiretitan.search.api.rules import SearchRulesApiDeps, create_search_rules_router
 from hiretitan.search.api.runs import SearchRunsApiDeps, create_search_runs_router
 from hiretitan.search.application.synonyms_seed import load_title_synonyms
+from hiretitan.search.application.tables_seed import check_seed_tables
 from hiretitan.search_wiring import (
     ProfileAndPreferencesSource,
     SetupFinishedGate,
@@ -205,6 +206,7 @@ def build_app(settings: Settings | None = None) -> FastAPI:
         await engine.dispose()
 
     synonyms = load_title_synonyms(SEED_DIR / "title_synonyms.yaml")
+    check_seed_tables(SEED_DIR)  # the area and technology tables (002i); a bad file stops start-up
     routers = [
         create_resumes_router(deps),
         create_reviews_router(deps),
