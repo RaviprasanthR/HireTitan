@@ -98,6 +98,29 @@ class RulesService:
         )
         return _view(row)
 
+    async def suggest(self) -> SearchRules:
+        """The rules the profile and preferences suggest right now. Nothing is stored (FR-017)."""
+        facts = await self._source.read()
+        return propose_rules(facts.source, self._synonyms, self._work_areas)
+
+    async def save_approved(self, rules: SearchRules) -> RuleSetView:
+        """The person's edited rules become the rules searches use, in one step (FR-015).
+
+        They are checked first. Any open draft is replaced, the previous approved set becomes
+        superseded, and the saved set is based on the profile and preferences as they are now, so
+        it is no longer "changed since you approved".
+        """
+        rules.validate()
+        await self._store.lock_first_approval()  # one approval at a time, like the first rules
+        try:
+            facts = await self._source.read()
+            basis = _basis(facts.profile_version_id, facts.preferences_saved_at)
+        except RulesUnavailableError:
+            previous = await self._store.approved()
+            basis = dict(previous.based_on) if previous is not None else {}
+        row = await self._store.propose(rules_to_dict(rules), basis)
+        return _view(await self._store.approve(row.id, approved_by="person"))
+
     async def propose_from_approved(self) -> RuleSetView:
         """Open a draft that is a copy of the approved rules, to change by hand (not rebuilt)."""
         approved = await self._store.approved()

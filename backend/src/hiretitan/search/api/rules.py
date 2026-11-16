@@ -184,6 +184,27 @@ def create_search_rules_router(deps: SearchRulesApiDeps) -> APIRouter:
                 stale=await svc.is_stale(),
             )
 
+    @router.get("/suggested")
+    async def read_suggested() -> SearchRulesModel:
+        """What the profile and preferences suggest now; writes nothing (for "Start over")."""
+        async with deps.sessions() as session:
+            try:
+                rules = await service(session).suggest()
+            except RulesUnavailableError as error:
+                raise _unavailable(error) from error
+            return SearchRulesModel.from_domain(rules)
+
+    @router.put("/approved")
+    async def save_approved(body: SearchRulesModel) -> RuleSetOut:
+        """Save the person's edited rules as the rules searches use, in one step."""
+        async with deps.sessions() as session:
+            try:
+                view = await service(session).save_approved(body.to_domain())
+            except RulesInvalidError as invalid:
+                raise _invalid(invalid) from invalid
+            await session.commit()
+            return await render(session, view)
+
     @router.post("/proposal", status_code=201)
     async def make_proposal() -> RuleSetOut:
         async with deps.sessions() as session:

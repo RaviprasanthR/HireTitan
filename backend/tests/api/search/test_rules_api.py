@@ -277,3 +277,104 @@ async def test_edit_approved_without_approved_rules_409(
 
     assert draft.status_code == 409
     assert draft.json()["reason"] == "rules_not_approved"
+
+
+# --- 002i: suggested rules, and saving edited rules in one step ------------------------------
+
+
+async def test_FR017_suggested_writes_nothing(
+    client: httpx.AsyncClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    await ready(sessions)
+
+    response = await client.get(f"{RULES}/suggested")
+
+    assert response.status_code == 200
+    rules = response.json()
+    assert rules["title_words"][0]["text"] == "Backend Engineer"
+    assert rules["areas"] == ["back_end"]
+    # nothing was stored: no proposal, nothing approved
+    assert (await client.get(RULES)).json() == {"approved": None, "proposal": None, "stale": False}
+
+
+async def test_FR017_suggested_needs_a_profile_and_preferences(client: httpx.AsyncClient) -> None:
+    response = await client.get(f"{RULES}/suggested")
+    assert response.status_code == 409
+    assert response.json()["reason"] == "no_confirmed_profile"
+
+
+async def test_FR015_put_approved_saves_new_version(
+    client: httpx.AsyncClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    await ready(sessions)
+    await client.post(f"{RULES}/proposal")
+    first = (await client.post(f"{RULES}/proposal/approve")).json()
+    edited = with_changes(first["rules"], max_age_days=14)
+
+    saved = await client.put(f"{RULES}/approved", json=edited)
+
+    assert saved.status_code == 200
+    body = saved.json()
+    assert (body["status"], body["version"], body["approved_by"]) == ("approved", 2, "person")
+    assert body["rules"]["max_age_days"] == 14
+    state = (await client.get(RULES)).json()
+    assert state["approved"]["id"] == body["id"]  # these are the rules searches use now
+    assert state["proposal"] is None
+
+
+async def test_FR015_put_approved_discards_open_proposal(
+    client: httpx.AsyncClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    await ready(sessions)
+    await client.post(f"{RULES}/proposal")
+    approved = (await client.post(f"{RULES}/proposal/approve")).json()
+    await client.post(f"{RULES}/proposal/from-approved")  # an open draft is lying around
+
+    assert (await client.put(f"{RULES}/approved", json=approved["rules"])).status_code == 200
+
+    assert (await client.get(RULES)).json()["proposal"] is None
+
+
+async def test_FR015_put_approved_works_before_anything_was_approved(
+    client: httpx.AsyncClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    await ready(sessions)
+    suggested = (await client.get(f"{RULES}/suggested")).json()
+
+    saved = await client.put(f"{RULES}/approved", json=suggested)
+
+    assert saved.status_code == 200
+    assert saved.json()["approved_by"] == "person"
+
+
+async def test_FR017_saving_the_rules_clears_the_stale_notice(
+    client: httpx.AsyncClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    await ready(sessions)
+    await client.post(f"{RULES}/proposal")
+    approved = (await client.post(f"{RULES}/proposal/approve")).json()
+    await save_preferences(
+        sessions, roles=("Data Engineer",), saved_at=datetime(2026, 11, 6, tzinfo=UTC)
+    )
+    assert (await client.get(RULES)).json()["stale"] is True
+
+    await client.put(f"{RULES}/approved", json=approved["rules"])
+
+    assert (await client.get(RULES)).json()["stale"] is False  # checked against what they are now
+
+
+async def test_FR016_put_approved_rejects_invalid_rules(
+    client: httpx.AsyncClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    await ready(sessions)
+    await client.post(f"{RULES}/proposal")
+    approved = (await client.post(f"{RULES}/proposal/approve")).json()
+
+    bad = with_changes(approved["rules"], title_words=[], max_age_days=0, areas=["backend"])
+    response = await client.put(f"{RULES}/approved", json=bad)
+
+    assert response.status_code == 422
+    fields = {e["field"] for e in response.json()["errors"]}
+    assert {"title_words", "max_age_days", "areas"} <= fields
+    state = (await client.get(RULES)).json()
+    assert (state["approved"]["id"], state["approved"]["version"]) == (approved["id"], 1)
