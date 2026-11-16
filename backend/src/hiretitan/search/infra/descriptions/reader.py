@@ -9,6 +9,7 @@ description that cannot be read is an ``unreadable`` result, never an error.
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import time
 from collections.abc import Awaitable, Callable
@@ -29,6 +30,7 @@ API_GAP_SECONDS: Final = 1.0
 API_TIMEOUT_SECONDS: Final = 20.0
 MAX_BODY_BYTES: Final = 8 * 1024 * 1024  # an Ashby board lists every posting in one answer
 BOARD_TTL_SECONDS: Final = 600.0  # one Ashby board answer serves a whole search
+CACHE_MAX: Final = 64  # answers kept at once; a long-lived worker must not grow without bound
 
 
 class DescriptionReader:
@@ -83,17 +85,32 @@ class DescriptionReader:
         self._last_request[host] = self._monotonic()
         client = self._client or httpx.AsyncClient()
         try:
-            response = await client.get(
+            async with client.stream(
+                "GET",
                 url,
                 headers={"User-Agent": user_agent(), "Accept": "application/json"},
                 timeout=httpx.Timeout(API_TIMEOUT_SECONDS),
                 follow_redirects=False,
-            )
+            ) as response:
+                if response.status_code != 200:
+                    raise ValueError(f"the job API answered {response.status_code}")
+                body = bytearray()
+                async for chunk in response.aiter_bytes():
+                    body += chunk
+                    if len(body) > MAX_BODY_BYTES:  # stop reading: the cap is on what is held
+                        raise ValueError("the job API answer is too large")
         finally:
             if self._client is None:
                 await client.aclose()
-        if response.status_code != 200 or len(response.content) > MAX_BODY_BYTES:
-            raise ValueError(f"the job API answered {response.status_code}")
-        data = response.json()
-        self._answers[url] = (self._monotonic(), data)
+        data = json.loads(body)
+        self._remember(url, data)
         return data
+
+    def _remember(self, url: str, data: Any) -> None:
+        """Keep an answer for a while: expired ones go first, then the oldest, up to the cap."""
+        now = self._monotonic()
+        for key in [k for k, (at, _) in self._answers.items() if now - at >= BOARD_TTL_SECONDS]:
+            del self._answers[key]
+        self._answers[url] = (now, data)
+        while len(self._answers) > CACHE_MAX:
+            del self._answers[next(iter(self._answers))]

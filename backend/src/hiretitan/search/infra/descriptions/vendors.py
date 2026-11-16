@@ -81,6 +81,8 @@ def plan(url: str) -> VendorCall | None:
         return None
     host = parts.hostname.lower()
     seg = [s for s in parts.path.split("/") if s]
+    if any(s in (".", "..") for s in seg):
+        return None  # a path that climbs out of its folder is never a posting
     if host in GREENHOUSE_HOSTS and len(seg) >= 3 and seg[1] == "jobs" and seg[2].isdigit():
         api = f"https://boards-api.greenhouse.io/v1/boards/{_segment(seg[0])}/jobs/{seg[2]}"
         return VendorCall("greenhouse", api, _greenhouse)

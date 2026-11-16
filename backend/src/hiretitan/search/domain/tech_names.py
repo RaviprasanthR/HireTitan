@@ -6,6 +6,7 @@ person's skills, is not for them ("needs Java, which is not in your skills").
 
 from __future__ import annotations
 
+import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Literal
@@ -23,6 +24,9 @@ class TechName:
     kind: TechKind
     aliases: tuple[str, ...]
     context: tuple[str, ...] = ()  # when set, the name counts only next to one of these words
+    # the languages a framework is written in: a title naming Django is for a Python person too,
+    # and a person with Spring has Java
+    implies: tuple[str, ...] = ()
 
 
 TechTable = tuple[TechName, ...]
@@ -39,12 +43,18 @@ def _candidates(tech: TechName) -> list[tuple[str, bool]]:
     return forms
 
 
+# "Spring 2027", "Spring Internship": a season, not the framework
+_SEASON = re.compile(r" ?(\d|intern|internship|cohort|batch)")
+
+
 def _counts(text: str, phrase: str, tech: TechName, needs_context: bool) -> bool:
     if f" {phrase} " not in text:
         return False
     if not needs_context:
         return True
     if f" {phrase} to " in text:  # "Go to market" is not the language
+        return False
+    if _SEASON.match(text.split(f" {phrase} ", 1)[1]):
         return False
     return any(
         f" {phrase} {word} " in text or f" {word} {phrase} " in text for word in tech.context
@@ -73,12 +83,16 @@ def names_in(title: str, table: TechTable) -> tuple[str, ...]:
 
 
 def _persons(skills: Sequence[str], table: TechTable) -> set[str]:
-    """The table names the person has: a skill equal to a name or alias, or one that mentions it."""
+    """The table names the person has: a skill equal to a name or alias, or one that mentions it,
+    and the languages those frameworks are written in."""
     have: set[str] = set()
     for skill in skills:
         wanted = normalize_phrase(skill)
         have.update(tech.name for tech in table if wanted in _forms(tech))
         have.update(names_in(skill, table))
+    by_name = {tech.name: tech for tech in table}
+    for name in list(have):
+        have.update(by_name[name].implies)
     return have
 
 
@@ -95,7 +109,11 @@ def stack_skip_reason(title: str, skills: Sequence[str], table: TechTable) -> st
     named = names_in(title, table)
     if not named or not skills:
         return None
-    if set(named) & _persons(skills, table):
+    have = _persons(skills, table)
+    if not have:
+        return None  # none of the skills is a language or framework: nothing to compare
+    by_name = {tech.name: tech for tech in table}
+    if any(name in have or have & set(by_name[name].implies) for name in named):
         return None
     verb = "is" if len(named) == 1 else "are"
     return f"needs {_list(named)}, which {verb} not in your skills"

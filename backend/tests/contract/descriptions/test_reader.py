@@ -39,6 +39,10 @@ def fixture(name: str) -> Any:
     return json.loads((FIXTURES / name).read_text("utf-8"))
 
 
+async def public_dns(host: str) -> list[str]:
+    return ["93.184.216.34"]
+
+
 class Clock:
     def __init__(self) -> None:
         self.now = 1000.0
@@ -59,7 +63,9 @@ def clock() -> Clock:
 
 @pytest.fixture
 def reader(tmp_path: Path, clock: Clock) -> DescriptionReader:
-    pages = CareersPageFetcher(tmp_path / "cache", monotonic=clock.monotonic, sleep=clock.sleep)
+    pages = CareersPageFetcher(
+        tmp_path / "cache", monotonic=clock.monotonic, sleep=clock.sleep, resolve=public_dns
+    )
     return DescriptionReader(pages, monotonic=clock.monotonic, sleep=clock.sleep)
 
 
@@ -330,3 +336,61 @@ def test_FR029_the_allowlist_refuses_other_hosts_methods_and_paths() -> None:
     assert not is_allowed("greenhouse", "GET", "https://evil.example.com/v1/boards/a/jobs/1")
     assert not is_allowed("greenhouse", "GET", "https://boards-api.greenhouse.io/v1/boards/a")
     assert not is_allowed("smartrecruiters", "GET", "https://api.smartrecruiters.com/v1/x")
+
+
+# --- limits found by the story review -----------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "link",
+    [
+        "https://examplecorp.wd5.myworkdayjobs.com/en-US/ExampleSite/job/../../secret",
+        "https://examplecorp.wd5.myworkdayjobs.com/en-US/ExampleSite/job/./x",
+        "https://boards.greenhouse.io/../jobs/4001",
+        "https://jobs.lever.co/examplecorp/..",
+    ],
+)
+def test_FR029_a_link_with_dot_segments_has_no_vendor_call(link: str) -> None:
+    assert plan(link) is None
+
+
+async def test_FR029_the_answer_cache_stays_small(reader: DescriptionReader, clock: Clock) -> None:
+    with respx.mock(assert_all_called=False) as mock:
+        mock.get(url__regex=r"https://boards-api\.greenhouse\.io/.*").respond(
+            200, json=fixture("greenhouse.json")
+        )
+        for number in range(200):
+            await reader.read(
+                DescribeRequest(f"https://boards.greenhouse.io/examplecorp/jobs/{4000 + number}")
+            )
+
+    assert len(reader._answers) <= 64
+
+
+async def test_FR029_old_answers_are_dropped_when_new_ones_arrive(
+    reader: DescriptionReader, clock: Clock
+) -> None:
+    with respx.mock(assert_all_called=False) as mock:
+        mock.get(url__regex=r"https://boards-api\.greenhouse\.io/.*").respond(
+            200, json=fixture("greenhouse.json")
+        )
+        await reader.read(DescribeRequest(GREENHOUSE))
+        clock.now += 3600  # an hour later
+        await reader.read(DescribeRequest("https://boards.greenhouse.io/examplecorp/jobs/4002"))
+
+    assert len(reader._answers) == 1
+
+
+async def test_FR029_a_body_over_the_size_limit_is_not_kept(
+    reader: DescriptionReader, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("hiretitan.search.infra.descriptions.reader.MAX_BODY_BYTES", 200)
+    with respx.mock(assert_all_called=False) as mock:
+        mock.get("https://boards-api.greenhouse.io/v1/boards/examplecorp/jobs/4001").respond(
+            200, json={"content": "x" * 5000}
+        )
+        mock.get("https://boards.greenhouse.io/robots.txt").respond(404)
+        mock.get(GREENHOUSE).respond(404)
+        result = await reader.read(DescribeRequest(GREENHOUSE))
+
+    assert result.status == "unreadable"

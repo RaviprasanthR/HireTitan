@@ -40,6 +40,9 @@ def test_FR032_names_in_a_title(title: str, named: list[str]) -> None:
     "title",
     [
         "Spring 2027 Software Engineering Intern",  # a season, not the framework
+        "Software Engineer, Spring 2027",  # the context word is next to it, still a season
+        "Engineer - Spring 2027 Intern",
+        "Engineering Spring Internship Program",
         "Swift Logistics Operations Manager",  # a company, not the language
         "Go To Market Engineer",  # not the language
         "Engineer, Go-to-Market Systems",
@@ -86,3 +89,26 @@ def test_FR032_the_person_without_skills_is_not_filtered() -> None:
 
 def test_FR032_an_empty_table_skips_nothing() -> None:
     assert stack_skip_reason("Senior Java Developer", PERSON, ()) is None
+
+
+def test_FR032_a_framework_title_is_kept_for_a_person_with_its_language() -> None:
+    assert stack_skip_reason("Django Developer", ["Python"], TABLE) is None
+    assert stack_skip_reason("Spring Boot Developer", ["Java"], TABLE) is None
+    assert stack_skip_reason("React Developer", ["JavaScript"], TABLE) is None
+    assert stack_skip_reason("Node.js Engineer", ["TypeScript"], TABLE) is None
+
+
+def test_FR032_a_person_with_a_framework_has_its_language() -> None:
+    assert stack_skip_reason("Java Developer", ["Spring Boot", "Docker"], TABLE) is None
+    assert stack_skip_reason("Python Developer", ["Django"], TABLE) is None
+    assert stack_skip_reason("JavaScript Developer", ["React"], TABLE) is None
+
+
+def test_FR032_a_framework_of_another_language_is_still_left_out() -> None:
+    reason = stack_skip_reason("Django Developer", ["Java", "Spring"], TABLE)
+    assert reason == "needs Django, which is not in your skills"
+
+
+def test_FR032_skills_with_no_language_or_framework_in_them_filter_nothing() -> None:
+    """Nothing is known about this person's stack: a title naming a language does not skip."""
+    assert stack_skip_reason("Analyst (Python)", ["SQL", "Tableau"], TABLE) is None

@@ -84,11 +84,17 @@ def load_tech_names(path: Path) -> TechTable:
             raise TablesError(f"{name}: kind must be language or framework.")
         aliases = _words(entry.get("aliases"), f"{name}.aliases")
         context = _words(entry.get("context", []), f"{name}.context")
+        implies = _words(entry.get("implies", []), f"{name}.implies")
         for word in (name, *aliases):
             if _key(word) in seen:
                 raise TablesError(f"{word!r} is listed twice.")
             seen.add(_key(word))
-        table.append(TechName(name, kind, aliases, context))
+        table.append(TechName(name, kind, aliases, context, implies))
+    known = {tech.name for tech in table}
+    for tech in table:
+        unknown = [n for n in tech.implies if n not in known]
+        if unknown:
+            raise TablesError(f"{tech.name}.implies: {unknown} are not in the table.")
     return tuple(table)
 
 

@@ -13,9 +13,11 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import ipaddress
 import json
+import socket
 import time as _time
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Sequence
 from pathlib import Path
 from typing import Any, Final
 from urllib.parse import urljoin, urlsplit
@@ -25,6 +27,8 @@ from protego import Protego
 
 from hiretitan import __version__
 from hiretitan.search.application.ports import PageFetch
+
+Resolver = Callable[[str], Awaitable[Sequence[str]]]
 
 MIN_GAP_SECONDS: Final = 2.0
 ROBOTS_TTL_SECONDS: Final = 24 * 60 * 60
@@ -43,6 +47,25 @@ class _TooLargeError(Exception):
     pass
 
 
+async def resolve_host(host: str) -> list[str]:
+    """Every address a name points to (a literal address is its own answer)."""
+    infos = await asyncio.get_running_loop().getaddrinfo(host, None, type=socket.SOCK_STREAM)
+    return sorted({str(info[4][0]) for info in infos})
+
+
+def is_public_address(address: str) -> bool:
+    """True only for an address on the public internet: not private, loopback, link-local,
+    shared (100.64/10), multicast, reserved or unspecified. An IPv4 address written as IPv6
+    (``::ffff:127.0.0.1``) is judged as the IPv4 address it is."""
+    try:
+        ip = ipaddress.ip_address(address.split("%")[0])
+    except ValueError:
+        return False
+    if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped is not None:
+        ip = ip.ipv4_mapped
+    return ip.is_global and not ip.is_multicast
+
+
 class CareersPageFetcher:
     def __init__(
         self,
@@ -51,7 +74,9 @@ class CareersPageFetcher:
         client: httpx.AsyncClient | None = None,
         monotonic: Callable[[], float] = _time.monotonic,
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
+        resolve: Resolver = resolve_host,
     ) -> None:
+        self._resolve = resolve
         self._cache_dir = cache_dir
         self._client = client
         self._monotonic = monotonic
@@ -65,10 +90,17 @@ class CareersPageFetcher:
 
     async def fetch(self, url: str) -> PageFetch:
         current = url.strip()
+        secure = False  # the first link was https: a redirect may not drop to http
         for _ in range(MAX_REDIRECTS + 1):
             parts = urlsplit(current)
             if parts.scheme not in ("http", "https") or not parts.hostname:
                 return PageFetch("failed", error="Only http and https links can be read.")
+            refused = await self._public(parts.hostname)  # every hop, redirects too
+            if refused is not None:
+                return refused
+            if secure and parts.scheme != "https":
+                return PageFetch("failed", error="The page redirects from https to http.")
+            secure = secure or parts.scheme == "https"
             try:
                 allowed = await self._allowed(parts.scheme, parts.netloc, current)
                 if allowed is not None:
@@ -82,6 +114,25 @@ class CareersPageFetcher:
                 return outcome
             current = outcome  # a redirect target: check and space it like any page
         return PageFetch("failed", error="The page redirects too many times.")
+
+    # ---- the address ----------------------------------------------------------------------
+
+    async def _public(self, host: str) -> PageFetch | None:
+        """None when the host is only on public addresses. A link in a posting must never lead
+        the app to a private or local address (a router page, a cloud metadata service)."""
+        try:
+            addresses = [str(ipaddress.ip_address(host))]  # a literal address: no lookup
+        except ValueError:
+            addresses = []
+        try:
+            addresses = addresses or list(await self._resolve(host))
+        except OSError:
+            return PageFetch("failed", error="The address could not be found.")
+        if not addresses or not all(is_public_address(a) for a in addresses):
+            return PageFetch(
+                "blocked", error="The link points to a private address, so it was not read."
+            )
+        return None
 
     # ---- robots.txt -----------------------------------------------------------------------
 

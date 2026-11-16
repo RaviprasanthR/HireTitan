@@ -101,3 +101,24 @@ def test_seed_tables_reject_bad_files_tech_names(tmp_path: Path, text: str) -> N
 def test_missing_file_is_a_tables_error(tmp_path: Path) -> None:
     with pytest.raises(TablesError):
         load_work_areas(tmp_path / "missing.yaml")
+
+
+def test_implied_languages_are_known_names(tmp_path: Path) -> None:
+    ok = (
+        "technologies:\n"
+        "  - {name: Python, kind: language, aliases: []}\n"
+        "  - {name: Django, kind: framework, aliases: [], implies: [Python]}\n"
+    )
+    table = load_tech_names(write(tmp_path, ok))
+    assert next(t for t in table if t.name == "Django").implies == ("Python",)
+    bad = ok.replace("implies: [Python]", "implies: [Cobol]")
+    with pytest.raises(TablesError):
+        load_tech_names(write(tmp_path, bad))
+
+
+def test_the_shipped_frameworks_name_their_languages() -> None:
+    table = load_tech_names(SEED / "tech_names.yaml")
+    by_name = {t.name: t for t in table}
+    assert "Python" in by_name["Django"].implies
+    assert "Java" in by_name["Spring"].implies
+    assert "JavaScript" in by_name["React"].implies

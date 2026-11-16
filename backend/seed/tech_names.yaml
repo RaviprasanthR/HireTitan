@@ -8,6 +8,8 @@
 # name:    how the reason shows it.
 # aliases: other ways to write it; the name itself is always matched too.
 # kind:    language | framework.
+# implies: for a framework, the languages it is written in. A title naming the framework is for a
+#          person with one of them, and a person with the framework has them.
 # context: only for names that are also ordinary words (Go, Swift, Rust, Spring): the name itself
 #          (not its aliases) matches only right next to one of these words, as in "Go developer", so "Spring 2027 Intern"
 #          and "Swift Logistics" are not technologies.
@@ -27,10 +29,10 @@ technologies:
   - {name: Rust, kind: language, aliases: [], context: [developer, engineer, programmer, lang, language]}
   - {name: Elixir, kind: language, aliases: [erlang]}
   - {name: Perl, kind: language, aliases: []}
-  - {name: React, kind: framework, aliases: [reactjs, react js, react native]}
-  - {name: Angular, kind: framework, aliases: [angularjs, angular js]}
-  - {name: Vue, kind: framework, aliases: [vuejs, vue js]}
-  - {name: Node.js, kind: framework, aliases: [node js, nodejs, node]}
-  - {name: Django, kind: framework, aliases: []}
-  - {name: Spring, kind: framework, aliases: [spring boot, springboot], context: [boot, developer, engineer, framework, java]}
+  - {name: React, kind: framework, aliases: [reactjs, react js, react native], implies: [JavaScript, TypeScript]}
+  - {name: Angular, kind: framework, aliases: [angularjs, angular js], implies: [TypeScript, JavaScript]}
+  - {name: Vue, kind: framework, aliases: [vuejs, vue js], implies: [JavaScript, TypeScript]}
+  - {name: Node.js, kind: framework, aliases: [node js, nodejs, node], implies: [JavaScript, TypeScript]}
+  - {name: Django, kind: framework, aliases: [], implies: [Python]}
+  - {name: Spring, kind: framework, aliases: [spring boot, springboot], context: [boot, developer, engineer, framework, java], implies: [Java, Kotlin]}
   - {name: Flutter, kind: framework, aliases: []}

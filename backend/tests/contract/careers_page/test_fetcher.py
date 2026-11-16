@@ -47,9 +47,16 @@ def time() -> FakeTime:
     return FakeTime()
 
 
+async def public_dns(host: str) -> list[str]:
+    """Every test host is on a public address, so no test needs the network's DNS."""
+    return ["93.184.216.34"]
+
+
 @pytest.fixture
 def fetcher(tmp_path: Path, time: FakeTime) -> CareersPageFetcher:
-    return CareersPageFetcher(tmp_path / "cache", monotonic=time.monotonic, sleep=time.sleep)
+    return CareersPageFetcher(
+        tmp_path / "cache", monotonic=time.monotonic, sleep=time.sleep, resolve=public_dns
+    )
 
 
 def robots(
@@ -223,7 +230,9 @@ async def test_FR013_conditional_request_uses_cache(fetcher: CareersPageFetcher)
 
 async def test_the_cache_survives_a_new_fetcher(tmp_path: Path, time: FakeTime) -> None:
     def make() -> CareersPageFetcher:
-        return CareersPageFetcher(tmp_path / "cache", monotonic=time.monotonic, sleep=time.sleep)
+        return CareersPageFetcher(
+            tmp_path / "cache", monotonic=time.monotonic, sleep=time.sleep, resolve=public_dns
+        )
 
     with respx.mock(assert_all_called=False) as mock:
         robots(mock)
@@ -363,3 +372,124 @@ async def test_only_http_and_https_pages_are_read(fetcher: CareersPageFetcher, u
     result = await fetcher.fetch(url)
 
     assert result.status == "failed"
+
+
+# --- a link must never lead the app to a private address (SSRF, constitution VII) -------------
+
+PRIVATE_LINKS = [
+    "http://127.0.0.1:8000/admin",
+    "http://localhost/",
+    "http://169.254.169.254/latest/meta-data/",
+    "http://10.0.0.5/jobs",
+    "http://192.168.1.1/",
+    "http://172.16.0.9/",
+    "http://100.64.0.1/",
+    "http://0.0.0.0/",
+    "http://[::1]/",
+    "http://[fd00::1]/",
+    "http://[::ffff:127.0.0.1]/",
+]
+
+
+def dns_of(table: dict[str, list[str]]):  # type: ignore[no-untyped-def]
+    async def resolve(host: str) -> list[str]:
+        if host not in table:
+            raise OSError("no such host")
+        return table[host]
+
+    return resolve
+
+
+@pytest.mark.parametrize("link", PRIVATE_LINKS)
+async def test_SSRF_a_private_address_is_never_requested(link: str, tmp_path: Path) -> None:
+    fetcher = CareersPageFetcher(tmp_path / "cache", resolve=dns_of({"localhost": ["127.0.0.1"]}))
+    with respx.mock(assert_all_called=False) as mock:
+        result = await fetcher.fetch(link)
+        requested = len(mock.calls)
+
+    assert result.status == "blocked"
+    assert result.body is None
+    assert requested == 0  # not even robots.txt was asked for
+
+
+async def test_SSRF_a_name_that_resolves_to_a_private_address_is_not_requested(
+    tmp_path: Path,
+) -> None:
+    fetcher = CareersPageFetcher(
+        tmp_path / "cache", resolve=dns_of({"intranet.example.com": ["10.1.2.3"]})
+    )
+    with respx.mock(assert_all_called=False) as mock:
+        result = await fetcher.fetch("https://intranet.example.com/jobs")
+        requested = len(mock.calls)
+
+    assert result.status == "blocked"
+    assert requested == 0
+
+
+async def test_SSRF_one_private_record_among_public_ones_is_enough_to_refuse(
+    tmp_path: Path,
+) -> None:
+    fetcher = CareersPageFetcher(
+        tmp_path / "cache", resolve=dns_of({"mixed.example.com": ["93.184.216.34", "127.0.0.1"]})
+    )
+    with respx.mock(assert_all_called=False) as mock:
+        result = await fetcher.fetch("https://mixed.example.com/jobs")
+        requested = len(mock.calls)
+
+    assert result.status == "blocked"
+    assert requested == 0
+
+
+async def test_SSRF_a_redirect_into_a_private_address_is_not_followed(
+    tmp_path: Path, time: FakeTime
+) -> None:
+    fetcher = CareersPageFetcher(
+        tmp_path / "cache",
+        monotonic=time.monotonic,
+        sleep=time.sleep,
+        resolve=dns_of({"careers.example.com": ["93.184.216.34"]}),
+    )
+    with respx.mock(assert_all_called=False) as mock:
+        robots(mock)
+        mock.get(PAGE).respond(
+            302, headers={"location": "http://169.254.169.254/latest/meta-data/"}
+        )
+        result = await fetcher.fetch(PAGE)
+        hosts = {call.request.url.host for call in mock.calls}
+
+    assert result.status == "blocked"
+    assert hosts == {"careers.example.com"}  # the private host was never contacted
+
+
+async def test_SSRF_a_redirect_may_not_drop_from_https_to_http(
+    fetcher: CareersPageFetcher,
+) -> None:
+    with respx.mock(assert_all_called=False) as mock:
+        robots(mock)
+        mock.get(PAGE).respond(302, headers={"location": "http://careers.example.com/jobs"})
+        plain = mock.get("http://careers.example.com/jobs").respond(
+            200, text=HTML, headers=HTML_HEADERS
+        )
+        result = await fetcher.fetch(PAGE)
+
+    assert result.status == "failed"
+    assert not plain.called
+
+
+async def test_SSRF_a_host_that_cannot_be_resolved_fails_without_a_request(tmp_path: Path) -> None:
+    fetcher = CareersPageFetcher(tmp_path / "cache", resolve=dns_of({}))
+    with respx.mock(assert_all_called=False) as mock:
+        result = await fetcher.fetch("https://nowhere.example.com/jobs")
+        requested = len(mock.calls)
+
+    assert result.status == "failed"
+    assert requested == 0
+
+
+async def test_SSRF_a_public_address_is_read_as_before(fetcher: CareersPageFetcher) -> None:
+    with respx.mock(assert_all_called=False) as mock:
+        robots(mock)
+        mock.get(PAGE).respond(200, text=HTML, headers=HTML_HEADERS)
+        result = await fetcher.fetch(PAGE)
+
+    assert result.status == "ok"
