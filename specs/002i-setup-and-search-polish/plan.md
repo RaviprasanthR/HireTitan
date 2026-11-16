@@ -114,7 +114,7 @@ backend/
 
 frontend/src/
 ├── features/explore/SearchPanel.tsx              # searching state, one progress line, no batches
-├── features/explore/SearchingIndicator.tsx       # moving bar (static under reduced motion)
+├── components/ProgressBar.tsx                    # reused as is: sweep, determinate fill, reduced motion
 ├── features/explore/ExplorePage.tsx              # expandable JobRow; title opens the posting;
 │                                                 # empty state names the missing step with a link
 ├── features/jobs/JobDetails.tsx                  # shared details (row and job page)
@@ -123,7 +123,6 @@ frontend/src/
 │                                                 # Update from my profile, Start over, leave guard
 ├── features/setup/SetupLayout.tsx                # width narrow | wide
 ├── features/setup/PreferencesStep.tsx, ReviewStep # wide
-└── theme/theme.css                               # .ht-searching (+ reduced motion)
 frontend/e2e/setup-and-profile.spec.ts            # Finish setup → Search now (no Search rules visit)
 frontend/e2e/job-search.spec.ts                   # searching state, row expand, area and stack skips
 ```
