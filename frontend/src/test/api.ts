@@ -30,7 +30,7 @@ export function stubApi(handler: (call: Call) => unknown): Call[] {
         body: typeof init?.body === 'string' ? JSON.parse(init.body) : undefined,
       }
       calls.push(call)
-      const answer = handler(call)
+      const answer = await handler(call) // a handler may return a promise, e.g. one held open
       if (answer instanceof Response) return answer
       if (answer === undefined) return problem(404, 'Not found')
       return json(answer)

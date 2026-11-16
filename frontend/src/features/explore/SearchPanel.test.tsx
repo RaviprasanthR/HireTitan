@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -101,14 +101,58 @@ describe('SearchPanel', () => {
     expect(await screen.findByText(/AI step skipped: the AI was not available/)).toBeInTheDocument()
   })
 
-  it('FR008_progress_per_batch', async () => {
+  it('US2_AS2_shows_companies_checked_and_new_jobs', async () => {
     renderPanel(run())
 
-    expect(await screen.findByText('Batch 2 of 3')).toBeInTheDocument()
-    expect(screen.getByText(/8 of 20 companies read/)).toBeInTheDocument()
-    expect(screen.getByText(/6 jobs added/)).toBeInTheDocument()
+    expect(await screen.findByText('Searching your companies…')).toBeInTheDocument()
+    expect(screen.getByText('Checked 8 of 20 companies · 6 new jobs so far')).toBeInTheDocument()
+    expect(screen.getByRole('progressbar', { name: 'Search progress' })).toHaveAttribute(
+      'aria-valuenow',
+      '40',
+    )
     expect(screen.queryByText(/cost/i)).not.toBeInTheDocument() // SC003
     expect(screen.queryByRole('button', { name: 'Search now' })).not.toBeInTheDocument()
+  })
+
+  it('US2_AS1_shows_searching_and_no_zero_counts_before_a_company_is_read', async () => {
+    // the plan is made (20 companies) but none is read yet: no "0 of 20"
+    renderPanel(run({ companies_total: 20, companies_read: 0, added: 0 }))
+
+    expect(await screen.findByText('Searching your companies…')).toBeInTheDocument()
+    expect(screen.queryByText(/Checked/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/0 of/)).not.toBeInTheDocument()
+    const bar = screen.getByRole('progressbar', { name: 'Search progress' })
+    expect(bar).not.toHaveAttribute('aria-valuenow') // moving, amount not known
+    expect(bar).toHaveAttribute('aria-busy', 'true')
+  })
+
+  it('US2_AS1_shows_searching_at_once_when_search_now_is_pressed', async () => {
+    const user = userEvent.setup()
+    // the server has not answered yet: the panel must already say it is searching
+    renderPanel(null, (call) =>
+      call.method === 'POST' && call.path === '/search/runs' ? new Promise(() => {}) : undefined,
+    )
+
+    await user.click(await screen.findByRole('button', { name: 'Search now' }))
+
+    expect(await screen.findByText('Searching your companies…')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Search now' })).not.toBeInTheDocument()
+    expect(screen.queryByText(/0 of/)).not.toBeInTheDocument()
+  })
+
+  it('US2_AS1_a_failed_start_goes_back_to_the_button', async () => {
+    const user = userEvent.setup()
+    renderPanel(null, (call) =>
+      call.method === 'POST' && call.path === '/search/runs'
+        ? problem(409, 'A search is already running.', { reason: 'search_already_running' })
+        : undefined,
+    )
+
+    await user.click(await screen.findByRole('button', { name: 'Search now' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('A search is already running.')
+    expect(screen.queryByText('Searching your companies…')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Search now' })).toBeInTheDocument()
   })
 
   it('US1_AS9_stop_button', async () => {
@@ -122,13 +166,32 @@ describe('SearchPanel', () => {
         true,
       ),
     )
-    expect(await screen.findByText(/stopping after this batch/i)).toBeInTheDocument()
+    // US2 AS4: says jobs found so far are kept, and does not mention batches
+    expect(await screen.findByText(/Stopping… jobs found so far are kept/)).toBeInTheDocument()
   })
 
-  it('US1_AS9_shows_stopping_while_a_stop_is_requested', async () => {
+  it('US2_AS4_shows_stopping_while_a_stop_is_requested', async () => {
     renderPanel(run({ stop_requested: true }))
-    expect(await screen.findByText(/stopping after this batch/i)).toBeInTheDocument()
+    expect(await screen.findByText(/Stopping… jobs found so far are kept/)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Stop' })).not.toBeInTheDocument()
+  })
+
+  it('US2_AS6_the_message_is_announced_politely_and_the_bar_is_named', async () => {
+    renderPanel(run())
+    const message = await screen.findByText('Searching your companies…')
+    expect(message.closest('[aria-live="polite"]')).not.toBeNull()
+    expect(screen.getByRole('progressbar', { name: 'Search progress' })).toBeInTheDocument()
+  })
+
+  it('SC003_the_word_batch_appears_nowhere_in_the_panel', async () => {
+    const outcomes = [null, 'finished', 'stopped_by_user', 'out_of_credit', 'failed', 'budget_reached']
+    for (const outcome of outcomes) {
+      renderPanel(run({ outcome, stop_requested: outcome === null }))
+      await screen.findByText(/Search|Searching|Your AI account|stopped|Stopping/i)
+      expect(document.body.textContent ?? '').not.toMatch(/batch/i)
+      cleanup()
+      vi.unstubAllGlobals()
+    }
   })
 
   it('US1_AS8_out_of_credit_shows_provider_message', async () => {
@@ -155,6 +218,17 @@ describe('SearchPanel', () => {
     await waitFor(() =>
       expect(calls.some((c) => c.method === 'POST' && c.path === '/search/runs')).toBe(true),
     )
+  })
+
+  it('US2_AS5_finished_says_how_many_new_jobs_without_batches', async () => {
+    renderPanel(run({ outcome: 'finished', batches_done: 3, companies_read: 20, added: 6 }))
+    expect(await screen.findByText(/Search finished/)).toBeInTheDocument()
+    expect(screen.getByText('Checked 20 of 20 companies · 6 new jobs')).toBeInTheDocument()
+  })
+
+  it('US2_AS5_a_stopped_search_says_jobs_so_far_are_kept', async () => {
+    renderPanel(run({ outcome: 'stopped_by_user' }))
+    expect(await screen.findByText('Search stopped. Jobs found so far are kept.')).toBeInTheDocument()
   })
 
   it('shows_the_summary_link_when_finished', async () => {
