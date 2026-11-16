@@ -62,7 +62,19 @@ describe('theme', () => {
     const selectors = [...css.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{/g)].map(
       (m) => m[1]?.trim() ?? '',
     )
-    expect(selectors.sort()).toEqual(['.ht-logo', '.ht-wordmark'])
+    // The thick logo adds a 3D wrapper, edge and back faces; the spin adds hover, working and keyframes.
+    expect(selectors.sort()).toEqual([
+      '.ht-appname:hover .ht-logo-3d',
+      '.ht-logo',
+      '.ht-logo-3d',
+      '.ht-logo-3d',
+      '.ht-logo-edge, .ht-logo-back',
+      '.ht-wordmark',
+      '@keyframes ht-logo-spin',
+      '@media (prefers-reduced-motion: no-preference)',
+      'html[data-working] .ht-logo-3d',
+      'to',
+    ])
     const main = readFileSync(resolve(process.cwd(), 'src/main.tsx'), 'utf8')
     expect(main).toContain("import './theme/brand.css'")
   })

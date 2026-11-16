@@ -3,6 +3,7 @@ import { X } from 'lucide-react'
 import { Link } from 'react-router'
 import { AiBanner } from '@/app/AiBanner'
 import { AppName } from '@/components/AppName'
+import { useWorking } from '@/lib/useWorking'
 
 const STEPS = 4
 
@@ -20,6 +21,7 @@ export function SetupLayout({
   closeTo?: string
   children: ReactNode
 }) {
+  useWorking(step !== undefined) // the logo keeps turning through the setup steps
   return (
     <div className="flex min-h-screen flex-col text-foreground">
       <AiBanner />

@@ -1,4 +1,5 @@
 import { useId } from 'react'
+import { useWorking } from '@/lib/useWorking'
 import { cn } from '@/lib/utils'
 
 type Props = {
@@ -16,6 +17,7 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS
 
 /** A ring with a colour-changing arc that fills as the work goes, with the percent in the middle; unknown amount: a spinning arc. */
 export function CircularProgress({ label, value, animated = true, className }: Props) {
+  useWorking(animated)
   const known = value !== null
   const percent = known ? Math.min(100, Math.max(0, Math.round(value))) : 0
   const gradient = `ht-ring-gradient-${useId().replace(/:/g, '')}`

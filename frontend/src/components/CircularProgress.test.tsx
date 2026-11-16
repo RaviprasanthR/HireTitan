@@ -30,4 +30,14 @@ describe('CircularProgress', () => {
     const ids = [...container.querySelectorAll('linearGradient')].map((g) => g.id)
     expect(new Set(ids).size).toBe(2)
   })
+
+  it('marks the page as working while it animates, so the logo keeps turning, and clears it after', () => {
+    const { rerender, unmount } = render(<CircularProgress label="x" value={10} />)
+    expect(document.documentElement).toHaveAttribute('data-working')
+    rerender(<CircularProgress label="x" value={10} animated={false} />)
+    expect(document.documentElement).not.toHaveAttribute('data-working')
+    rerender(<CircularProgress label="x" value={10} />)
+    unmount()
+    expect(document.documentElement).not.toHaveAttribute('data-working')
+  })
 })

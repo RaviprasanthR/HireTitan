@@ -113,7 +113,7 @@ describe('Shell', () => {
     expect(sidebar.firstElementChild).toHaveTextContent('HireTitan')
     expect(sidebar.firstElementChild?.querySelector('svg[data-logo]')).not.toBeNull()
     // the other graphics in the sidebar are the menu icons
-    expect(sidebar.querySelectorAll('svg:not([data-logo])')).toHaveLength(
+    expect(sidebar.querySelectorAll('svg:not([data-logo], .ht-logo-edge, .ht-logo-back)')).toHaveLength(
       within(nav).getAllByRole('link').length,
     )
     expect(sidebar.querySelector('img')).toBeNull()
