@@ -121,6 +121,7 @@ class StoredRuleSet(Protocol):
     rules: dict[str, Any]
     based_on: dict[str, Any]
     approved_at: datetime | None
+    approved_by: str | None  # person | auto; none for a proposal
 
 
 class RuleSetStore(Protocol):
@@ -132,7 +133,9 @@ class RuleSetStore(Protocol):
 
     async def update_proposed(self, rules: dict[str, Any]) -> StoredRuleSet | None: ...
 
-    async def approve(self, rule_set_id: UUID) -> StoredRuleSet: ...
+    async def approve(self, rule_set_id: UUID, *, approved_by: str = "person") -> StoredRuleSet: ...
+
+    async def ever_approved(self) -> bool: ...
 
     async def discard_proposed(self) -> None: ...
 

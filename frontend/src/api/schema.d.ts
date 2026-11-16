@@ -2150,6 +2150,8 @@ export interface components {
         RuleSetOut: {
             /** Approved At */
             approved_at: string | null;
+            /** Approved By */
+            approved_by?: string | null;
             /** Based On */
             based_on: {
                 [key: string]: unknown;

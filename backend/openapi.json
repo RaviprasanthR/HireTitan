@@ -3670,6 +3670,17 @@
             ],
             "title": "Approved At"
           },
+          "approved_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By"
+          },
           "based_on": {
             "additionalProperties": true,
             "title": "Based On",

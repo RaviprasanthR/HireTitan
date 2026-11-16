@@ -118,6 +118,7 @@ class RuleSetOut(BaseModel):
     rules: SearchRulesModel
     based_on: dict[str, Any]
     approved_at: datetime | None
+    approved_by: str | None = None  # "person", "auto" (set up when setup finished) or none
 
 
 class RulesStateOut(BaseModel):
@@ -162,6 +163,7 @@ def create_search_rules_router(deps: SearchRulesApiDeps) -> APIRouter:
             rules=SearchRulesModel.from_domain(view.rules),
             based_on=row.based_on,
             approved_at=view.approved_at,
+            approved_by=view.approved_by,
         )
 
     @router.get("")

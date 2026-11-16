@@ -173,7 +173,16 @@ class RuleSetsRepo:
             await self._session.refresh(row)
         return row
 
-    async def approve(self, rule_set_id: UUID, *, now: datetime | None = None) -> SearchRuleSetRow:
+    async def ever_approved(self) -> bool:
+        """True when any rule set was ever approved (superseded ones keep their approval time)."""
+        found = await self._session.scalar(
+            select(SearchRuleSetRow.id).where(SearchRuleSetRow.approved_at.is_not(None)).limit(1)
+        )
+        return found is not None
+
+    async def approve(
+        self, rule_set_id: UUID, *, approved_by: str = "person", now: datetime | None = None
+    ) -> SearchRuleSetRow:
         """The previous approved set becomes ``superseded`` in the same transaction."""
         await self._session.execute(
             update(SearchRuleSetRow)
@@ -183,7 +192,7 @@ class RuleSetsRepo:
         await self._session.execute(
             update(SearchRuleSetRow)
             .where(SearchRuleSetRow.id == rule_set_id)
-            .values(status="approved", approved_at=now or func.now())
+            .values(status="approved", approved_at=now or func.now(), approved_by=approved_by)
         )
         await self._session.flush()
         row = await self._session.get_one(SearchRuleSetRow, rule_set_id)

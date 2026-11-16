@@ -135,6 +135,18 @@ async def test_US2_AS2_edit_and_approve(
     assert got["stale"] is False
 
 
+async def test_approve_records_person(
+    client: httpx.AsyncClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    """002i: a rule set the person approves says so; a proposal has no approver."""
+    await ready(sessions)
+    proposal = (await client.post(f"{RULES}/proposal")).json()
+    assert proposal["approved_by"] is None
+    approved = (await client.post(f"{RULES}/proposal/approve")).json()
+    assert approved["approved_by"] == "person"
+    assert (await client.get(RULES)).json()["approved"]["approved_by"] == "person"
+
+
 async def test_FR002_limits_return_field_errors(
     client: httpx.AsyncClient, sessions: async_sessionmaker[AsyncSession]
 ) -> None:

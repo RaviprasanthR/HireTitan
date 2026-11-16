@@ -44,10 +44,18 @@ class RuleSetView:
     status: str
     rules: SearchRules
     approved_at: datetime | None
+    approved_by: str | None = None
 
 
 def _view(row: StoredRuleSet) -> RuleSetView:
-    return RuleSetView(row.id, row.version, row.status, rules_from_dict(row.rules), row.approved_at)
+    return RuleSetView(
+        row.id,
+        row.version,
+        row.status,
+        rules_from_dict(row.rules),
+        row.approved_at,
+        row.approved_by,
+    )
 
 
 def _basis(profile_version_id: UUID, preferences_saved_at: datetime) -> dict[str, Any]:
