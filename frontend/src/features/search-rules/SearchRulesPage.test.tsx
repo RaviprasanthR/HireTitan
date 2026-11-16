@@ -49,6 +49,8 @@ let state: State
 let calls: { method: string; path: string; body?: string }[]
 let suggested: ReturnType<typeof rules>
 let saveReply: (() => Response) | null
+let deleteReply: (() => Response) | null
+let prefsCountry: string
 
 function serve() {
   vi.stubGlobal(
@@ -66,7 +68,11 @@ function serve() {
         state = { approved: next, proposal: null, stale: false }
         return json(next)
       }
+      if (method === 'GET' && path === '/preferences') {
+        return json({ content: { default_country: prefsCountry } })
+      }
       if (method === 'DELETE' && path === '/search/rules/proposal') {
+        if (deleteReply) return deleteReply()
         state = { ...state, proposal: null }
         return new Response(null, { status: 204 })
       }
@@ -88,8 +94,12 @@ function renderPage() {
 
 beforeEach(() => {
   state = { approved: approvedSet(), proposal: null, stale: false }
-  suggested = rules({ title_words: [{ text: 'Suggested Engineer', origin: 'user', effect: 'skips' }] })
+  suggested = rules({
+    title_words: [{ text: 'Suggested Engineer', origin: 'user', effect: 'skips' }],
+  })
   saveReply = null
+  deleteReply = null
+  prefsCountry = 'DE'
   calls = []
   serve()
 })
@@ -122,10 +132,9 @@ describe('SearchRulesPage', () => {
     expect(within(rank).getByText('Back end')).toBeInTheDocument() // the area, as a person says it
     expect(within(rank).getByText('Python')).toBeInTheDocument()
     expect(within(rank).getByText(/Years of experience: 4\.5/)).toBeInTheDocument()
-    expect(within(rank).getByRole('link', { name: /change these in preferences/i })).toHaveAttribute(
-      'href',
-      '/profile/preferences',
-    )
+    expect(
+      within(rank).getByRole('link', { name: /change these in preferences/i }),
+    ).toHaveAttribute('href', '/profile/preferences')
   })
 
   it('SC003_shows_none_of_the_old_tag_texts', async () => {
@@ -224,7 +233,9 @@ describe('SearchRulesPage', () => {
     const keep = await screen.findByRole('region', { name: 'Jobs we keep' })
     expect(await within(keep).findByRole('alert')).toHaveTextContent('Add at least one job title.')
     const leave = screen.getByRole('region', { name: 'Jobs we leave out' })
-    expect(within(leave).getByRole('alert')).toHaveTextContent('Use a number of days from 1 to 365.')
+    expect(within(leave).getByRole('alert')).toHaveTextContent(
+      'Use a number of days from 1 to 365.',
+    )
     expect(screen.getByRole('button', { name: 'Save rules' })).toBeEnabled() // still editing
   })
 
@@ -298,7 +309,11 @@ describe('SearchRulesPage', () => {
 
   it('areas_can_be_picked_up_to_four', async () => {
     const user = userEvent.setup()
-    state = { approved: approvedSet({ rules: rules({ areas: ['back_end'] }) }), proposal: null, stale: false }
+    state = {
+      approved: approvedSet({ rules: rules({ areas: ['back_end'] }) }),
+      proposal: null,
+      stale: false,
+    }
     renderPage()
     await openEditor(user)
 
@@ -320,5 +335,150 @@ describe('SearchRulesPage', () => {
     await user.click(screen.getByRole('button', { name: 'Save rules' }))
 
     await waitFor(() => expect(calls.some((c) => c.method === 'PUT')).toBe(true))
+  })
+
+  // --- fixes from the story review -------------------------------------------------------
+
+  const leftover = () => ({
+    approved: approvedSet(),
+    proposal: approvedSet({
+      id: 'p1',
+      version: 2,
+      status: 'proposed',
+      approved_at: null,
+      approved_by: null,
+      rules: rules({ title_words: [{ text: 'Half Done', origin: 'user', effect: 'skips' }] }),
+    }),
+    stale: false,
+  })
+
+  it('opening_the_editor_puts_the_cursor_in_the_first_field', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await openEditor(user)
+    expect(screen.getByLabelText('Job titles')).toHaveFocus()
+  })
+
+  it('after_save_and_after_cancel_the_edit_button_has_the_focus_again', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await openEditor(user)
+    await user.click(screen.getByRole('button', { name: 'Save rules' }))
+    expect(await screen.findByRole('button', { name: /edit rules/i })).toHaveFocus()
+
+    await openEditor(user)
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(await screen.findByRole('button', { name: /edit rules/i })).toHaveFocus()
+  })
+
+  it('saving_a_leftover_draft_does_not_bring_it_back_while_the_page_refreshes', async () => {
+    const user = userEvent.setup()
+    state = leftover()
+    renderPage()
+    await screen.findByText('Half Done')
+
+    await user.click(screen.getByRole('button', { name: 'Save rules' }))
+
+    expect(await screen.findByText('Rules saved.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Save rules' })).not.toBeInTheDocument()
+    expect(screen.getByText(/version 2/)).toBeInTheDocument() // the saved rules, at once
+  })
+
+  it('a_leftover_draft_that_could_not_be_discarded_stays_and_says_so', async () => {
+    const user = userEvent.setup()
+    deleteReply = () => json({ title: 'Boom', status: 500 }, 500, 'application/problem+json')
+    state = leftover()
+    renderPage()
+    await screen.findByText('Half Done')
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(
+      await screen.findByText(/could not discard your changes in progress/i),
+    ).toBeInTheDocument()
+    expect(screen.getByText('Half Done')).toBeInTheDocument() // it was not discarded
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeEnabled() // and can be tried again
+  })
+
+  it('an_error_about_a_field_the_page_does_not_know_is_still_shown', async () => {
+    const user = userEvent.setup()
+    saveReply = () =>
+      json(
+        {
+          title: 'Some fields are not valid.',
+          status: 422,
+          errors: [
+            { field: 'title_words.0.text', message: 'Each item is 1 to 60 characters.' },
+            { field: 'something_new', message: 'This one is new to the page.' },
+          ],
+        },
+        422,
+        'application/problem+json',
+      )
+    renderPage()
+
+    await openEditor(user)
+    await user.click(screen.getByRole('button', { name: 'Save rules' }))
+
+    const keep = await screen.findByRole('region', { name: 'Jobs we keep' })
+    expect(await within(keep).findByRole('alert')).toHaveTextContent('Each item is 1 to 60')
+    expect(await screen.findByText('This one is new to the page.')).toBeInTheDocument()
+  })
+
+  it('a_group_with_an_error_points_to_it_for_screen_readers', async () => {
+    const user = userEvent.setup()
+    saveReply = () =>
+      json(
+        {
+          title: 'Some fields are not valid.',
+          status: 422,
+          errors: [{ field: 'title_words', message: 'Add at least 1.' }],
+        },
+        422,
+        'application/problem+json',
+      )
+    renderPage()
+
+    await openEditor(user)
+    await user.click(screen.getByRole('button', { name: 'Save rules' }))
+
+    const keep = await screen.findByRole('region', { name: 'Jobs we keep' })
+    const alert = await within(keep).findByRole('alert')
+    const describedBy = keep.getAttribute('aria-describedby')
+    expect(describedBy).toBeTruthy()
+    expect(document.getElementById(describedBy as string)).toContainElement(alert)
+  })
+
+  it('a_new_place_starts_in_the_persons_own_country_not_a_built_in_one', async () => {
+    const user = userEvent.setup()
+    prefsCountry = 'DE'
+    renderPage()
+    await openEditor(user)
+    await waitFor(() => expect(screen.getByLabelText('Places to skip country')).toHaveValue('DE'))
+
+    await user.type(screen.getByLabelText('Places to skip city'), 'Berlin')
+    await user.click(screen.getByRole('button', { name: /add places to skip/i }))
+    await user.click(screen.getByRole('button', { name: 'Save rules' }))
+
+    await waitFor(() => expect(calls.some((c) => c.method === 'PUT')).toBe(true))
+    const sent = JSON.parse(calls.find((c) => c.method === 'PUT')?.body as string)
+    const blocked = sent.blocked_locations.map(
+      (p: { city: string; country: string }) => `${p.city}, ${p.country}`,
+    )
+    expect(blocked).toContain('Berlin, DE')
+  })
+
+  it('the_age_field_can_be_cleared_to_type_a_new_number', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await openEditor(user)
+
+    const age = screen.getByLabelText(/oldest job we show/i)
+    await user.clear(age)
+    expect(age).toHaveValue(null) // empty, not "0"
+    await user.type(age, '14')
+
+    expect(age).toHaveValue(14)
   })
 })

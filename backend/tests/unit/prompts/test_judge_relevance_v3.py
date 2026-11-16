@@ -100,10 +100,12 @@ def test_FR034_the_job_card_says_whether_the_text_was_read(v3: LoadedPrompt, sta
     assert cards[0]["description_status"] == status
 
 
-def test_the_system_prompt_judges_area_then_stack_then_level(v3: LoadedPrompt) -> None:
+def test_the_system_prompt_judges_kind_area_stack_then_level(v3: LoadedPrompt) -> None:
     text = v3.system
-    area, stack, level = (text.index(w) for w in ("1. Area of work", "2. Main stack", "3. Level"))
-    assert area < stack < level
+    steps = ("1. Kind of work", "2. Area of work", "3. Main stack", "4. Level")
+    positions = [text.index(step) for step in steps]
+    assert positions == sorted(positions)
+    assert "a warehouse, sales, support" in text  # a different kind of work is never relevant
     assert "description_status" in text
     assert "unreadable" in text  # what to do without a description
     assert "generic title" in text  # a generic title is not a reason to leave a job out

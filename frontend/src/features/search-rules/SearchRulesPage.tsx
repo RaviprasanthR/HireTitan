@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Ban, Briefcase, Pencil, RotateCcw, Sparkles } from 'lucide-react'
-import { type ReactNode, useState } from 'react'
+import { type ReactNode, useEffect, useId, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { ApiError, apiFetch } from '@/api/client'
 import type { components } from '@/api/schema'
@@ -75,19 +75,28 @@ function Group({
   errors?: string[]
   children: ReactNode
 }) {
+  const errorId = useId()
   return (
-    <section aria-label={title} className={`ht-detail-card ht-${tone} space-y-3`}>
+    <section
+      aria-label={title}
+      aria-describedby={errors && errors.length > 0 ? errorId : undefined}
+      className={`ht-detail-card ht-${tone} space-y-3`}
+    >
       <h2 className="ht-detail-heading">
         <Icon aria-hidden className="size-4" />
         {title}
       </h2>
       <p className="text-sm text-muted-small">{intro}</p>
       {children}
-      {errors?.map((message) => (
-        <p key={message} role="alert" className="text-sm text-danger">
-          {message}
-        </p>
-      ))}
+      {errors && errors.length > 0 && (
+        <div id={errorId}>
+          {errors.map((message) => (
+            <p key={message} role="alert" className="text-sm text-danger">
+              {message}
+            </p>
+          ))}
+        </div>
+      )}
     </section>
   )
 }
@@ -197,15 +206,18 @@ function PlaceRulesInput({
   label,
   places,
   onChange,
+  country,
 }: {
   label: string
   places: PlaceRule[]
   onChange: (next: PlaceRule[]) => void
+  country: string
 }) {
   return (
     <PlacesInput
+      key={country} // the input takes its starting country once: restart when it is known
       label={label}
-      defaultCountry="IN"
+      defaultCountry={country}
       value={places.map((p) => ({ city: p.city ?? '', country: p.country ?? '' }))}
       onChange={(next) =>
         onChange(
@@ -223,11 +235,23 @@ function PlaceRulesInput({
   )
 }
 
+/** The group a field belongs to; a path like ``title_words.0.text`` belongs to ``title_words``. */
+function groupOf(field: string): GroupName | undefined {
+  return GROUP_OF[field.split('.')[0] ?? field]
+}
+
 function errorsFor(error: ApiError | null, group: GroupName): string[] {
   if (!error) return []
   return error.fieldErrors
-    .filter((e) => GROUP_OF[e.field] === group)
+    .filter((e) => groupOf(e.field) === group)
     .map((e) => PLAIN_ERROR[e.field] ?? e.message)
+}
+
+/** Errors that belong to no group on the page, so they are never lost. */
+function otherErrors(error: ApiError | null): string[] {
+  if (!error) return []
+  if (error.fieldErrors.length === 0) return [error.detail]
+  return error.fieldErrors.filter((e) => !groupOf(e.field)).map((e) => e.message)
 }
 
 function RulesEditor({
@@ -235,16 +259,33 @@ function RulesEditor({
   fromProposal,
   onSaved,
   onCancel,
+  cancelling,
 }: {
   initial: Rules
   fromProposal: boolean
-  onSaved: () => void
+  onSaved: (saved: RuleSet) => void
   onCancel: () => void
+  cancelling: boolean
 }) {
   const [draft, setDraft] = useState<Rules>(initial)
   const set = <K extends keyof Rules>(key: K, value: Rules[K]) =>
     setDraft((d) => ({ ...d, [key]: value }))
   const dirty = JSON.stringify(draft) !== JSON.stringify(initial)
+  // the person's own country (from Preferences) is where a new place starts; none is assumed
+  const preferences = useQuery({
+    queryKey: [...QUERY_KEY, 'country'],
+    queryFn: () => apiFetch<{ content: { default_country: string } }>('/preferences'),
+    retry: false,
+  })
+  const country =
+    preferences.data?.content.default_country ??
+    initial.blocked_locations.find((p) => p.country)?.country ??
+    initial.preferred_locations.find((p) => p.country)?.country ??
+    ''
+  // a keyboard user lands on the first field when the editor opens
+  useEffect(() => {
+    document.getElementById('rule-titles')?.focus()
+  }, [])
 
   const save = useMutation({
     mutationFn: () => apiFetch<RuleSet>('/search/rules/approved', { method: 'PUT', json: draft }),
@@ -255,7 +296,7 @@ function RulesEditor({
     onSuccess: (suggested) => setDraft(suggested),
   })
   const error = save.error instanceof ApiError ? save.error : null
-  const otherError = error && error.fieldErrors.length === 0 ? error.detail : null
+  const others = otherErrors(error)
 
   return (
     <div className="space-y-4">
@@ -304,6 +345,7 @@ function RulesEditor({
             label="Places to skip"
             places={draft.blocked_locations}
             onChange={(v) => set('blocked_locations', v)}
+            country={country}
           />
           <label className="flex items-center gap-2 text-sm">
             Oldest job we show (days)
@@ -312,7 +354,7 @@ function RulesEditor({
               min={1}
               max={365}
               className={`${input} w-24`}
-              value={draft.max_age_days}
+              value={draft.max_age_days === 0 ? '' : draft.max_age_days} // empty while typing
               onChange={(e) => set('max_age_days', Number(e.target.value))}
             />
           </label>
@@ -364,15 +406,16 @@ function RulesEditor({
             label="Places you prefer"
             places={draft.preferred_locations}
             onChange={(v) => set('preferred_locations', v)}
+            country={country}
           />
           <FromPreferences rules={draft} />
         </Group>
       </div>
-      {otherError && (
-        <p role="alert" className="text-sm text-danger">
-          {otherError}
+      {others.map((message) => (
+        <p key={message} role="alert" className="text-sm text-danger">
+          {message}
         </p>
-      )}
+      ))}
       {startOver.isError && (
         <p role="alert" className="text-sm text-danger">
           {startOver.error instanceof ApiError
@@ -384,7 +427,7 @@ function RulesEditor({
         <Button variant="success" disabled={save.isPending} onClick={() => save.mutate()}>
           Save rules
         </Button>
-        <Button variant="cancel" disabled={save.isPending} onClick={onCancel}>
+        <Button variant="cancel" disabled={save.isPending || cancelling} onClick={onCancel}>
           Cancel
         </Button>
         <Button
@@ -410,6 +453,7 @@ export function SearchRulesPage() {
   // the rules being edited, once the person chose to (a leftover open draft opens by itself)
   const [editing, setEditing] = useState<{ rules: Rules; key: string } | null>(null)
   const [saved, setSaved] = useState(false)
+  const returnFocus = useRef(false) // set when the editor closes, used by the Edit button
 
   const suggest = useMutation({
     mutationFn: () => apiFetch<Rules>('/search/rules/suggested'),
@@ -420,7 +464,11 @@ export function SearchRulesPage() {
   })
   const discard = useMutation({
     mutationFn: () => apiFetch('/search/rules/proposal', { method: 'DELETE' }),
-    onSuccess: () => client.invalidateQueries({ queryKey: QUERY_KEY }),
+    onSuccess: async () => {
+      returnFocus.current = true
+      client.setQueryData<RulesState>(QUERY_KEY, (old) => old && { ...old, proposal: null })
+      await client.invalidateQueries({ queryKey: QUERY_KEY })
+    },
   })
 
   if (query.isPending) return <p className="text-sm text-muted-small">Loading your search rules…</p>
@@ -437,15 +485,25 @@ export function SearchRulesPage() {
   const draft = editing ?? (leftover ? { rules: leftover.rules, key: leftover.id } : null)
   const suggestError = suggest.error instanceof ApiError ? suggest.error.detail : null
 
-  const finish = async () => {
+  const finish = async (result: RuleSet) => {
+    returnFocus.current = true
+    // show the saved rules at once: the old draft must not come back while the page refreshes
+    client.setQueryData<RulesState>(
+      QUERY_KEY,
+      (old) => old && { ...old, approved: result, proposal: null, stale: false },
+    )
     setEditing(null)
     setSaved(true)
     await client.invalidateQueries({ queryKey: QUERY_KEY })
     await client.invalidateQueries({ queryKey: ['status'] })
   }
   const cancel = () => {
+    if (leftover) {
+      discard.mutate() // the draft stays until it is really gone
+      return
+    }
+    returnFocus.current = true
     setEditing(null)
-    if (leftover) discard.mutate()
   }
 
   return (
@@ -468,6 +526,7 @@ export function SearchRulesPage() {
           fromProposal={leftover !== null}
           onSaved={finish}
           onCancel={cancel}
+          cancelling={discard.isPending}
         />
       ) : approved ? (
         <div className="space-y-4">
@@ -487,6 +546,12 @@ export function SearchRulesPage() {
           <ReadView rules={approved.rules} />
           <div className="flex flex-wrap gap-3">
             <Button
+              ref={(node) => {
+                if (node && returnFocus.current) {
+                  returnFocus.current = false
+                  node.focus()
+                }
+              }}
               onClick={() => {
                 setSaved(false)
                 setEditing({ rules: approved.rules, key: `edit-${approved.id}` })
@@ -508,9 +573,9 @@ export function SearchRulesPage() {
           </Button>
         </div>
       )}
-      {suggestError && (
+      {(suggestError || discard.isError) && (
         <p role="alert" className="text-sm text-danger">
-          {suggestError}
+          {suggestError ?? 'Could not discard your changes in progress. Try again.'}
         </p>
       )}
     </section>

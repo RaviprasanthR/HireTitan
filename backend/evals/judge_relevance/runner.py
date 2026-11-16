@@ -6,11 +6,13 @@ app could not use (after one repair) counts as ``unusable`` and as missed answer
 
 from __future__ import annotations
 
+import importlib.util
 import math
 from collections import defaultdict
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from types import ModuleType
 from typing import Final
 
 from pydantic import BaseModel
@@ -22,7 +24,6 @@ from hiretitan.platform.llm.infra.calls_repo import LlmCallRecord
 from hiretitan.platform.llm.port import LlmPort, LlmRequest
 from hiretitan.platform.llm.prompts import LoadedPrompt, PromptRegistry
 from hiretitan.platform.llm.validation import TaskSpec, ValidatedLlm
-from hiretitan.prompts.judge_relevance.v2.checks import role_words_outside, rule_errors
 from hiretitan.search.application.judge_prompt import render_judge_prompt
 from hiretitan.search.domain.cards import JobCardInput
 from hiretitan.search.domain.normalize import normalize_job
@@ -83,6 +84,19 @@ class JudgeReport:
             and self.injection_affected == 0
             and self.roles_in_title == self.roles_given
         )
+
+
+def _checks(root: Path | None, version: int) -> ModuleType:
+    """The ``checks.py`` of the version being evaluated (each version ships its own, and a
+    candidate is not importable as a package until it is moved into the app)."""
+    base = root or Path(hiretitan_prompts.__file__).parent
+    path = base / PROMPT_NAME / f"v{version}" / "checks.py"
+    spec = importlib.util.spec_from_file_location(f"{PROMPT_NAME}_v{version}_checks", path)
+    if spec is None or spec.loader is None:
+        raise ValueError(f"Cannot load {path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def _registry(root: Path | None = None) -> PromptRegistry:
@@ -157,6 +171,7 @@ async def evaluate_judge(
 ) -> JudgeReport:
     prompt = _registry(prompt_root).load(PROMPT_NAME, version)
     schema: type[BaseModel] = prompt.output_schema
+    checks = _checks(prompt_root, prompt.version.version)
     calls: list[LlmCallRecord] = []
 
     async def record(call: LlmCallRecord) -> None:
@@ -174,7 +189,7 @@ async def evaluate_judge(
                     request,
                     TaskSpec(
                         fallback=lambda: schema.model_validate({"decisions": []}),
-                        rules=rule_errors(refs, [p.title for p in batch]),
+                        rules=checks.rule_errors(refs, [p.title for p in batch]),
                     ),
                 )
                 said = (
@@ -187,7 +202,7 @@ async def evaluate_judge(
                     for d in result.value.decisions:
                         if d.role is not None:
                             roles_given += 1
-                            roles_in_title += not role_words_outside(d.role, titles[d.ref])
+                            roles_in_title += not checks.role_words_outside(d.role, titles[d.ref])
                 for ref, posting in zip(refs, batch, strict=True):
                     answers[(profile, posting.id)].append(said.get(ref))
 
