@@ -155,6 +155,89 @@ describe('SearchPanel', () => {
     expect(screen.getByRole('button', { name: 'Search now' })).toBeInTheDocument()
   })
 
+  it('US2_a_search_that_ends_before_it_is_seen_goes_straight_to_the_end_message', async () => {
+    const user = userEvent.setup()
+    let latest: unknown = null
+    renderPanel(null, (call) => {
+      if (call.method === 'POST' && call.path === '/search/runs')
+        latest = run({
+          id: 's2',
+          outcome: 'finished',
+          companies_total: 0,
+          companies_read: 0,
+          added: 0,
+        })
+      if (call.path === '/search/latest') return latest
+      return undefined
+    })
+
+    await user.click(await screen.findByRole('button', { name: 'Search now' }))
+
+    expect(await screen.findByText('Search finished.')).toBeInTheDocument()
+    expect(screen.queryByText('Searching your companies…')).not.toBeInTheDocument()
+    expect(screen.getByText('0 new jobs')).toBeInTheDocument() // no "Checked 0 of 0"
+    expect(screen.queryByText(/Checked/)).not.toBeInTheDocument()
+  })
+
+  it('US2_a_second_search_after_a_finished_one_shows_searching_then_its_counts', async () => {
+    const user = userEvent.setup()
+    let latest: unknown = run({ id: 's1', outcome: 'finished' })
+    renderPanel(null, (call) => {
+      if (call.method === 'POST' && call.path === '/search/runs')
+        latest = run({ id: 's2', companies_total: 10, companies_read: 3, added: 2 })
+      if (call.path === '/search/latest') return latest
+      return undefined
+    })
+    expect(await screen.findByText('Search finished.')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Search now' }))
+
+    expect(await screen.findByText('Searching your companies…')).toBeInTheDocument()
+    expect(await screen.findByText('Checked 3 of 10 companies · 2 new jobs so far')).toBeInTheDocument()
+    expect(screen.queryByText('Search finished.')).not.toBeInTheDocument()
+  })
+
+  it('US2_a_start_can_be_retried_after_it_failed', async () => {
+    const user = userEvent.setup()
+    let attempts = 0
+    renderPanel(null, (call) => {
+      if (call.method === 'POST' && call.path === '/search/runs') {
+        attempts += 1
+        if (attempts === 1) return problem(409, 'A search is already running.')
+        return new Promise(() => {}) // the second one is still waiting for the server
+      }
+      return undefined
+    })
+
+    await user.click(await screen.findByRole('button', { name: 'Search now' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('already running')
+    await user.click(screen.getByRole('button', { name: 'Search now' }))
+
+    expect(await screen.findByText('Searching your companies…')).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('US2_stop_cannot_be_pressed_twice_while_it_is_being_sent', async () => {
+    const user = userEvent.setup()
+    const calls = renderPanel(run(), (call) =>
+      call.path.endsWith('/stop') ? new Promise(() => {}) : undefined,
+    )
+
+    const stop = await screen.findByRole('button', { name: 'Stop' })
+    await user.click(stop)
+    await user.click(stop)
+
+    expect(calls.filter((c) => c.path.endsWith('/stop'))).toHaveLength(1)
+  })
+
+  it('US2_AS6_the_status_line_is_always_on_the_page_so_changes_are_announced', async () => {
+    renderPanel(null)
+    // no run yet: the line exists (empty) and is a polite live region
+    const status = await screen.findByRole('status')
+    expect(status).toHaveAttribute('aria-live', 'polite')
+    expect(status).toHaveTextContent('')
+  })
+
   it('US1_AS9_stop_button', async () => {
     const user = userEvent.setup()
     const calls = renderPanel(run())
@@ -187,7 +270,8 @@ describe('SearchPanel', () => {
     const outcomes = [null, 'finished', 'stopped_by_user', 'out_of_credit', 'failed', 'budget_reached']
     for (const outcome of outcomes) {
       renderPanel(run({ outcome, stop_requested: outcome === null }))
-      await screen.findByText(/Search|Searching|Your AI account|stopped|Stopping/i)
+      await screen.findByRole('region', { name: 'Search' })
+      await screen.findByRole('status')
       expect(document.body.textContent ?? '').not.toMatch(/batch/i)
       cleanup()
       vi.unstubAllGlobals()

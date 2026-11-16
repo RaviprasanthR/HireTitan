@@ -138,6 +138,7 @@ export function useStartSearch() {
         json: { mode },
       }),
     onSuccess: refresh,
+    onError: refresh, // e.g. "already running": show the run that is, not an idle panel
   })
 }
 

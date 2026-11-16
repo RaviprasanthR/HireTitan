@@ -4,27 +4,44 @@ import { ProgressBar } from '@/components/ProgressBar'
 import { Button } from '@/components/ui/button'
 import { type RunSummary, useLatestRun, useStartSearch, useStopSearch } from './api'
 
+const ENDED: Record<string, string> = {
+  finished: 'Search finished.',
+  stopped_by_user: 'Search stopped. Jobs found so far are kept.',
+  // a search that ended under the old AI budget (no longer in HireTitan)
+  budget_reached: 'Search stopped. Jobs found so far are kept.',
+  out_of_credit:
+    'Your AI account is out of credit, so the search stopped. Jobs found so far are kept.',
+  failed: 'The search stopped because of an error. Jobs found so far are kept.',
+}
+
 /** Companies checked and new jobs found: the one line of progress the person needs. */
 function counts(run: RunSummary, suffix: string): string {
-  return `Checked ${run.companies_read} of ${run.companies_total} companies · ${run.added} new jobs${suffix}`
+  const jobs = `${run.added} new jobs${suffix}`
+  // a search that ended before its plan was made has no companies to count
+  return run.companies_total > 0
+    ? `Checked ${run.companies_read} of ${run.companies_total} companies · ${jobs}`
+    : jobs
 }
 
 /**
- * A search in progress. `run` is missing for the moment between pressing "Search now" and the
- * server's first answer: the panel already says it is searching, with no counts (US2 AS1).
+ * Progress of a search that is running. `run` is missing for the moment between pressing
+ * "Search now" and the server's first answer: the bar is already moving, with no counts
+ * (US2 AS1). Counts appear once a company has been checked, never as "0 of 20".
  */
-function Searching({ run }: { run: RunSummary | null }) {
-  const stop = useStopSearch()
-  const stopping = run !== null && (run.stop_requested || stop.isSuccess)
-  // Counts appear once a company has been checked; before that only the moving bar is shown.
+function Progress({
+  run,
+  stopping,
+  stop,
+}: {
+  run: RunSummary | null
+  stopping: boolean
+  stop: ReturnType<typeof useStopSearch>
+}) {
   const started = run !== null && run.companies_total > 0 && run.companies_read > 0
   const percent =
     started && run ? Math.round((run.companies_read / run.companies_total) * 100) : null
   return (
-    <div className="space-y-2" aria-live="polite">
-      <p className="font-medium">
-        {stopping ? 'Stopping… jobs found so far are kept.' : 'Searching your companies…'}
-      </p>
+    <div className="space-y-2">
       {started && run && <p className="text-sm text-muted-small">{counts(run, ' so far')}</p>}
       <ProgressBar
         label="Search progress"
@@ -32,7 +49,13 @@ function Searching({ run }: { run: RunSummary | null }) {
         animated={percent !== null && !stopping}
       />
       {run && !stopping && (
-        <Button type="button" variant="danger" size="sm" onClick={() => stop.mutate(run.id)}>
+        <Button
+          type="button"
+          variant="danger"
+          size="sm"
+          disabled={stop.isPending}
+          onClick={() => stop.mutate(run.id)}
+        >
           Stop
         </Button>
       )}
@@ -46,18 +69,8 @@ function Searching({ run }: { run: RunSummary | null }) {
 }
 
 function Ended({ run }: { run: RunSummary }) {
-  const reasons: Record<string, string> = {
-    finished: 'Search finished.',
-    stopped_by_user: 'Search stopped. Jobs found so far are kept.',
-    // a search that ended under the old AI budget (no longer in HireTitan)
-    budget_reached: 'Search stopped. Jobs found so far are kept.',
-    out_of_credit:
-      'Your AI account is out of credit, so the search stopped. Jobs found so far are kept.',
-    failed: 'The search stopped because of an error. Jobs found so far are kept.',
-  }
   return (
-    <div className="space-y-1" aria-live="polite">
-      <p className="font-medium">{reasons[run.outcome ?? ''] ?? 'Search ended.'}</p>
+    <div className="space-y-1">
       {run.stop_message && <p className="text-sm">{run.stop_message}</p>}
       <p className="text-sm text-muted-small">{counts(run, '')}</p>
       {run.ai_note && <p className="text-sm text-warning">{run.ai_note}</p>}
@@ -76,6 +89,7 @@ function Ended({ run }: { run: RunSummary }) {
 export function SearchPanel() {
   const latest = useLatestRun()
   const start = useStartSearch()
+  const stop = useStopSearch()
   const [rulesOnly, setRulesOnly] = useState(false)
   // The run that was the latest when "Search now" was pressed. Until a different run shows up (or
   // the start fails, or the server has answered and the latest run is read again) the panel is
@@ -91,17 +105,31 @@ export function SearchPanel() {
     !start.isError &&
     (run?.id ?? null) === clicked.base &&
     !(start.isSuccess && !latest.isFetching)
-
   const searching = active || starting
+  const stopping = active && run !== null && (run.stop_requested || stop.isSuccess)
+
   const begin = () => {
     setClicked({ base: run?.id ?? null })
     start.mutate(rulesOnly ? 'rules_only' : 'rules_and_ai')
   }
 
+  // One status line that is always on the page, so a screen reader announces each change of it
+  // (a live region that arrives together with its text is often not announced).
+  const message = searching
+    ? stopping
+      ? 'Stopping… jobs found so far are kept.'
+      : 'Searching your companies…'
+    : run
+      ? (ENDED[run.outcome ?? ''] ?? 'Search ended.')
+      : ''
+
   return (
     <section aria-label="Search" className="space-y-3 rounded-lg bg-surface p-4">
+      <p role="status" aria-live="polite" className="font-medium empty:hidden">
+        {message}
+      </p>
       {searching ? (
-        <Searching run={active ? run : null} />
+        <Progress run={active ? run : null} stopping={stopping} stop={stop} />
       ) : (
         run && <Ended run={run} />
       )}
