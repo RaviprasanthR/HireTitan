@@ -60,6 +60,12 @@ CLIENT_CONSTRUCTORS = frozenset({"Client", "AsyncClient", "OpenAI", "AsyncOpenAI
 # robots.txt and rate limits by its own contract tests (T051). Nothing else under
 # ``search/`` may build a client, and nothing there may use a mutating HTTP verb.
 CAREERS_FETCHER = Path("search/infra/careers_page/fetcher.py")
+# Feature 002i: a second exemption. Reading a posting's own text goes to the public job API of the
+# board it was listed on (the same hosts career-ops already reads, five vendors, GET only). That
+# module may build a client, but only for requests ``descriptions/allowlist.py`` names, which its
+# contract test enforces by intercepting every request (tests/contract/descriptions).
+DESCRIPTION_READER = Path("search/infra/descriptions/reader.py")
+HTTP_CLIENT_MODULES = frozenset({CAREERS_FETCHER, DESCRIPTION_READER})
 SEARCH_PACKAGE = Path("search")
 MUTATING_VERBS = frozenset({"post", "put", "patch", "delete"})
 
@@ -175,7 +181,8 @@ def test_constitution_I_outbound_hosts_allowlisted() -> None:
     violations = {
         str(path.relative_to(PACKAGE)): found
         for path, source in _package_sources()
-        if path.relative_to(PACKAGE) != CAREERS_FETCHER and (found := outbound_violations(source))
+        if path.relative_to(PACKAGE) not in HTTP_CLIENT_MODULES
+        and (found := outbound_violations(source))
     }
     assert violations == {}
 
@@ -197,7 +204,7 @@ def test_constitution_VII_careers_pages_fetched_only_through_the_fetcher() -> No
         if path.relative_to(PACKAGE).is_relative_to(SEARCH_PACKAGE)
         and (
             found := search_http_violations(
-                source, is_fetcher=path.relative_to(PACKAGE) == CAREERS_FETCHER
+                source, is_fetcher=path.relative_to(PACKAGE) in HTTP_CLIENT_MODULES
             )
         )
     }
@@ -212,6 +219,20 @@ def test_the_fetcher_is_the_only_outbound_exemption() -> None:
         if path.relative_to(PACKAGE) != CAREERS_FETCHER
     ]
     assert lookalikes == []
+
+
+def test_the_description_reader_is_the_only_other_http_module_under_search() -> None:
+    """002i: exactly two modules under ``search/`` build an HTTP client."""
+    builders = sorted(
+        str(path.relative_to(PACKAGE))
+        for path in PACKAGE.joinpath(SEARCH_PACKAGE).rglob("*.py")
+        if any(
+            _call_name(node.func) in CLIENT_CONSTRUCTORS
+            for node in ast.walk(ast.parse(path.read_text(encoding="utf-8")))
+            if isinstance(node, ast.Call)
+        )
+    )
+    assert builders == sorted(str(p) for p in HTTP_CLIENT_MODULES)
 
 
 def test_constitution_I_allowlist_holds_only_openai() -> None:

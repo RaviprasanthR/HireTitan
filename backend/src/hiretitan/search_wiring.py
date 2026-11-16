@@ -21,7 +21,13 @@ from hiretitan.preferences.infra.repo import PreferencesRepo
 from hiretitan.profile.domain.content import Experience, ProfileContent
 from hiretitan.profile.infra.models import ResumeFileRow
 from hiretitan.profile.infra.repos import VersionsRepo
-from hiretitan.search.application.ports import CareerOpsPort, ProposalFacts, ProposalSource
+from hiretitan.search.application.ports import (
+    CareerOpsPort,
+    DescriptionPort,
+    PageFetcherPort,
+    ProposalFacts,
+    ProposalSource,
+)
 from hiretitan.search.application.resume_choice import ResumeFacts
 from hiretitan.search.application.rules import (
     FirstRulesOutcome,
@@ -37,6 +43,8 @@ from hiretitan.search.domain.tech_names import TechTable
 from hiretitan.search.domain.work_areas import WorkAreaTable
 from hiretitan.search.infra.careerops.adapter import CareerOpsAdapter
 from hiretitan.search.infra.careerops.fake import FileCareerOps
+from hiretitan.search.infra.descriptions.fake import FileDescriptions
+from hiretitan.search.infra.descriptions.reader import DescriptionReader
 from hiretitan.search.infra.repos import CompaniesRepo, RuleSetsRepo
 from hiretitan.setup.infra.settings_repo import SettingsRepo
 
@@ -46,6 +54,14 @@ def build_career_ops(settings: Settings) -> CareerOpsPort:
     if settings.career_ops == "fake":
         return FileCareerOps(settings.fake_career_ops_dir)
     return CareerOpsAdapter(career_ops_dir=settings.career_ops_dir, data_dir=settings.data_dir)
+
+
+def build_descriptions(settings: Settings, pages: PageFetcherPort) -> DescriptionPort:
+    """The posting-text reader: the vendors' public APIs and the posting's own page, or the
+    file-based fake for end-to-end runs (``HIRETITAN_CAREER_OPS=fake``)."""
+    if settings.career_ops == "fake":
+        return FileDescriptions(settings.fake_career_ops_dir)
+    return DescriptionReader(pages)
 
 
 async def seed_companies(

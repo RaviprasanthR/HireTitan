@@ -35,7 +35,7 @@ from hiretitan.search.workflow.graph import WORKFLOW_NAME as SEARCH_WORKFLOW_NAM
 from hiretitan.search.workflow.graph import SearchDeps, job_search_workflow
 from hiretitan.search.workflow.judge import JudgeDeps
 from hiretitan.search.workflow.recheck import RECHECK_WORKFLOW, recheck_workflow
-from hiretitan.search_wiring import build_career_ops, profile_card_source
+from hiretitan.search_wiring import build_career_ops, build_descriptions, profile_card_source
 from hiretitan.seed_dir import resolve_seed_dir
 
 SEED_DIR = resolve_seed_dir()
@@ -74,6 +74,7 @@ async def run_worker(settings: Settings, *, wait: bool = True) -> None:
         default_country=default_country_provider(sessions),
     )
     tables = load_seed_tables(SEED_DIR)  # area and technology tables; a bad file stops start-up
+    pages = CareersPageFetcher(settings.data_dir / "cache" / "careers_pages")
     search_deps = SearchDeps(
         sessions=sessions,
         career_ops=build_career_ops(settings),
@@ -81,7 +82,8 @@ async def run_worker(settings: Settings, *, wait: bool = True) -> None:
         synonyms=load_title_synonyms(SEED_DIR / "title_synonyms.yaml"),
         tech_names=tables.tech_names,
         publish=publisher.publish,
-        pages=CareersPageFetcher(settings.data_dir / "cache" / "careers_pages"),
+        pages=pages,
+        descriptions=build_descriptions(settings, pages),  # one fetcher: one spacing per host
         page_ai=True,  # T053 eval passed 2026-11-08 (precision and recall 100%, 0 off-site links)
         judge=JudgeDeps(
             sessions=sessions,
