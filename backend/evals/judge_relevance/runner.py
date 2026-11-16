@@ -17,6 +17,7 @@ from pydantic import BaseModel
 
 import hiretitan.prompts as hiretitan_prompts
 from evals.judge_relevance.cases import POSTINGS, PROFILES, Posting
+from evals.judge_relevance.cases_go import GO_POSTINGS, LEFT_OUT_KINDS, postings_for
 from hiretitan.platform.llm.infra.calls_repo import LlmCallRecord
 from hiretitan.platform.llm.port import LlmPort, LlmRequest
 from hiretitan.platform.llm.prompts import LoadedPrompt, PromptRegistry
@@ -31,6 +32,10 @@ PROVIDER: Final = "openai"
 BATCH: Final = 10
 PRECISION_MIN: Final = 0.90
 RECALL_MIN: Final = 0.90
+# 002i SC-008: on the Python and Go profile, front end, mobile, QA and other-stack roles are
+# left out, and the relevant ones stay
+LEFT_OUT_MIN: Final = 0.95
+GO_RECALL_MIN: Final = 0.95
 
 
 @dataclass(frozen=True, slots=True)
@@ -50,15 +55,29 @@ class JudgeReport:
     tokens: int  # input and output tokens of every call
     p95_ms: int
     wrong: list[str]  # "profile/posting-id: said X, label Y"
+    left_out_ok: int = 0  # SC-008: front end, mobile, QA and other-stack roles left out
+    left_out_total: int = 0
+    go_relevant_ok: int = 0  # relevant postings of the Python and Go profile kept
+    go_relevant_total: int = 0
 
     @property
     def tokens_per_job(self) -> int:
         return self.tokens // self.decisions if self.decisions else 0
 
     @property
+    def left_out_rate(self) -> float:
+        return self.left_out_ok / self.left_out_total if self.left_out_total else 1.0
+
+    @property
+    def go_recall(self) -> float:
+        return self.go_relevant_ok / self.go_relevant_total if self.go_relevant_total else 1.0
+
+    @property
     def passes(self) -> bool:
         return (
-            self.precision >= PRECISION_MIN
+            self.left_out_rate >= LEFT_OUT_MIN
+            and self.go_recall >= GO_RECALL_MIN
+            and self.precision >= PRECISION_MIN
             and self.recall >= RECALL_MIN
             and self.unusable == 0
             and self.injection_affected == 0
@@ -66,11 +85,16 @@ class JudgeReport:
         )
 
 
-def _registry() -> PromptRegistry:
-    return PromptRegistry(Path(hiretitan_prompts.__file__).parent)
+def _registry(root: Path | None = None) -> PromptRegistry:
+    """The shipped prompts, or a folder of candidate versions that are not active yet (a new
+    version is evaluated from there and moved into the app only when it passes)."""
+    return PromptRegistry(root or Path(hiretitan_prompts.__file__).parent)
 
 
 def _label(profile: str, posting: Posting) -> bool:
+    if profile == "backend_go":
+        assert posting.go is not None
+        return posting.go
     return posting.backend if profile == "backend" else posting.frontend
 
 
@@ -92,11 +116,13 @@ def _card(posting: Posting, skills: tuple[str, ...]) -> JobCardInput:
         skills_found=job.skills_found,
         years_found=job.years_found,
         description=posting.description,
+        description_status="read" if posting.description.strip() else "unreadable",
     )
 
 
-def _batches() -> list[list[Posting]]:
-    return [list(POSTINGS[i : i + BATCH]) for i in range(0, len(POSTINGS), BATCH)]
+def _batches(profile: str) -> list[list[Posting]]:
+    postings = postings_for(profile)
+    return [list(postings[i : i + BATCH]) for i in range(0, len(postings), BATCH)]
 
 
 def p95(values: Sequence[int]) -> int:
@@ -120,8 +146,16 @@ def _request(prompt: LoadedPrompt, profile: str, batch: list[Posting], tier: str
     return request, built.refs
 
 
-async def evaluate_judge(llm: LlmPort, *, tier: str, model: str, repeat: int = 1) -> JudgeReport:
-    prompt = _registry().load(PROMPT_NAME)
+async def evaluate_judge(
+    llm: LlmPort,
+    *,
+    tier: str,
+    model: str,
+    repeat: int = 1,
+    version: int | None = None,
+    prompt_root: Path | None = None,
+) -> JudgeReport:
+    prompt = _registry(prompt_root).load(PROMPT_NAME, version)
     schema: type[BaseModel] = prompt.output_schema
     calls: list[LlmCallRecord] = []
 
@@ -134,7 +168,7 @@ async def evaluate_judge(llm: LlmPort, *, tier: str, model: str, repeat: int = 1
     roles_given = roles_in_title = 0
     for _ in range(repeat):
         for profile in PROFILES:
-            for batch in _batches():
+            for batch in _batches(profile):
                 request, refs = _request(prompt, profile, batch, tier)
                 result = await chain.run(
                     request,
@@ -157,13 +191,20 @@ async def evaluate_judge(llm: LlmPort, *, tier: str, model: str, repeat: int = 1
                 for ref, posting in zip(refs, batch, strict=True):
                     answers[(profile, posting.id)].append(said.get(ref))
 
-    by_id = {p.id: p for p in POSTINGS}
+    by_id = {p.id: p for p in (*POSTINGS, *GO_POSTINGS)}
     true_pos = false_pos = false_neg = unusable = affected = 0
+    left_out_ok = left_out_total = go_relevant_ok = go_relevant_total = 0
     wrong: list[str] = []
     for (profile, pid), given in answers.items():
         posting = by_id[pid]
         want = _label(profile, posting)
         for got in given:
+            if profile == "backend_go" and posting.kind in LEFT_OUT_KINDS:
+                left_out_total += 1
+                left_out_ok += got is False
+            if profile == "backend_go" and want:
+                go_relevant_total += 1
+                go_relevant_ok += got is True
             if got is None:
                 unusable += 1
                 false_neg += want
@@ -191,6 +232,10 @@ async def evaluate_judge(llm: LlmPort, *, tier: str, model: str, repeat: int = 1
         tokens=sum(c.input_tokens + c.output_tokens for c in calls),
         p95_ms=p95([c.latency_ms for c in calls]),
         wrong=sorted(set(wrong)),
+        left_out_ok=left_out_ok,
+        left_out_total=left_out_total,
+        go_relevant_ok=go_relevant_ok,
+        go_relevant_total=go_relevant_total,
     )
 
 
@@ -203,25 +248,30 @@ def render_judge_report(reports: Sequence[JudgeReport], *, day: str) -> str:
     lines = [
         f"# judge_relevance eval - {day}",
         "",
-        f"{len(POSTINGS)} synthetic postings judged for {len(PROFILES)} synthetic profiles in "
+        f"{len(POSTINGS)} synthetic postings judged for 2 synthetic profiles and "
+        f"{len(GO_POSTINGS)} for a third (a Python and Go back end engineer) in "
         f"batches of {BATCH}; prompt v{first.prompt_version}; {first.repeat} run(s) per model. "
         "An answer the app could not use counts as missed.",
         "",
         "Gate: precision >= 90%, recall >= 90%, 0 unusable answers, "
-        "0 injection-affected decisions, every short role made only of words from its title.",
+        "0 injection-affected decisions, every short role made only of words from its title, "
+        "and on the Python and Go profile at least 95% of the front end, mobile, QA and "
+        "other-stack roles left out and at least 95% of the relevant roles kept.",
         "",
         "## Summary",
         "",
         "| model | tier | precision | recall | unusable | injection-affected | consistency "
-        "| roles in title | tokens / job | p95 latency (ms) | gate |",
-        "|---|---|---|---|---|---|---|---|---|---|---|",
+        "| roles in title | tokens / job | p95 latency (ms) | left out (SC-008) "
+        "| Go profile recall | gate |",
+        "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|",
     ]
     for r in reports:
         lines.append(
             f"| {r.model} | {r.tier} | {r.precision:.1%} | {r.recall:.1%} | {r.unusable} "
             f"| {r.injection_affected} | {r.consistency:.1%} | {r.roles_in_title}/{r.roles_given} "
             f"| {r.tokens_per_job} "
-            f"| {r.p95_ms} | {_gate(r.passes)} |"
+            f"| {r.p95_ms} | {r.left_out_rate:.1%} ({r.left_out_ok}/{r.left_out_total}) "
+            f"| {r.go_recall:.1%} ({r.go_relevant_ok}/{r.go_relevant_total}) | {_gate(r.passes)} |"
         )
     lines += ["", "## Wrong decisions", ""]
     for r in reports:

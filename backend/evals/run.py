@@ -330,6 +330,8 @@ def _main_judge(
     llm_for: Callable[[str], LlmPort] | None,
     today: Callable[[], str],
 ) -> int:
+    from evals.judge_relevance.cases import POSTINGS
+    from evals.judge_relevance.cases_go import GO_POSTINGS
     from evals.judge_relevance.runner import (
         PROMPT_NAME as JUDGE_PROMPT,
     )
@@ -338,14 +340,26 @@ def _main_judge(
         render_judge_report,
     )
 
-    print(f"This run uses your AI credit ({args.repeat} run(s) of 120 decisions per model).")
+    decisions = 2 * len(POSTINGS) + len(GO_POSTINGS)
+    print(
+        f"This run uses your AI credit ({args.repeat} run(s) of {decisions} decisions per model)."
+    )
     if not args.yes:
         print("Nothing was sent. Re-run with --yes to run the eval.")
         return 2
     build = llm_for or _real_llm_for(catalog)
     try:
         reports = [
-            asyncio.run(evaluate_judge(build(model), tier=label, model=model, repeat=args.repeat))
+            asyncio.run(
+                evaluate_judge(
+                    build(model),
+                    tier=label,
+                    model=model,
+                    repeat=args.repeat,
+                    version=args.prompt_version,
+                    prompt_root=args.prompt_root,
+                )
+            )
             for label, model in specs
         ]
     except AiUnavailable as exc:
@@ -411,6 +425,18 @@ def main(
         "--yes", action="store_true", help="confirm that this run uses your AI credit"
     )
     parser.add_argument("--repeat", type=int, default=1, help="judge_relevance: runs per model")
+    parser.add_argument(
+        "--prompt-version",
+        type=int,
+        default=None,
+        help="judge_relevance: evaluate this version instead of the latest",
+    )
+    parser.add_argument(
+        "--prompt-root",
+        type=Path,
+        default=None,
+        help="judge_relevance: a folder of candidate prompt versions that are not active yet",
+    )
     parser.add_argument("--reports-dir", type=Path, default=REPORTS_DIR)
     args = parser.parse_args(argv)
 
