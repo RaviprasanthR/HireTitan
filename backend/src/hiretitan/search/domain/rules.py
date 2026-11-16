@@ -13,6 +13,7 @@ from decimal import Decimal
 from typing import Final, Literal
 
 Effect = Literal["skips", "guides_ai"]
+ApprovedBy = Literal["person", "auto"]  # who approved a rule set (002i): the person, or setup
 
 EFFECTS: Final[dict[str, Effect]] = {
     "title_words": "skips",

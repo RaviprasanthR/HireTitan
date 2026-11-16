@@ -97,7 +97,10 @@ async def approve_first_rules(
             RuleSetsRepo(session), (source or ProfileAndPreferencesSource)(session), synonyms
         ).approve_first()
         await session.commit()
-    log.info("First search rules: %s", outcome)
+    if outcome == "not_possible":
+        log.warning("The first search rules could not be approved (profile or preferences)")
+    else:
+        log.info("First search rules: %s", outcome)
     return outcome
 
 

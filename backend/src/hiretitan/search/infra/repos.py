@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from hiretitan.platform.runtime.infra.models import WorkflowRunRow
 from hiretitan.search.domain.contacts import ContactFields, link_key, name_key
 from hiretitan.search.domain.job_state import JobState
+from hiretitan.search.domain.rules import ApprovedBy
 from hiretitan.search.domain.vendors import ENABLED_VENDORS
 from hiretitan.search.infra.models import (
     CompanyNoteRow,
@@ -189,7 +190,11 @@ class RuleSetsRepo:
         return found is not None
 
     async def approve(
-        self, rule_set_id: UUID, *, approved_by: str = "person", now: datetime | None = None
+        self,
+        rule_set_id: UUID,
+        *,
+        approved_by: ApprovedBy = "person",
+        now: datetime | None = None,
     ) -> SearchRuleSetRow:
         """The previous approved set becomes ``superseded`` in the same transaction."""
         await self._session.execute(

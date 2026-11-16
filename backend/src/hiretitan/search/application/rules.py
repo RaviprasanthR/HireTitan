@@ -111,6 +111,8 @@ class RulesService:
 
     async def approve(self) -> RuleSetView:
         """Validate and approve the open proposal; the old approved set becomes superseded."""
+        # the same lock as the first approval, so the two can never cross (002i)
+        await self._store.lock_first_approval()
         proposed = await self._store.proposed()
         if proposed is None:
             raise NoProposalError

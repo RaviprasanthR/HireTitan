@@ -12,6 +12,7 @@ from typing import Any, Literal, Protocol
 from uuid import UUID
 
 from hiretitan.search.domain.proposer import ProposalInput
+from hiretitan.search.domain.rules import ApprovedBy
 
 
 @dataclass(frozen=True, slots=True)
@@ -133,7 +134,9 @@ class RuleSetStore(Protocol):
 
     async def update_proposed(self, rules: dict[str, Any]) -> StoredRuleSet | None: ...
 
-    async def approve(self, rule_set_id: UUID, *, approved_by: str = "person") -> StoredRuleSet: ...
+    async def approve(
+        self, rule_set_id: UUID, *, approved_by: ApprovedBy = "person"
+    ) -> StoredRuleSet: ...
 
     async def ever_approved(self) -> bool: ...
 
