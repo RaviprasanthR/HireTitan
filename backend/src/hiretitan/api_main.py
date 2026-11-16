@@ -52,7 +52,9 @@ from hiretitan.search_wiring import (
     ProfileAndPreferencesSource,
     SetupFinishedGate,
     SqlResumeLookup,
+    approve_first_rules_at_start,
     build_career_ops,
+    first_rules_callback,
     seed_companies,
 )
 from hiretitan.seed_dir import resolve_seed_dir
@@ -198,14 +200,17 @@ def build_app(settings: Settings | None = None) -> FastAPI:
     async def enqueue_key_check() -> None:
         await runtime.app.configure_task(CHECK_PROVIDER_KEY_TASK).defer_async()
 
+    synonyms = load_title_synonyms(SEED_DIR / "title_synonyms.yaml")
+
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         await seed_companies(deps.sessions, SEED_DIR / "companies.yaml")
+        # an install that finished setup before 002i, or whose approval failed, gets its rules
+        await approve_first_rules_at_start(deps.sessions, synonyms)
         async with runtime.app.open_async():  # the job queue connection, to defer jobs
             yield
         await engine.dispose()
 
-    synonyms = load_title_synonyms(SEED_DIR / "title_synonyms.yaml")
     check_seed_tables(SEED_DIR)  # the area and technology tables (002i); a bad file stops start-up
     routers = [
         create_resumes_router(deps),
@@ -263,7 +268,12 @@ def build_app(settings: Settings | None = None) -> FastAPI:
             )
         ),
         create_onboarding_router(
-            OnboardingApiDeps(sessions=deps.sessions, clock=clock, facts=RepoFacts)
+            OnboardingApiDeps(
+                sessions=deps.sessions,
+                clock=clock,
+                facts=RepoFacts,
+                on_completed=first_rules_callback(deps.sessions, synonyms),
+            )
         ),
         create_review_items_router(ReviewItemsApiDeps(sessions=deps.sessions, facts=RepoFacts)),
         create_data_router(

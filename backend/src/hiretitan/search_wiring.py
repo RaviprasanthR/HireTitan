@@ -7,7 +7,8 @@ The search module may not import other features' internals, so this composition-
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Awaitable, Callable
+import logging
+from collections.abc import Awaitable, Callable, Mapping
 from datetime import UTC
 from pathlib import Path
 from uuid import UUID
@@ -19,16 +20,20 @@ from hiretitan.platform.config.settings import Settings
 from hiretitan.preferences.infra.repo import PreferencesRepo
 from hiretitan.profile.infra.models import ResumeFileRow
 from hiretitan.profile.infra.repos import VersionsRepo
-from hiretitan.search.application.ports import CareerOpsPort, ProposalFacts
+from hiretitan.search.application.ports import CareerOpsPort, ProposalFacts, ProposalSource
 from hiretitan.search.application.resume_choice import ResumeFacts
-from hiretitan.search.application.rules import RulesUnavailableError
+from hiretitan.search.application.rules import (
+    FirstRulesOutcome,
+    RulesService,
+    RulesUnavailableError,
+)
 from hiretitan.search.application.seed import SeedResult, load_seed
 from hiretitan.search.domain.cards import ProfileCard
 from hiretitan.search.domain.proposer import PlaceInput, ProposalInput
 from hiretitan.search.domain.resume_choice import offerable
 from hiretitan.search.infra.careerops.adapter import CareerOpsAdapter
 from hiretitan.search.infra.careerops.fake import FileCareerOps
-from hiretitan.search.infra.repos import CompaniesRepo
+from hiretitan.search.infra.repos import CompaniesRepo, RuleSetsRepo
 from hiretitan.setup.infra.settings_repo import SettingsRepo
 
 
@@ -76,6 +81,51 @@ def profile_card_source(
         )
 
     return read
+
+
+log = logging.getLogger(__name__)
+
+
+async def approve_first_rules(
+    sessions: async_sessionmaker[AsyncSession],
+    synonyms: Mapping[str, tuple[str, ...]],
+    source: Callable[[AsyncSession], ProposalSource] | None = None,
+) -> FirstRulesOutcome:
+    """Approve the first search rules in a session of their own (002i FR-001)."""
+    async with sessions() as session:
+        outcome = await RulesService(
+            RuleSetsRepo(session), (source or ProfileAndPreferencesSource)(session), synonyms
+        ).approve_first()
+        await session.commit()
+    log.info("First search rules: %s", outcome)
+    return outcome
+
+
+def first_rules_callback(
+    sessions: async_sessionmaker[AsyncSession],
+    synonyms: Mapping[str, tuple[str, ...]],
+    source: Callable[[AsyncSession], ProposalSource] | None = None,
+) -> Callable[[], Awaitable[None]]:
+    """What finishing setup runs: approve the first rules, nothing else."""
+
+    async def run() -> None:
+        await approve_first_rules(sessions, synonyms, source)
+
+    return run
+
+
+async def approve_first_rules_at_start(
+    sessions: async_sessionmaker[AsyncSession], synonyms: Mapping[str, tuple[str, ...]]
+) -> None:
+    """At API start: an install that finished setup without ever approving rules gets them
+    (002i FR-003). Never raises; the API must start either way."""
+    try:
+        async with sessions() as session:
+            finished = await SetupFinishedGate(session).setup_complete()
+        if finished:
+            await approve_first_rules(sessions, synonyms)
+    except Exception:
+        log.exception("Could not approve the first search rules at start-up")
 
 
 class SetupFinishedGate:
