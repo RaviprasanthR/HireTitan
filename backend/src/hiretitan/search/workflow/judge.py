@@ -22,7 +22,7 @@ from hiretitan.platform.llm.port import AiUnavailable, LlmPort, LlmRequest, Retr
 from hiretitan.platform.llm.prompts import PromptRegistry
 from hiretitan.platform.llm.validation import TaskSpec, ValidatedLlm
 from hiretitan.platform.untrusted.sanitize import sanitize
-from hiretitan.prompts.judge_relevance.v2.checks import rule_errors
+from hiretitan.prompts.judge_relevance.v3.checks import rule_errors
 from hiretitan.search.application.judge_prompt import render_judge_prompt
 from hiretitan.search.application.search import DecisionInput, NewJob
 from hiretitan.search.domain.cards import JOBS_PER_CALL_MAX, JobCardInput, ProfileCard

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -239,15 +240,24 @@ def test_SC008_the_report_shows_both_measures() -> None:
     assert "100.0% (" in text
 
 
-def test_a_candidate_prompt_version_is_loaded_from_its_own_folder() -> None:
+def test_a_candidate_prompt_version_is_loaded_from_its_own_folder(tmp_path: Path) -> None:
     """A new version is evaluated from a folder of candidates, before it is active."""
-    from pathlib import Path
+    import shutil
 
     from evals.judge_relevance import runner
 
-    root = Path(runner.__file__).parent / "candidates"
-    prompt = runner._registry(root).load("judge_relevance", 3)
-    assert prompt.version.version == 3
-    assert "areas" in prompt.system  # the profile card's area of work is part of v3
-    # and the active prompts do not have it yet
-    assert runner._registry().load("judge_relevance").version.version < 3
+    active = runner._registry()
+    source = Path(runner.hiretitan_prompts.__file__).parent / "judge_relevance" / "v3"  # type: ignore[attr-defined]
+    candidate = tmp_path / "judge_relevance" / "v9"
+    shutil.copytree(source, candidate)
+    (candidate / "meta.yaml").write_text(
+        (source / "meta.yaml").read_text(encoding="utf-8").replace("version: 3", "version: 9"),
+        encoding="utf-8",
+    )
+
+    loaded = runner._registry(tmp_path).load("judge_relevance", 9)
+
+    assert loaded.version.version == 9
+    assert active.load("judge_relevance").version.version == 3  # the active ones are untouched
+    # and the checks that go with a candidate are its own
+    assert runner._checks(tmp_path, 9).has_link("See acme.com")

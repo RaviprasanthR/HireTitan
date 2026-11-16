@@ -302,3 +302,23 @@ async def test_job_card_has_inquired_on(env: Env) -> None:
     assert detail["applied_on"] is None
     assert card["title"] == "Browsing"
     assert card["inquired_on"] is None
+
+
+async def test_sources_oldest_first(env: Env) -> None:
+    """002i FR-026: the first-found source comes first (it is the link the title opens), whatever
+    order the rows were written in."""
+    job_id = await add_job(env, "Backend Engineer", days_ago=1)
+    earlier = NOW - timedelta(days=5)
+    async with env.sessions() as session:
+        await JobsRepo(session).add_source(
+            job_id, kind="careers_page", url="https://acme.example.com/first-seen", seen_at=earlier
+        )
+        await session.commit()
+
+    detail = (await env.client.get(f"/api/v1/jobs/{job_id}")).json()
+    listed = (await env.client.get("/api/v1/jobs?list=explore")).json()["items"][0]
+
+    first = "https://acme.example.com/first-seen"
+    assert detail["sources"][0]["url"] == first
+    assert listed["sources"][0]["url"] == first
+    assert len(detail["sources"]) == 2

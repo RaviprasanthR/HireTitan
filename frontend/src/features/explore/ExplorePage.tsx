@@ -1,7 +1,9 @@
-import { useState } from 'react'
+import { ChevronDown, ChevronRight } from 'lucide-react'
+import { type MouseEvent, useId, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { useStatus } from '@/api/useStatus'
 import { Button } from '@/components/ui/button'
+import { JobDetails } from '@/features/jobs/JobDetails'
 import { PipelineControl } from '@/features/jobs/PipelineControl'
 import { PasteJobDialog } from '@/features/jobs/PasteJobDialog'
 import { firstMissingStep, setupIsDone } from '@/features/home/setup'
@@ -23,9 +25,21 @@ import {
 
 const input = 'rounded-md border border-muted-foreground bg-background px-3 py-1.5 text-sm'
 
+function postingLink(url: string | undefined): string | null {
+  return url && /^https?:\/\//i.test(url) ? url : null
+}
+
+/**
+ * One job in the list. The row opens in place to show everything about the job (the same details
+ * the job page has); the title opens the posting itself, where it was first found, in a new tab.
+ */
 export function JobCardItem({ job, showCheck = true }: { job: JobCard; showCheck?: boolean }) {
   const recheck = useRecheck()
+  const [open, setOpen] = useState(false)
+  const panelId = useId()
+  const details = useRef<HTMLDivElement>(null)
   const source = job.sources[0]
+  const href = postingLink(source?.url)
   const facts = [
     job.company_name,
     job.location_text,
@@ -33,33 +47,75 @@ export function JobCardItem({ job, showCheck = true }: { job: JobCard; showCheck
     job.posted_at ? `Posted ${formatDate(job.posted_at)}` : null,
     source ? sourceLabel(source.kind) : null,
   ].filter(Boolean)
+
+  // A click anywhere on the row opens it, except on the things that do something themselves.
+  function onRowClick(event: MouseEvent<HTMLLIElement>) {
+    const target = event.target as HTMLElement
+    if (target.closest('a, button, input, select, textarea, label')) return
+    if (details.current?.contains(target)) return
+    setOpen((was) => !was)
+  }
+
   return (
-    <li className="space-y-1 rounded-lg bg-surface p-4">
-      <Link to={`/jobs/${job.id}`} className="text-base font-semibold text-link underline">
-        {job.title}
-      </Link>
-      <p className="text-sm text-muted-small">{facts.join(' · ')}</p>
-      {reasonOf(job) && <p className="text-sm">{reasonOf(job)}</p>}
-      <PipelineControl id={job.id} state={job.state} title={job.title} />
-      {showCheck && isNotChecked(job) && (
-        <div className="flex items-center gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={recheck.isPending || recheck.isSuccess}
-            onClick={() => recheck.mutate(job.id)}
-          >
-            Check again
-          </Button>
-          {recheck.isSuccess && (
-            <span className="text-sm text-muted-small">Checking with the AI…</span>
+    // The expand button is the keyboard way in; the row click is a convenience for the pointer.
+    <li className="space-y-1 rounded-lg bg-surface p-4" onClick={onRowClick}>
+      <div className="flex items-start gap-2">
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-controls={open ? panelId : undefined}
+          aria-label={`${open ? 'Hide' : 'Show'} details of ${job.title}`}
+          className="mt-1 rounded p-0.5 text-muted-small hover:text-foreground"
+          onClick={() => setOpen((was) => !was)}
+        >
+          {open ? (
+            <ChevronDown aria-hidden className="size-4" />
+          ) : (
+            <ChevronRight aria-hidden className="size-4" />
           )}
-          {recheck.isError && (
-            <span role="alert" className="text-sm text-danger">
-              {recheck.error.message}
-            </span>
+        </button>
+        <div className="min-w-0 flex-1 space-y-1">
+          {href ? (
+            <a
+              href={href}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="text-base font-semibold text-link underline"
+            >
+              {job.title}
+            </a>
+          ) : (
+            <span className="text-base font-semibold">{job.title}</span>
           )}
+          <p className="text-sm text-muted-small">{facts.join(' · ')}</p>
+          {reasonOf(job) && <p className="text-sm">{reasonOf(job)}</p>}
+          <PipelineControl id={job.id} state={job.state} title={job.title} />
+          {showCheck && isNotChecked(job) && (
+            <div className="flex items-center gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={recheck.isPending || recheck.isSuccess}
+                onClick={() => recheck.mutate(job.id)}
+              >
+                Check again
+              </Button>
+              {recheck.isSuccess && (
+                <span className="text-sm text-muted-small">Checking with the AI…</span>
+              )}
+              {recheck.isError && (
+                <span role="alert" className="text-sm text-danger">
+                  {recheck.error.message}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+      {open && (
+        <div id={panelId} ref={details} className="mt-3 border-t border-divider pt-3">
+          <JobDetails id={job.id} actions={false} />
         </div>
       )}
     </li>

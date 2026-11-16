@@ -49,7 +49,7 @@ async def test_US1_AS2_ai_reason_shown_with_job(env: Env) -> None:
     found = await decisions(env)
     kept = found["Backend Engineer"]
     assert (kept.outcome, kept.decided_by, kept.reason) == ("shown", "ai", "Python backend role")
-    assert (kept.prompt_name, kept.prompt_version) == (TASK, "2")
+    assert (kept.prompt_name, kept.prompt_version) == (TASK, "3")
     assert kept.llm_call_id is not None
     assert kept.provider
     assert kept.model

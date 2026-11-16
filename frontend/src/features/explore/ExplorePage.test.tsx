@@ -30,6 +30,22 @@ function card(id: string, title: string, over: Record<string, unknown> = {}) {
   }
 }
 
+function detail(job: ReturnType<typeof card>) {
+  return {
+    ...job,
+    company_id: null,
+    description: `About ${job.title}: build services.`,
+    city: 'Pune',
+    country: 'IN',
+    skills_found: [],
+    years_found: null,
+    canonical_url: null,
+    injection_flags: [],
+    decision_history: [],
+    first_search_id: null,
+  }
+}
+
 type Setup = {
   status?: typeof STATUS
   jobs?: ReturnType<typeof card>[]
@@ -44,6 +60,9 @@ function renderPage({ status = STATUS, jobs = [], next = null, url = '/' }: Setu
     if (call.path === '/search/latest') return null
     if (call.path.startsWith('/jobs/duplicates')) return { items: [], next_cursor: null }
     if (call.path.startsWith('/jobs?')) return { items: jobs, next_cursor: next }
+    const one = /^\/jobs\/([^/?]+)$/.exec(call.path)
+    if (one) return detail(jobs.find((j) => j.id === one[1]) ?? card(one[1] ?? 'x', 'Job'))
+    if (call.path.endsWith('/interview')) return undefined
     if (call.path.endsWith('/recheck'))
       return new Response('{"run_id":"r1"}', {
         status: 202,
@@ -109,7 +128,7 @@ describe('ExplorePage', () => {
       within(items[0] as HTMLElement).getByRole('link', {
         name: /backend engineer/i,
       }),
-    ).toHaveAttribute('href', '/jobs/1')
+    ).toHaveAttribute('href', 'https://jobs.example.com/1')
   })
 
   it('US1_AS10_empty_state_offers_search', async () => {
@@ -307,5 +326,116 @@ describe('ExplorePage', () => {
       screen.getByRole('combobox', { name: 'Resume used for Platform Engineer' }),
     ).toBeInTheDocument()
   })
-})
 
+  // --- 002i US5: a row opens in place, the title opens the posting ------------------------
+
+  it('US5_AS1_a_row_expands_and_collapses_in_place', async () => {
+    const user = userEvent.setup()
+    renderPage({ jobs: [card('1', 'Backend Engineer')] })
+    const row = (await screen.findAllByRole('listitem'))[0] as HTMLElement
+
+    await user.click(within(row).getByText(/Acme · Pune, India/)) // the row, not a link or button
+    expect(
+      await within(row).findByText(/About Backend Engineer: build services/),
+    ).toBeInTheDocument()
+    expect(
+      within(row).getByRole('button', { name: /hide details of backend engineer/i }),
+    ).toHaveAttribute('aria-expanded', 'true')
+
+    await user.click(within(row).getByText(/Acme · Pune, India/))
+    expect(within(row).queryByText(/About Backend Engineer/)).not.toBeInTheDocument()
+  })
+
+  it('US5_AS1_clicking_the_details_does_not_close_the_row', async () => {
+    const user = userEvent.setup()
+    renderPage({ jobs: [card('1', 'Backend Engineer')] })
+    const row = (await screen.findAllByRole('listitem'))[0] as HTMLElement
+    await user.click(within(row).getByText(/Acme · Pune, India/))
+
+    await user.click(await within(row).findByText(/About Backend Engineer: build services/))
+
+    expect(within(row).getByText(/About Backend Engineer: build services/)).toBeInTheDocument()
+  })
+
+  it('US5_AS2_the_title_opens_the_posting_in_a_new_tab_and_leaves_the_row_closed', async () => {
+    const user = userEvent.setup()
+    renderPage({ jobs: [card('1', 'Backend Engineer')] })
+
+    const title = await screen.findByRole('link', { name: 'Backend Engineer' })
+    expect(title).toHaveAttribute('href', 'https://jobs.example.com/1')
+    expect(title).toHaveAttribute('target', '_blank')
+    expect(title).toHaveAttribute('rel', expect.stringContaining('noopener'))
+    await user.click(title)
+    expect(screen.queryByText(/About Backend Engineer/)).not.toBeInTheDocument()
+  })
+
+  it('US5_AS3_the_first_found_source_is_the_title_link', async () => {
+    renderPage({
+      jobs: [
+        card('1', 'Backend Engineer', {
+          sources: [
+            { kind: 'careers_page', url: 'https://acme.example.com/first' },
+            { kind: 'company_board', url: 'https://jobs.example.com/second' },
+          ],
+        }),
+      ],
+    })
+    expect(await screen.findByRole('link', { name: 'Backend Engineer' })).toHaveAttribute(
+      'href',
+      'https://acme.example.com/first',
+    )
+  })
+
+  it('US5_AS4_a_job_with_no_link_has_a_plain_title', async () => {
+    renderPage({
+      jobs: [
+        card('1', 'Backend Engineer', { sources: [] }),
+        card('2', 'Data Engineer', { sources: [{ kind: 'paste', url: 'javascript:alert(1)' }] }),
+      ],
+    })
+    expect(await screen.findByText('Backend Engineer')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Backend Engineer' })).not.toBeInTheDocument()
+    // a link that is not http(s) is never made into a link
+    expect(screen.queryByRole('link', { name: 'Data Engineer' })).not.toBeInTheDocument()
+  })
+
+  it('US5_AS5_the_keyboard_opens_and_closes_a_row_and_it_is_announced', async () => {
+    const user = userEvent.setup()
+    renderPage({ jobs: [card('1', 'Backend Engineer')] })
+    const toggle = await screen.findByRole('button', { name: /show details of backend engineer/i })
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+
+    toggle.focus()
+    await user.keyboard('{Enter}')
+    expect(await screen.findByText(/About Backend Engineer/)).toBeInTheDocument()
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    expect(toggle).toHaveAttribute('aria-controls')
+
+    await user.keyboard(' ')
+    expect(screen.queryByText(/About Backend Engineer/)).not.toBeInTheDocument()
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  it('US5_AS6_the_actions_are_the_rows_own_and_work_with_the_row_open', async () => {
+    const user = userEvent.setup()
+    const calls = renderPage({ jobs: [card('1', 'Backend Engineer')] })
+    const row = (await screen.findAllByRole('listitem'))[0] as HTMLElement
+    await user.click(within(row).getByRole('button', { name: /show details/i }))
+    await within(row).findByText(/About Backend Engineer/)
+
+    // one set of buttons, not two
+    expect(within(row).getAllByRole('button', { name: /i applied/i })).toHaveLength(1)
+    await user.click(within(row).getByRole('button', { name: /i applied/i }))
+
+    await waitFor(() =>
+      expect(calls.some((c) => c.method === 'POST' && c.path === '/jobs/1/applied')).toBe(true),
+    )
+  })
+
+  it('FR028_explore_no_longer_links_to_the_job_page', async () => {
+    renderPage({ jobs: [card('1', 'Backend Engineer'), card('2', 'Data Engineer')] })
+    await screen.findByText('Data Engineer')
+    const links = screen.getAllByRole('link').map((a) => a.getAttribute('href') ?? '')
+    expect(links.filter((href) => href.startsWith('/jobs/'))).toEqual([])
+  })
+})

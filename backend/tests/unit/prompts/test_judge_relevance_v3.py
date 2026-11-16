@@ -1,7 +1,7 @@
-"""judge_relevance v3 (feature 002i): area, then stack, then level, on the richer cards.
+"""judge_relevance v3 (feature 002i): kind of work, area, stack, then level, on the richer cards.
 
-v3 is a candidate: it lives with the eval (``evals/judge_relevance/candidates``) until its report
-passes, and is moved into the app's prompts only then. These tests read it from there.
+v3 was evaluated as a candidate (outside the active prompts) and moved in when its report passed
+(``evals/reports/judge_relevance-2026-11-16.md``), which made it the current version.
 """
 
 from __future__ import annotations
@@ -18,13 +18,12 @@ from hiretitan.platform.llm.prompts import LoadedPrompt
 from hiretitan.search.application.judge_prompt import render_judge_prompt
 from hiretitan.search.domain.cards import JobCardInput, ProfileCard
 
-CANDIDATES = Path(runner.__file__).parent / "candidates"
 ACTIVE = Path(runner.hiretitan_prompts.__file__).parent  # type: ignore[attr-defined]
 
 
 @pytest.fixture(scope="module")
 def v3() -> LoadedPrompt:
-    return runner._registry(CANDIDATES).load("judge_relevance", 3)
+    return runner._registry().load("judge_relevance", 3)
 
 
 def profile() -> ProfileCard:
@@ -57,7 +56,7 @@ def blocks(user: str) -> list[str]:
     return [m[2] for m in re.findall(r"<<DATA (\w+) label=(\w+)>>\n(.*?)\n<<END \1>>", user, re.S)]
 
 
-def test_registry_loads_the_candidate(v3: LoadedPrompt) -> None:
+def test_registry_loads_v3_as_the_current_version(v3: LoadedPrompt) -> None:
     version = v3.version
     assert (version.name, version.version, version.tier, version.max_output_tokens) == (
         "judge_relevance",
@@ -67,19 +66,13 @@ def test_registry_loads_the_candidate(v3: LoadedPrompt) -> None:
     )
 
 
-def test_v3_is_not_active_until_it_passes_its_evaluation() -> None:
+def test_v3_is_current_and_its_passing_report_is_committed() -> None:
     """Constitution IV: from v2 on, a prompt must pass its evaluation before it is active."""
-    versions = sorted(p.name for p in (ACTIVE / "judge_relevance").glob("v*"))
-    active_has_v3 = "v3" in versions
-    if active_has_v3:
-        # once moved in, its passing report must be committed
-        reports = sorted(
-            (Path(runner.__file__).parents[1] / "reports").glob("judge_relevance-*.md")
-        )
-        assert reports
-        latest = reports[-1].read_text(encoding="utf-8")
-        assert "prompt v3" in latest
-        assert "FAIL" not in latest.split("## Wrong decisions")[0]
+    assert runner._registry().load("judge_relevance").version.version == 3
+    reports = sorted((Path(runner.__file__).parents[1] / "reports").glob("judge_relevance-*.md"))
+    latest = reports[-1].read_text(encoding="utf-8")
+    assert "prompt v3" in latest
+    assert "FAIL" not in latest.split("## Wrong decisions")[0]  # the gate column says pass
 
 
 def test_FR033_the_profile_card_reaches_the_model_with_area_skills_and_titles(
@@ -140,7 +133,7 @@ def _v3_checks():  # type: ignore[no-untyped-def]
     """v3's checks module, from the candidate folder or (once moved) the active prompts."""
     import importlib.util
 
-    for root in (CANDIDATES, ACTIVE):
+    for root in (ACTIVE,):
         path = root / "judge_relevance" / "v3" / "checks.py"
         if path.exists():
             spec = importlib.util.spec_from_file_location("judge_relevance_v3_checks", path)

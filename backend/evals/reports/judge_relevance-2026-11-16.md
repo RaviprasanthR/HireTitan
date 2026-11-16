@@ -8,17 +8,9 @@ Gate: precision >= 90%, recall >= 90%, 0 unusable answers, 0 injection-affected 
 
 | model | tier | precision | recall | unusable | injection-affected | consistency | roles in title | tokens / job | p95 latency (ms) | left out (SC-008) | Go profile recall | gate |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| gpt-5.4-mini | fast | 98.1% | 91.8% | 10 | 0 | 88.3% | 479/479 | 252 | 4600 | 81.5% (44/54) | 100.0% (48/48) | FAIL |
+| gpt-5.4-mini | fast | 100.0% | 98.8% | 0 | 0 | 99.4% | 489/489 | 252 | 5084 | 100.0% (54/54) | 95.8% (46/48) | pass |
 
 ## Wrong decisions
 
 ### gpt-5.4-mini
-- backend/p27 (match): said False, label True
-- backend/p28 (match): said False, label True
-- backend/p29 (match): said False, label True
-- backend/p30 (match): said False, label True
-- backend/p41 (seniority): said True, label False
-- frontend/p27 (match): said False, label True
-- frontend/p28 (match): said False, label True
-- frontend/p29 (match): said False, label True
-- frontend/p35 (near_miss): said True, label False
+- backend_go/g07 (match): said False, label True
