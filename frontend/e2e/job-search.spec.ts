@@ -86,22 +86,23 @@ test('SC002_job_search_journey', async ({ page, request }) => {
 
   // 4a. A row opens in place (002i US5): the posting's own text, read from its link (the listing
   // had none), and the title links to the posting in a new tab.
-  const withReadText = page
-    .getByRole('list', { name: 'Jobs' })
-    .getByRole('listitem')
+  const table = page.getByRole('table', { name: 'Jobs' })
+  const withReadText = table
+    .getByRole('row')
     .filter({ hasText: 'Senior Backend Engineer' })
     .first()
   await withReadText
     .getByRole('button', { name: /show details of senior backend engineer/i })
     .click()
-  await expect(withReadText.getByText(/Mentor engineers and own reliability/)).toBeVisible()
+  // the opened details are the next row of the table
+  await expect(table.getByText(/Mentor engineers and own reliability/)).toBeVisible()
   const titleLink = withReadText.getByRole('link', { name: 'Senior Backend Engineer' })
   await expect(titleLink).toHaveAttribute('target', '_blank')
   await expect(titleLink).toHaveAttribute('href', /alpha\.example\.test\/jobs\/102/)
   await withReadText
     .getByRole('button', { name: /hide details of senior backend engineer/i })
     .click()
-  await expect(withReadText.getByText(/Mentor engineers/)).toHaveCount(0)
+  await expect(table.getByText(/Mentor engineers/)).toHaveCount(0)
 
   // 4b. The Java posting is left out by the rules, with its reason on the summary (002i US6).
   await page.getByRole('link', { name: 'See the summary' }).click()

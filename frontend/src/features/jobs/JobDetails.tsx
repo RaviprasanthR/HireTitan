@@ -49,11 +49,13 @@ export function JobDetails({
     <div role="group" aria-label={`Details of ${data.title}`} className="space-y-4">
       <InjectionWarning flags={data.injection_flags as InjectionFlag[]} />
 
-      {data.decision && (
+      {/* Inside an Explore row the details are the description and the people: why it is listed is
+          the row's own line, the buttons are on the row, and the posting is the title's link. */}
+      {actions && data.decision && (
         <div className="space-y-2 rounded-lg bg-surface p-4">
           <p className="font-medium">Why it is listed</p>
           <p>{data.decision.reason}</p>
-          {actions && isNotChecked(data) && (
+          {isNotChecked(data) && (
             <div className="flex items-center gap-3">
               <Button
                 type="button"
@@ -125,23 +127,25 @@ export function JobDetails({
         />
       )}
 
-      <div className="flex flex-wrap items-center gap-4 text-sm">
-        {original && (
-          <a
-            href={original}
-            target="_blank"
-            rel="noreferrer noopener"
-            className="text-link underline"
-          >
-            Open original posting
-          </a>
-        )}
-        {data.first_search_id && (
-          <Link to={`/search/runs/${data.first_search_id}`} className="text-link underline">
-            First found in this search
-          </Link>
-        )}
-      </div>
+      {actions && (
+        <div className="flex flex-wrap items-center gap-4 text-sm">
+          {original && (
+            <a
+              href={original}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="text-link underline"
+            >
+              Open original posting
+            </a>
+          )}
+          {data.first_search_id && (
+            <Link to={`/search/runs/${data.first_search_id}`} className="text-link underline">
+              First found in this search
+            </Link>
+          )}
+        </div>
+      )}
 
       {data.company_id && (
         <section className="space-y-2">
@@ -181,26 +185,28 @@ export function JobDetails({
         </ul>
       </section>
 
-      <section className="space-y-2">
-        <Heading className="text-lg font-semibold">Decision history</Heading>
-        <ul aria-label="Decision history" className="space-y-1 text-sm">
-          {data.decision_history.map((decision) => (
-            <li key={`${decision.created_at}:${decision.decided_by}`}>
-              {formatDate(decision.created_at)} ·{' '}
-              {decision.outcome === 'shown' ? 'Kept' : 'Left out'} by{' '}
-              {decision.decided_by === 'ai'
-                ? 'the AI'
-                : decision.decided_by === 'rule'
-                  ? 'your rules'
-                  : decision.decided_by === 'person'
-                    ? 'you'
-                    : 'rules only (not checked by AI)'}
-              : {decision.reason}
-              {decision.is_current && ' (current)'}
-            </li>
-          ))}
-        </ul>
-      </section>
+      {actions && (
+        <section className="space-y-2">
+          <Heading className="text-lg font-semibold">Decision history</Heading>
+          <ul aria-label="Decision history" className="space-y-1 text-sm">
+            {data.decision_history.map((decision) => (
+              <li key={`${decision.created_at}:${decision.decided_by}`}>
+                {formatDate(decision.created_at)} ·{' '}
+                {decision.outcome === 'shown' ? 'Kept' : 'Left out'} by{' '}
+                {decision.decided_by === 'ai'
+                  ? 'the AI'
+                  : decision.decided_by === 'rule'
+                    ? 'your rules'
+                    : decision.decided_by === 'person'
+                      ? 'you'
+                      : 'rules only (not checked by AI)'}
+                : {decision.reason}
+                {decision.is_current && ' (current)'}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </div>
   )
 }

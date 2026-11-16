@@ -27,9 +27,12 @@ export function PipelineControl({
   ownResumeId,
   ownRemoved = false,
   title,
+  className = '',
 }: {
   id: string
   state: string
+  /** Extra classes for the row of controls (a list row right-aligns them). */
+  className?: string
   /** The job's title, so the choice is named for it where a page lists many jobs. */
   title?: string
   /** The job's own resume file, `null` for none; left out while it is not known. */
@@ -71,7 +74,7 @@ export function PipelineControl({
   const error = applied.isError ? applied.error : inquired.isError ? inquired.error : null
   const busy = applied.isPending || inquired.isPending
   return (
-    <div className="flex flex-wrap items-end gap-2">
+    <div className={`flex flex-wrap items-end gap-2 ${className}`}>
       {custom && (
         <label className="flex flex-col gap-1 text-sm">
           Date
@@ -95,7 +98,7 @@ export function PipelineControl({
       )}
       <Button
         type="button"
-        variant="outline"
+        variant="success"
         size="sm"
         disabled={busy}
         onClick={() => {
@@ -120,7 +123,13 @@ export function PipelineControl({
         </Button>
       )}
       {!custom && (
-        <Button type="button" variant="ghost" size="sm" onClick={() => setCustom(true)}>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="text-muted-small"
+          onClick={() => setCustom(true)}
+        >
           Other date
         </Button>
       )}

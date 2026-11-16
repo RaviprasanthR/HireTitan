@@ -85,6 +85,15 @@ function renderPage({ status = STATUS, jobs = [], next = null, url = '/' }: Setu
 
 afterEach(() => vi.unstubAllGlobals())
 
+/** The job rows of the table (not the header row, not an opened row's details). */
+async function jobRows(): Promise<HTMLElement[]> {
+  const table = await screen.findByRole('table', { name: 'Jobs' })
+  return within(table)
+    .getAllByRole('row')
+    .filter((row) => within(row).queryAllByRole('columnheader').length === 0)
+    .filter((row) => row.querySelector('td[colspan]') === null)
+}
+
 describe('ExplorePage', () => {
   it('US4_add_a_job_button_opens_and_closes_the_paste_form', async () => {
     const user = userEvent.setup()
@@ -116,8 +125,7 @@ describe('ExplorePage', () => {
       jobs: [card('1', 'Backend Engineer'), card('2', 'Python Developer')],
     })
 
-    const list = await screen.findByRole('list', { name: 'Jobs' })
-    const items = within(list).getAllByRole('listitem')
+    const items = await jobRows()
     expect(items).toHaveLength(2)
     expect(items[0]).toHaveTextContent('Backend Engineer')
     expect(items[0]).toHaveTextContent('Acme')
@@ -212,7 +220,7 @@ describe('ExplorePage', () => {
         card('2', 'Judged Role'),
       ],
     })
-    const items = within(await screen.findByRole('list', { name: 'Jobs' })).getAllByRole('listitem')
+    const items = await jobRows()
 
     expect(items[0]).toHaveTextContent('not checked by AI')
     await user.click(
@@ -234,7 +242,7 @@ describe('ExplorePage', () => {
   it('FR030_filters_and_sort', async () => {
     const user = userEvent.setup()
     const calls = renderPage({ jobs: [card('1', 'Backend Engineer')] })
-    await screen.findByRole('list', { name: 'Jobs' })
+    await screen.findByRole('table', { name: 'Jobs' })
 
     await user.selectOptions(screen.getByLabelText('Work mode'), 'remote')
     await user.selectOptions(screen.getByLabelText('Sort by'), 'company')
@@ -332,29 +340,27 @@ describe('ExplorePage', () => {
   it('US5_AS1_a_row_expands_and_collapses_in_place', async () => {
     const user = userEvent.setup()
     renderPage({ jobs: [card('1', 'Backend Engineer')] })
-    const row = (await screen.findAllByRole('listitem'))[0] as HTMLElement
+    const row = (await jobRows())[0] as HTMLElement
 
-    await user.click(within(row).getByText(/Acme · Pune, India/)) // the row, not a link or button
-    expect(
-      await within(row).findByText(/About Backend Engineer: build services/),
-    ).toBeInTheDocument()
+    await user.click(within(row).getByRole('button', { name: /show details of backend engineer/i }))
+    expect(await screen.findByText(/About Backend Engineer: build services/)).toBeInTheDocument()
     expect(
       within(row).getByRole('button', { name: /hide details of backend engineer/i }),
     ).toHaveAttribute('aria-expanded', 'true')
 
-    await user.click(within(row).getByText(/Acme · Pune, India/))
-    expect(within(row).queryByText(/About Backend Engineer/)).not.toBeInTheDocument()
+    await user.click(within(row).getByRole('button', { name: /hide details of backend engineer/i }))
+    expect(screen.queryByText(/About Backend Engineer/)).not.toBeInTheDocument()
   })
 
   it('US5_AS1_clicking_the_details_does_not_close_the_row', async () => {
     const user = userEvent.setup()
     renderPage({ jobs: [card('1', 'Backend Engineer')] })
-    const row = (await screen.findAllByRole('listitem'))[0] as HTMLElement
-    await user.click(within(row).getByText(/Acme · Pune, India/))
+    const row = (await jobRows())[0] as HTMLElement
+    await user.click(within(row).getByRole('button', { name: /show details/i }))
 
-    await user.click(await within(row).findByText(/About Backend Engineer: build services/))
+    await user.click(await screen.findByText(/About Backend Engineer: build services/))
 
-    expect(within(row).getByText(/About Backend Engineer: build services/)).toBeInTheDocument()
+    expect(screen.getByText(/About Backend Engineer: build services/)).toBeInTheDocument()
   })
 
   it('US5_AS2_the_title_opens_the_posting_in_a_new_tab_and_leaves_the_row_closed', async () => {
@@ -419,9 +425,9 @@ describe('ExplorePage', () => {
   it('US5_AS6_the_actions_are_the_rows_own_and_work_with_the_row_open', async () => {
     const user = userEvent.setup()
     const calls = renderPage({ jobs: [card('1', 'Backend Engineer')] })
-    const row = (await screen.findAllByRole('listitem'))[0] as HTMLElement
+    const row = (await jobRows())[0] as HTMLElement
     await user.click(within(row).getByRole('button', { name: /show details/i }))
-    await within(row).findByText(/About Backend Engineer/)
+    await screen.findByText(/About Backend Engineer/)
 
     // one set of buttons, not two
     expect(within(row).getAllByRole('button', { name: /i applied/i })).toHaveLength(1)

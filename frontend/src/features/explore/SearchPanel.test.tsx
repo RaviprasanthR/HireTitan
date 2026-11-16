@@ -193,7 +193,9 @@ describe('SearchPanel', () => {
     await user.click(screen.getByRole('button', { name: 'Search now' }))
 
     expect(await screen.findByText('Searching your companies…')).toBeInTheDocument()
-    expect(await screen.findByText('Checked 3 of 10 companies · 2 new jobs so far')).toBeInTheDocument()
+    expect(
+      await screen.findByText('Checked 3 of 10 companies · 2 new jobs so far'),
+    ).toBeInTheDocument()
     expect(screen.queryByText('Search finished.')).not.toBeInTheDocument()
   })
 
@@ -267,7 +269,14 @@ describe('SearchPanel', () => {
   })
 
   it('SC003_the_word_batch_appears_nowhere_in_the_panel', async () => {
-    const outcomes = [null, 'finished', 'stopped_by_user', 'out_of_credit', 'failed', 'budget_reached']
+    const outcomes = [
+      null,
+      'finished',
+      'stopped_by_user',
+      'out_of_credit',
+      'failed',
+      'budget_reached',
+    ]
     for (const outcome of outcomes) {
       renderPanel(run({ outcome, stop_requested: outcome === null }))
       await screen.findByRole('region', { name: 'Search' })
@@ -312,7 +321,9 @@ describe('SearchPanel', () => {
 
   it('US2_AS5_a_stopped_search_says_jobs_so_far_are_kept', async () => {
     renderPanel(run({ outcome: 'stopped_by_user' }))
-    expect(await screen.findByText('Search stopped. Jobs found so far are kept.')).toBeInTheDocument()
+    expect(
+      await screen.findByText('Search stopped. Jobs found so far are kept.'),
+    ).toBeInTheDocument()
   })
 
   it('shows_the_summary_link_when_finished', async () => {

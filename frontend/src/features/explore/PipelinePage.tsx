@@ -20,29 +20,13 @@ import { useUnsavedRegistry, type UnsavedRegistry } from '@/features/jobs/interv
 import { EditJobDialog } from '@/features/jobs/EditJobDialog'
 import { resumeName } from '@/features/jobs/resume/resumeApi'
 import { HomeTabs } from './HomeTabs'
+import { Pill } from './Pill'
+import { SOURCE_TONE, type Tone } from './pillTones'
 import { formatDay, sourceLabel, usePipelineJobs, useJob, type JobCard } from './api'
-
-type Tone = 'green' | 'yellow' | 'orange' | 'red' | 'blue' | 'purple' | 'teal' | 'grey'
-
-/** A coloured tag. Colour never carries the meaning alone: the words are always shown. */
-function Pill({ tone, children }: { tone: Tone; children: React.ReactNode }) {
-  return <span className={`ht-pill ht-pill-${tone}`}>{children}</span>
-}
 
 const STATUS_TONE: Record<string, Tone> = {
   Applied: 'green',
   Inquired: 'blue',
-}
-
-const SOURCE_TONE: Record<string, Tone> = {
-  naukri: 'blue',
-  linkedin: 'teal',
-  indeed: 'purple',
-  'company job board': 'green',
-  'careers page': 'orange',
-  'added by you': 'yellow',
-  'email alert': 'purple',
-  'job site': 'blue',
 }
 
 const COLUMNS = ['Company', 'Role', 'Date', 'Status', 'Resume', 'Source'] as const
@@ -91,7 +75,10 @@ function Details({ id, colSpan }: { id: string; colSpan: number }) {
           </h3>
           <ul aria-label="Where it was found" className="space-y-1.5">
             {job.data.sources.map((source) => (
-              <li key={`${source.kind}-${source.url}`} className="flex flex-wrap items-center gap-2">
+              <li
+                key={`${source.kind}-${source.url}`}
+                className="flex flex-wrap items-center gap-2"
+              >
                 <Pill tone={SOURCE_TONE[sourceLabel(source.kind).toLowerCase()] ?? 'grey'}>
                   {sourceLabel(source.kind)}
                 </Pill>

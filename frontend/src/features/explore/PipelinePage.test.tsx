@@ -749,7 +749,10 @@ describe('the edit card resume guard (feature 002f)', () => {
     )
     await user.click(await screen.findByRole('button', { name: /^Edit / }))
     const card = await screen.findByRole('region', { name: /^Edit / })
-    await user.selectOptions(await within(card).findByRole('combobox', { name: 'Resume file' }), 'f1')
+    await user.selectOptions(
+      await within(card).findByRole('combobox', { name: 'Resume file' }),
+      'f1',
+    )
 
     await user.click(within(card).getByRole('button', { name: 'Close' }))
 
@@ -812,14 +815,18 @@ describe('the edit card resume guard (feature 002f)', () => {
     )
     await user.click(await screen.findByRole('button', { name: /^Edit / }))
     const card = await screen.findByRole('region', { name: /^Edit / })
-    await user.selectOptions(await within(card).findByRole('combobox', { name: 'Resume file' }), 'f1')
+    await user.selectOptions(
+      await within(card).findByRole('combobox', { name: 'Resume file' }),
+      'f1',
+    )
     await user.click(within(card).getByRole('button', { name: 'Save resume' }))
     await within(card).findByText(/Backend_2025.pdf \(removed\)/)
 
     await user.click(within(card).getByRole('button', { name: 'Close' }))
 
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
-    await waitFor(() => expect(screen.queryByRole('region', { name: /^Edit / })).not.toBeInTheDocument())
+    await waitFor(() =>
+      expect(screen.queryByRole('region', { name: /^Edit / })).not.toBeInTheDocument(),
+    )
   })
 })
-

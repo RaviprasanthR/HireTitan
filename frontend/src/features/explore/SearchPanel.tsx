@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
-import { ProgressBar } from '@/components/ProgressBar'
+import { CircularProgress } from '@/components/CircularProgress'
 import { Button } from '@/components/ui/button'
+import { nextPhrase } from './phrases'
 import { type RunSummary, useLatestRun, useStartSearch, useStopSearch } from './api'
 
 const ENDED: Record<string, string> = {
@@ -25,7 +26,7 @@ function counts(run: RunSummary, suffix: string): string {
 
 /**
  * Progress of a search that is running. `run` is missing for the moment between pressing
- * "Search now" and the server's first answer: the bar is already moving, with no counts
+ * "Search now" and the server's first answer: the ring is already spinning, with no counts
  * (US2 AS1). Counts appear once a company has been checked, never as "0 of 20".
  */
 function Progress({
@@ -40,30 +41,41 @@ function Progress({
   const started = run !== null && run.companies_total > 0 && run.companies_read > 0
   const percent =
     started && run ? Math.round((run.companies_read / run.companies_total) * 100) : null
+  const [phrase, setPhrase] = useState(() => nextPhrase(null))
+  useEffect(() => {
+    if (stopping) return
+    const timer = window.setInterval(() => setPhrase((was) => nextPhrase(was)), 3500)
+    return () => window.clearInterval(timer)
+  }, [stopping])
   return (
-    <div className="space-y-2">
-      {started && run && <p className="text-sm text-muted-small">{counts(run, ' so far')}</p>}
-      <ProgressBar
-        label="Search progress"
-        value={percent}
-        animated={percent !== null && !stopping}
-      />
-      {run && !stopping && (
-        <Button
-          type="button"
-          variant="danger"
-          size="sm"
-          disabled={stop.isPending}
-          onClick={() => stop.mutate(run.id)}
-        >
-          Stop
-        </Button>
-      )}
-      {stop.isError && (
-        <p role="alert" className="text-sm text-danger">
-          {stop.error.message}
-        </p>
-      )}
+    <div className="flex items-center gap-4">
+      <CircularProgress label="Search progress" value={percent} animated={!stopping} />
+      <div className="min-w-0 space-y-1.5">
+        {/* a changing phrase is decoration: it is hidden from screen readers, which hear the
+            one steady status line above instead */}
+        {!stopping && (
+          <p aria-hidden className="text-sm italic text-muted-small">
+            {phrase}
+          </p>
+        )}
+        {started && run && <p className="text-sm text-muted-small">{counts(run, ' so far')}</p>}
+        {run && !stopping && (
+          <Button
+            type="button"
+            variant="danger"
+            size="sm"
+            disabled={stop.isPending}
+            onClick={() => stop.mutate(run.id)}
+          >
+            Stop
+          </Button>
+        )}
+        {stop.isError && (
+          <p role="alert" className="text-sm text-danger">
+            {stop.error.message}
+          </p>
+        )}
+      </div>
     </div>
   )
 }
