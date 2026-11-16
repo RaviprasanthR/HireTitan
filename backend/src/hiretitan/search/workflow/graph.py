@@ -474,7 +474,10 @@ async def judge_relevance(deps: SearchDeps, state: State) -> State:
     if deps.judge is None:
         return {}
     async with deps.sessions() as session:
-        mode = (await _run(session, state)).mode
+        run = await _run(session, state)
+    if run.stop_requested:  # Stop was pressed while the texts were read: no more AI calls (FR-010)
+        return {}
+    mode = run.mode
     judged = await judge_jobs(
         deps.judge,
         _NEW.validate_python(state["new"]),

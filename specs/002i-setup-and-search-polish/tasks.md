@@ -141,7 +141,7 @@ description: "Task list for 002i-setup-and-search-polish"
 - [x] T023 [P] Docs: `docs/user-guide/job-search.md` (searching panel, Explore rows, Search rules page, areas and the stack rule, descriptions), `docs/user-guide/getting-started.md` (rules set up automatically), `docs/architecture.md` (description reader, first approval, prompt v3), README features list if it names these screens.
 - [x] T024 Change notes (FR-024): dated notes in `docs/clarified-requirements.md` §3 and `specs/002-job-search/spec.md` FR-002, FR-004, FR-005, FR-006; a 002i line in `docs/clarified-requirements.md` §12.
 - [x] T025 Gates and `specs/002i-setup-and-search-polish/success-criteria-map.md` (SC-001 … SC-009 → tests, eval report, measurements; also FR-023, English only, no AI cost, theme, keyboard and focus, mapped to the contrast tests and story reviews): backend suite with the coverage gate, `ruff`, `ruff format --check`, `mypy --strict`, `lint-imports`, `pip-audit`, licence gate; frontend `tsc`, `eslint`, `npm test` with coverage, `npm run build`, `npm audit`, licence check; three Playwright journeys.
-- [ ] T026 Final review: python/FastAPI, database, React and security reviewer agents over `master...HEAD`; fix the findings; update `docs/CONTEXT.md` §4 and §5. Open the PR to `master` only when Ravi says so (include the v3 eval report).
+- [x] T026 Final review: python/FastAPI, database, React and security reviewer agents over `master...HEAD`; fix the findings; update `docs/CONTEXT.md` §4 and §5. Open the PR to `master` only when Ravi says so (include the v3 eval report).
 
 ---
 

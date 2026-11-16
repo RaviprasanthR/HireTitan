@@ -162,6 +162,7 @@ async def test_FR029_stop_during_reads_keeps_finished_jobs(env: Env) -> None:
     await go(env, await new_search(env, mode="rules_and_ai"))
 
     assert len(descriptions.calls) == 1  # the stop was seen before the next read
+    assert not env.llm.calls  # and no AI call is made after Stop (FR-010)
     async with env.sessions() as session:
         stored = (await session.scalars(select(JobRow))).all()
         run = (await session.scalars(select(SearchRunRow))).one()
