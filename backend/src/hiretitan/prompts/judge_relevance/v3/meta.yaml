@@ -1,0 +1,7 @@
+version: 3
+tier: fast
+max_output_tokens: 1500
+changelog:
+  - "v1: first version. Judges up to 10 job cards against one profile card; one short reason per job."
+  - "v2: also returns a short `role` per job, taken from the words of the posting's own title (for the Applied table). No extra request."
+  - "v3: judges area of work, then main stack, then level, in that order, using the profile card's `areas`, language-first `key_skills` and `recent_titles` and each job card's `description_status`. With no description it decides on the title only and keeps a generic title. Same schema as v2."

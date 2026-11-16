@@ -1,13 +1,17 @@
-import { useState } from 'react'
+import { ChevronRight } from 'lucide-react'
+import { Fragment, useId, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { useStatus } from '@/api/useStatus'
 import { Button } from '@/components/ui/button'
+import { JobDetails } from '@/features/jobs/JobDetails'
 import { PipelineControl } from '@/features/jobs/PipelineControl'
 import { PasteJobDialog } from '@/features/jobs/PasteJobDialog'
-import { setupIsDone } from '@/features/home/setup'
+import { firstMissingStep, setupIsDone } from '@/features/home/setup'
 import { DuplicatesPanel } from './DuplicatesPanel'
 import { ReviewNotice } from '@/features/home/ReviewNotice'
 import { HomeTabs } from './HomeTabs'
+import { Pill } from './Pill'
+import { SOURCE_TONE } from './pillTones'
 import { SearchPanel } from './SearchPanel'
 import {
   type JobCard,
@@ -23,46 +27,116 @@ import {
 
 const input = 'rounded-md border border-muted-foreground bg-background px-3 py-1.5 text-sm'
 
+function postingLink(url: string | undefined): string | null {
+  return url && /^https?:\/\//i.test(url) ? url : null
+}
+
+const COLUMNS = ['Company', 'Role', 'Location', 'Posted', 'Source'] as const
+
+/**
+ * One job as a row of the table, like the rows of the Applied list: company, role, where, when and
+ * where it was found, with "I applied" and "I inquired" on the right. The arrow opens the row in
+ * place to show the job's description and people; the role opens the posting itself in a new tab.
+ */
 export function JobCardItem({ job, showCheck = true }: { job: JobCard; showCheck?: boolean }) {
   const recheck = useRecheck()
+  const [open, setOpen] = useState(false)
+  const panelId = useId()
   const source = job.sources[0]
-  const facts = [
-    job.company_name,
-    job.location_text,
-    job.work_mode,
-    job.posted_at ? `Posted ${formatDate(job.posted_at)}` : null,
-    source ? sourceLabel(source.kind) : null,
-  ].filter(Boolean)
+  const href = postingLink(source?.url)
+  const where = [job.location_text, job.work_mode].filter(Boolean).join(' · ')
+
   return (
-    <li className="space-y-1 rounded-lg bg-surface p-4">
-      <Link to={`/jobs/${job.id}`} className="text-base font-semibold text-link underline">
-        {job.title}
-      </Link>
-      <p className="text-sm text-muted-small">{facts.join(' · ')}</p>
-      {reasonOf(job) && <p className="text-sm">{reasonOf(job)}</p>}
-      <PipelineControl id={job.id} state={job.state} title={job.title} />
-      {showCheck && isNotChecked(job) && (
-        <div className="flex items-center gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={recheck.isPending || recheck.isSuccess}
-            onClick={() => recheck.mutate(job.id)}
-          >
-            Check again
-          </Button>
-          {recheck.isSuccess && (
-            <span className="text-sm text-muted-small">Checking with the AI…</span>
-          )}
-          {recheck.isError && (
-            <span role="alert" className="text-sm text-danger">
-              {recheck.error.message}
+    <Fragment>
+      <tr className="ht-row border-t border-divider align-top">
+        <td className="px-3 py-2">{job.company_name}</td>
+        <td className="px-3 py-2">
+          {href ? (
+            <a
+              href={href}
+              target="_blank"
+              rel="noreferrer noopener"
+              title={job.title}
+              className="block max-w-[22rem] truncate font-semibold text-link underline"
+            >
+              {job.title}
+            </a>
+          ) : (
+            <span title={job.title} className="block max-w-[22rem] truncate font-semibold">
+              {job.title}
             </span>
           )}
-        </div>
+          {reasonOf(job) && (
+            <p className="mt-0.5 max-w-[22rem] text-xs text-muted-small">{reasonOf(job)}</p>
+          )}
+          {showCheck && isNotChecked(job) && (
+            <div className="mt-1 flex items-center gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={recheck.isPending || recheck.isSuccess}
+                onClick={() => recheck.mutate(job.id)}
+              >
+                Check again
+              </Button>
+              {recheck.isSuccess && (
+                <span className="text-sm text-muted-small">Checking with the AI…</span>
+              )}
+              {recheck.isError && (
+                <span role="alert" className="text-sm text-danger">
+                  {recheck.error.message}
+                </span>
+              )}
+            </div>
+          )}
+        </td>
+        <td className="px-3 py-2">{where || '—'}</td>
+        <td className="px-3 py-2 whitespace-nowrap">
+          {job.posted_at ? formatDate(job.posted_at) : '—'}
+        </td>
+        <td className="px-3 py-2">
+          {source ? (
+            <Pill tone={SOURCE_TONE[sourceLabel(source.kind).toLowerCase()] ?? 'grey'}>
+              {sourceLabel(source.kind)}
+            </Pill>
+          ) : (
+            '—'
+          )}
+        </td>
+        <td className="px-3 py-2">
+          <div className="flex items-start justify-end gap-2">
+            <PipelineControl
+              id={job.id}
+              state={job.state}
+              title={job.title}
+              className="justify-end"
+            />
+            <button
+              type="button"
+              className="ht-icon-button"
+              aria-expanded={open}
+              aria-controls={open ? panelId : undefined}
+              aria-label={`${open ? 'Hide' : 'Show'} details of ${job.title}`}
+              title={open ? 'Hide details' : 'Show details'}
+              onClick={() => setOpen((was) => !was)}
+            >
+              <ChevronRight
+                aria-hidden
+                className={`size-4 transition-transform ${open ? 'rotate-90' : ''}`}
+              />
+            </button>
+          </div>
+        </td>
+      </tr>
+      {open && (
+        <tr>
+          <td id={panelId} colSpan={COLUMNS.length + 1} className="bg-surface px-4 py-3">
+            <JobDetails id={job.id} actions={false} />
+          </td>
+        </tr>
       )}
-    </li>
+    </Fragment>
   )
 }
 
@@ -123,6 +197,20 @@ function Filters({ value, onChange }: { value: JobFilters; onChange: (next: JobF
   )
 }
 
+/** Why there are no jobs yet: the first thing still to do, with a link to do it (FR-006). */
+function MissingStep({ checklist }: { checklist: Parameters<typeof firstMissingStep>[0] }) {
+  const step = firstMissingStep(checklist)
+  if (!step) return <p>No jobs yet.</p>
+  return (
+    <p>
+      No jobs yet. {step.missing}{' '}
+      <Link to={step.to} className="text-link underline">
+        {step.action}
+      </Link>
+    </p>
+  )
+}
+
 export function ExplorePage() {
   const status = useStatus()
   const [params, setParams] = useSearchParams()
@@ -149,16 +237,30 @@ export function ExplorePage() {
     ) : setupDone ? (
       <p>No jobs fetched yet. Search now.</p>
     ) : (
-      <p>No jobs yet. Finish setup first.</p>
+      <MissingStep checklist={status.data?.checklist} />
     )
   } else {
     list = (
       <>
-        <ul aria-label="Jobs" className="space-y-3">
-          {items.map((job) => (
-            <JobCardItem key={job.id} job={job} />
-          ))}
-        </ul>
+        <div className="overflow-x-auto rounded-lg bg-surface">
+          <table aria-label="Jobs" className="w-full text-left text-sm">
+            <thead className="ht-thead">
+              <tr>
+                {COLUMNS.map((name) => (
+                  <th key={name} scope="col" className="px-3 py-3">
+                    {name}
+                  </th>
+                ))}
+                <th scope="col" aria-label="Actions" className="px-3 py-2" />
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((job) => (
+                <JobCardItem key={job.id} job={job} />
+              ))}
+            </tbody>
+          </table>
+        </div>
         {jobs.hasNextPage && (
           <Button
             type="button"

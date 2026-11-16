@@ -3670,6 +3670,17 @@
             ],
             "title": "Approved At"
           },
+          "approved_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By"
+          },
           "based_on": {
             "additionalProperties": true,
             "title": "Based On",
@@ -3847,6 +3858,14 @@
       "SearchRulesModel-Input": {
         "additionalProperties": false,
         "properties": {
+          "areas": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Areas",
+            "type": "array"
+          },
           "blocked_locations": {
             "items": {
               "$ref": "#/components/schemas/PlaceRuleModel"
@@ -3932,6 +3951,14 @@
       "SearchRulesModel-Output": {
         "additionalProperties": false,
         "properties": {
+          "areas": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Areas",
+            "type": "array"
+          },
           "blocked_locations": {
             "items": {
               "$ref": "#/components/schemas/PlaceRuleModel"
@@ -7664,6 +7691,48 @@
         ]
       }
     },
+    "/api/v1/search/rules/approved": {
+      "put": {
+        "description": "Save the person's edited rules as the rules searches use, in one step.",
+        "operationId": "save_approved_api_v1_search_rules_approved_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchRulesModel-Input"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleSetOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Save Approved",
+        "tags": [
+          "search"
+        ]
+      }
+    },
     "/api/v1/search/rules/proposal": {
       "delete": {
         "operationId": "discard_api_v1_search_rules_proposal_delete",
@@ -7773,6 +7842,28 @@
           }
         },
         "summary": "Make Proposal From Approved",
+        "tags": [
+          "search"
+        ]
+      }
+    },
+    "/api/v1/search/rules/suggested": {
+      "get": {
+        "description": "What the profile and preferences suggest now; writes nothing (for \"Start over\").",
+        "operationId": "read_suggested_api_v1_search_rules_suggested_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchRulesModel-Output"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Read Suggested",
         "tags": [
           "search"
         ]

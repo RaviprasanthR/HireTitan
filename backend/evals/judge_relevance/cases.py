@@ -26,6 +26,8 @@ class Posting:
     backend: bool  # relevant to the backend profile
     frontend: bool  # relevant to the frontend profile
     injection: bool = False
+    # relevant to the Python and Go back end profile (002i, cases_go.py); None: not in its set
+    go: bool | None = None
 
 
 PROFILES: Final[dict[str, ProfileCard]] = {
@@ -44,6 +46,18 @@ PROFILES: Final[dict[str, ProfileCard]] = {
         key_skills=("React", "TypeScript", "CSS", "HTML", "Jest"),
         preferred_locations=("Pune, IN",),
         work_modes=("remote", "onsite"),
+    ),
+    # 002i: a Python and Go back end engineer who writes "software engineer" as the role (its
+    # postings are in cases_go.py)
+    "backend_go": ProfileCard(
+        target_roles=("Backend Engineer", "Software Engineer", "SDE"),
+        seniority=(),
+        years_experience=Decimal("4.5"),
+        key_skills=("Python", "Go", "FastAPI", "PostgreSQL", "Docker", "Kubernetes", "REST APIs"),
+        preferred_locations=("Chennai, IN",),
+        work_modes=("hybrid", "onsite", "remote"),
+        areas=("back_end",),
+        recent_titles=("Backend Engineer", "Software Engineer"),
     ),
 }
 

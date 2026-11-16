@@ -15,10 +15,12 @@ from uuid import UUID
 
 from hiretitan.search.application.ports import ProposalSource, RuleSetStore, StoredRuleSet
 from hiretitan.search.domain.proposer import propose_rules
-from hiretitan.search.domain.rules import SearchRules
+from hiretitan.search.domain.rules import RulesInvalidError, SearchRules
 from hiretitan.search.domain.rules_serialization import rules_from_dict, rules_to_dict
+from hiretitan.search.domain.work_areas import WorkAreaTable
 
 UnavailableReason = Literal["no_confirmed_profile", "no_preferences"]
+FirstRulesOutcome = Literal["approved", "already", "not_possible"]
 
 
 class RulesUnavailableError(Exception):
@@ -44,10 +46,18 @@ class RuleSetView:
     status: str
     rules: SearchRules
     approved_at: datetime | None
+    approved_by: str | None = None
 
 
 def _view(row: StoredRuleSet) -> RuleSetView:
-    return RuleSetView(row.id, row.version, row.status, rules_from_dict(row.rules), row.approved_at)
+    return RuleSetView(
+        row.id,
+        row.version,
+        row.status,
+        rules_from_dict(row.rules),
+        row.approved_at,
+        row.approved_by,
+    )
 
 
 def _basis(profile_version_id: UUID, preferences_saved_at: datetime) -> dict[str, Any]:
@@ -63,10 +73,12 @@ class RulesService:
         store: RuleSetStore,
         source: ProposalSource,
         synonyms: Mapping[str, tuple[str, ...]],
+        work_areas: WorkAreaTable | None = None,
     ) -> None:
         self._store = store
         self._source = source
         self._synonyms = synonyms
+        self._work_areas = work_areas
 
     async def current(self) -> tuple[RuleSetView | None, RuleSetView | None]:
         """``(approved, proposed)``; either may be missing."""
@@ -80,11 +92,34 @@ class RulesService:
     async def propose(self) -> RuleSetView:
         """Build a fresh proposal from the profile and preferences. The approved set stays."""
         facts = await self._source.read()
-        rules = propose_rules(facts.source, self._synonyms)
+        rules = propose_rules(facts.source, self._synonyms, self._work_areas)
         row = await self._store.propose(
             rules_to_dict(rules), _basis(facts.profile_version_id, facts.preferences_saved_at)
         )
         return _view(row)
+
+    async def suggest(self) -> SearchRules:
+        """The rules the profile and preferences suggest right now. Nothing is stored (FR-017)."""
+        facts = await self._source.read()
+        return propose_rules(facts.source, self._synonyms, self._work_areas)
+
+    async def save_approved(self, rules: SearchRules) -> RuleSetView:
+        """The person's edited rules become the rules searches use, in one step (FR-015).
+
+        They are checked first. Any open draft is replaced, the previous approved set becomes
+        superseded, and the saved set is based on the profile and preferences as they are now, so
+        it is no longer "changed since you approved".
+        """
+        rules.validate()
+        await self._store.lock_first_approval()  # one approval at a time, like the first rules
+        try:
+            facts = await self._source.read()
+            basis = _basis(facts.profile_version_id, facts.preferences_saved_at)
+        except RulesUnavailableError:
+            previous = await self._store.approved()
+            basis = dict(previous.based_on) if previous is not None else {}
+        row = await self._store.propose(rules_to_dict(rules), basis)
+        return _view(await self._store.approve(row.id, approved_by="person"))
 
     async def propose_from_approved(self) -> RuleSetView:
         """Open a draft that is a copy of the approved rules, to change by hand (not rebuilt)."""
@@ -102,11 +137,35 @@ class RulesService:
 
     async def approve(self) -> RuleSetView:
         """Validate and approve the open proposal; the old approved set becomes superseded."""
+        # the same lock as the first approval, so the two can never cross (002i)
+        await self._store.lock_first_approval()
         proposed = await self._store.proposed()
         if proposed is None:
             raise NoProposalError
         rules_from_dict(proposed.rules).validate()
         return _view(await self._store.approve(proposed.id))
+
+    async def approve_first(self) -> FirstRulesOutcome:
+        """Approve the rules proposed from the profile and preferences, once (feature 002i).
+
+        Nothing is done when rules were ever approved, so a later change never replaces the
+        person's own rules. The lock makes a double Finish (or Finish and start-up) approve one
+        set. The caller owns the transaction; errors are reported, not raised, so setup can finish.
+        """
+        await self._store.lock_first_approval()
+        if await self._store.ever_approved():
+            return "already"
+        try:
+            facts = await self._source.read()
+            rules = propose_rules(facts.source, self._synonyms, self._work_areas)
+            rules.validate()
+        except (RulesUnavailableError, RulesInvalidError):
+            return "not_possible"
+        row = await self._store.propose(
+            rules_to_dict(rules), _basis(facts.profile_version_id, facts.preferences_saved_at)
+        )
+        await self._store.approve(row.id, approved_by="auto")
+        return "approved"
 
     async def discard_proposal(self) -> None:
         await self._store.discard_proposed()

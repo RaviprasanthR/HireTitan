@@ -905,6 +905,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/search/rules/approved": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Save Approved
+         * @description Save the person's edited rules as the rules searches use, in one step.
+         */
+        put: operations["save_approved_api_v1_search_rules_approved_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/search/rules/proposal": {
         parameters: {
             query?: never;
@@ -952,6 +972,26 @@ export interface paths {
         put?: never;
         /** Make Proposal From Approved */
         post: operations["make_proposal_from_approved_api_v1_search_rules_proposal_from_approved_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/search/rules/suggested": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Suggested
+         * @description What the profile and preferences suggest now; writes nothing (for "Start over").
+         */
+        get: operations["read_suggested_api_v1_search_rules_suggested_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2150,6 +2190,8 @@ export interface components {
         RuleSetOut: {
             /** Approved At */
             approved_at: string | null;
+            /** Approved By */
+            approved_by?: string | null;
             /** Based On */
             based_on: {
                 [key: string]: unknown;
@@ -2215,6 +2257,11 @@ export interface components {
         };
         /** SearchRulesModel */
         "SearchRulesModel-Input": {
+            /**
+             * Areas
+             * @default []
+             */
+            areas: string[];
             /** Blocked Locations */
             blocked_locations: components["schemas"]["PlaceRuleModel"][];
             /** Max Age Days */
@@ -2236,6 +2283,11 @@ export interface components {
         };
         /** SearchRulesModel */
         "SearchRulesModel-Output": {
+            /**
+             * Areas
+             * @default []
+             */
+            areas: string[];
             /** Blocked Locations */
             blocked_locations: components["schemas"]["PlaceRuleModel"][];
             /** Max Age Days */
@@ -4509,6 +4561,39 @@ export interface operations {
             };
         };
     };
+    save_approved_api_v1_search_rules_approved_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SearchRulesModel-Input"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuleSetOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     edit_proposal_api_v1_search_rules_proposal_put: {
         parameters: {
             query?: never;
@@ -4616,6 +4701,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RuleSetOut"];
+                };
+            };
+        };
+    };
+    read_suggested_api_v1_search_rules_suggested_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchRulesModel-Output"];
                 };
             };
         };

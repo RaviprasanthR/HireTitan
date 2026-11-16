@@ -64,22 +64,23 @@ function GateProbe() {
 }
 
 function renderStep() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   const data: Onboarding = {
     step: 4,
     display_name: 'Jane',
     open_review_id: null,
     active_run_id: null,
   }
-  return render(
-    <QueryClientProvider
-      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
-    >
+  const invalidate = vi.spyOn(client, 'invalidateQueries')
+  const rendered = render(
+    <QueryClientProvider client={client}>
       <MemoryRouter>
         <GateProbe />
         <StepCard onboarding={data} />
       </MemoryRouter>
     </QueryClientProvider>,
   )
+  return { invalidate, rendered }
 }
 
 describe('PreferencesStep', () => {
@@ -109,6 +110,30 @@ describe('PreferencesStep', () => {
     const order = calls.filter((c) => c.method !== 'GET').map((c) => c.url.split('/api/v1')[1])
     expect(order).toEqual(['/preferences', '/onboarding/complete']) // saved first, then finished
     await waitFor(() => expect(reads()).toBeGreaterThan(before)) // the gate re-reads and opens Home
+  })
+
+  it('US1_AS1_finish_refreshes_status_and_rules', async () => {
+    const user = userEvent.setup()
+    const { invalidate } = renderStep()
+    await user.click(await screen.findByRole('button', { name: "Add 'Backend Engineer'" }))
+
+    await user.click(screen.getByRole('button', { name: 'Finish setup' }))
+
+    // Explore reads the checklist and Search rules reads the rules approved for the person
+    await waitFor(() => {
+      const keys = invalidate.mock.calls.map((c) => JSON.stringify(c[0]?.queryKey))
+      expect(keys).toContain(JSON.stringify(['status']))
+      expect(keys).toContain(JSON.stringify(['search-rules']))
+    })
+  })
+
+  it('FR021_the_cards_flow_in_two_columns_in_setup_so_the_step_is_shorter', async () => {
+    const { container } = renderStep().rendered
+    await screen.findByRole('button', { name: 'Finish setup' }) // the form has loaded
+    const layout = container.querySelector('[data-layout]')
+    expect(layout).toHaveAttribute('data-layout', 'flow')
+    expect(layout?.className).toContain('lg:columns-2')
+    expect(layout?.className).not.toContain('auto-rows-fr') // no forced equal heights
   })
 
   it('finish_is_refused_until_the_form_is_valid', async () => {

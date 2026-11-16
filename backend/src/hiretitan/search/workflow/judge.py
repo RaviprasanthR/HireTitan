@@ -22,7 +22,7 @@ from hiretitan.platform.llm.port import AiUnavailable, LlmPort, LlmRequest, Retr
 from hiretitan.platform.llm.prompts import PromptRegistry
 from hiretitan.platform.llm.validation import TaskSpec, ValidatedLlm
 from hiretitan.platform.untrusted.sanitize import sanitize
-from hiretitan.prompts.judge_relevance.v2.checks import rule_errors
+from hiretitan.prompts.judge_relevance.v3.checks import rule_errors
 from hiretitan.search.application.judge_prompt import render_judge_prompt
 from hiretitan.search.application.search import DecisionInput, NewJob
 from hiretitan.search.domain.cards import JOBS_PER_CALL_MAX, JobCardInput, ProfileCard
@@ -66,7 +66,20 @@ def _card(job: NewJob) -> JobCardInput:
         skills_found=job.skills_found,
         years_found=job.years_found,
         description=job.description,
+        description_status=job.description_status,
     )
+
+
+NO_TEXT_NOTE: Final = " Description could not be read."
+
+
+def _reason(raw: str, relevant: bool, job: NewJob) -> str:
+    """The model's reason, cleaned. A job kept without its description says so (FR-034), in code,
+    so it does not depend on the model remembering to."""
+    reason = " ".join(sanitize(raw).text.split())[:REASON_MAX]
+    if relevant and job.description_status != "read":
+        reason += NO_TEXT_NOTE
+    return reason
 
 
 def _role(decision: object) -> str | None:
@@ -134,7 +147,7 @@ async def judge_jobs(deps: JudgeDeps, jobs: list[NewJob], *, mode: str, run_id: 
                 DecisionInput(
                     "shown" if decision.relevant else "skipped",
                     "ai",
-                    " ".join(sanitize(decision.reason).text.split())[:REASON_MAX],
+                    _reason(decision.reason, decision.relevant, jobs[index]),
                     role=_role(decision),
                     provenance={
                         "prompt_name": call.prompt_name,

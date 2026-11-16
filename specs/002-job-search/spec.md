@@ -142,10 +142,10 @@ The person opens a job from Explore, applies on the company's own site, and come
 **Search rules**
 
 - **FR-001**: The system MUST propose search rules from the confirmed profile and saved preferences: title words to look for and to avoid, synonyms, stack keywords, locations, work mode, blocked locations, and the oldest posting age.
-- **FR-002**: Each proposed rule MUST show the profile or preference fact it came from, and MUST be editable, removable and addable by hand before approval.
+- **FR-002** *(changed 2026-11-16, feature 002i FR-014: the page no longer shows a source tag on each rule; the groups explain what the rules do and every rule stays editable)*: Each proposed rule MUST show the profile or preference fact it came from, and MUST be editable, removable and addable by hand before approval.
 - **FR-003**: The person MUST be able to build and approve rules without any AI, and the AI proposal MUST be optional and shown for approval before it takes effect.
-- **FR-004**: The system MUST NOT run a search until the person has approved a set of rules, and MUST save the approved rules until they are changed.
-- **FR-005**: The system MUST show for each rule whether it skips jobs (title words to avoid, blocked locations, titles matching none of the person's roles or their synonyms, postings older than the limit) or guides the AI's judgment (stack keywords, preferred locations and work mode, seniority, years of experience).
+- **FR-004**: The system MUST NOT run a search until the person has approved a set of rules, and MUST save the approved rules until they are changed. *(Changed 2026-11-16, feature 002i FR-001: the first rules are approved automatically when setup finishes; later changes are saved by the person.)*
+- **FR-005** *(changed 2026-11-16, feature 002i FR-014 and FR-031: the effect is explained once per group, not tagged on each rule, and the proposal now also adds title words to avoid for areas that clearly differ from the person's)*: The system MUST show for each rule whether it skips jobs (title words to avoid, blocked locations, titles matching none of the person's roles or their synonyms, postings older than the limit) or guides the AI's judgment (stack keywords, preferred locations and work mode, seniority, years of experience).
 - **FR-006**: When the profile or preferences change, the system MUST propose updated rules and MUST change nothing until the person approves.
 
 **Running a search**

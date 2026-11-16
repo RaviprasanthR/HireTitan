@@ -1,0 +1,12 @@
+{
+  "id": "11111111-2222-3333-4444-555555555555",
+  "text": "Backend Engineer",
+  "descriptionPlain": "Build Python services.",
+  "lists": [
+    {
+      "text": "Requirements",
+      "content": "<li>4+ years of experience</li><li>PostgreSQL</li>"
+    }
+  ],
+  "additionalPlain": "We are an equal opportunity employer."
+}

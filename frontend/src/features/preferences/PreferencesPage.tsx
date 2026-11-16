@@ -212,7 +212,16 @@ function PreferencesForm({
         </div>
       )}
 
-      <div className="grid auto-rows-fr gap-5 lg:grid-cols-2">
+      {/* On the page the four cards are equal height. In setup they flow in two balanced columns, so
+          a short card (Companies) does not sit in a tall empty one and the step is shorter. */}
+      <div
+        data-layout={embedded ? 'flow' : 'equal'}
+        className={
+          embedded
+            ? 'gap-5 lg:columns-2 [&>section]:mb-5 [&>section]:break-inside-avoid'
+            : 'grid auto-rows-fr gap-5 lg:grid-cols-2'
+        }
+      >
         <section className="ht-detail-card ht-pref-looking space-y-4">
           <h2 className="ht-detail-heading">
             <Target aria-hidden className="size-4" />

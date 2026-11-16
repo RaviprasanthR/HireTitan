@@ -12,6 +12,7 @@ from datetime import datetime
 from hiretitan.search.domain.places import city_aliases, key, same_city
 from hiretitan.search.domain.rules import LocationRule, SearchRules
 from hiretitan.search.domain.synonyms import expand
+from hiretitan.search.domain.tech_names import TechTable, stack_skip_reason
 
 
 @dataclass(frozen=True, slots=True)
@@ -30,7 +31,7 @@ class Pass:
 
 @dataclass(frozen=True, slots=True)
 class Skip:
-    rule_key: str  # title_words | title_avoid | blocked_locations | max_age_days
+    rule_key: str  # title_words | title_avoid | stack_in_title | blocked_locations | max_age_days
     reason: str
 
 
@@ -59,6 +60,7 @@ def apply(
     rules: SearchRules,
     now: datetime,
     synonyms: Mapping[str, tuple[str, ...]] | None = None,
+    tech_names: TechTable = (),
 ) -> Pass | Skip:
     """The first rule that skips the job, else ``Pass``."""
     table = synonyms or {}
@@ -69,6 +71,9 @@ def apply(
     for avoid in rules.title_avoid:
         if _contains_phrase(job.title, avoid.text):
             return Skip("title_avoid", f"title contains '{avoid.text}', a word you avoid")
+    # a technology the title names (Java) that is none of the person's skills (002i FR-032)
+    if reason := stack_skip_reason(job.title, [i.text for i in rules.stack_keywords], tech_names):
+        return Skip("stack_in_title", reason)
     for place in rules.blocked_locations:
         if (named := _blocked(job, place)) is not None:
             return Skip("blocked_locations", f"location {named} is in your blocked list")

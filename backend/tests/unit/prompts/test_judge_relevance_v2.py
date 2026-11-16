@@ -18,14 +18,14 @@ def out(role: str | None) -> SimpleNamespace:
     )
 
 
-def test_latest_judge_prompt_is_v2_and_asks_for_a_role() -> None:
-    loaded = PromptRegistry(PROMPTS).load("judge_relevance")
+def test_judge_prompt_v2_asks_for_a_role() -> None:
+    loaded = PromptRegistry(PROMPTS).load("judge_relevance", 2)
     assert loaded.version.version == 2
     assert "role" in loaded.system
 
 
 def test_schema_accepts_an_answer_without_a_role() -> None:
-    schema = PromptRegistry(PROMPTS).load("judge_relevance").output_schema
+    schema = PromptRegistry(PROMPTS).load("judge_relevance", 2).output_schema
     parsed = schema.model_validate({"decisions": [{"ref": "j1", "relevant": True, "reason": "x"}]})
     assert parsed.decisions[0].role is None  # type: ignore[attr-defined]
 

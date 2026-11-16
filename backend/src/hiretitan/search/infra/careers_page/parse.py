@@ -220,6 +220,11 @@ def _plain(markup: Any) -> str | None:
     return "\n".join(line for line in lines if line) or None
 
 
+def html_to_text(markup: Any) -> str | None:
+    """The plain text of some HTML (a posting's description), or None when there is none."""
+    return _plain(markup)
+
+
 def _identifier(value: Any) -> str | None:
     if isinstance(value, dict):
         return _text(value.get("value"))

@@ -61,6 +61,12 @@ test('SC001_journey_completes', async ({ page, request }) => {
   await page.getByLabel('Target roles').press('Enter')
   await page.getByRole('button', { name: 'Finish setup' }).click()
   await expect(page.getByRole('heading', { name: 'Jobs', level: 1 })).toBeVisible()
+  // 002i SC-001: the first search rules were approved when setup finished, so Explore is ready
+  // to search without a visit to Search rules
+  await page.getByRole('link', { name: 'Explore' }).click()
+  await expect(page.getByRole('button', { name: 'Search now' })).toBeVisible()
+  await expect(page.getByText('Finish setup first')).toHaveCount(0)
+  await page.getByRole('link', { name: 'Home', exact: true }).click()
   const menu = page.getByRole('navigation', { name: 'Main' })
   await expect(menu.getByRole('link')).toHaveText(['Home', 'Companies', 'Profile', 'Settings'])
   await page.goto('/preferences') // the old address opens the Profile tab

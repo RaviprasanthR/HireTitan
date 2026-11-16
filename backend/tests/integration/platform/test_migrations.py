@@ -251,6 +251,83 @@ def test_0019_resume_picker_up_down(
         engine.dispose()
 
 
+def test_0020_first_rules_up_down(
+    fresh_database_url: str, make_alembic_config: Callable[[str], Config]
+) -> None:
+    """002i: 0020 adds ``approved_by`` to the rule sets, with a check on its values; the
+    downgrade removes both."""
+    cfg = make_alembic_config(fresh_database_url)
+    command.upgrade(cfg, "0019")
+    engine = create_engine(fresh_database_url)
+    try:
+
+        def columns() -> set[str]:
+            return {
+                c["name"] for c in inspect(engine).get_columns("search_rule_sets", schema="app")
+            }
+
+        assert "approved_by" not in columns()
+        command.upgrade(cfg, "0020")
+        assert "approved_by" in columns()
+        with engine.connect() as conn:
+            defs = list(
+                conn.execute(
+                    text(
+                        "SELECT pg_get_constraintdef(oid) FROM pg_constraint "
+                        "WHERE conrelid = 'app.search_rule_sets'::regclass AND contype = 'c'"
+                    )
+                ).scalars()
+            )
+        assert any("approved_by" in d and "person" in d and "auto" in d for d in defs)
+
+        command.downgrade(cfg, "0019")
+        assert "approved_by" not in columns()
+        with engine.connect() as conn:
+            left = conn.execute(
+                text(
+                    "SELECT pg_get_constraintdef(oid) FROM pg_constraint "
+                    "WHERE conrelid = 'app.search_rule_sets'::regclass"
+                )
+            ).scalars()
+            assert not [d for d in left if "approved_by" in d]
+    finally:
+        engine.dispose()
+
+
+def test_0020_migration_backfills_person(
+    fresh_database_url: str, make_alembic_config: Callable[[str], Config]
+) -> None:
+    """002i: every approval made before 0020 was the person's; proposals have no approver."""
+    cfg = make_alembic_config(fresh_database_url)
+    command.upgrade(cfg, "0019")
+    engine = create_engine(fresh_database_url)
+    try:
+        with engine.begin() as conn:
+            for version, status, approved_at in (
+                (1, "superseded", "2026-11-01 10:00:00+00"),
+                (2, "approved", "2026-11-02 10:00:00+00"),
+                (3, "proposed", None),
+            ):
+                conn.execute(
+                    text(
+                        "INSERT INTO app.search_rule_sets (id, version, status, rules, based_on, "
+                        "approved_at, created_at, updated_at) VALUES (:id, :v, :s, '{}', '{}', "
+                        ":at, now(), now())"
+                    ),
+                    {"id": uuid7(), "v": version, "s": status, "at": approved_at},
+                )
+        command.upgrade(cfg, "0020")
+        with engine.connect() as conn:
+            got = dict(
+                conn.execute(
+                    text("SELECT version, approved_by FROM app.search_rule_sets ORDER BY version")
+                ).all()
+            )
+        assert got == {1: "person", 2: "person", 3: None}
+    finally:
+        engine.dispose()
+
+
 def test_0018_interview_tracking_up_down(
     fresh_database_url: str, make_alembic_config: Callable[[str], Config]
 ) -> None:

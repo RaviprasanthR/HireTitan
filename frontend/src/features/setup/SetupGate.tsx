@@ -39,8 +39,10 @@ export function SetupGate() {
       </SetupLayout>
     )
   }
+  // Preferences holds a lot, so its card is wide; the other steps are short forms
+  const wide = !renaming && step === 4
   return (
-    <SetupLayout step={renaming ? 1 : step}>
+    <SetupLayout step={renaming ? 1 : step} wide={wide}>
       <StepCard onboarding={query.data} renaming={renaming} setRenaming={setRenaming} />
     </SetupLayout>
   )

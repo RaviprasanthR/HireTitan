@@ -6,6 +6,7 @@ from uuid import UUID
 
 import pytest
 from sqlalchemy import select
+from tests.fakes.descriptions import FakeDescriptions
 from tests.fakes.search_env import Env, add_company, go, new_search, posting
 
 from hiretitan.platform.llm.port import AiUnavailable
@@ -75,3 +76,36 @@ async def test_recheck_leaves_the_job_when_the_answer_is_unusable(env: Env) -> N
     await recheck(env, job_id)
 
     assert await state_and_decision(env, job_id) == ("explore", "rules_only_fallback", "shown")
+
+
+async def test_recheck_reads_description_first(env: Env) -> None:
+    """002i FR-029: a job found without text gets it read before the AI is asked again."""
+    ref = await add_company(env, "Acme")
+    env.career_ops.script(ref, ScanOk([posting("Backend Engineer", description="")]))
+    await go(env, await new_search(env, mode="rules_only"))
+    async with env.sessions() as session:
+        job = (await session.scalars(select(JobRow))).one()
+        job_id, url = job.id, job.canonical_url
+    assert url
+    env.deps.descriptions = FakeDescriptions({url: "Build Python APIs for payments."})
+    env.llm.add({"decisions": [{"ref": "j1", "relevant": True, "reason": "Fits"}]})
+
+    await recheck(env, job_id)
+
+    async with env.sessions() as session:
+        stored = await session.get(JobRow, job_id)
+    assert stored is not None
+    assert stored.description == "Build Python APIs for payments."  # kept on the job
+    sent = env.llm.calls[-1].prompt.user
+    assert '"description_status": "read"' in sent
+    assert "Build Python APIs for payments." in sent
+    assert await state_and_decision(env, job_id) == ("explore", "ai", "shown")
+
+
+async def test_recheck_without_a_reader_is_unchanged(env: Env) -> None:
+    job_id = await unchecked_job(env)
+    env.llm.add({"decisions": [{"ref": "j1", "relevant": True, "reason": "Fits"}]})
+
+    await recheck(env, job_id)
+
+    assert await state_and_decision(env, job_id) == ("explore", "ai", "shown")

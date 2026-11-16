@@ -284,6 +284,37 @@ async def test_rule_set_lifecycle(db_session: AsyncSession) -> None:
     assert (await repo.get(first.id)).status == "superseded"  # type: ignore[union-attr]
 
 
+async def test_0020_approve_records_who_approved(db_session: AsyncSession) -> None:
+    """002i: a person's approval is stored as 'person', an automatic one as 'auto'."""
+    repo = RuleSetsRepo(db_session)
+    first = await repo.propose({"v": 1}, {})
+    assert first.approved_by is None  # a proposal has no approver
+    approved = await repo.approve(first.id)
+    assert approved.approved_by == "person"
+    second = await repo.propose({"v": 2}, {})
+    assert (await repo.approve(second.id, approved_by="auto")).approved_by == "auto"
+
+
+async def test_0020_migration_check_rejects_other_values(db_session: AsyncSession) -> None:
+    repo = RuleSetsRepo(db_session)
+    row = await repo.propose({"v": 1}, {})
+    row.approved_by = "robot"
+    with pytest.raises(IntegrityError):
+        await db_session.flush()
+
+
+async def test_0020_ever_approved_survives_supersede(db_session: AsyncSession) -> None:
+    """002i FR-002: 'never had approved rules' means no row has an approval time."""
+    repo = RuleSetsRepo(db_session)
+    assert await repo.ever_approved() is False
+    first = await repo.propose({"v": 1}, {})
+    assert await repo.ever_approved() is False  # a proposal is not an approval
+    await repo.approve(first.id)
+    second = await repo.propose({"v": 2}, {})
+    await repo.approve(second.id)  # the first becomes superseded
+    assert await repo.ever_approved() is True
+
+
 async def test_a_new_proposal_replaces_the_open_one(db_session: AsyncSession) -> None:
     repo = RuleSetsRepo(db_session)
     await repo.propose({"v": 1}, {})

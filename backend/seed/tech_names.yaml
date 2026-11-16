@@ -1,0 +1,38 @@
+# Programming languages and frameworks that can appear in a job title (feature 002i, research R6).
+# Role-level facts only; nothing about any person.
+#
+# A job whose title names one of these and none that the person has is left out by the free rules
+# ("needs Java, which is not in your skills"). Each entry is matched as whole words,
+# case-insensitively, with punctuation ignored, so "Java" never matches "JavaScript".
+#
+# name:    how the reason shows it.
+# aliases: other ways to write it; the name itself is always matched too.
+# kind:    language | framework.
+# implies: for a framework, the languages it is written in. A title naming the framework is for a
+#          person with one of them, and a person with the framework has them.
+# context: only for names that are also ordinary words (Go, Swift, Rust, Spring): the name itself
+#          (not its aliases) matches only right next to one of these words, as in "Go developer", so "Spring 2027 Intern"
+#          and "Swift Logistics" are not technologies.
+technologies:
+  - {name: Java, kind: language, aliases: [core java, java8, java 8, j2ee, jvm]}
+  - {name: JavaScript, kind: language, aliases: [js, ecmascript]}
+  - {name: TypeScript, kind: language, aliases: [ts]}
+  - {name: C#, kind: language, aliases: [c sharp, csharp, dotnet, net core, asp net]}
+  - {name: C++, kind: language, aliases: [cpp, c plus plus]}
+  - {name: Go, kind: language, aliases: [golang], context: [developer, engineer, programmer, lang, language]}
+  - {name: Python, kind: language, aliases: [python3]}
+  - {name: Ruby, kind: language, aliases: [ruby on rails, rails]}
+  - {name: PHP, kind: language, aliases: [laravel, symfony, codeigniter]}
+  - {name: Kotlin, kind: language, aliases: []}
+  - {name: Swift, kind: language, aliases: [swiftui], context: [developer, engineer, programmer, ios, lang, language]}
+  - {name: Scala, kind: language, aliases: []}
+  - {name: Rust, kind: language, aliases: [], context: [developer, engineer, programmer, lang, language]}
+  - {name: Elixir, kind: language, aliases: [erlang]}
+  - {name: Perl, kind: language, aliases: []}
+  - {name: React, kind: framework, aliases: [reactjs, react js, react native], implies: [JavaScript, TypeScript]}
+  - {name: Angular, kind: framework, aliases: [angularjs, angular js], implies: [TypeScript, JavaScript]}
+  - {name: Vue, kind: framework, aliases: [vuejs, vue js], implies: [JavaScript, TypeScript]}
+  - {name: Node.js, kind: framework, aliases: [node js, nodejs, node], implies: [JavaScript, TypeScript]}
+  - {name: Django, kind: framework, aliases: [], implies: [Python]}
+  - {name: Spring, kind: framework, aliases: [spring boot, springboot], context: [boot, developer, engineer, framework, java], implies: [Java, Kotlin]}
+  - {name: Flutter, kind: framework, aliases: []}

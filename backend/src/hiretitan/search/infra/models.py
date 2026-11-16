@@ -98,6 +98,9 @@ class SearchRuleSetRow(IdTimestampMixin, Base):
     __table_args__ = (
         UniqueConstraint("version"),
         CheckConstraint(_in("status", RULE_SET_STATUSES), name="status_values"),
+        CheckConstraint(
+            "approved_by IS NULL OR approved_by IN ('person', 'auto')", name="approved_by_values"
+        ),
         # at most one approved set at a time
         Index(
             "uq_search_rule_sets_one_approved",
@@ -112,6 +115,8 @@ class SearchRuleSetRow(IdTimestampMixin, Base):
     rules: Mapped[JsonDict] = mapped_column(JSONB)
     based_on: Mapped[JsonDict] = mapped_column(JSONB)
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # 'person', or 'auto' for the first rules approved when setup finished; none for a proposal
+    approved_by: Mapped[str | None] = mapped_column(Text)
 
 
 class SearchRunRow(IdTimestampMixin, Base):

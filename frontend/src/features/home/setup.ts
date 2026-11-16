@@ -5,6 +5,8 @@ type Step = {
   done: boolean
   action: string
   to: string
+  /** What is missing, in a sentence, for the empty Explore page (FR-006). */
+  missing: string
   /** When set, the step cannot be started yet and this says why. */
   blocked?: string
 }
@@ -18,24 +20,28 @@ export function stepsFor(checklist: Checklist): Step[] {
       done: checklist.key_ok,
       action: 'Check the AI key',
       to: '/settings',
+      missing: 'Your AI key is not working yet.',
     },
     {
       label: 'Resume uploaded',
       done: checklist.resume_uploaded,
       action: 'Upload your resume',
       to: '/profile',
+      missing: 'You have not uploaded a resume yet.',
     },
     {
       label: 'Profile confirmed',
       done: checklist.profile_confirmed,
       action: 'Confirm your profile',
       to: '/profile',
+      missing: 'Your profile is not confirmed yet.',
     },
     {
       label: 'Preferences saved',
       done: checklist.preferences_saved,
       action: 'Set your preferences',
       to: '/profile/preferences',
+      missing: 'Your preferences are not saved yet.',
       blocked: checklist.profile_confirmed
         ? undefined
         : 'Available after you confirm your profile.',
@@ -45,6 +51,7 @@ export function stepsFor(checklist: Checklist): Step[] {
       done: checklist.rules_approved,
       action: 'Review your search rules',
       to: '/profile/search-rules',
+      missing: 'Your search rules are not approved yet.',
       blocked: checklist.preferences_saved
         ? undefined
         : 'Available after you save your preferences.',
@@ -55,4 +62,9 @@ export function stepsFor(checklist: Checklist): Step[] {
 /** True when every step before the first search is done (FR-031). */
 export function setupIsDone(checklist: Checklist | undefined): boolean {
   return checklist !== undefined && stepsFor(checklist).every((s) => s.done)
+}
+
+/** The first step still to do, or none when setup is done (FR-006). */
+export function firstMissingStep(checklist: Checklist | undefined): Step | undefined {
+  return checklist === undefined ? undefined : stepsFor(checklist).find((s) => !s.done)
 }

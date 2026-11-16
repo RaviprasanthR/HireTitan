@@ -127,3 +127,20 @@ def test_FR005_each_rule_declares_its_effect() -> None:
         "seniority": "guides_ai",
         "years_experience": "guides_ai",
     }
+
+
+# --- 002i: the person's area of work ---------------------------------------------------------
+
+
+def test_FR030_areas_validation() -> None:
+    SearchRules(title_words=words(1), areas=("back_end", "data")).validate()
+    assert fields_failing(areas=("backend",)) == {"areas"}  # not a known area
+    assert fields_failing(areas=("back_end", "back_end")) == {"areas"}  # a duplicate
+    assert fields_failing(areas=("back_end", "front_end", "full_stack", "mobile", "data")) == {
+        "areas"
+    }  # more than four
+
+
+def test_FR030_no_area_is_valid() -> None:
+    SearchRules(title_words=words(1)).validate()
+    SearchRules(title_words=words(1), areas=()).validate()

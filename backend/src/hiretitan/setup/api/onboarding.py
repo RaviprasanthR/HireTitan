@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+import logging
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Literal
@@ -23,12 +24,17 @@ from hiretitan.setup.application.onboarding import (
 )
 from hiretitan.setup.infra.settings_repo import SettingsRepo
 
+log = logging.getLogger(__name__)
+
 
 @dataclass(frozen=True)
 class OnboardingApiDeps:
     sessions: async_sessionmaker[AsyncSession]
     clock: ClockPort
     facts: Callable[[AsyncSession], OnboardingFacts]
+    # runs after setup is recorded (the composition root wires "approve the first search rules");
+    # a failure is logged and never fails setup (002i FR-004)
+    on_completed: Callable[[], Awaitable[None]] | None = None
 
 
 class OnboardingOut(BaseModel):
@@ -92,6 +98,11 @@ def create_onboarding_router(deps: OnboardingApiDeps) -> APIRouter:
             except SetupNotReady as not_ready:
                 raise ProblemError(409, str(not_ready)) from not_ready
             await session.commit()
+        if deps.on_completed is not None:
+            try:
+                await deps.on_completed()
+            except Exception:
+                log.exception("Setup finished, but the follow-up step failed")
         return CompletedOut(setup_completed_at=at)
 
     return router

@@ -98,3 +98,58 @@ def test_job_search_registered() -> None:
     registry = workflow_registry(MagicMock(), MagicMock())
     assert SEARCH_WORKFLOW in registry
     assert registry[SEARCH_WORKFLOW].recursion_limit > 25
+
+
+SEED = Path(__file__).resolve().parents[3] / "seed"
+
+# --- 002i T012: the profile card the relevance check reads ----------------------------------
+
+
+async def test_FR033_profile_card_has_profile_skills_and_areas(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    """The 2026-11-16 bug: the card held only skills typed in Preferences (none), so the model
+    saw no skills at all. It must hold the confirmed profile's own skills, languages first."""
+    from dataclasses import replace
+    from datetime import UTC, datetime
+
+    from hiretitan.platform.clock import FakeClock
+    from hiretitan.preferences.application.service import save_preferences
+    from hiretitan.preferences.domain.defaults import default_preferences
+    from hiretitan.preferences.infra.repo import PreferencesRepo
+    from hiretitan.profile.domain.content import Contact, Experience, ProfileContent, YearMonth
+    from hiretitan.profile.infra.repos import VersionsRepo
+    from hiretitan.search.application.rules import RulesService
+    from hiretitan.search.application.tables_seed import load_tech_names, load_work_areas
+    from hiretitan.search.infra.repos import RuleSetsRepo
+    from hiretitan.search_wiring import ProfileAndPreferencesSource, profile_card_source
+
+    clock = FakeClock(datetime(2026, 11, 16, tzinfo=UTC))
+    async with sessions() as session:
+        await VersionsRepo(session).create_version(
+            ProfileContent(
+                contact=Contact(name="Jane"),
+                skills=("Docker", "Python", "Go", "PostgreSQL"),
+                experience=(
+                    Experience("Acme", "Backend Engineer", start=YearMonth(2023), current=True),
+                ),
+            ),
+            created_by="manual",
+        )
+        prefs = replace(default_preferences(), target_roles=("Software Engineer",), key_skills=())
+        await save_preferences(PreferencesRepo(session), clock, prefs)
+        await RulesService(
+            RuleSetsRepo(session),
+            ProfileAndPreferencesSource(session),
+            {},
+            load_work_areas(SEED / "work_areas.yaml"),
+        ).approve_first()
+        await session.commit()
+
+    card = await profile_card_source(sessions, load_tech_names(SEED / "tech_names.yaml"))()
+
+    assert card is not None
+    assert card.key_skills[:2] == ("Python", "Go")  # the languages come first
+    assert set(card.key_skills) >= {"Docker", "PostgreSQL"}
+    assert card.areas == ("back_end",)
+    assert card.recent_titles == ("Backend Engineer",)

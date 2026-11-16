@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime
+from decimal import Decimal
 from typing import Any, Literal
 from uuid import UUID
 
@@ -19,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from hiretitan.platform.runtime.infra.models import WorkflowRunRow
 from hiretitan.search.domain.contacts import ContactFields, link_key, name_key
 from hiretitan.search.domain.job_state import JobState
+from hiretitan.search.domain.rules import ApprovedBy
 from hiretitan.search.domain.vendors import ENABLED_VENDORS
 from hiretitan.search.infra.models import (
     CompanyNoteRow,
@@ -131,6 +133,10 @@ class CompaniesRepo:
 # --- rule sets -------------------------------------------------------------------------------
 
 
+# one fixed key for "the first search rules are being approved" (Postgres advisory lock)
+FIRST_RULES_LOCK_KEY = 0x48540020
+
+
 class RuleSetsRepo:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
@@ -173,7 +179,24 @@ class RuleSetsRepo:
             await self._session.refresh(row)
         return row
 
-    async def approve(self, rule_set_id: UUID, *, now: datetime | None = None) -> SearchRuleSetRow:
+    async def lock_first_approval(self) -> None:
+        """Wait for any other first-approval in progress; held until this transaction ends."""
+        await self._session.execute(select(func.pg_advisory_xact_lock(FIRST_RULES_LOCK_KEY)))
+
+    async def ever_approved(self) -> bool:
+        """True when any rule set was ever approved (superseded ones keep their approval time)."""
+        found = await self._session.scalar(
+            select(SearchRuleSetRow.id).where(SearchRuleSetRow.approved_at.is_not(None)).limit(1)
+        )
+        return found is not None
+
+    async def approve(
+        self,
+        rule_set_id: UUID,
+        *,
+        approved_by: ApprovedBy = "person",
+        now: datetime | None = None,
+    ) -> SearchRuleSetRow:
         """The previous approved set becomes ``superseded`` in the same transaction."""
         await self._session.execute(
             update(SearchRuleSetRow)
@@ -183,7 +206,7 @@ class RuleSetsRepo:
         await self._session.execute(
             update(SearchRuleSetRow)
             .where(SearchRuleSetRow.id == rule_set_id)
-            .values(status="approved", approved_at=now or func.now())
+            .values(status="approved", approved_at=now or func.now(), approved_by=approved_by)
         )
         await self._session.flush()
         row = await self._session.get_one(SearchRuleSetRow, rule_set_id)
@@ -335,6 +358,28 @@ class JobsRepo:
         if row is not None:
             await self._session.refresh(row)
         return row
+
+    async def set_description(
+        self,
+        job_id: UUID,
+        *,
+        description: str,
+        skills_found: tuple[str, ...],
+        years_found: Decimal | None,
+        injection_flags: list[dict[str, Any]],
+    ) -> None:
+        """Store the posting's own text, read after the job was first found (002i)."""
+        await self._session.execute(
+            update(JobRow)
+            .where(JobRow.id == job_id)
+            .values(
+                description=description,
+                skills_found=list(skills_found),
+                years_found=years_found,
+                injection_flags=injection_flags,
+            )
+        )
+        await self._session.flush()
 
     async def set_role_short(self, job_id: UUID, role: str | None) -> None:
         await self._session.execute(

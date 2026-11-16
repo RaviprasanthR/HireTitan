@@ -21,6 +21,9 @@ from hiretitan.preferences.domain.defaults import default_preferences
 from hiretitan.preferences.infra.repo import PreferencesRepo
 from hiretitan.profile.domain.content import Contact, ProfileContent
 from hiretitan.profile.infra.repos import Provenance, ResumeFilesRepo, ReviewsRepo, VersionsRepo
+from hiretitan.search.application.ports import ProposalFacts
+from hiretitan.search.infra.repos import RuleSetsRepo
+from hiretitan.search_wiring import ProfileAndPreferencesSource, first_rules_callback
 from hiretitan.setup.api.onboarding import OnboardingApiDeps, create_onboarding_router
 from hiretitan.setup_wiring import RepoFacts
 
@@ -31,7 +34,13 @@ URL = "/api/v1/onboarding"
 async def client(
     sessions: async_sessionmaker[AsyncSession], tmp_path: Path, fake_clock: FakeClock
 ) -> AsyncIterator[httpx.AsyncClient]:
-    deps = OnboardingApiDeps(sessions=sessions, clock=fake_clock, facts=RepoFacts)
+    # the first-rules callback is wired as the real application wires it (002i)
+    deps = OnboardingApiDeps(
+        sessions=sessions,
+        clock=fake_clock,
+        facts=RepoFacts,
+        on_completed=first_rules_callback(sessions, {}),
+    )
     app = create_app(
         Settings(), frontend_dist=tmp_path / "none", routers=[create_onboarding_router(deps)]
     )
@@ -185,3 +194,108 @@ async def test_US5_AS7_upload_after_completion_stays_done(
     await run_in_state(sessions, RunStatus.running)  # a later resume upload
 
     assert (await client.get(URL)).json()["step"] == "done"
+
+
+async def approved_rules(sessions: async_sessionmaker[AsyncSession]) -> Any:
+    async with sessions() as session:
+        return await RuleSetsRepo(session).approved()
+
+
+async def test_FR001_finish_setup_approves_first_rules(
+    client: httpx.AsyncClient,
+    sessions: async_sessionmaker[AsyncSession],
+    fake_clock: FakeClock,
+) -> None:
+    await named(client)
+    await confirmed_profile(sessions)
+    await saved_preferences(sessions, fake_clock)
+    assert await approved_rules(sessions) is None
+
+    done = await client.post(f"{URL}/complete")
+
+    assert done.status_code == 200
+    approved = await approved_rules(sessions)
+    assert approved is not None
+    assert approved.approved_by == "auto"
+    assert [w["text"] for w in approved.rules["title_words"]] == ["Engineer"]
+
+
+async def test_FR002_finishing_again_keeps_the_same_rules(
+    client: httpx.AsyncClient,
+    sessions: async_sessionmaker[AsyncSession],
+    fake_clock: FakeClock,
+) -> None:
+    await named(client)
+    await confirmed_profile(sessions)
+    await saved_preferences(sessions, fake_clock)
+    assert (await client.post(f"{URL}/complete")).status_code == 200
+    first = await approved_rules(sessions)
+
+    assert (await client.post(f"{URL}/complete")).status_code == 200
+
+    again = await approved_rules(sessions)
+    assert first is not None
+    assert again is not None
+    assert (again.id, again.version) == (first.id, first.version)
+
+
+async def test_FR004_invalid_proposal_leaves_setup_finished(
+    sessions: async_sessionmaker[AsyncSession], tmp_path: Path, fake_clock: FakeClock
+) -> None:
+    """Rules that cannot be approved (here: no job title to look for) approve nothing, and
+    setup still finishes."""
+
+    class NoTitles:
+        def __init__(self, session: AsyncSession) -> None:
+            self._real = ProfileAndPreferencesSource(session)
+
+        async def read(self) -> ProposalFacts:
+            facts = await self._real.read()
+            return replace(facts, source=replace(facts.source, target_roles=()))
+
+    deps = OnboardingApiDeps(
+        sessions=sessions,
+        clock=fake_clock,
+        facts=RepoFacts,
+        on_completed=first_rules_callback(sessions, {}, NoTitles),
+    )
+    app = create_app(
+        Settings(), frontend_dist=tmp_path / "none", routers=[create_onboarding_router(deps)]
+    )
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as c:
+        await named(c)
+        await confirmed_profile(sessions)
+        await saved_preferences(sessions, fake_clock)
+
+        done = await c.post(f"{URL}/complete")
+
+        assert done.status_code == 200
+        assert (await c.get(URL)).json()["step"] == "done"
+    assert await approved_rules(sessions) is None
+
+
+async def test_FR004_a_failing_callback_never_fails_setup(
+    sessions: async_sessionmaker[AsyncSession], tmp_path: Path, fake_clock: FakeClock
+) -> None:
+    async def broken() -> None:
+        raise RuntimeError("boom")
+
+    deps = OnboardingApiDeps(
+        sessions=sessions, clock=fake_clock, facts=RepoFacts, on_completed=broken
+    )
+    app = create_app(
+        Settings(), frontend_dist=tmp_path / "none", routers=[create_onboarding_router(deps)]
+    )
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as c:
+        await named(c)
+        await confirmed_profile(sessions)
+        await saved_preferences(sessions, fake_clock)
+
+        done = await c.post(f"{URL}/complete")
+
+        assert done.status_code == 200
+        assert (await c.get(URL)).json()["step"] == "done"

@@ -12,6 +12,7 @@ from typing import Any, Literal, Protocol
 from uuid import UUID
 
 from hiretitan.search.domain.proposer import ProposalInput
+from hiretitan.search.domain.rules import ApprovedBy
 
 
 @dataclass(frozen=True, slots=True)
@@ -121,6 +122,7 @@ class StoredRuleSet(Protocol):
     rules: dict[str, Any]
     based_on: dict[str, Any]
     approved_at: datetime | None
+    approved_by: str | None  # person | auto; none for a proposal
 
 
 class RuleSetStore(Protocol):
@@ -132,7 +134,13 @@ class RuleSetStore(Protocol):
 
     async def update_proposed(self, rules: dict[str, Any]) -> StoredRuleSet | None: ...
 
-    async def approve(self, rule_set_id: UUID) -> StoredRuleSet: ...
+    async def approve(
+        self, rule_set_id: UUID, *, approved_by: ApprovedBy = "person"
+    ) -> StoredRuleSet: ...
+
+    async def ever_approved(self) -> bool: ...
+
+    async def lock_first_approval(self) -> None: ...
 
     async def discard_proposed(self) -> None: ...
 
@@ -153,3 +161,28 @@ class ProposalSource(Protocol):
     """
 
     async def read(self) -> ProposalFacts: ...
+
+
+@dataclass(frozen=True, slots=True)
+class DescribeRequest:
+    """One posting whose own text should be read: its link, and the board it came from (if any)."""
+
+    url: str
+    ats_vendor: str | None = None
+    requisition_id: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class DescriptionResult:
+    status: Literal["read", "unreadable"]
+    text: str | None = None
+    error: str | None = None
+
+
+class DescriptionPort(Protocol):
+    """Reads a posting's description from its source (public job-board APIs or its own page).
+
+    Never raises for a posting that cannot be read: it answers ``unreadable``.
+    """
+
+    async def read(self, job: DescribeRequest) -> DescriptionResult: ...

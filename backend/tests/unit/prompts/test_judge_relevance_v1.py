@@ -132,6 +132,7 @@ def test_job_cards_get_short_refs_and_no_ids(prompt) -> None:  # type: ignore[no
         "work_mode",
         "skills_found",
         "years_found",
+        "description_status",  # 002i: whether the posting's own text was read
         "excerpt",
     }
 

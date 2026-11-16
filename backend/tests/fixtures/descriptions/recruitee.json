@@ -1,0 +1,8 @@
+{
+  "offer": {
+    "slug": "backend-engineer",
+    "title": "Backend Engineer",
+    "description": "<p>Build Python services.</p>",
+    "requirements": "<ul><li>PostgreSQL</li></ul>"
+  }
+}

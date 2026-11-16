@@ -98,6 +98,42 @@ describe('SetupGate', () => {
     expect(fill).toHaveStyle({ width })
   })
 
+  // the card the step sits in: wide only for Preferences, which holds a lot (US4, FR-021)
+  const cardOf = (label: string) =>
+    screen.getByText(label).closest('[data-setup-card]') as HTMLElement
+
+  it.each([
+    [1, 'Step 1 of 4'],
+    [2, 'Step 2 of 4'],
+    [3, 'Step 3 of 4'],
+  ] as const)('FR021_the_other_steps_stay_narrow %s', async (step, label) => {
+    renderAt('/', step)
+    await screen.findByText(label)
+    expect(cardOf(label)).toHaveAttribute('data-wide', 'false')
+    expect(cardOf(label)).toHaveClass('max-w-2xl')
+  })
+
+  it('FR021_the_preferences_step_uses_a_wide_card', async () => {
+    renderAt('/', 4)
+    await screen.findByText('Step 4 of 4')
+    expect(cardOf('Step 4 of 4')).toHaveAttribute('data-wide', 'true')
+    expect(cardOf('Step 4 of 4')).toHaveClass('max-w-6xl')
+    expect(cardOf('Step 4 of 4')).not.toHaveClass('max-w-2xl')
+  })
+
+  it('FR021_going_back_to_the_name_makes_the_card_narrow_again', async () => {
+    const user = userEvent.setup()
+    renderAt('/', 2)
+    await user.click(await screen.findByRole('button', { name: /back/i }))
+    expect(cardOf('Step 1 of 4')).toHaveAttribute('data-wide', 'false')
+  })
+
+  it('FR021_settings_during_setup_keeps_the_narrow_card', async () => {
+    renderAt('/settings', 4)
+    const close = await screen.findByRole('link', { name: 'Close settings' })
+    expect(close.closest('[data-setup-card]')).toHaveAttribute('data-wide', 'false')
+  })
+
   it('going_back_to_the_name_lowers_the_step_bar', async () => {
     const user = userEvent.setup()
     renderAt('/', 2)

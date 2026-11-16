@@ -48,18 +48,28 @@ test('SC002_job_search_journey', async ({ page, request }) => {
   await page.getByRole('button', { name: 'Finish setup' }).click()
   await expect(page.getByRole('heading', { name: 'Jobs', level: 1 })).toBeVisible()
   // Home opens on In pipeline (empty at first); the search lives in Explore.
-  await expect(page.getByRole('link', { name: 'In pipeline' })).toHaveAttribute('aria-current', 'page')
+  await expect(page.getByRole('link', { name: 'In pipeline' })).toHaveAttribute(
+    'aria-current',
+    'page',
+  )
   await page.getByRole('link', { name: 'Explore' }).click()
 
   // 1. Explore does not show the setup checklist.
   await expect(page.getByRole('list', { name: 'Setup checklist' })).toHaveCount(0)
 
-  // 2. Search rules (a Profile tab): proposed from the profile, then approved.
+  // 2. Search rules (a Profile tab): approved by HireTitan when setup finished (002i), in plain
+  // words, with the person's area and the title words of other areas to leave out.
   await page.goto('/profile/search-rules')
-  await page.getByRole('button', { name: 'Suggest rules' }).click()
-  await expect(page.getByRole('region', { name: /job titles/i })).toBeVisible()
-  await page.getByRole('button', { name: /approve/i }).click()
-  await expect(page.getByText(/rules approved/i)).toBeVisible()
+  await expect(page.getByText(/HireTitan set these up from your profile/)).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Jobs we keep' })).toBeVisible()
+  const leaveOut = page.getByRole('region', { name: 'Jobs we leave out' })
+  await expect(leaveOut.getByText('frontend', { exact: true })).toBeVisible()
+  await expect(
+    page.getByRole('region', { name: 'What helps rank a job' }).getByText('Back end'),
+  ).toBeVisible()
+  expect(await page.locator('main').innerText()).not.toMatch(
+    /Skips jobs|Guides the AI|Similar title/,
+  )
 
   // 3. Search now: the run finishes and the jobs are listed.
   await page.goto('/explore')
@@ -67,10 +77,36 @@ test('SC002_job_search_journey', async ({ page, request }) => {
   await expect(page.getByRole('link', { name: 'See the summary' })).toBeVisible({
     timeout: 120_000,
   })
+  // the panel never talks about batches or shows "0 of 0" (002i SC-003)
+  const panel = page.getByRole('region', { name: 'Search', exact: true })
+  expect(await panel.innerText()).not.toMatch(/batch|\b0 of 0\b/i)
 
   // 4. Only the relevant jobs are listed; the rest are on the summary and can be restored.
   await expect.poll(async () => (await exploreJobs(request)).length).toBe(2)
+
+  // 4a. A row opens in place (002i US5): the posting's own text, read from its link (the listing
+  // had none), and the title links to the posting in a new tab.
+  const table = page.getByRole('table', { name: 'Jobs' })
+  const withReadText = table
+    .getByRole('row')
+    .filter({ hasText: 'Senior Backend Engineer' })
+    .first()
+  await withReadText
+    .getByRole('button', { name: /show details of senior backend engineer/i })
+    .click()
+  // the opened details are the next row of the table
+  await expect(table.getByText(/Mentor engineers and own reliability/)).toBeVisible()
+  const titleLink = withReadText.getByRole('link', { name: 'Senior Backend Engineer' })
+  await expect(titleLink).toHaveAttribute('target', '_blank')
+  await expect(titleLink).toHaveAttribute('href', /alpha\.example\.test\/jobs\/102/)
+  await withReadText
+    .getByRole('button', { name: /hide details of senior backend engineer/i })
+    .click()
+  await expect(table.getByText(/Mentor engineers/)).toHaveCount(0)
+
+  // 4b. The Java posting is left out by the rules, with its reason on the summary (002i US6).
   await page.getByRole('link', { name: 'See the summary' }).click()
+  await expect(page.getByText('needs Java, which is not in your skills')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Restore' }).first()).toBeVisible()
   await page.getByRole('button', { name: 'Restore' }).first().click()
   await expect.poll(async () => (await exploreJobs(request)).length).toBe(3)
@@ -127,7 +163,10 @@ test('SC002_job_search_journey', async ({ page, request }) => {
   await expect.poll(async () => (await exploreJobs(request)).length).toBe(2)
   await page.getByRole('link', { name: 'In pipeline' }).click()
   // the row's details are read-only; the interview records are changed in the edit card
-  await page.getByRole('button', { name: /^Edit / }).first().click()
+  await page
+    .getByRole('button', { name: /^Edit / })
+    .first()
+    .click()
   const card = page.getByRole('region', { name: /^Edit / })
   const details = card.getByRole('region', { name: 'Interview details' })
   await expect(details).toBeVisible()

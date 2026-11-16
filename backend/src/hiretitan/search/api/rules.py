@@ -29,6 +29,7 @@ from hiretitan.search.domain.rules import (
     RulesInvalidError,
     SearchRules,
 )
+from hiretitan.search.domain.work_areas import WorkAreaTable
 from hiretitan.search.infra.repos import RuleSetsRepo
 
 
@@ -37,6 +38,7 @@ class SearchRulesApiDeps:
     sessions: async_sessionmaker[AsyncSession]
     source: Callable[[AsyncSession], ProposalSource]
     synonyms: Mapping[str, tuple[str, ...]]
+    work_areas: WorkAreaTable | None = None  # the reviewed table behind areas and avoid words
 
 
 class RuleItemModel(BaseModel):
@@ -65,6 +67,7 @@ class SearchRulesModel(BaseModel):
     work_modes: list[str]
     seniority: list[str]
     years_experience: Decimal | None
+    areas: list[str] = []  # the person's area of work (002i); older callers may leave it out
 
     @classmethod
     def from_domain(cls, rules: SearchRules) -> SearchRulesModel:
@@ -91,6 +94,7 @@ class SearchRulesModel(BaseModel):
             work_modes=sorted(rules.work_modes),
             seniority=list(rules.seniority),
             years_experience=rules.years_experience,
+            areas=list(rules.areas),
         )
 
     def to_domain(self) -> SearchRules:
@@ -108,6 +112,7 @@ class SearchRulesModel(BaseModel):
             work_modes=frozenset(self.work_modes),
             seniority=tuple(self.seniority),
             years_experience=self.years_experience,
+            areas=tuple(self.areas),
         )
 
 
@@ -118,6 +123,7 @@ class RuleSetOut(BaseModel):
     rules: SearchRulesModel
     based_on: dict[str, Any]
     approved_at: datetime | None
+    approved_by: str | None = None  # "person", "auto" (set up when setup finished) or none
 
 
 class RulesStateOut(BaseModel):
@@ -150,7 +156,9 @@ def create_search_rules_router(deps: SearchRulesApiDeps) -> APIRouter:
     router = APIRouter(prefix="/search/rules", tags=["search"])
 
     def service(session: AsyncSession) -> RulesService:
-        return RulesService(RuleSetsRepo(session), deps.source(session), deps.synonyms)
+        return RulesService(
+            RuleSetsRepo(session), deps.source(session), deps.synonyms, deps.work_areas
+        )
 
     async def render(session: AsyncSession, view: RuleSetView) -> RuleSetOut:
         row = await RuleSetsRepo(session).get(view.id)
@@ -162,6 +170,7 @@ def create_search_rules_router(deps: SearchRulesApiDeps) -> APIRouter:
             rules=SearchRulesModel.from_domain(view.rules),
             based_on=row.based_on,
             approved_at=view.approved_at,
+            approved_by=view.approved_by,
         )
 
     @router.get("")
@@ -174,6 +183,27 @@ def create_search_rules_router(deps: SearchRulesApiDeps) -> APIRouter:
                 proposal=await render(session, proposal) if proposal else None,
                 stale=await svc.is_stale(),
             )
+
+    @router.get("/suggested")
+    async def read_suggested() -> SearchRulesModel:
+        """What the profile and preferences suggest now; writes nothing (for "Start over")."""
+        async with deps.sessions() as session:
+            try:
+                rules = await service(session).suggest()
+            except RulesUnavailableError as error:
+                raise _unavailable(error) from error
+            return SearchRulesModel.from_domain(rules)
+
+    @router.put("/approved")
+    async def save_approved(body: SearchRulesModel) -> RuleSetOut:
+        """Save the person's edited rules as the rules searches use, in one step."""
+        async with deps.sessions() as session:
+            try:
+                view = await service(session).save_approved(body.to_domain())
+            except RulesInvalidError as invalid:
+                raise _invalid(invalid) from invalid
+            await session.commit()
+            return await render(session, view)
 
     @router.post("/proposal", status_code=201)
     async def make_proposal() -> RuleSetOut:

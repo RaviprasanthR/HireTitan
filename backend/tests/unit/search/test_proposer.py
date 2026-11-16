@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from decimal import Decimal
+from pathlib import Path
 
+from hiretitan.search.application.tables_seed import load_work_areas
 from hiretitan.search.domain.proposer import PlaceInput, ProposalInput, propose_rules
 from hiretitan.search.domain.rules import (
     STACK_KEYWORDS_MAX,
@@ -105,3 +107,58 @@ def test_no_target_roles_gives_no_title_words() -> None:
         seniority=rules.seniority,
         years_experience=rules.years_experience,
     )
+
+
+# --- 002i: the person's area of work and the words to avoid for other areas ------------------
+
+AREAS_TABLE = load_work_areas(Path(__file__).resolve().parents[3] / "seed" / "work_areas.yaml")
+
+
+def test_FR030_proposer_guesses_areas() -> None:
+    rules = propose_rules(_input(), TABLE, AREAS_TABLE)
+    assert rules.areas == ("back_end",)
+    rules.validate()
+
+
+def test_FR030_recent_titles_help_the_guess() -> None:
+    source = _input(
+        target_roles=("Software Engineer",),
+        key_skills=(),
+        profile_skills=(),
+        recent_titles=("Frontend Developer",),
+    )
+    assert propose_rules(source, TABLE, AREAS_TABLE).areas == ("front_end",)
+
+
+def test_FR031_avoid_words_for_other_areas() -> None:
+    rules = propose_rules(_input(), TABLE, AREAS_TABLE)
+    avoid = {i.text: i.origin for i in rules.title_avoid}
+    assert {"frontend", "front end", "android", "sdet"} <= set(avoid)
+    assert avoid["frontend"] == "area:front_end"  # recorded, though the page does not show it
+    assert avoid["android"] == "area:mobile"
+    assert "backend" not in avoid
+    rules.validate()  # the new origins are accepted
+
+
+def test_FR030_no_signal_gives_no_area_and_no_avoid_words() -> None:
+    source = _input(target_roles=("Chief Llama Wrangler",), key_skills=(), profile_skills=())
+    rules = propose_rules(source, TABLE, AREAS_TABLE)
+    assert rules.areas == ()
+    assert rules.title_avoid == ()
+
+
+def test_FR031_without_a_table_nothing_changes() -> None:
+    rules = propose_rules(_input(), TABLE)
+    assert rules.areas == ()
+    assert rules.title_avoid == ()
+
+
+def test_FR031_avoid_words_stay_within_the_limit() -> None:
+    from hiretitan.search.domain.rules import TITLE_AVOID_MAX
+
+    # a QA person: every other area's words are proposed, and still fit
+    source = _input(target_roles=("QA Engineer",), key_skills=("Selenium",), profile_skills=())
+    rules = propose_rules(source, TABLE, AREAS_TABLE)
+    assert rules.areas == ("qa",)
+    assert 0 < len(rules.title_avoid) <= TITLE_AVOID_MAX
+    rules.validate()
