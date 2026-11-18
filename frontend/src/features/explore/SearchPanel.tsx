@@ -3,6 +3,8 @@ import { Link } from 'react-router'
 import { CircularProgress } from '@/components/CircularProgress'
 import { Button } from '@/components/ui/button'
 import { nextPhrase } from './phrases'
+import { ChartRow } from '@/components/FlowChart'
+import { OutcomeDonut, SearchFlow } from './SearchFlow'
 import { type RunSummary, useLatestRun, useStartSearch, useStopSearch } from './api'
 
 const ENDED: Record<string, string> = {
@@ -80,20 +82,39 @@ function Progress({
   )
 }
 
+/** The last search at the top of Explore: the same flow and bar as its summary page, with links
+ * to the full summary and the history. A search that ended before it had companies to read only
+ * says how many new jobs it found. */
 function Ended({ run }: { run: RunSummary }) {
+  const leftOutByAi = Math.max(0, run.judged_by_ai - run.kept)
   return (
-    <div className="space-y-1">
+    <div className="space-y-3">
       {run.stop_message && <p className="text-sm">{run.stop_message}</p>}
-      <p className="text-sm text-muted-small">{counts(run, '')}</p>
+      {run.companies_total > 0 ? (
+        <ChartRow>
+          <SearchFlow
+            counts={{
+              companiesRead: run.companies_read,
+              companiesTotal: run.companies_total,
+              toCheck: 0, // the latest-search answer has no per-company results; the summary does
+              jobsFound: run.jobs_found,
+              byRules: run.skipped_by_rules,
+              judgedByAi: run.judged_by_ai,
+              byAi: leftOutByAi,
+              added: run.added,
+              merged: run.merged,
+            }}
+          />
+          <OutcomeDonut
+            added={run.added}
+            merged={run.merged}
+            leftOut={run.skipped_by_rules + leftOutByAi}
+          />
+        </ChartRow>
+      ) : (
+        <p className="text-sm text-muted-small">{counts(run, '')}</p>
+      )}
       {run.ai_note && <p className="text-sm text-warning">{run.ai_note}</p>}
-      <p className="flex gap-4 text-sm">
-        <Link to={`/search/runs/${run.id}`} className="text-link underline">
-          See the summary
-        </Link>
-        <Link to="/search/history" className="text-link underline">
-          Search history
-        </Link>
-      </p>
     </div>
   )
 }
@@ -136,20 +157,32 @@ export function SearchPanel() {
 
   return (
     <section aria-label="Search" className="ht-search-panel space-y-3">
-      <p role="status" aria-live="polite" className="font-medium empty:hidden">
-        {message}
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p role="status" aria-live="polite" className="font-medium empty:hidden">
+          {message}
+        </p>
+        {!searching && (
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            {run && (
+              <>
+                <Button asChild variant="ghost" size="sm">
+                  <Link to={`/search/runs/${run.id}`}>See the summary</Link>
+                </Button>
+                <Button asChild variant="ghost" size="sm">
+                  <Link to="/search/history">Search history</Link>
+                </Button>
+              </>
+            )}
+            <Button type="button" variant="success" disabled={start.isPending} onClick={begin}>
+              {resumable ? 'Continue searching' : 'Search now'}
+            </Button>
+          </div>
+        )}
+      </div>
       {searching ? (
         <Progress run={active ? run : null} stopping={stopping} stop={stop} />
       ) : (
         run && <Ended run={run} />
-      )}
-      {!searching && (
-        <div className="flex flex-wrap items-center gap-4">
-          <Button type="button" variant="success" disabled={start.isPending} onClick={begin}>
-            {resumable ? 'Continue searching' : 'Search now'}
-          </Button>
-        </div>
       )}
       {start.isError && (
         <p role="alert" className="text-sm text-danger">

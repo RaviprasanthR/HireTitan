@@ -1,4 +1,5 @@
 import { Link } from 'react-router'
+import { BackButton } from '@/components/BackButton'
 import { Button } from '@/components/ui/button'
 import { OUTCOME_LABELS, formatDate, useRuns } from './api'
 
@@ -43,6 +44,7 @@ export function SearchHistoryPage() {
 
   return (
     <section className="space-y-4">
+      <BackButton to="/explore" />
       <h1 className="text-2xl font-semibold">Search history</h1>
       {body}
     </section>

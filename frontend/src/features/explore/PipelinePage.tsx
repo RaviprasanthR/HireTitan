@@ -1,4 +1,5 @@
 import { Fragment, useState } from 'react'
+import { PipelineChart } from './PipelineChart'
 import { Link } from 'react-router'
 import {
   ArrowUpRight,
@@ -271,6 +272,7 @@ export function PipelinePage() {
       <ReviewNotice />
       <LeaveGuard when={registry.any} />
       <HomeTabs />
+      <PipelineChart />
       {body}
     </section>
   )

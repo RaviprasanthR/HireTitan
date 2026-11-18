@@ -78,5 +78,6 @@ describe('SearchHistoryPage', () => {
       </QueryClientProvider>,
     )
     expect(await screen.findByText(/No searches yet/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Back' })).toBeInTheDocument()
   })
 })

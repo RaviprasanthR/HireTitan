@@ -87,10 +87,7 @@ test('SC002_job_search_journey', async ({ page, request }) => {
   // 4a. A row opens in place (002i US5): the posting's own text, read from its link (the listing
   // had none), and the title links to the posting in a new tab.
   const table = page.getByRole('table', { name: 'Jobs' })
-  const withReadText = table
-    .getByRole('row')
-    .filter({ hasText: 'Senior Backend Engineer' })
-    .first()
+  const withReadText = table.getByRole('row').filter({ hasText: 'Senior Backend Engineer' }).first()
   await withReadText
     .getByRole('button', { name: /show details of senior backend engineer/i })
     .click()
@@ -106,6 +103,8 @@ test('SC002_job_search_journey', async ({ page, request }) => {
 
   // 4b. The Java posting is left out by the rules, with its reason on the summary (002i US6).
   await page.getByRole('link', { name: 'See the summary' }).click()
+  await page.getByRole('button', { name: 'Show details', exact: true }).click() // the summary opens on a chart
+  await page.getByText(/^Jobs left out/).click() // folded on the summary (2026-11-18)
   await expect(page.getByText('needs Java, which is not in your skills')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Restore' }).first()).toBeVisible()
   await page.getByRole('button', { name: 'Restore' }).first().click()
@@ -206,10 +205,16 @@ test('SC002_job_search_journey', async ({ page, request }) => {
   const stored = await (await request.get('/api/v1/resumes')).json()
   const fileName: string = stored[0].original_name
   await page.goto('/explore')
+  // The row has only the two one-click buttons; the resume choice is in the opened row (002k).
+  await expect(page.getByRole('combobox', { name: /^Resume used/ })).toHaveCount(0)
+  await page
+    .getByRole('button', { name: /^Show details of / })
+    .first()
+    .click()
   const resumeChoice = page.getByRole('combobox', { name: /^Resume used/ }).first()
   await expect(resumeChoice).toBeVisible()
   await resumeChoice.selectOption(stored[0].id)
-  await page.getByRole('button', { name: 'I applied' }).first().click()
+  await page.locator('section.ht-section-record').getByRole('button', { name: 'I applied' }).click()
   await expect.poll(async () => (await exploreJobs(request)).length).toBe(1)
   await page.getByRole('link', { name: 'In pipeline' }).click()
   const withResume = page.getByRole('row').filter({ hasText: fileName })
@@ -240,6 +245,26 @@ test('SC002_job_search_journey', async ({ page, request }) => {
   await expect(noteCard.getByText('(removed)')).toBeHidden()
   await page.keyboard.press('Escape')
   await expect(page.getByRole('row').filter({ hasText: '(removed)' })).toHaveCount(0)
+
+  // 7d. Outreach drafts (feature 002k): a connection request for someone typed in, at most 200
+  // characters, to copy. Nothing is sent.
+  await page.goto('/explore')
+  await page
+    .getByRole('button', { name: /^Show details of / })
+    .first()
+    .click()
+  await page.getByRole('button', { name: 'Connection request' }).click()
+  await page.getByLabel('Name', { exact: true }).fill('Asha Rao')
+  await page.getByLabel('Role', { exact: true }).fill('Talent Partner')
+  await page.getByRole('button', { name: 'Write', exact: true }).click()
+  const draftBox = page.getByRole('textbox', { name: 'Draft for Asha Rao' })
+  await expect(draftBox).toBeVisible()
+  await expect(draftBox).toHaveValue(/^Hi Asha,/)
+  expect((await draftBox.inputValue()).length).toBeLessThanOrEqual(200)
+  await expect(page.getByText(/^\d+ \/ 200$/)).toBeVisible()
+  await expect(
+    page.getByText('HireTitan never sends this. Copy it and send it yourself.'),
+  ).toBeVisible()
 
   // 8. No page talks about AI cost or a budget (SC-005). "$" is not checked: pay can use it.
   const cost = /AI cost|cost so far|budget|\bspend\b|\bspent\b/i

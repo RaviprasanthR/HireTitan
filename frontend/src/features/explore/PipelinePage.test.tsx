@@ -36,7 +36,9 @@ function inquired(id: string, title: string, day: string) {
   }
 }
 
-function renderPage(initial?: unknown[]) {
+const SUMMARY = { total: 9, inquired: 3, applied: 2, scheduled: 2, cleared: 1, failed: 1 }
+
+function renderPage(initial?: unknown[], summary: unknown = SUMMARY) {
   let rows = (initial as ReturnType<typeof applied>[] | undefined) ?? [
     applied('a', 'Newest', '2026-11-05'),
     inquired('b', 'Older', '2026-10-01'),
@@ -51,6 +53,7 @@ function renderPage(initial?: unknown[]) {
       }
     }
     if (call.path.startsWith('/jobs?')) return { items: rows, next_cursor: null }
+    if (call.path === '/pipeline/summary') return summary
     return undefined
   })
   render(
@@ -69,6 +72,31 @@ function renderPage(initial?: unknown[]) {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('PipelinePage', () => {
+  it('shows the pipeline by status as a flow chart and a donut', async () => {
+    renderPage()
+
+    const flow = await screen.findByRole('list', { name: 'Your pipeline' })
+    const steps = within(flow).getAllByRole('listitem')
+    expect(steps.map((step) => step.textContent)).toEqual([
+      expect.stringMatching(/^9In pipeline/),
+      expect.stringMatching(/^3Inquired/),
+      expect.stringMatching(/^2Applied/),
+      expect.stringMatching(/^2Interview scheduled/),
+      expect.stringMatching(/^1Round cleared1 failed/),
+    ])
+    const donut = screen.getByRole('img', {
+      name: '3 inquired, 2 applied, 2 interview scheduled, 1 round cleared, 1 failed',
+    })
+    expect(donut.querySelectorAll('[data-part]')).toHaveLength(5)
+    expect(screen.getByTestId('donut-centre')).toHaveTextContent('9jobs in pipeline')
+  })
+
+  it('shows no chart while the pipeline is empty', async () => {
+    renderPage([], { total: 0, inquired: 0, applied: 0, scheduled: 0, cleared: 0, failed: 0 })
+    expect(await screen.findByText(/Nothing in your pipeline yet/)).toBeInTheDocument()
+    expect(screen.queryByRole('list', { name: 'Your pipeline' })).not.toBeInTheDocument()
+  })
+
   it('US1 AS2 pipeline lists applied and inquired', async () => {
     const calls = renderPage()
 
