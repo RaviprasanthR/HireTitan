@@ -24,6 +24,9 @@ from fastapi.responses import FileResponse, Response
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.types import ASGIApp, Lifespan, Message, Receive, Scope, Send
 
+from hiretitan.drafts.api.drafts import DraftsApiDeps, create_drafts_router
+from hiretitan.drafts.api.resumes import create_resumes_router as create_tailored_router
+from hiretitan.drafts_wiring import SqlContacts, SqlJobs, SqlProfileFacts, clear_drafts_for_job
 from hiretitan.platform.clock import SystemClock
 from hiretitan.platform.config.settings import Settings, get_settings
 from hiretitan.platform.db import create_engine, session_factory
@@ -255,6 +258,27 @@ def build_app(settings: Settings | None = None) -> FastAPI:
                 queue=deps.queue,
                 clock=clock,
                 resume_lookup=SqlResumeLookup,
+                job_cleanups=(clear_drafts_for_job,),
+            )
+        ),
+        create_drafts_router(
+            DraftsApiDeps(
+                sessions=deps.sessions,
+                queue=deps.queue,
+                jobs=SqlJobs(deps.sessions),
+                profile=SqlProfileFacts(deps.sessions),
+                contacts=SqlContacts(deps.sessions),
+                provider=provider,
+            )
+        ),
+        create_tailored_router(
+            DraftsApiDeps(
+                sessions=deps.sessions,
+                queue=deps.queue,
+                jobs=SqlJobs(deps.sessions),
+                profile=SqlProfileFacts(deps.sessions),
+                contacts=SqlContacts(deps.sessions),
+                provider=provider,
             )
         ),
         create_pipeline_router(PipelineApiDeps(sessions=deps.sessions)),

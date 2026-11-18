@@ -5,6 +5,7 @@ import { ExplorePage } from '@/features/explore/ExplorePage'
 import { PipelinePage } from '@/features/explore/PipelinePage'
 import { RunSummaryPage } from '@/features/explore/RunSummaryPage'
 import { SearchHistoryPage } from '@/features/explore/SearchHistoryPage'
+import { TailoredResumePage } from '@/features/drafts/TailoredResumePage'
 import { JobDetailPage } from '@/features/jobs/JobDetailPage'
 import { PreferencesPage } from '@/features/preferences/PreferencesPage'
 import { ReviewPage } from '@/features/review/ReviewPage'
@@ -36,6 +37,7 @@ export {
   CompaniesPage,
   ExplorePage,
   JobDetailPage,
+  TailoredResumePage,
   PipelinePage,
   RunSummaryPage,
   SearchHistoryPage,

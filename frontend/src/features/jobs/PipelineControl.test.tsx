@@ -35,6 +35,7 @@ function renderControl(
     ownRemoved?: boolean
     lastFails?: boolean
     markFails?: boolean
+    compact?: boolean
   } = {},
 ) {
   const {
@@ -45,6 +46,7 @@ function renderControl(
     ownRemoved = false,
     lastFails = false,
     markFails = false,
+    compact = false,
   } = opts
   const calls = stubApi((call) => {
     if (call.path === '/resumes') return files
@@ -57,7 +59,13 @@ function renderControl(
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   render(
     <QueryClientProvider client={client}>
-      <PipelineControl id="j1" state={state} ownResumeId={ownResumeId} ownRemoved={ownRemoved} />
+      <PipelineControl
+        id="j1"
+        state={state}
+        ownResumeId={ownResumeId}
+        ownRemoved={ownRemoved}
+        compact={compact}
+      />
     </QueryClientProvider>,
   )
   return Object.assign(calls, { client })
@@ -67,6 +75,53 @@ const marks = (calls: { method: string; path: string; body?: unknown }[]) =>
   calls.filter((c) => c.method === 'POST')
 
 afterEach(() => vi.unstubAllGlobals())
+
+describe('PipelineControl compact (feature 002k)', () => {
+  it('FR001 compact shows only I applied and I inquired', async () => {
+    const calls = renderControl({ last: 'f2', compact: true })
+    await waitFor(() => expect(calls.some((c) => c.path === '/pipeline/resumes')).toBe(true))
+
+    expect(screen.getByRole('button', { name: 'I applied' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'I inquired' })).toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: 'Resume used' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /date/i })).not.toBeInTheDocument()
+  })
+
+  it('FR003 compact one click records today and the starting resume', async () => {
+    const user = userEvent.setup()
+    const calls = renderControl({ last: 'f2', compact: true })
+    await waitFor(() => expect(calls.some((c) => c.path === '/pipeline/resumes')).toBe(true))
+    await waitFor(() => expect(calls.some((c) => c.path === '/resumes')).toBe(true))
+    await screen.findByRole('button', { name: 'I applied' })
+    // let the two lists settle so the starting resume is known
+    await waitFor(() => expect(calls.filter((c) => c.path === '/resumes').length).toBe(1))
+    await new Promise((resolve) => setTimeout(resolve, 20))
+
+    await user.click(screen.getByRole('button', { name: 'I applied' }))
+
+    await waitFor(() => expect(marks(calls)).toHaveLength(1))
+    expect(marks(calls)[0]).toMatchObject({
+      path: '/jobs/j1/applied',
+      body: { resume_file_id: 'f2' },
+    })
+  })
+
+  it('FR002 full form says Pick a date', async () => {
+    renderControl()
+    expect(await screen.findByRole('button', { name: 'Pick a date' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Other date' })).not.toBeInTheDocument()
+  })
+
+  it('a cleared date cannot be marked', async () => {
+    const user = userEvent.setup()
+    renderControl()
+    await user.click(await screen.findByRole('button', { name: 'Pick a date' }))
+    await user.clear(screen.getByLabelText('Date'))
+
+    expect(screen.getByRole('button', { name: 'I applied' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'I inquired' })).toBeDisabled()
+  })
+})
 
 describe('PipelineControl resume choice', () => {
   it('US1 AS4 starts on the last choice and sends it with the mark', async () => {
@@ -119,7 +174,7 @@ describe('PipelineControl resume choice', () => {
     const calls = renderControl({ last: 'f2' })
     const select = await screen.findByRole('combobox', { name: 'Resume used' })
     await user.selectOptions(select, 'f1')
-    await user.click(screen.getByRole('button', { name: 'Other date' }))
+    await user.click(screen.getByRole('button', { name: 'Pick a date' }))
     const day = new Date()
     day.setDate(day.getDate() - 2)
     const iso = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`
@@ -197,7 +252,9 @@ describe('PipelineControl resume choice', () => {
 
     // the file is removed on the Profile page; the shared list refreshes without it
     act(() => calls.client.setQueryData(['resumes'], [NEWER, LETTER]))
-    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Resume used' })).toHaveValue(''))
+    await waitFor(() =>
+      expect(screen.getByRole('combobox', { name: 'Resume used' })).toHaveValue(''),
+    )
     await user.click(screen.getByRole('button', { name: 'I applied' }))
 
     await waitFor(() => expect(marks(calls)).toHaveLength(1))

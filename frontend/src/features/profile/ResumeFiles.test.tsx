@@ -107,7 +107,10 @@ describe('ResumeFiles', () => {
   it('shows the reason when the file cannot be deleted right now', async () => {
     remove = () =>
       new Response(
-        JSON.stringify({ title: 'Conflict', detail: 'Your resume is being read right now. Try again in a moment.' }),
+        JSON.stringify({
+          title: 'Conflict',
+          detail: 'Your resume is being read right now. Try again in a moment.',
+        }),
         { status: 409, headers: { 'Content-Type': 'application/problem+json' } },
       )
     renderList()
@@ -228,7 +231,9 @@ describe('ResumeFiles removal and the jobs that use a file (feature 002f)', () =
     await confirmRemoval(dialog)
 
     await waitFor(() =>
-      expect(log.filter((c) => c.url === '/api/v1/pipeline/resumes').length).toBeGreaterThan(before),
+      expect(log.filter((c) => c.url === '/api/v1/pipeline/resumes').length).toBeGreaterThan(
+        before,
+      ),
     )
   })
 
@@ -245,7 +250,9 @@ describe('ResumeFiles removal and the jobs that use a file (feature 002f)', () =
 
     await userEvent.click(screen.getByRole('button', { name: 'Delete cv-old.pdf' }))
 
-    const again = await screen.findByRole('checkbox', { name: 'Also clear the name from these jobs' })
+    const again = await screen.findByRole('checkbox', {
+      name: 'Also clear the name from these jobs',
+    })
     expect(again).not.toBeChecked()
   })
 })
@@ -311,7 +318,9 @@ describe('ResumeFiles removal edge cases (story review)', () => {
     usageMode = 'error'
     const dialog = await open()
 
-    expect(await within(dialog).findByText(/Could not check which jobs use this file/)).toBeInTheDocument()
+    expect(
+      await within(dialog).findByText(/Could not check which jobs use this file/),
+    ).toBeInTheDocument()
     expect(within(dialog).getByRole('button', { name: 'Delete file' })).toBeDisabled()
 
     usageMode = 'ok'
@@ -350,7 +359,9 @@ describe('ResumeFiles removal edge cases (story review)', () => {
     await within(dialog).findByRole('checkbox', { name: 'Also clear the name from these jobs' })
 
     await confirmRemoval(dialog)
-    await waitFor(() => expect(within(dialog).getByRole('button', { name: 'Cancel' })).toBeDisabled())
+    await waitFor(() =>
+      expect(within(dialog).getByRole('button', { name: 'Cancel' })).toBeDisabled(),
+    )
     await userEvent.keyboard('{Escape}')
 
     expect(screen.getByRole('alertdialog')).toBeInTheDocument() // Escape did nothing

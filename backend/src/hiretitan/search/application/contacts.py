@@ -18,7 +18,12 @@ from hiretitan.search.domain.contacts import (
     FieldIssue,
     check_company_note,
     check_contact,
+    link_key,
     name_key,
+)
+from hiretitan.search.domain.linkedin_connections import (
+    company_match_key,
+    parse_connections,
 )
 
 CONTACT_FIELDS = ("name", "role", "linkedin_url", "email", "phone", "confidence", "note")
@@ -235,3 +240,69 @@ async def set_note(
     if saved is None:
         return NoteView(None, None, None)
     return NoteView(saved.body, saved.source, saved.updated_at)
+
+
+class CompanyLister(Protocol):
+    async def list_all(self) -> Sequence[Any]: ...
+
+
+@dataclass(frozen=True, slots=True)
+class LinkedinImportResult:
+    connections: int  # rows in the file that name a person and an employer
+    added: int
+    already_there: int
+    skipped_companies: int  # how many different employers match no company on the list
+    companies_with_new_contacts: int
+    invalid_rows: int  # people at a listed company whose details could not be kept
+    truncated: bool  # the file had more people than are read in one go
+
+
+async def import_linkedin_connections(
+    companies: CompanyLister, contacts: ContactsStore, csv_text: str
+) -> LinkedinImportResult:
+    """Attach each connection to the company on the list that has the same name.
+
+    Employers that match no company (or match two) are counted and left out: the list is not
+    grown from a file of a thousand people. Running it again adds nothing new.
+    """
+    by_key: dict[str, list[UUID]] = {}
+    for company in await companies.list_all():
+        by_key.setdefault(company_match_key(company.name), []).append(company.id)
+    parsed = parse_connections(csv_text)
+    rows = parsed.rows
+    added = already = invalid = 0
+    unmatched: set[str] = set()
+    touched: set[UUID] = set()
+    # existing people per company, read once per company rather than once per row
+    known: dict[UUID, tuple[set[str], set[str]]] = {}
+    for row in rows:
+        key = company_match_key(row.company)
+        ids = by_key.get(key, []) if key else []
+        if len(ids) != 1:
+            unmatched.add(key or row.company.lower())
+            continue
+        company_id = ids[0]
+        fields, _ = check_contact(name=row.name, role=row.position, linkedin_url=row.url)
+        if fields is None:
+            invalid += 1
+            continue
+        if company_id not in known:
+            stored = await contacts.list_for_company(company_id)
+            known[company_id] = (
+                {c.name_key for c in stored},
+                {c.link_key for c in stored if c.link_key},
+            )
+        names, links = known[company_id]
+        person, link = name_key(fields.name), link_key(fields.linkedin_url)
+        if person in names or (link is not None and link in links):
+            already += 1
+            continue
+        await contacts.add(company_id, fields, source="import")
+        names.add(person)
+        if link is not None:
+            links.add(link)
+        added += 1
+        touched.add(company_id)
+    return LinkedinImportResult(
+        len(rows), added, already, len(unmatched), len(touched), invalid, parsed.truncated
+    )

@@ -198,6 +198,26 @@ async def test_US1_AS7_summary_says_ai_step_skipped_and_why(env: Env) -> None:
     assert detail["ai_note"] is None
 
 
+async def test_US1_AS7_a_stop_before_the_ai_step_is_not_blamed_on_the_ai(env: Env) -> None:
+    await approve_rules(env)
+    body = (await start(env, "rules_and_ai")).json()
+    async with env.sessions() as session:
+        await session.execute(
+            update(SearchRunRow)
+            .where(SearchRunRow.id == UUID(body["search_run_id"]))
+            .values(not_checked_by_ai=1, judged_by_ai=0)
+        )
+        await SearchRunsRepo(session).finish(
+            UUID(body["search_run_id"]), outcome="stopped_by_user", finished_at=NOW
+        )
+        await session.commit()
+
+    note = (await env.client.get(f"{RUNS}/{body['search_run_id']}")).json()["ai_note"]
+
+    assert "not available" not in note.lower()
+    assert "stopped" in note.lower()
+
+
 async def test_FR042_history_lists_runs_newest_first(env: Env) -> None:
     await approve_rules(env)
     ids = []

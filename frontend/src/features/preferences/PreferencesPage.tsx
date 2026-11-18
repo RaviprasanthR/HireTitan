@@ -204,11 +204,16 @@ function PreferencesForm({
   return (
     <form onSubmit={form.handleSubmit(save)} className="max-w-6xl space-y-5" noValidate>
       {!embedded && (
-        <div>
-          <h1 className="text-2xl font-semibold">Preferences</h1>
-          <p className="text-sm text-muted-small" aria-live="polite">
-            {savedAt ? `Last saved ${new Date(savedAt).toLocaleString()}` : 'Not saved yet'}
-          </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold">Preferences</h1>
+            <p className="text-sm text-muted-small" aria-live="polite">
+              {savedAt ? `Last saved ${new Date(savedAt).toLocaleString()}` : 'Not saved yet'}
+            </p>
+          </div>
+          <Button type="submit" variant="success" disabled={busy}>
+            Save preferences
+          </Button>
         </div>
       )}
 
@@ -464,9 +469,11 @@ function PreferencesForm({
           {formError}
         </p>
       )}
-      <Button type="submit" variant="success" disabled={busy}>
-        {embedded ? 'Finish setup' : 'Save preferences'}
-      </Button>
+      {embedded && (
+        <Button type="submit" variant="success" disabled={busy}>
+          Finish setup
+        </Button>
+      )}
     </form>
   )
 }

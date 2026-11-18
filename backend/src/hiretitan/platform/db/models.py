@@ -17,6 +17,7 @@ MODEL_MODULES: tuple[str, ...] = (
     "hiretitan.profile.infra.models",
     "hiretitan.preferences.infra.models",
     "hiretitan.search.infra.models",
+    "hiretitan.drafts.infra.models",
 )
 
 

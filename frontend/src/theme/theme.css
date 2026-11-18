@@ -368,6 +368,27 @@ button[data-variant="secondary"]:hover:not(:disabled) {
 .ht-company-source { --accent: #a371f7; }
 .ht-company-contacts { --accent: #f0a35e; }
 .ht-company-note { --accent: #d29922; }
+/* Buttons: the base .bg-background rule above is unlayered and would beat Tailwind's hover
+   utilities, so hover is spelled out here for outline and ghost buttons. */
+[data-slot="button"][data-variant="outline"]:not(:disabled):hover,
+[data-slot="button"][data-variant="ghost"]:not(:disabled):hover,
+[data-slot="button"][data-variant="outline"][aria-pressed="false"]:not(:disabled):hover {
+  color: var(--ht-accent);
+  background: rgb(240 163 94 / 0.14);
+  border-color: rgb(240 163 94 / 0.55);
+}
+[data-slot="button"] {
+  cursor: pointer;
+}
+[data-slot="button"]:disabled {
+  cursor: not-allowed;
+}
+.ht-section-record { --accent: #3fb950; }
+.ht-section-act { --accent: #f0a35e; }
+.ht-section-people { --accent: #4cc9f0; }
+.ht-section-description { --accent: #4cc9f0; }
+.ht-section-sources { --accent: #56d4dd; }
+.ht-section-history { --accent: #a371f7; }
 .ht-detail-heading {
   display: flex;
   align-items: center;

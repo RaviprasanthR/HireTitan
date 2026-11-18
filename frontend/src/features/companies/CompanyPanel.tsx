@@ -323,7 +323,10 @@ export function CompanyPanel({
         {items.length === 0 ? (
           <p className="text-sm">No contacts yet.</p>
         ) : (
-          <ul aria-label={`Contacts at ${companyName}`} className="space-y-2">
+          <ul
+            aria-label={`Contacts at ${companyName}`}
+            className="max-h-72 space-y-2 overflow-y-auto pr-1"
+          >
             {items.map((contact) => (
               <ContactItem key={contact.id} contact={contact} companyId={companyId} />
             ))}

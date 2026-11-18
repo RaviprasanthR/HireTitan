@@ -58,6 +58,8 @@ class WorkflowDef:
     initial_input: Callable[[Run], dict[str, Any]]
     # LangGraph stops a run after this many steps; a long loop (a search) needs more than 25
     recursion_limit: int | None = None
+    # called once when the run is finally marked failed, so the feature can mark its own row
+    on_failed: Callable[[Run], Awaitable[None]] | None = None
 
 
 class RunQueue(Protocol):
@@ -121,9 +123,19 @@ class WorkflowRunner:
             if attempt >= max_attempts:
                 logger.exception("run failed", extra={"run_id": str(run_id)})
                 await self._move(run_id, RunStatus.failed, error=FAILURE_MESSAGE)
+                await self._after_failure(run)
                 return
             raise
         await self._finish(run_id, result)
+
+    async def _after_failure(self, run: Run) -> None:
+        hook = self._registry[run.workflow].on_failed
+        if hook is None:
+            return
+        try:
+            await hook(run)
+        except Exception:
+            logger.exception("on_failed hook failed", extra={"run_id": str(run.id)})
 
     async def _drive(self, run: Run, resume: Any) -> dict[str, Any]:
         definition = self._registry[run.workflow]

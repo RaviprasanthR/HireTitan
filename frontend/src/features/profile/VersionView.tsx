@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { BackButton } from '@/components/BackButton'
 import { Link, useParams } from 'react-router'
 import { apiFetch } from '@/api/client'
 import type { components } from '@/api/schema'
@@ -22,6 +23,7 @@ export function VersionView() {
 
   return (
     <article className="max-w-2xl space-y-6">
+      <BackButton fallback="/profile/versions" />
       <header className="space-y-1">
         <h1 className="text-2xl font-semibold">Version {v.number}</h1>
         <p className="text-sm text-muted-small">

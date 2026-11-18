@@ -10,8 +10,7 @@ type Props = {
   changedPaths?: string[]
 }
 
-const input =
-  'w-full rounded-md border border-muted-foreground bg-background px-3 py-2 text-sm'
+const input = 'w-full rounded-md border border-muted-foreground bg-background px-3 py-2 text-sm'
 
 function messageAt(errors: FieldErrors<FormValues>, path: string): string | undefined {
   let node: unknown = errors
@@ -136,7 +135,10 @@ export function ProfileFormFields({ form, compare, changedPaths = [] }: Props) {
   // `field` keeps the values the entry had when it was loaded, which is the label that changed
   // paths use; reading the live form values here made the badge vanish as the person typed.
   const entryChanged = (prefix: string, a: string, b: string): boolean => {
-    const label = [a, b].map((s) => s.trim()).filter(Boolean).join(' | ')
+    const label = [a, b]
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .join(' | ')
     return changedPaths.some((p) => p.startsWith(`${prefix}[${label}]`))
   }
 
@@ -144,28 +146,58 @@ export function ProfileFormFields({ form, compare, changedPaths = [] }: Props) {
     <div className="space-y-8">
       <fieldset className="space-y-3">
         <legend className="text-lg font-semibold">Contact</legend>
-        <Field label="Name" htmlFor="contact-name" error={messageAt(errors, 'contact.name')} note={noteFor('contact.name')}>
+        <Field
+          label="Name"
+          htmlFor="contact-name"
+          error={messageAt(errors, 'contact.name')}
+          note={noteFor('contact.name')}
+        >
           <input id="contact-name" className={input} {...register('contact.name')} />
         </Field>
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Email" htmlFor="contact-email" error={messageAt(errors, 'contact.email')} note={noteFor('contact.email')}>
+          <Field
+            label="Email"
+            htmlFor="contact-email"
+            error={messageAt(errors, 'contact.email')}
+            note={noteFor('contact.email')}
+          >
             <input id="contact-email" className={input} {...register('contact.email')} />
           </Field>
-          <Field label="Phone" htmlFor="contact-phone" error={messageAt(errors, 'contact.phone')} note={noteFor('contact.phone')}>
+          <Field
+            label="Phone"
+            htmlFor="contact-phone"
+            error={messageAt(errors, 'contact.phone')}
+            note={noteFor('contact.phone')}
+          >
             <input id="contact-phone" className={input} {...register('contact.phone')} />
           </Field>
         </div>
-        <Field label="Location" htmlFor="contact-location" error={messageAt(errors, 'contact.location')} note={noteFor('contact.location')}>
+        <Field
+          label="Location"
+          htmlFor="contact-location"
+          error={messageAt(errors, 'contact.location')}
+          note={noteFor('contact.location')}
+        >
           <input id="contact-location" className={input} {...register('contact.location')} />
         </Field>
       </fieldset>
 
       <fieldset className="space-y-3">
         <legend className="text-lg font-semibold">About you</legend>
-        <Field label="Headline" htmlFor="headline" error={messageAt(errors, 'headline')} note={noteFor('headline')}>
+        <Field
+          label="Headline"
+          htmlFor="headline"
+          error={messageAt(errors, 'headline')}
+          note={noteFor('headline')}
+        >
           <input id="headline" className={input} {...register('headline')} />
         </Field>
-        <Field label="Summary" htmlFor="summary" error={messageAt(errors, 'summary')} note={noteFor('summary')}>
+        <Field
+          label="Summary"
+          htmlFor="summary"
+          error={messageAt(errors, 'summary')}
+          note={noteFor('summary')}
+        >
           <textarea id="summary" rows={4} className={input} {...register('summary')} />
         </Field>
       </fieldset>
@@ -178,35 +210,101 @@ export function ProfileFormFields({ form, compare, changedPaths = [] }: Props) {
               <h3 className="font-medium">
                 Job {i + 1}
                 {entryChanged('experience', field.employer, field.title) && (
-                  <span className="ml-2 rounded bg-warning px-2 py-0.5 text-xs text-background">Changed</span>
+                  <span className="ml-2 rounded bg-warning px-2 py-0.5 text-xs text-background">
+                    Changed
+                  </span>
                 )}
               </h3>
-              <ListControls index={i} count={experience.fields.length} noun="job" onMove={experience.move} onRemove={() => experience.remove(i)} />
+              <ListControls
+                index={i}
+                count={experience.fields.length}
+                noun="job"
+                onMove={experience.move}
+                onRemove={() => experience.remove(i)}
+              />
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <Field label={`Employer ${i + 1}`} htmlFor={`exp-${i}-employer`} error={messageAt(errors, `experience.${i}.employer`)}>
-                <input id={`exp-${i}-employer`} className={input} {...register(`experience.${i}.employer`)} />
+              <Field
+                label={`Employer ${i + 1}`}
+                htmlFor={`exp-${i}-employer`}
+                error={messageAt(errors, `experience.${i}.employer`)}
+              >
+                <input
+                  id={`exp-${i}-employer`}
+                  className={input}
+                  {...register(`experience.${i}.employer`)}
+                />
               </Field>
-              <Field label={`Job title ${i + 1}`} htmlFor={`exp-${i}-title`} error={messageAt(errors, `experience.${i}.title`)}>
-                <input id={`exp-${i}-title`} className={input} {...register(`experience.${i}.title`)} />
+              <Field
+                label={`Job title ${i + 1}`}
+                htmlFor={`exp-${i}-title`}
+                error={messageAt(errors, `experience.${i}.title`)}
+              >
+                <input
+                  id={`exp-${i}-title`}
+                  className={input}
+                  {...register(`experience.${i}.title`)}
+                />
               </Field>
-              <Field label={`Start ${i + 1}`} htmlFor={`exp-${i}-start`} error={messageAt(errors, `experience.${i}.start`)}>
-                <input id={`exp-${i}-start`} placeholder="2021-03" className={input} {...register(`experience.${i}.start`)} />
+              <Field
+                label={`Start ${i + 1}`}
+                htmlFor={`exp-${i}-start`}
+                error={messageAt(errors, `experience.${i}.start`)}
+              >
+                <input
+                  id={`exp-${i}-start`}
+                  placeholder="2021-03"
+                  className={input}
+                  {...register(`experience.${i}.start`)}
+                />
               </Field>
-              <Field label={`End ${i + 1}`} htmlFor={`exp-${i}-end`} error={messageAt(errors, `experience.${i}.end`)}>
-                <input id={`exp-${i}-end`} placeholder="2023-06" className={input} {...register(`experience.${i}.end`)} />
+              <Field
+                label={`End ${i + 1}`}
+                htmlFor={`exp-${i}-end`}
+                error={messageAt(errors, `experience.${i}.end`)}
+              >
+                <input
+                  id={`exp-${i}-end`}
+                  placeholder="2023-06"
+                  className={input}
+                  {...register(`experience.${i}.end`)}
+                />
               </Field>
             </div>
             <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" {...register(`experience.${i}.current`)} />
-              I currently work here
+              <input type="checkbox" {...register(`experience.${i}.current`)} />I currently work
+              here
             </label>
-            <Field label={`Bullet points ${i + 1} (one per line)`} htmlFor={`exp-${i}-bullets`} error={messageAt(errors, `experience.${i}.bullets`)}>
-              <textarea id={`exp-${i}-bullets`} rows={4} className={input} {...register(`experience.${i}.bullets`)} />
+            <Field
+              label={`Bullet points ${i + 1} (one per line)`}
+              htmlFor={`exp-${i}-bullets`}
+              error={messageAt(errors, `experience.${i}.bullets`)}
+            >
+              <textarea
+                id={`exp-${i}-bullets`}
+                rows={4}
+                className={input}
+                {...register(`experience.${i}.bullets`)}
+              />
             </Field>
           </div>
         ))}
-        <Button type="button" variant="outline" className="w-full border-dashed" onClick={() => experience.append({ employer: '', title: '', location: '', start: '', end: '', current: false, bullets: '' })}>
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full border-dashed"
+          onClick={() =>
+            experience.append({
+              employer: '',
+              title: '',
+              location: '',
+              start: '',
+              end: '',
+              current: false,
+              bullets: '',
+            })
+          }
+        >
           Add a job
         </Button>
       </fieldset>
@@ -219,35 +317,96 @@ export function ProfileFormFields({ form, compare, changedPaths = [] }: Props) {
               <h3 className="font-medium">
                 Education {i + 1}
                 {entryChanged('education', field.institution, field.qualification) && (
-                  <span className="ml-2 rounded bg-warning px-2 py-0.5 text-xs text-background">Changed</span>
+                  <span className="ml-2 rounded bg-warning px-2 py-0.5 text-xs text-background">
+                    Changed
+                  </span>
                 )}
               </h3>
-              <ListControls index={i} count={education.fields.length} noun="education" onMove={education.move} onRemove={() => education.remove(i)} />
+              <ListControls
+                index={i}
+                count={education.fields.length}
+                noun="education"
+                onMove={education.move}
+                onRemove={() => education.remove(i)}
+              />
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <Field label={`Institution ${i + 1}`} htmlFor={`edu-${i}-institution`} error={messageAt(errors, `education.${i}.institution`)}>
-                <input id={`edu-${i}-institution`} className={input} {...register(`education.${i}.institution`)} />
+              <Field
+                label={`Institution ${i + 1}`}
+                htmlFor={`edu-${i}-institution`}
+                error={messageAt(errors, `education.${i}.institution`)}
+              >
+                <input
+                  id={`edu-${i}-institution`}
+                  className={input}
+                  {...register(`education.${i}.institution`)}
+                />
               </Field>
-              <Field label={`Qualification ${i + 1}`} htmlFor={`edu-${i}-qualification`} error={messageAt(errors, `education.${i}.qualification`)}>
-                <input id={`edu-${i}-qualification`} className={input} {...register(`education.${i}.qualification`)} />
+              <Field
+                label={`Qualification ${i + 1}`}
+                htmlFor={`edu-${i}-qualification`}
+                error={messageAt(errors, `education.${i}.qualification`)}
+              >
+                <input
+                  id={`edu-${i}-qualification`}
+                  className={input}
+                  {...register(`education.${i}.qualification`)}
+                />
               </Field>
-              <Field label={`Education start ${i + 1}`} htmlFor={`edu-${i}-start`} error={messageAt(errors, `education.${i}.start`)}>
-                <input id={`edu-${i}-start`} placeholder="2013" className={input} {...register(`education.${i}.start`)} />
+              <Field
+                label={`Education start ${i + 1}`}
+                htmlFor={`edu-${i}-start`}
+                error={messageAt(errors, `education.${i}.start`)}
+              >
+                <input
+                  id={`edu-${i}-start`}
+                  placeholder="2013"
+                  className={input}
+                  {...register(`education.${i}.start`)}
+                />
               </Field>
-              <Field label={`Education end ${i + 1}`} htmlFor={`edu-${i}-end`} error={messageAt(errors, `education.${i}.end`)}>
-                <input id={`edu-${i}-end`} placeholder="2017" className={input} {...register(`education.${i}.end`)} />
+              <Field
+                label={`Education end ${i + 1}`}
+                htmlFor={`edu-${i}-end`}
+                error={messageAt(errors, `education.${i}.end`)}
+              >
+                <input
+                  id={`edu-${i}-end`}
+                  placeholder="2017"
+                  className={input}
+                  {...register(`education.${i}.end`)}
+                />
               </Field>
             </div>
           </div>
         ))}
-        <Button type="button" variant="outline" className="w-full border-dashed" onClick={() => education.append({ institution: '', qualification: '', field: '', start: '', end: '', grade: '' })}>
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full border-dashed"
+          onClick={() =>
+            education.append({
+              institution: '',
+              qualification: '',
+              field: '',
+              start: '',
+              end: '',
+              grade: '',
+            })
+          }
+        >
           Add education
         </Button>
       </fieldset>
 
       <fieldset className="space-y-3">
         <legend className="text-lg font-semibold">Skills</legend>
-        <Field label="Skills (one per line)" htmlFor="skills" error={messageAt(errors, 'skills')} note={noteFor('skills')}>
+        <Field
+          label="Skills (one per line)"
+          htmlFor="skills"
+          error={messageAt(errors, 'skills')}
+          note={noteFor('skills')}
+        >
           <textarea id="skills" rows={6} className={input} {...register('skills')} />
         </Field>
       </fieldset>
@@ -258,17 +417,41 @@ export function ProfileFormFields({ form, compare, changedPaths = [] }: Props) {
           <div key={field.id} className="space-y-3 rounded-lg bg-surface p-4">
             <div className="flex items-center justify-between">
               <h3 className="font-medium">Project {i + 1}</h3>
-              <ListControls index={i} count={projects.fields.length} noun="project" onMove={projects.move} onRemove={() => projects.remove(i)} />
+              <ListControls
+                index={i}
+                count={projects.fields.length}
+                noun="project"
+                onMove={projects.move}
+                onRemove={() => projects.remove(i)}
+              />
             </div>
-            <Field label={`Project name ${i + 1}`} htmlFor={`proj-${i}-name`} error={messageAt(errors, `projects.${i}.name`)}>
+            <Field
+              label={`Project name ${i + 1}`}
+              htmlFor={`proj-${i}-name`}
+              error={messageAt(errors, `projects.${i}.name`)}
+            >
               <input id={`proj-${i}-name`} className={input} {...register(`projects.${i}.name`)} />
             </Field>
-            <Field label={`Project description ${i + 1}`} htmlFor={`proj-${i}-description`} error={messageAt(errors, `projects.${i}.description`)}>
-              <textarea id={`proj-${i}-description`} rows={3} className={input} {...register(`projects.${i}.description`)} />
+            <Field
+              label={`Project description ${i + 1}`}
+              htmlFor={`proj-${i}-description`}
+              error={messageAt(errors, `projects.${i}.description`)}
+            >
+              <textarea
+                id={`proj-${i}-description`}
+                rows={3}
+                className={input}
+                {...register(`projects.${i}.description`)}
+              />
             </Field>
           </div>
         ))}
-        <Button type="button" variant="outline" className="w-full border-dashed" onClick={() => projects.append({ name: '', description: '', technologies: '', link: '' })}>
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full border-dashed"
+          onClick={() => projects.append({ name: '', description: '', technologies: '', link: '' })}
+        >
           Add a project
         </Button>
       </fieldset>
@@ -279,14 +462,33 @@ export function ProfileFormFields({ form, compare, changedPaths = [] }: Props) {
           <div key={field.id} className="space-y-3 rounded-lg bg-surface p-4">
             <div className="flex items-center justify-between">
               <h3 className="font-medium">Certification {i + 1}</h3>
-              <ListControls index={i} count={certifications.fields.length} noun="certification" onMove={certifications.move} onRemove={() => certifications.remove(i)} />
+              <ListControls
+                index={i}
+                count={certifications.fields.length}
+                noun="certification"
+                onMove={certifications.move}
+                onRemove={() => certifications.remove(i)}
+              />
             </div>
-            <Field label={`Certification name ${i + 1}`} htmlFor={`cert-${i}-name`} error={messageAt(errors, `certifications.${i}.name`)}>
-              <input id={`cert-${i}-name`} className={input} {...register(`certifications.${i}.name`)} />
+            <Field
+              label={`Certification name ${i + 1}`}
+              htmlFor={`cert-${i}-name`}
+              error={messageAt(errors, `certifications.${i}.name`)}
+            >
+              <input
+                id={`cert-${i}-name`}
+                className={input}
+                {...register(`certifications.${i}.name`)}
+              />
             </Field>
           </div>
         ))}
-        <Button type="button" variant="outline" className="w-full border-dashed" onClick={() => certifications.append({ name: '', issuer: '', date: '' })}>
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full border-dashed"
+          onClick={() => certifications.append({ name: '', issuer: '', date: '' })}
+        >
           Add a certification
         </Button>
       </fieldset>

@@ -65,6 +65,15 @@ PLANTED_VIOLATIONS: dict[str, dict[str, str]] = {
         "profile/application/bad.py": "import hiretitan.search.infra\n",
     },
     "platform_imports_search": {"platform/bad.py": "import hiretitan.search\n"},
+    # feature 002k: the drafts module imports no other feature module, and its domain is pure
+    "drafts_imports_search": {"drafts/application/bad.py": "import hiretitan.search.application\n"},
+    "drafts_imports_profile": {"drafts/workflow/bad.py": "import hiretitan.profile.application\n"},
+    "drafts_domain_imports_framework": {"drafts/domain/bad.py": "import sqlalchemy\n"},
+    "drafts_lower_layer_imports_higher": {"drafts/domain/bad.py": "import hiretitan.drafts.api\n"},
+    "other_module_bypasses_drafts_application": {
+        "profile/application/bad.py": "import hiretitan.drafts.infra\n",
+    },
+    "platform_imports_drafts": {"platform/bad.py": "import hiretitan.drafts\n"},
 }
 
 
@@ -112,4 +121,24 @@ def test_FR022_workflows_prompts_and_llm_cannot_import_contacts(where: str, tmp_
     result = _lint_with_plants(plants, tmp_path)
 
     assert result.returncode != 0, f"{where} was not caught:\n{result.stdout}"
+    assert "BROKEN" in result.stdout
+
+
+def test_FR022_drafts_contracts_present() -> None:
+    config = CONFIG.read_text(encoding="utf-8")
+    assert "hiretitan.drafts.domain" in config  # pure-domain and layer containers
+    assert "contract:drafts-boundary" in config
+    for module in ("hiretitan.drafts.infra", "hiretitan.drafts.workflow", "hiretitan.drafts.api"):
+        assert config.count(module) >= 4, module  # forbidden for the four other modules
+
+
+def test_FR022_drafts_workflow_may_not_import_contacts(tmp_path: Path) -> None:
+    plants = {
+        CONTACTS_MODULE: "",
+        "drafts/workflow/bad.py": "import hiretitan.search.application.contacts\n",
+    }
+
+    result = _lint_with_plants(plants, tmp_path)
+
+    assert result.returncode != 0, result.stdout
     assert "BROKEN" in result.stdout

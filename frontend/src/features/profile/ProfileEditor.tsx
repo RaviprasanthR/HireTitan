@@ -38,7 +38,8 @@ function EditorForm({ initial, hasCurrent }: { initial: ApiContent; hasCurrent: 
       if (e instanceof ApiError && e.status === 422) {
         for (const err of e.fieldErrors) {
           if (err.field === 'profile') setFormError(err.message)
-          else form.setError(toFormPath(err.field) as never, { type: 'server', message: err.message })
+          else
+            form.setError(toFormPath(err.field) as never, { type: 'server', message: err.message })
         }
         if (!e.fieldErrors.length) setFormError(e.detail)
       } else {

@@ -18,6 +18,7 @@ import {
   retryRun,
   uploadResume,
 } from './api'
+import { TailoredResumesList } from '@/features/drafts/TailoredResumesList'
 import { ResumeFiles } from './ResumeFiles'
 
 const PAUSE_MESSAGES: Record<string, string> = {
@@ -230,6 +231,8 @@ export function ProfilePage({
 
       {!embedded && <ResumeFiles />}
 
+      {!embedded && <TailoredResumesList />}
+
       {error && (
         <p role="alert" className="rounded-md border border-danger p-3 text-danger">
           {error}
@@ -277,8 +280,8 @@ export function ProfilePage({
       {notResume && (
         <div role="status" className="space-y-3 rounded-lg border border-warning p-4">
           <p>
-            This doesn&apos;t look like a resume, so it was not used. Upload your resume as a PDF
-            or DOCX, or fill in your profile by hand.
+            This doesn&apos;t look like a resume, so it was not used. Upload your resume as a PDF or
+            DOCX, or fill in your profile by hand.
           </p>
           <div className="flex gap-3">
             {onTypeItIn ? (

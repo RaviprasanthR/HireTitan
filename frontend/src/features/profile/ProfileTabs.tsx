@@ -4,9 +4,10 @@ const TABS = [
   { to: '/profile', label: 'Profile' },
   { to: '/profile/preferences', label: 'Preferences' },
   { to: '/profile/search-rules', label: 'Search rules' },
+  { to: '/profile/connections', label: 'Connections' },
 ]
 
-/** Profile, Preferences and Search rules: the three things that describe you to a search. */
+/** Profile, Preferences, Search rules and Connections: what describes you to a search. */
 export function ProfileTabs() {
   return (
     <nav aria-label="Profile tabs" className="flex gap-2 border-b border-divider">
@@ -30,7 +31,7 @@ export function ProfileTabs() {
   )
 }
 
-/** Route layout: the tabs above whichever of the three pages is open. */
+/** Route layout: the tabs above whichever page is open. */
 export function ProfileTabsLayout() {
   return (
     <div className="space-y-6">

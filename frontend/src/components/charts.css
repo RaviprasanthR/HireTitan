@@ -1,0 +1,174 @@
+/* Motion for the flow chart and the donut (components/FlowChart.tsx, components/Donut.tsx).
+   Short, eased, and off for reduced motion. */
+
+/* ---- flow chart -------------------------------------------------------------------------- */
+
+@keyframes ht-flow-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes ht-flow-run {
+  to {
+    background-position: 24px 0;
+  }
+}
+
+@keyframes ht-flow-run-down {
+  to {
+    background-position: 0 24px;
+  }
+}
+
+.ht-flow-step {
+  animation: ht-flow-in 460ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  cursor: default;
+}
+
+.ht-flow-node {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 9999px;
+  background: var(--ht-surface);
+  color: var(--ht-muted);
+  box-shadow:
+    0 0 0 2px var(--ht-slate),
+    0 2px 8px rgb(0 0 0 / 0.3);
+  transition:
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 220ms ease-out,
+    color 220ms ease-out;
+}
+
+.ht-flow-node-last {
+  color: var(--ht-accent);
+  box-shadow:
+    0 0 0 2px var(--ht-accent),
+    0 2px 8px rgb(0 0 0 / 0.3);
+}
+
+.ht-flow-step:hover .ht-flow-node {
+  transform: translateY(-3px) scale(1.06);
+  color: var(--ht-accent);
+  box-shadow:
+    0 0 0 2px var(--ht-accent),
+    0 8px 18px rgb(0 0 0 / 0.4);
+}
+
+.ht-flow-icon {
+  transition: transform 220ms ease-out;
+}
+
+.ht-flow-step:hover .ht-flow-icon {
+  transform: scale(1.1);
+}
+
+/* the connector: dashes that run along it, toward the next step */
+.ht-flow-link {
+  flex: none;
+  width: 2px;
+  height: 1.5rem;
+  border-radius: 1px;
+  background-image: linear-gradient(to bottom, var(--ht-slate) 50%, transparent 50%);
+  background-size: 2px 12px;
+  animation:
+    ht-flow-in 460ms cubic-bezier(0.22, 1, 0.36, 1) both,
+    ht-flow-run-down 1.2s linear infinite;
+}
+
+@media (min-width: 64rem) {
+  .ht-flow-link {
+    flex: 1 1 0%;
+    min-width: 1.5rem;
+    width: auto;
+    height: 2px;
+    margin-top: 1.75rem; /* the middle of a node */
+    background-image: linear-gradient(to right, var(--ht-slate) 50%, transparent 50%);
+    background-size: 12px 2px;
+    animation:
+      ht-flow-in 460ms cubic-bezier(0.22, 1, 0.36, 1) both,
+      ht-flow-run 1.2s linear infinite;
+  }
+}
+
+/* ---- donut ------------------------------------------------------------------------------- */
+
+.ht-donut-slice {
+  cursor: pointer;
+  transition:
+    stroke-dasharray 900ms cubic-bezier(0.22, 1, 0.36, 1),
+    stroke-width 180ms ease-out,
+    opacity 180ms ease-out,
+    filter 180ms ease-out;
+}
+
+.ht-donut-slice[data-state='active'] {
+  stroke-width: 24;
+  filter: brightness(1.15);
+}
+
+.ht-donut-slice[data-state='dimmed'] {
+  opacity: 0.35;
+}
+
+@keyframes ht-readout-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.ht-donut-readout {
+  animation: ht-readout-in 180ms ease-out both;
+}
+
+.ht-donut-legend {
+  cursor: default;
+  transition:
+    background-color 180ms ease-out,
+    opacity 180ms ease-out;
+}
+
+.ht-donut-legend[data-state='active'] {
+  background-color: var(--ht-divider);
+}
+
+.ht-donut-legend[data-state='dimmed'] {
+  opacity: 0.55;
+}
+
+.ht-donut-legend:focus-visible {
+  outline: 2px solid var(--ht-accent);
+  outline-offset: 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ht-flow-step,
+  .ht-flow-link,
+  .ht-donut-readout {
+    animation: none;
+  }
+  .ht-flow-node,
+  .ht-flow-icon,
+  .ht-donut-slice,
+  .ht-donut-legend {
+    transition: none;
+  }
+  .ht-flow-step:hover .ht-flow-node,
+  .ht-flow-step:hover .ht-flow-icon {
+    transform: none;
+  }
+}

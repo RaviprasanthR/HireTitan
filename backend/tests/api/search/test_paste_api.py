@@ -122,3 +122,12 @@ async def test_a_deleted_job_link_is_refused(env: Env) -> None:
 
     assert response.status_code == 422
     assert response.json()["errors"][0]["field"] == "url"
+
+
+async def test_US4_paste_keeps_the_location_the_person_typed(env: Env) -> None:
+    response = await env.client.post(
+        "/api/v1/jobs/paste", json=body(location="  Berlin,  Germany ")
+    )
+
+    assert response.status_code == 201
+    assert response.json()["location_text"] == "Berlin, Germany"

@@ -1,10 +1,12 @@
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, CircleCheck } from 'lucide-react'
 import { Fragment, useId, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { useStatus } from '@/api/useStatus'
 import { Button } from '@/components/ui/button'
+import { ActOnJob } from '@/features/drafts/ActOnJob'
 import { JobDetails } from '@/features/jobs/JobDetails'
 import { PipelineControl } from '@/features/jobs/PipelineControl'
+import { Section } from '@/features/jobs/Section'
 import { PasteJobDialog } from '@/features/jobs/PasteJobDialog'
 import { firstMissingStep, setupIsDone } from '@/features/home/setup'
 import { DuplicatesPanel } from './DuplicatesPanel'
@@ -111,6 +113,7 @@ export function JobCardItem({ job, showCheck = true }: { job: JobCard; showCheck
               state={job.state}
               title={job.title}
               className="justify-end"
+              compact
             />
             <button
               type="button"
@@ -131,7 +134,18 @@ export function JobCardItem({ job, showCheck = true }: { job: JobCard; showCheck
       </tr>
       {open && (
         <tr>
-          <td id={panelId} colSpan={COLUMNS.length + 1} className="bg-surface px-4 py-3">
+          <td id={panelId} colSpan={COLUMNS.length + 1} className="space-y-4 bg-surface px-4 py-3">
+            {(job.state === 'explore' || job.state === 'inquired') && (
+              <Section
+                title="Record it"
+                icon={CircleCheck}
+                tone="ht-section-record"
+                hint="Choose the resume you used or pick another date."
+              >
+                <PipelineControl id={job.id} state={job.state} title={job.title} />
+              </Section>
+            )}
+            <ActOnJob jobId={job.id} title={job.title} />
             <JobDetails id={job.id} actions={false} />
           </td>
         </tr>

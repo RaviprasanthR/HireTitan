@@ -22,7 +22,17 @@ from hiretitan.platform.runtime.runner import Notify
 
 CHANNEL: Final = "hiretitan_events"
 EVENT_TYPES: Final = frozenset(
-    {"run.updated", "status.updated", "profile.updated", "search.batch_done", "search.finished"}
+    {
+        "run.updated",
+        "status.updated",
+        "profile.updated",
+        "search.batch_done",
+        "search.finished",
+        "draft.ready",
+        "draft.failed",
+        "tailored_resume.ready",
+        "tailored_resume.failed",
+    }
 )
 
 

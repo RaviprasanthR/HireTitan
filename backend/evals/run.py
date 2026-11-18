@@ -410,6 +410,40 @@ def _main_pages(
     return 0 if all(r.passes for r in reports) else 3
 
 
+def _main_drafts(
+    args: argparse.Namespace,
+    specs: list[tuple[str, str]],
+    catalog: ModelCatalog,
+    llm_for: Callable[[str], LlmPort] | None,
+    today: Callable[[], str],
+) -> int:
+    from evals.drafts.cases import build_cases
+    from evals.drafts.runner import evaluate_outreach, evaluate_tailor, render_report
+
+    outreach = args.eval == "outreach_drafts"
+    per_run = len(build_cases()) * (2 if outreach else 1)
+    print(f"This run uses your AI credit ({args.repeat} run(s) of {per_run} drafts per model).")
+    if not args.yes:
+        print("Nothing was sent. Re-run with --yes to run the eval.")
+        return 2
+    build = llm_for or _real_llm_for(catalog)
+    evaluate = evaluate_outreach if outreach else evaluate_tailor
+    try:
+        reports = [
+            asyncio.run(evaluate(build(model), tier=label, model=model, repeat=args.repeat))
+            for label, model in specs
+        ]
+    except AiUnavailable as exc:
+        print(f"Stopped: the AI is unavailable ({exc}). Check OPENAI_API_KEY in .env.")
+        print("No report was written.")
+        return 1
+    args.reports_dir.mkdir(parents=True, exist_ok=True)
+    out = args.reports_dir / f"{args.eval}-{today()}.md"
+    out.write_text(render_report(reports, day=today()), encoding="utf-8")
+    print(f"Report written to {out}")
+    return 0 if all(r.passes for r in reports) else 3
+
+
 def main(
     argv: Sequence[str] | None = None,
     *,
@@ -418,7 +452,14 @@ def main(
 ) -> int:
     parser = argparse.ArgumentParser(prog="python -m evals.run")
     parser.add_argument(
-        "eval", choices=["extract_profile", "judge_relevance", "extract_jobs_from_page"]
+        "eval",
+        choices=[
+            "extract_profile",
+            "judge_relevance",
+            "extract_jobs_from_page",
+            "outreach_drafts",
+            "tailor_resume",
+        ],
     )
     parser.add_argument("--models", default="fast", help="comma list of tiers or model names")
     parser.add_argument(
@@ -452,6 +493,8 @@ def main(
         return _main_judge(args, specs, catalog, llm_for, today)
     if args.eval == "extract_jobs_from_page":
         return _main_pages(args, specs, catalog, llm_for, today)
+    if args.eval in ("outreach_drafts", "tailor_resume"):
+        return _main_drafts(args, specs, catalog, llm_for, today)
 
     print(f"This run uses your AI credit ({len(cases)} resumes per model).")
     if not args.yes:

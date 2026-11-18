@@ -1,4 +1,5 @@
 import { useParams } from 'react-router'
+import { BackButton } from '@/components/BackButton'
 import { formatDate, useJob } from '@/features/explore/api'
 import { JobDetails } from './JobDetails'
 import { LeaveGuard } from './interview/LeaveGuard'
@@ -23,6 +24,7 @@ export function JobDetailPage() {
   return (
     <section className="space-y-4">
       <LeaveGuard when={registry.any} />
+      <BackButton fallback="/explore" />
       <h1 className="text-2xl font-semibold">{data.title}</h1>
       <p className="text-muted-small">{facts.join(' · ')}</p>
       <JobDetails id={id} registry={registry} />

@@ -12,7 +12,8 @@ from typing import Any, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Response
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -27,9 +28,11 @@ from hiretitan.search.application.contacts import (
     add_contact,
     delete_contact,
     edit_contact,
+    import_linkedin_connections,
     list_contacts,
     set_note,
 )
+from hiretitan.search.domain.linkedin_connections import NotAConnectionsFileError
 from hiretitan.search.infra.repos import CompaniesRepo, ContactsRepo, NotesRepo
 
 
@@ -86,6 +89,20 @@ class ContactPatch(BaseModel):
     note: str | None = None
 
 
+class LinkedinImportIn(BaseModel):
+    csv: str = Field(default="", max_length=5_000_000)
+
+
+class LinkedinImportOut(BaseModel):
+    connections: int
+    added: int
+    already_there: int
+    skipped_companies: int
+    companies_with_new_contacts: int
+    invalid_rows: int
+    truncated: bool
+
+
 class NoteIn(BaseModel):
     body: str | None = None
 
@@ -123,6 +140,22 @@ def _exists(error: ContactExistsError) -> ProblemError:
 
 def create_contacts_router(deps: SearchContactsApiDeps) -> APIRouter:
     router = APIRouter(prefix="/companies", tags=["contacts"])
+
+    @router.post("/contacts/linkedin-import", response_model=LinkedinImportOut)
+    async def linkedin_import(body: LinkedinImportIn) -> Any:
+        async with deps.sessions() as session:
+            # two uploads at once would both see a person as new and the second insert would fail
+            await session.execute(
+                select(func.pg_advisory_xact_lock(func.hashtext("linkedin-import")))
+            )
+            try:
+                result = await import_linkedin_connections(
+                    CompaniesRepo(session), ContactsRepo(session), body.csv
+                )
+            except NotAConnectionsFileError as error:
+                return problem(422, str(error))
+            await session.commit()
+        return LinkedinImportOut.model_validate(asdict(result))
 
     @router.get("/{company_id}/contacts", response_model=ContactsOut)
     async def contacts_of(company_id: UUID) -> ContactsOut:

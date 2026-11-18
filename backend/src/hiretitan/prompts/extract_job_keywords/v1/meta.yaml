@@ -1,0 +1,5 @@
+version: 1
+tier: fast
+max_output_tokens: 800
+changelog:
+  - "v1: first version. Reads one job description as data and lists what it asks for: a short role summary, up to 30 keywords and up to 10 must-have requirements."

@@ -109,33 +109,68 @@ function renderPage() {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('RunSummaryPage', () => {
-  it('US1_AS3_summary_counts_skipped', async () => {
+  it('US1_AS3_shows_the_search_as_a_flow_of_steps', async () => {
     renderPage()
 
-    expect(await screen.findByText(/40 jobs found/)).toBeInTheDocument()
-    expect(screen.getByText(/10 added/)).toBeInTheDocument()
-    expect(screen.getByText(/25 left out by your rules/)).toBeInTheDocument()
-    expect(screen.getByText(/3 already known/)).toBeInTheDocument()
+    const flow = await screen.findByRole('list', { name: 'How the search went' })
+    const steps = within(flow).getAllByRole('listitem')
+    expect(steps.map((step) => step.textContent)).toEqual([
+      expect.stringMatching(/3 of 3.*Companies read.*3 to check by hand/),
+      expect.stringMatching(/40.*Jobs found/),
+      expect.stringMatching(/25 left out.*Your rules/),
+      expect.stringMatching(/12 checked.*AI check.*4 left out/),
+      expect.stringMatching(/10.*New jobs.*3 already known/),
+    ])
     expect(screen.queryByText(/cost/i)).not.toBeInTheDocument() // SC003
+    expect(screen.queryByText(/batch/i)).not.toBeInTheDocument()
   })
 
-  it('shows_each_company_result_with_a_plain_label', async () => {
+  it('shows_what_happened_to_the_jobs_as_one_bar_with_a_legend', async () => {
     renderPage()
-    const list = await screen.findByRole('list', { name: 'Companies' })
+    const bar = await screen.findByRole('img', { name: /10 new, 3 already known, 29 left out/ })
+    expect(bar).toBeInTheDocument()
+    const legend = screen.getByRole('list', { name: 'Legend' })
+    expect(within(legend).getByText('New jobs').parentElement).toHaveTextContent('10')
+    expect(within(legend).getByText('Already known').parentElement).toHaveTextContent('3')
+    expect(within(legend).getByText('Left out').parentElement).toHaveTextContent('29')
+  })
+
+  it('keeps_the_details_hidden_until_asked', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    const toggle = await screen.findByRole('button', { name: 'Show details' })
+    expect(screen.queryByRole('list', { name: 'Companies to check' })).not.toBeInTheDocument()
+
+    await user.click(toggle)
+
+    const list = screen.getByRole('list', { name: 'Companies to check' })
     const items = within(list).getAllByRole('listitem')
-    expect(items[0]).toHaveTextContent('Acme')
-    expect(items[0]).toHaveTextContent('12 jobs')
-    expect(items[1]).toHaveTextContent('Broken Co')
-    expect(items[1]).toHaveTextContent('Failed')
-    expect(items[1]).toHaveTextContent('board timed out')
-    expect(items[2]).toHaveTextContent(/Blocked/)
-    expect(items[3]).toHaveTextContent(/Check manually/)
+    expect(items).toHaveLength(3)
+    expect(items[0]).toHaveTextContent('Broken Co')
+    expect(items[0]).toHaveTextContent('board timed out')
+    expect(items[1]).toHaveTextContent(/Blocked/)
+    expect(items[2]).toHaveTextContent(/Check manually/)
+    expect(screen.getByText(/2 jobs were not checked by the AI/)).toBeInTheDocument()
+    const all = screen.getByText('All 4 companies').closest('details') as HTMLElement
+    expect(within(all).getByText('Acme').closest('li')).toHaveTextContent('12 jobs')
+    expect(screen.getByRole('button', { name: 'Hide details' })).toBeInTheDocument()
+  })
+
+  it('has_back_and_search_history_at_the_top', async () => {
+    renderPage()
+    expect(await screen.findByRole('button', { name: 'Back' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Search history' })).toHaveAttribute(
+      'href',
+      '/search/history',
+    )
   })
 
   it('US1_AS5_restore_moves_job_to_explore', async () => {
     const user = userEvent.setup()
     const calls = renderPage()
 
+    await user.click(await screen.findByRole('button', { name: 'Show details' }))
+    await user.click(screen.getByText('Jobs left out (29)'))
     const skipped = await screen.findByRole('list', { name: 'Skipped jobs' })
     const item = within(skipped).getByText('Sales Lead').closest('li') as HTMLElement
     expect(item).toHaveTextContent('Title is not about your roles')

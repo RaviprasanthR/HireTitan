@@ -30,6 +30,17 @@ class PipelineResumesOut(BaseModel):
     usage: list[ResumeUsageOut]
 
 
+class PipelineSummaryOut(BaseModel):
+    """Pipeline jobs by status, each job once (the In pipeline chart)."""
+
+    total: int
+    inquired: int
+    applied: int
+    scheduled: int
+    cleared: int
+    failed: int
+
+
 def create_pipeline_router(deps: PipelineApiDeps) -> APIRouter:
     router = APIRouter(prefix="/pipeline", tags=["pipeline"])
 
@@ -44,6 +55,13 @@ def create_pipeline_router(deps: PipelineApiDeps) -> APIRouter:
             last_choice=last,
             usage=[ResumeUsageOut(resume_file_id=f, jobs=n) for f, n in sorted(usage.items())],
         )
+
+    @router.get("/summary", response_model=PipelineSummaryOut)
+    async def pipeline_summary() -> PipelineSummaryOut:
+        """How many pipeline jobs are in each status, for the chart above the In pipeline list."""
+        async with deps.sessions() as session:
+            counts = await InterviewsRepo(session).status_counts()
+        return PipelineSummaryOut(total=sum(counts.values()), **counts)
 
     @router.delete("/resumes/{file_id}/uses", status_code=204)
     async def clear_uses(file_id: UUID) -> Response:

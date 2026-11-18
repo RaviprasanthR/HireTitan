@@ -358,7 +358,8 @@ function CompanyRow({ company }: { company: Company }) {
               size="sm"
               disabled={remove.isPending}
               onClick={() => remove.mutate(company.id)}
-             variant="danger">
+              variant="danger"
+            >
               Yes, delete
             </Button>
             <Button type="button" variant="cancel" size="sm" onClick={() => setConfirming(false)}>
@@ -448,9 +449,7 @@ function HeaderRow({ sort, onSort }: { sort: Sort; onSort: (key: SortKey) => voi
     )
   }
   return (
-    <div
-      className={`ht-thead-row hidden px-3 py-3 [scrollbar-gutter:stable] ${COLUMNS}`}
-    >
+    <div className={`ht-thead-row hidden px-3 py-3 [scrollbar-gutter:stable] ${COLUMNS}`}>
       {button('name', 'Company')}
       {button('city', 'Location')}
       {button('pipeline', 'Pipeline')}

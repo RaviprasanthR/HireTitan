@@ -172,6 +172,47 @@ describe('PasteJobDialog', () => {
     await waitFor(() => expect(calls.some((c) => c.path === '/jobs/j9/applied')).toBe(true))
   })
 
+  it('sends_the_location_and_records_applied_with_a_point_of_contact', async () => {
+    const { calls } = renderDialog(() => json(pasted(), 201))
+    const user = await fill('https://jobs.example.com/acme/1', DESCRIPTION)
+    await user.type(screen.getByLabelText('Location (optional)'), 'Berlin')
+    await user.click(screen.getByLabelText('I applied'))
+    await user.type(screen.getByLabelText('Name'), 'Dev Patel')
+    await user.type(screen.getByLabelText('Role'), 'Recruiter')
+    await user.click(screen.getByRole('button', { name: 'Save job' }))
+
+    await waitFor(() =>
+      expect(calls.find((c) => c.path === '/jobs/j9/interview/contact')?.body).toMatchObject({
+        name: 'Dev Patel',
+        role: 'Recruiter',
+      }),
+    )
+    expect(calls.find((c) => c.path === '/jobs/paste')?.body).toMatchObject({ location: 'Berlin' })
+    expect(calls.some((c) => c.path === '/jobs/j9/applied')).toBe(true)
+  })
+
+  it('says_the_job_was_marked_and_does_not_offer_marking_it_again', async () => {
+    renderDialog(() => json(pasted(), 201))
+    const user = await fill('https://jobs.example.com/acme/1', DESCRIPTION)
+    await user.click(screen.getByLabelText('I applied'))
+    await user.click(screen.getByRole('button', { name: 'Save job' }))
+
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Marked as applied.'))
+    expect(screen.queryByRole('button', { name: 'I applied' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Done' })).toBeEnabled()
+  })
+
+  it('says_a_job_already_in_the_pipeline_was_not_marked_again', async () => {
+    renderDialog(() => json(pasted({ state: 'applied', merged_into: 'j1' }), 200))
+    const user = await fill('https://jobs.example.com/acme/1', DESCRIPTION)
+    await user.click(screen.getByLabelText('I applied'))
+    await user.click(screen.getByRole('button', { name: 'Save job' }))
+
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'already in your pipeline, so it was not marked again',
+    )
+  })
+
   it('cancel_closes_the_form', async () => {
     const { onClose } = renderDialog(() => undefined)
     const user = userEvent.setup()

@@ -71,6 +71,18 @@ export function usePipelineJobs() {
   })
 }
 
+export type PipelineSummary = components['schemas']['PipelineSummaryOut']
+
+/** Pipeline jobs by status, each job once. Under ['jobs', 'pipeline'], so whatever refreshes the
+ * pipeline list (a mark, an undo, a round) refreshes the chart too. */
+export function usePipelineSummary() {
+  return useQuery({
+    queryKey: ['jobs', 'pipeline', 'summary'],
+    queryFn: () => apiFetch<PipelineSummary>('/pipeline/summary'),
+    refetchOnWindowFocus: false,
+  })
+}
+
 export function useJob(id: string) {
   return useQuery({
     queryKey: ['jobs', 'one', id],

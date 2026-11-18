@@ -315,7 +315,12 @@ describe('SearchPanel', () => {
   it('US2_AS5_finished_says_how_many_new_jobs_without_batches', async () => {
     renderPanel(run({ outcome: 'finished', batches_done: 3, companies_read: 20, added: 6 }))
     expect(await screen.findByText(/Search finished/)).toBeInTheDocument()
-    expect(screen.getByText('Checked 20 of 20 companies · 6 new jobs')).toBeInTheDocument()
+    // the last search is shown as the summary's flow chart and donut, at the top of Explore
+    const flow = screen.getByRole('list', { name: 'How the search went' })
+    expect(flow).toHaveTextContent(/20 of 20\s*Companies read/)
+    expect(flow).toHaveTextContent(/6\s*New jobs/)
+    expect(screen.getByRole('img', { name: /6 new/ })).toBeInTheDocument()
+    expect(screen.queryByText(/batch/i)).not.toBeInTheDocument()
   })
 
   it('US2_AS5_a_stopped_search_says_jobs_so_far_are_kept', async () => {

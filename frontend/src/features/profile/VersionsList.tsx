@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { BackButton } from '@/components/BackButton'
 import { Link } from 'react-router'
 import { apiFetch } from '@/api/client'
 import type { components } from '@/api/schema'
@@ -22,6 +23,7 @@ export function VersionsList() {
 
   return (
     <section className="max-w-2xl space-y-4">
+      <BackButton fallback="/profile" />
       <h1 className="text-2xl font-semibold">Profile versions</h1>
       {versions.length === 0 ? (
         <p>

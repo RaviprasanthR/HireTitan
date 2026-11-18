@@ -1,0 +1,5 @@
+version: 1
+tier: strong
+max_output_tokens: 4000
+changelog:
+  - "v1: first version. Rewords the summary, reorders and rewords the person's own bullets and skills toward one job's requirements. Employers, titles, dates and schools are copied by the app, not written here."
