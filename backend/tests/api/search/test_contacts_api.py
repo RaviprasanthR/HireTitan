@@ -225,3 +225,77 @@ async def test_control_characters_are_stripped_from_typed_text(env: Env) -> None
 
     assert response.json()["name"] == "Jane Example"
     assert response.json()["note"] == "ab"
+
+
+LINKEDIN_CSV = """Notes:
+"Some lines LinkedIn puts first."
+
+First Name,Last Name,URL,Email Address,Company,Position,Connected On
+Jane,Sample,https://www.linkedin.com/in/jane-sample,,"Example Co Pvt. Ltd.",Recruiter,16 Nov 2026
+Raj,Other,https://www.linkedin.com/in/raj-other,,Unlisted Corp,Engineer,16 Nov 2026
+Lee,Nocompany,https://www.linkedin.com/in/lee-none,,,Engineer,16 Nov 2026
+"""
+
+
+async def test_US2_linkedin_import_adds_only_people_at_listed_companies(env: Env) -> None:
+    first = await env.client.post(f"{BASE}/contacts/linkedin-import", json={"csv": LINKEDIN_CSV})
+
+    assert first.status_code == 200
+    assert first.json() == {
+        "connections": 2,
+        "added": 1,
+        "already_there": 0,
+        "skipped_companies": 1,
+        "companies_with_new_contacts": 1,
+        "invalid_rows": 0,
+        "truncated": False,
+    }
+    listed = (await env.client.get(url(env))).json()["items"]
+    assert [(c["name"], c["role"], c["source"], c["linkedin_url"]) for c in listed] == [
+        ("Jane Sample", "Recruiter", "import", "https://www.linkedin.com/in/jane-sample")
+    ]
+
+    again = await env.client.post(f"{BASE}/contacts/linkedin-import", json={"csv": LINKEDIN_CSV})
+    assert (again.json()["added"], again.json()["already_there"]) == (0, 1)
+
+
+async def test_US2_linkedin_import_rejects_another_file(env: Env) -> None:
+    response = await env.client.post(f"{BASE}/contacts/linkedin-import", json={"csv": "a,b\n1,2\n"})
+
+    assert response.status_code == 422
+
+
+HEADER = "First Name,Last Name,URL,Email Address,Company,Position,Connected On\n"
+
+
+async def test_US2_linkedin_import_with_a_quoted_header_and_a_bad_row(env: Env) -> None:
+    quoted = ",".join(f'"{h}"' for h in HEADER.strip().split(",")) + "\n"
+    csv_text = (
+        quoted
+        + f"Jane,Sample,,,Example Co,{'x' * 400},16 Nov 2026\n"
+        + "Raj,Other,,,Example Co,Engineer,16 Nov 2026\n"
+    )
+    response = await env.client.post(f"{BASE}/contacts/linkedin-import", json={"csv": csv_text})
+
+    assert response.status_code == 200
+    assert (response.json()["added"], response.json()["invalid_rows"]) == (1, 1)
+
+
+async def test_US2_linkedin_import_a_broken_csv_is_a_422_not_a_500(env: Env) -> None:
+    csv_text = HEADER + "Jane,Sample,," + "x" * 200_000 + ",Example Co,Engineer,1 Nov 2026\n"
+    response = await env.client.post(f"{BASE}/contacts/linkedin-import", json={"csv": csv_text})
+
+    assert response.status_code == 422
+
+
+async def test_US2_two_imports_at_once_add_each_person_once(env: Env) -> None:
+    import asyncio
+
+    target = f"{BASE}/contacts/linkedin-import"
+    first, second = await asyncio.gather(
+        env.client.post(target, json={"csv": LINKEDIN_CSV}),
+        env.client.post(target, json={"csv": LINKEDIN_CSV}),
+    )
+
+    assert (first.status_code, second.status_code) == (200, 200)
+    assert first.json()["added"] + second.json()["added"] == 1
