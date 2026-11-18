@@ -232,7 +232,15 @@ describe('ProfilePage', () => {
 
   it('US1_AS5_manual_entry_choice_is_sent', async () => {
     routes['GET /api/v1/resumes'] = () =>
-      json([resumeItem({ parse_result: { injection_flags: [{ rule_id: 'x', severity: 'high', excerpt: 'bad', location: 'visible' }] } })])
+      json([
+        resumeItem({
+          parse_result: {
+            injection_flags: [
+              { rule_id: 'x', severity: 'high', excerpt: 'bad', location: 'visible' },
+            ],
+          },
+        }),
+      ])
     routes['POST /api/v1/resumes'] = () => json({ resume_file_id: FILE_ID, run_id: RUN_ID }, 202)
     routes[`GET /api/v1/runs/${RUN_ID}`] = () =>
       json(run({ status: 'awaiting_review', waiting_for: 'injection_decision' }))
@@ -303,7 +311,10 @@ describe('ProfilePage', () => {
       attempt += 1
       return attempt === 1
         ? problem(409, 'A profile review is already open.', { open_review_id: REVIEW_ID })
-        : json({ resume_file_id: FILE_ID, run_id: RUN_ID }, url.includes('discard_open_review=true') ? 202 : 500)
+        : json(
+            { resume_file_id: FILE_ID, run_id: RUN_ID },
+            url.includes('discard_open_review=true') ? 202 : 500,
+          )
     }
     routes[`GET /api/v1/runs/${RUN_ID}`] = () => json(run())
     renderPage()
@@ -317,7 +328,9 @@ describe('ProfilePage', () => {
     await user.click(within(dialog).getByRole('button', { name: /replace it/i }))
 
     expect(await screen.findByRole('progressbar', { name: 'Resume progress' })).toBeInTheDocument()
-    expect(calls.filter((c) => c.method === 'POST').at(-1)?.url).toContain('discard_open_review=true')
+    expect(calls.filter((c) => c.method === 'POST').at(-1)?.url).toContain(
+      'discard_open_review=true',
+    )
   })
 
   it('failed_run_offers_try_again', async () => {
@@ -337,7 +350,8 @@ describe('ProfilePage', () => {
   it('paused_run_explains_why', async () => {
     routes['GET /api/v1/resumes'] = () => json([resumeItem()])
     routes['POST /api/v1/resumes'] = () => json({ resume_file_id: FILE_ID, run_id: RUN_ID }, 202)
-    routes[`GET /api/v1/runs/${RUN_ID}`] = () => json(run({ status: 'paused', pause_reason: 'key_missing' }))
+    routes[`GET /api/v1/runs/${RUN_ID}`] = () =>
+      json(run({ status: 'paused', pause_reason: 'key_missing' }))
     renderPage()
     await upload(pdf())
 
@@ -358,7 +372,15 @@ describe('ProfilePage', () => {
 
   it('a_failed_decision_shows_a_message_and_keeps_the_dialog', async () => {
     routes['GET /api/v1/resumes'] = () =>
-      json([resumeItem({ parse_result: { injection_flags: [{ rule_id: 'x', severity: 'high', excerpt: 'bad', location: 'visible' }] } })])
+      json([
+        resumeItem({
+          parse_result: {
+            injection_flags: [
+              { rule_id: 'x', severity: 'high', excerpt: 'bad', location: 'visible' },
+            ],
+          },
+        }),
+      ])
     routes['POST /api/v1/resumes'] = () => json({ resume_file_id: FILE_ID, run_id: RUN_ID }, 202)
     routes[`GET /api/v1/runs/${RUN_ID}`] = () =>
       json(run({ status: 'awaiting_review', waiting_for: 'injection_decision' }))

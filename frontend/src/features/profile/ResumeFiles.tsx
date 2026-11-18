@@ -119,9 +119,12 @@ export function ResumeFiles() {
         ))}
       </ul>
 
-      <AlertDialog.Root open={target !== null} onOpenChange={(open) => {
+      <AlertDialog.Root
+        open={target !== null}
+        onOpenChange={(open) => {
           if (!open && !remove.isPending) setTarget(null)
-        }}>
+        }}
+      >
         <AlertDialog.Portal>
           <AlertDialog.Overlay className="fixed inset-0 bg-black/60" />
           <AlertDialog.Content className="fixed top-1/2 left-1/2 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 space-y-4 rounded-lg bg-surface p-6">

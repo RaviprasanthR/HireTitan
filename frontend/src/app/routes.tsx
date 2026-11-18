@@ -16,7 +16,9 @@ import {
   SearchHistoryPage,
   SearchRulesPage,
   SettingsPage,
+  TailoredResumePage,
 } from './pages'
+import { ConnectionsPage } from '@/features/profile/ConnectionsPage'
 import { ProfileTabsLayout } from '@/features/profile/ProfileTabs'
 import { SetupGate } from '@/features/setup/SetupGate'
 import { Shell } from './Shell'
@@ -38,6 +40,7 @@ export const routes: RouteObject[] = [
               { path: '/profile', element: <ProfilePage /> },
               { path: '/profile/preferences', element: <PreferencesPage /> },
               { path: '/profile/search-rules', element: <SearchRulesPage /> },
+              { path: '/profile/connections', element: <ConnectionsPage /> },
             ],
           },
           { path: '/preferences', element: <Navigate to="/profile/preferences" replace /> },
@@ -53,6 +56,7 @@ export const routes: RouteObject[] = [
           { path: '/search/history', element: <SearchHistoryPage /> },
           { path: '/search/runs/:id', element: <RunSummaryPage /> },
           { path: '/jobs/:id', element: <JobDetailPage /> },
+          { path: '/jobs/:id/resume', element: <TailoredResumePage /> },
           { path: '/review', element: <ReviewPage /> },
           { path: '/settings', element: <SettingsPage /> },
           { path: '*', element: <NotFoundPage /> },

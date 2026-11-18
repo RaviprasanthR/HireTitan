@@ -22,6 +22,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/companies/contacts/linkedin-import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Linkedin Import */
+        post: operations["linkedin_import_api_v1_companies_contacts_linkedin_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/companies/{company_id}": {
         parameters: {
             query?: never;
@@ -156,6 +173,24 @@ export interface paths {
         /** Delete Everything */
         post: operations["delete_everything_api_v1_data_delete_all_post"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/drafts/{draft_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Edit Draft */
+        put: operations["edit_draft_api_v1_drafts__draft_id__put"];
+        post?: never;
+        /** Remove Draft */
+        delete: operations["remove_draft_api_v1_drafts__draft_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -374,6 +409,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/jobs/{job_id}/description": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Put Description
+         * @description The person pastes the posting's text, for a job found without it (feature 002k).
+         */
+        put: operations["put_description_api_v1_jobs__job_id__description_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{job_id}/drafts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Drafts */
+        get: operations["list_drafts_api_v1_jobs__job_id__drafts_get"];
+        put?: never;
+        /** Create Draft */
+        post: operations["create_draft_api_v1_jobs__job_id__drafts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/jobs/{job_id}/inquired": {
         parameters: {
             query?: never;
@@ -503,6 +576,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/jobs/{job_id}/recipients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Recipients */
+        get: operations["recipients_api_v1_jobs__job_id__recipients_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/jobs/{job_id}/restore": {
         parameters: {
             query?: never;
@@ -514,6 +604,60 @@ export interface paths {
         put?: never;
         /** Restore */
         post: operations["restore_api_v1_jobs__job_id__restore_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{job_id}/tailored-resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Resume */
+        get: operations["get_resume_api_v1_jobs__job_id__tailored_resume_get"];
+        /** Save Resume */
+        put: operations["save_resume_api_v1_jobs__job_id__tailored_resume_put"];
+        /** Start Resume */
+        post: operations["start_resume_api_v1_jobs__job_id__tailored_resume_post"];
+        /** Remove Resume */
+        delete: operations["remove_resume_api_v1_jobs__job_id__tailored_resume_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{job_id}/tailored-resume.docx": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download Docx */
+        get: operations["download_docx_api_v1_jobs__job_id__tailored_resume_docx_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{job_id}/tailored-resume.pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download Pdf */
+        get: operations["download_pdf_api_v1_jobs__job_id__tailored_resume_pdf_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -608,6 +752,26 @@ export interface paths {
          *     the file is removed when the person wants nothing of it left (feature 002f, FR-009).
          */
         delete: operations["clear_uses_api_v1_pipeline_resumes__file_id__uses_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pipeline/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Pipeline Summary
+         * @description How many pipeline jobs are in each status, for the chart above the In pipeline list.
+         */
+        get: operations["pipeline_summary_api_v1_pipeline_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1101,6 +1265,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tailored-resumes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Resumes */
+        get: operations["list_resumes_api_v1_tailored_resumes_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1168,6 +1349,13 @@ export interface components {
             rules_approved: boolean;
             /** Searched Once */
             searched_once: boolean;
+        };
+        /** CitedFactOut */
+        CitedFactOut: {
+            /** Id */
+            id: string;
+            /** Text */
+            text: string;
         };
         /** CompanyIn */
         CompanyIn: {
@@ -1416,6 +1604,11 @@ export interface components {
              */
             confirm: "DELETE";
         };
+        /** DescriptionIn */
+        DescriptionIn: {
+            /** Description */
+            description: string;
+        };
         /** DiscoveryOut */
         DiscoveryOut: {
             /**
@@ -1425,6 +1618,137 @@ export interface components {
             status: "found" | "unsupported" | "none";
             suggestion: components["schemas"]["SuggestionOut"] | null;
         };
+        /** DocCertification */
+        DocCertification: {
+            /** Id */
+            id: string;
+            /** Issuer */
+            issuer?: string | null;
+            /** Name */
+            name: string;
+        };
+        /** DocContact */
+        DocContact: {
+            /** Email */
+            email?: string | null;
+            /** Links */
+            links?: string[];
+            /** Location */
+            location?: string | null;
+            /** Name */
+            name: string;
+            /** Phone */
+            phone?: string | null;
+        };
+        /** DocEducation */
+        DocEducation: {
+            /**
+             * Dates
+             * @default
+             */
+            dates: string;
+            /**
+             * Detail
+             * @default
+             */
+            detail: string;
+            /** Id */
+            id: string;
+            /** Institution */
+            institution: string;
+        };
+        /** DocExperience */
+        DocExperience: {
+            /** Bullets */
+            bullets?: string[];
+            /**
+             * Dates
+             * @default
+             */
+            dates: string;
+            /** Employer */
+            employer: string;
+            /** Id */
+            id: string;
+            /** Location */
+            location?: string | null;
+            /** Title */
+            title: string;
+        };
+        /** DocProject */
+        DocProject: {
+            /** Description */
+            description?: string | null;
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Technologies */
+            technologies?: string[];
+        };
+        /** DocumentIn */
+        DocumentIn: {
+            /** Document */
+            document: {
+                [key: string]: unknown;
+            };
+        };
+        /** DraftIn */
+        DraftIn: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "connection_request" | "referral_message";
+            recipient: components["schemas"]["RecipientIn"];
+            /** Recipient Kind */
+            recipient_kind?: ("recruiter" | "hiring_manager" | "engineer" | "other") | null;
+            /**
+             * Regenerate
+             * @default false
+             */
+            regenerate: boolean;
+        };
+        /** DraftOut */
+        DraftOut: {
+            /** Chars */
+            chars: number;
+            /** Cited Facts */
+            cited_facts: components["schemas"]["CitedFactOut"][];
+            /** Edited */
+            edited: boolean;
+            /** Failure Reason */
+            failure_reason: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "connection_request" | "referral_message";
+            /** Over Limit */
+            over_limit: boolean;
+            /** Paused Reason */
+            paused_reason: string | null;
+            recipient: components["schemas"]["RecipientOut"];
+            /** Source */
+            source: ("ai" | "fallback") | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "writing" | "ready" | "failed";
+            /** Text */
+            text: string | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
         /** DraftSavedOut */
         DraftSavedOut: {
             /**
@@ -1432,6 +1756,13 @@ export interface components {
              * Format: date-time
              */
             draft_saved_at: string;
+        };
+        /** DraftsOut */
+        DraftsOut: {
+            /** Drafts */
+            drafts: components["schemas"]["DraftOut"][];
+            /** Injection Signals */
+            injection_signals: components["schemas"]["SignalOut"][];
         };
         /** DuplicatePage */
         DuplicatePage: {
@@ -1661,12 +1992,56 @@ export interface components {
             /** Years Found */
             years_found: string | null;
         };
+        /** KeywordMatchOut */
+        KeywordMatchOut: {
+            /** Matched */
+            matched: string[];
+            /** Missing */
+            missing: components["schemas"]["MissingOut"][];
+            /** Score */
+            score: number;
+        };
         /** LinkModel */
         LinkModel: {
             /** Label */
             label?: string | null;
             /** Url */
             url: string;
+        };
+        /** LinkedinImportIn */
+        LinkedinImportIn: {
+            /**
+             * Csv
+             * @default
+             */
+            csv: string;
+        };
+        /** LinkedinImportOut */
+        LinkedinImportOut: {
+            /** Added */
+            added: number;
+            /** Already There */
+            already_there: number;
+            /** Companies With New Contacts */
+            companies_with_new_contacts: number;
+            /** Connections */
+            connections: number;
+            /** Invalid Rows */
+            invalid_rows: number;
+            /** Skipped Companies */
+            skipped_companies: number;
+            /** Truncated */
+            truncated: boolean;
+        };
+        /** MissingOut */
+        MissingOut: {
+            /** Keyword */
+            keyword: string;
+            /**
+             * Reason
+             * @enum {string}
+             */
+            reason: "not_in_profile" | "not_in_resume";
         };
         /** NameIn */
         NameIn: {
@@ -1715,6 +2090,8 @@ export interface components {
              * @default
              */
             description: string;
+            /** Location */
+            location?: string | null;
             /** Title */
             title?: string | null;
             /**
@@ -1828,6 +2205,24 @@ export interface components {
             last_choice: string | null;
             /** Usage */
             usage: components["schemas"]["ResumeUsageOut"][];
+        };
+        /**
+         * PipelineSummaryOut
+         * @description Pipeline jobs by status, each job once (the In pipeline chart).
+         */
+        PipelineSummaryOut: {
+            /** Applied */
+            applied: number;
+            /** Cleared */
+            cleared: number;
+            /** Failed */
+            failed: number;
+            /** Inquired */
+            inquired: number;
+            /** Scheduled */
+            scheduled: number;
+            /** Total */
+            total: number;
         };
         /** PlaceModel */
         PlaceModel: {
@@ -2001,6 +2396,53 @@ export interface components {
             /** Question */
             question?: string | null;
         };
+        /** RecipientContactOut */
+        RecipientContactOut: {
+            /**
+             * Contact Id
+             * Format: uuid
+             */
+            contact_id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "recruiter" | "hiring_manager" | "engineer" | "other";
+            /** Name */
+            name: string;
+            /** Role */
+            role: string | null;
+        };
+        /** RecipientIn */
+        RecipientIn: {
+            /** Contact Id */
+            contact_id?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Role */
+            role?: string | null;
+        };
+        /** RecipientOut */
+        RecipientOut: {
+            /** Contact Id */
+            contact_id: string | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "recruiter" | "hiring_manager" | "engineer" | "other";
+            /** Name */
+            name: string;
+            /** Role */
+            role: string | null;
+        };
+        /** RecipientsOut */
+        RecipientsOut: {
+            /** Contacts */
+            contacts: components["schemas"]["RecipientContactOut"][];
+            /** Kinds */
+            kinds: ("recruiter" | "hiring_manager" | "engineer" | "other")[];
+        };
         /**
          * ResumeChoiceOut
          * @description The resume used for a pipeline job (feature 002f): ``chosen`` (a stored file), ``removed``
@@ -2019,6 +2461,27 @@ export interface components {
              * @enum {string}
              */
             state: "chosen" | "removed" | "none";
+        };
+        /** ResumeDocument */
+        ResumeDocument: {
+            /** Certifications */
+            certifications?: components["schemas"]["DocCertification"][];
+            contact: components["schemas"]["DocContact"];
+            /** Education */
+            education?: components["schemas"]["DocEducation"][];
+            /** Experience */
+            experience?: components["schemas"]["DocExperience"][];
+            /** Headline */
+            headline?: string | null;
+            /** Projects */
+            projects?: components["schemas"]["DocProject"][];
+            /** Skills */
+            skills?: string[];
+            /**
+             * Summary
+             * @default
+             */
+            summary: string;
         };
         /** ResumeFileOut */
         ResumeFileOut: {
@@ -2410,6 +2873,15 @@ export interface components {
             /** Stop Requested */
             stop_requested: boolean;
         };
+        /** SignalOut */
+        SignalOut: {
+            /** Excerpt */
+            excerpt: string;
+            /** Rule Id */
+            rule_id: string;
+            /** Severity */
+            severity: string;
+        };
         /** SourceIn */
         SourceIn: {
             /** Firm Name */
@@ -2461,6 +2933,70 @@ export interface components {
             key_skills?: string[];
             /** Target Roles */
             target_roles?: string[];
+        };
+        /** TailorIn */
+        TailorIn: {
+            /**
+             * Regenerate
+             * @default false
+             */
+            regenerate: boolean;
+        };
+        /** TailoredListItem */
+        TailoredListItem: {
+            /** Company */
+            company: string;
+            /** Edited */
+            edited: boolean;
+            /**
+             * Job Id
+             * Format: uuid
+             */
+            job_id: string;
+            /** Job Title */
+            job_title: string;
+            /** Source */
+            source: ("ai" | "fallback") | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** TailoredOut */
+        TailoredOut: {
+            document: components["schemas"]["ResumeDocument"] | null;
+            /** Edited */
+            edited: boolean;
+            /** Failure Reason */
+            failure_reason: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Injection Signals */
+            injection_signals: components["schemas"]["SignalOut"][];
+            keyword_match: components["schemas"]["KeywordMatchOut"] | null;
+            /** Paused Reason */
+            paused_reason: string | null;
+            /** Source */
+            source: ("ai" | "fallback") | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "writing" | "ready" | "failed";
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** TextIn */
+        TextIn: {
+            /** Text */
+            text: string;
         };
         /** ValidationError */
         ValidationError: {
@@ -2642,6 +3178,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CompanyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    linkedin_import_api_v1_companies_contacts_linkedin_import_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LinkedinImportIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkedinImportOut"];
                 };
             };
             /** @description Validation Error */
@@ -2991,6 +3560,70 @@ export interface operations {
                 "application/json": components["schemas"]["DeleteAllIn"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    edit_draft_api_v1_drafts__draft_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TextIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DraftOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_draft_api_v1_drafts__draft_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             204: {
@@ -3511,6 +4144,107 @@ export interface operations {
             };
         };
     };
+    put_description_api_v1_jobs__job_id__description_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DescriptionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_drafts_api_v1_jobs__job_id__drafts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DraftsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_draft_api_v1_jobs__job_id__drafts_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DraftIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     inquired_api_v1_jobs__job_id__inquired_post: {
         parameters: {
             query?: never;
@@ -3843,6 +4577,37 @@ export interface operations {
             };
         };
     };
+    recipients_api_v1_jobs__job_id__recipients_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipientsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     restore_api_v1_jobs__job_id__restore_post: {
         parameters: {
             query?: never;
@@ -3861,6 +4626,198 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JobDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_resume_api_v1_jobs__job_id__tailored_resume_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TailoredOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_resume_api_v1_jobs__job_id__tailored_resume_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DocumentIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TailoredOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_resume_api_v1_jobs__job_id__tailored_resume_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TailorIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_resume_api_v1_jobs__job_id__tailored_resume_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_docx_api_v1_jobs__job_id__tailored_resume_docx_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_pdf_api_v1_jobs__job_id__tailored_resume_pdf_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
@@ -3992,6 +4949,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pipeline_summary_api_v1_pipeline_summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PipelineSummaryOut"];
                 };
             };
         };
@@ -4926,6 +5903,26 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
+                };
+            };
+        };
+    };
+    list_resumes_api_v1_tailored_resumes_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TailoredListItem"][];
                 };
             };
         };

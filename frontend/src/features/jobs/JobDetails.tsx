@@ -1,6 +1,8 @@
+import { FileText, History, Link2 } from 'lucide-react'
 import { Link } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { CompanyPanel } from '@/features/companies/CompanyPanel'
+import { ActOnJob } from '@/features/drafts/ActOnJob'
 import {
   formatDate,
   formatDay,
@@ -14,6 +16,7 @@ import { InterviewPanel } from './interview/InterviewPanel'
 import { type UnsavedRegistry, useUnsavedRegistry } from './interview/unsaved'
 import { PipelineControl } from './PipelineControl'
 import { useUndoPipeline } from './pipelineApi'
+import { Section } from './Section'
 
 function safeLink(url: string | null | undefined): string | null {
   return url && /^https?:\/\//i.test(url) ? url : null
@@ -114,6 +117,8 @@ export function JobDetails({
         actions && data.state !== 'deleted' && <PipelineControl id={data.id} state={data.state} />
       )}
 
+      {actions && data.state !== 'deleted' && <ActOnJob jobId={data.id} title={data.title} />}
+
       {data.state !== 'deleted' && (
         <InterviewPanel
           key={data.id}
@@ -154,13 +159,11 @@ export function JobDetails({
         </section>
       )}
 
-      <section className="space-y-2">
-        <Heading className="text-lg font-semibold">Description</Heading>
-        <p className="whitespace-pre-wrap">{data.description}</p>
-      </section>
+      <Section as={Heading} title="Description" icon={FileText} tone="ht-section-description">
+        <p className="max-h-96 overflow-y-auto whitespace-pre-wrap pr-2">{data.description}</p>
+      </Section>
 
-      <section className="space-y-2">
-        <Heading className="text-lg font-semibold">Sources</Heading>
+      <Section as={Heading} title="Sources" icon={Link2} tone="ht-section-sources">
         <ul aria-label="Sources" className="space-y-1 text-sm">
           {data.sources.map((source) => {
             const href = safeLink(source.url)
@@ -183,11 +186,10 @@ export function JobDetails({
             )
           })}
         </ul>
-      </section>
+      </Section>
 
       {actions && (
-        <section className="space-y-2">
-          <Heading className="text-lg font-semibold">Decision history</Heading>
+        <Section as={Heading} title="Decision history" icon={History} tone="ht-section-history">
           <ul aria-label="Decision history" className="space-y-1 text-sm">
             {data.decision_history.map((decision) => (
               <li key={`${decision.created_at}:${decision.decided_by}`}>
@@ -205,7 +207,7 @@ export function JobDetails({
               </li>
             ))}
           </ul>
-        </section>
+        </Section>
       )}
     </div>
   )

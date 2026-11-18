@@ -51,11 +51,22 @@ type Setup = {
   jobs?: ReturnType<typeof card>[]
   next?: string | null
   url?: string
+  files?: unknown[]
 }
 
-function renderPage({ status = STATUS, jobs = [], next = null, url = '/' }: Setup = {}) {
+function renderPage({
+  status = STATUS,
+  jobs = [],
+  next = null,
+  url = '/',
+  files = [],
+}: Setup = {}) {
   const calls = stubApi((call: Call) => {
     if (call.path === '/status') return status
+    if (call.path === '/resumes') return files
+    if (call.path === '/pipeline/resumes') return { last_choice: null, usage: [] }
+    if (call.method === 'POST' && /^\/jobs\/[^/]+\/(applied|inquired)$/.test(call.path))
+      return jobs[0] ?? card('1', 'Backend Engineer')
     if (call.path === '/onboarding') return { display_name: null }
     if (call.path === '/search/latest') return null
     if (call.path.startsWith('/jobs/duplicates')) return { items: [], next_cursor: null }
@@ -290,49 +301,82 @@ describe('ExplorePage', () => {
     })
   })
 
-  it("US1 each card's resume choice names its job", async () => {
-    const file = {
-      id: 'f1',
-      kind: 'upload_pdf',
-      original_name: 'Backend_2025.pdf',
-      size_bytes: 1000,
-      page_count: 1,
-      parse_status: 'parsed',
-      parse_result: null,
-      created_at: '2026-10-02T09:00:00Z',
-      has_open_review: false,
-      open_review_id: null,
-    }
-    stubApi((call: Call) => {
-      if (call.path === '/status') return STATUS
-      if (call.path === '/onboarding') return { display_name: null }
-      if (call.path === '/search/latest') return null
-      if (call.path.startsWith('/jobs/duplicates')) return { items: [], next_cursor: null }
-      if (call.path === '/resumes') return [file]
-      if (call.path === '/pipeline/resumes') return { last_choice: null, usage: [] }
-      if (call.path.startsWith('/jobs?'))
-        return {
-          items: [card('1', 'Backend Engineer'), card('2', 'Platform Engineer')],
-          next_cursor: null,
-        }
-      return undefined
-    })
-    render(
-      <QueryClientProvider
-        client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
-      >
-        <MemoryRouter>
-          <ExplorePage />
-        </MemoryRouter>
-      </QueryClientProvider>,
-    )
+  const FILE = {
+    id: 'f1',
+    kind: 'upload_pdf',
+    original_name: 'Backend_2025.pdf',
+    size_bytes: 1000,
+    page_count: 1,
+    parse_status: 'parsed',
+    parse_result: null,
+    created_at: '2026-10-02T09:00:00Z',
+    has_open_review: false,
+    open_review_id: null,
+  }
 
-    expect(
-      await screen.findByRole('combobox', { name: 'Resume used for Backend Engineer' }),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole('combobox', { name: 'Resume used for Platform Engineer' }),
-    ).toBeInTheDocument()
+  it('FR001 explore row shows only two actions', async () => {
+    const calls = renderPage({
+      jobs: [card('1', 'Backend Engineer'), card('2', 'Platform Engineer')],
+      files: [FILE],
+    })
+
+    const rows = await jobRows()
+    await waitFor(() => expect(calls.some((c) => c.path === '/resumes')).toBe(true))
+    for (const row of rows) {
+      expect(within(row).getByRole('button', { name: 'I applied' })).toBeInTheDocument()
+      expect(within(row).getByRole('button', { name: 'I inquired' })).toBeInTheDocument()
+      expect(within(row).queryByRole('combobox')).not.toBeInTheDocument()
+      expect(within(row).queryByRole('button', { name: /date/i, hidden: false })).toBeNull()
+    }
+  })
+
+  it('FR002 details record resume and date', async () => {
+    const user = userEvent.setup()
+    const calls = renderPage({ jobs: [card('1', 'Backend Engineer')], files: [FILE] })
+    const row = (await jobRows())[0] as HTMLElement
+    await user.click(within(row).getByRole('button', { name: /show details/i }))
+
+    const select = await screen.findByRole('combobox', {
+      name: 'Resume used for Backend Engineer',
+    })
+    await user.selectOptions(select, 'f1')
+    await user.click(screen.getByRole('button', { name: 'Pick a date' }))
+    const day = new Date()
+    day.setDate(day.getDate() - 3)
+    const iso = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`
+    const date = screen.getByLabelText('Date')
+    await user.clear(date)
+    await user.type(date, iso)
+    const details = screen.getByRole('heading', { name: 'Record it' }).closest('section')
+    await user.click(within(details as HTMLElement).getByRole('button', { name: 'I applied' }))
+
+    await waitFor(() => expect(calls.some((c) => c.path === '/jobs/1/applied')).toBe(true))
+    expect(calls.find((c) => c.path === '/jobs/1/applied')).toMatchObject({
+      body: { applied_on: iso, resume_file_id: 'f1' },
+    })
+  })
+
+  it('FR002 details hide the resume choice with no stored resume', async () => {
+    const user = userEvent.setup()
+    const calls = renderPage({ jobs: [card('1', 'Backend Engineer')], files: [] })
+    const row = (await jobRows())[0] as HTMLElement
+    await user.click(within(row).getByRole('button', { name: /show details/i }))
+
+    expect(await screen.findByRole('button', { name: 'Pick a date' })).toBeInTheDocument()
+    await waitFor(() => expect(calls.some((c) => c.path === '/resumes')).toBe(true))
+    expect(screen.queryByRole('combobox', { name: /Resume used/ })).not.toBeInTheDocument()
+  })
+
+  it('FR003 one click from the row is unchanged', async () => {
+    const user = userEvent.setup()
+    const calls = renderPage({ jobs: [card('1', 'Backend Engineer')], files: [] })
+    const row = (await jobRows())[0] as HTMLElement
+
+    await user.click(within(row).getByRole('button', { name: 'I applied' }))
+
+    await waitFor(() => expect(calls.some((c) => c.path === '/jobs/1/applied')).toBe(true))
+    const mark = calls.find((c) => c.path === '/jobs/1/applied')
+    expect(mark?.body).toBeUndefined()
   })
 
   // --- 002i US5: a row opens in place, the title opens the posting ------------------------

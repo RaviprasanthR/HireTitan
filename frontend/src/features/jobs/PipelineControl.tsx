@@ -12,7 +12,7 @@ function today(): string {
 }
 
 /**
- * "I applied" and "I inquired": one click marks the job with today's date. "Other date" shows a
+ * "I applied" and "I inquired": one click marks the job with today's date. "Pick a date" shows a
  * date field first, for when it happened on another day. A job already inquired offers only
  * "I applied"; an applied job offers neither.
  *
@@ -28,9 +28,15 @@ export function PipelineControl({
   ownRemoved = false,
   title,
   className = '',
+  compact = false,
 }: {
   id: string
   state: string
+  /**
+   * A list row: only "I applied" and "I inquired", one click each. The resume choice and the date
+   * stay out of sight, but the starting resume is still sent, so nothing is lost (feature 002k).
+   */
+  compact?: boolean
   /** Extra classes for the row of controls (a list row right-aligns them). */
   className?: string
   /** The job's title, so the choice is named for it where a page lists many jobs. */
@@ -73,9 +79,18 @@ export function PipelineControl({
   const day = custom && date !== today() ? date : undefined
   const error = applied.isError ? applied.error : inquired.isError ? inquired.error : null
   const busy = applied.isPending || inquired.isPending
+  // a cleared date would silently become today on the server: ask for one instead
+  const blocked = busy || (custom && date === '')
+  // in a list every row has the same buttons, so say which job they are for
+  const forId = compact && title ? `pipeline-for-${id}` : undefined
   return (
     <div className={`flex flex-wrap items-end gap-2 ${className}`}>
-      {custom && (
+      {forId && (
+        <span id={forId} className="sr-only">
+          {`For: ${title}`}
+        </span>
+      )}
+      {custom && !compact && (
         <label className="flex flex-col gap-1 text-sm">
           Date
           <input
@@ -87,7 +102,7 @@ export function PipelineControl({
           />
         </label>
       )}
-      {showResume && (
+      {showResume && !compact && (
         <ResumeSelect
           ariaLabel={title ? `Resume used for ${title}` : undefined}
           files={offered}
@@ -100,7 +115,8 @@ export function PipelineControl({
         type="button"
         variant="success"
         size="sm"
-        disabled={busy}
+        disabled={blocked}
+        aria-describedby={forId}
         onClick={() => {
           inquired.reset() // an old refusal of the other mark is not shown beside a new one
           applied.mutate({ id, day, resume })
@@ -113,7 +129,8 @@ export function PipelineControl({
           type="button"
           variant="outline"
           size="sm"
-          disabled={busy}
+          disabled={blocked}
+          aria-describedby={forId}
           onClick={() => {
             applied.reset()
             inquired.mutate({ id, day, resume })
@@ -122,7 +139,7 @@ export function PipelineControl({
           I inquired
         </Button>
       )}
-      {!custom && (
+      {!custom && !compact && (
         <Button
           type="button"
           variant="ghost"
@@ -130,7 +147,7 @@ export function PipelineControl({
           className="text-muted-small"
           onClick={() => setCustom(true)}
         >
-          Other date
+          Pick a date
         </Button>
       )}
       {error && (

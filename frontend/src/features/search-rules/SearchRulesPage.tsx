@@ -508,7 +508,26 @@ export function SearchRulesPage() {
 
   return (
     <section className="max-w-6xl space-y-4">
-      <h1 className="text-2xl font-semibold">Search rules</h1>
+      <div className="flex items-start justify-between gap-4">
+        <h1 className="text-2xl font-semibold">Search rules</h1>
+        {!draft && approved && (
+          <Button
+            ref={(node) => {
+              if (node && returnFocus.current) {
+                returnFocus.current = false
+                node.focus()
+              }
+            }}
+            onClick={() => {
+              setSaved(false)
+              setEditing({ rules: approved.rules, key: `edit-${approved.id}` })
+            }}
+          >
+            <Pencil aria-hidden className="size-4" />
+            Edit rules
+          </Button>
+        )}
+      </div>
       {stale && !draft && (
         <div className="flex flex-wrap items-center gap-3 rounded-lg bg-surface p-3 text-sm">
           <span className="text-warning">
@@ -544,23 +563,6 @@ export function SearchRulesPage() {
             These are the rules your searches use (version {approved.version}).
           </p>
           <ReadView rules={approved.rules} />
-          <div className="flex flex-wrap gap-3">
-            <Button
-              ref={(node) => {
-                if (node && returnFocus.current) {
-                  returnFocus.current = false
-                  node.focus()
-                }
-              }}
-              onClick={() => {
-                setSaved(false)
-                setEditing({ rules: approved.rules, key: `edit-${approved.id}` })
-              }}
-            >
-              <Pencil aria-hidden className="size-4" />
-              Edit rules
-            </Button>
-          </div>
         </div>
       ) : (
         <div className="space-y-4">

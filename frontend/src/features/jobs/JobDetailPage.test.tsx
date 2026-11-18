@@ -241,7 +241,7 @@ describe('JobDetailPage', () => {
     const user = userEvent.setup()
     const calls = renderPage()
 
-    await user.click(await screen.findByRole('button', { name: 'Other date' }))
+    await user.click(await screen.findByRole('button', { name: 'Pick a date' }))
     const date = screen.getByLabelText('Date')
     await user.clear(date)
     await user.type(date, '2026-11-03')
@@ -436,7 +436,7 @@ describe('JobDetailPage', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: 'Other date' }))
+    await user.click(await screen.findByRole('button', { name: 'Pick a date' }))
     const date = screen.getByLabelText('Date')
     fireEvent.change(date, { target: { value: '2999-01-01' } })
     await user.click(screen.getByRole('button', { name: 'I inquired' }))

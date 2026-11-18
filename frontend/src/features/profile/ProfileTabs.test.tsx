@@ -59,7 +59,7 @@ describe('Profile tabs', () => {
     vi.unstubAllGlobals()
   })
 
-  it('US4 AS1 the profile page has the three tabs, Profile first', async () => {
+  it('US4 AS1 the profile page has the four tabs, Profile first', async () => {
     renderAt('/profile')
 
     const tabs = await screen.findByRole('navigation', { name: 'Profile tabs' })
@@ -68,7 +68,7 @@ describe('Profile tabs', () => {
       within(tabs)
         .getAllByRole('link')
         .map((l) => l.textContent),
-    ).toEqual(['Profile', 'Preferences', 'Search rules'])
+    ).toEqual(['Profile', 'Preferences', 'Search rules', 'Connections'])
     expect(within(tabs).getByRole('link', { name: 'Profile' })).toHaveAttribute(
       'aria-current',
       'page',

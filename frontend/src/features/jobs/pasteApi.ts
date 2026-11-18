@@ -10,6 +10,7 @@ export type PasteFields = {
   description: string
   title?: string
   company?: string
+  location?: string
 }
 
 export function usePasteJob() {
