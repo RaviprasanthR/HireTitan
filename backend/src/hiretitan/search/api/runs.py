@@ -105,6 +105,8 @@ def ai_note(row: SearchRunRow) -> str | None:
     if row.mode == "rules_only":
         return "AI step skipped: you chose rules only."
     if row.judged_by_ai == 0 and row.not_checked_by_ai > 0:
+        if row.outcome == "stopped_by_user":
+            return "AI step skipped: the search was stopped before the AI checked these jobs."
         return "AI step skipped: the AI was not available, so the rules alone decided."
     return None
 
