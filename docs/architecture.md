@@ -264,7 +264,10 @@ Trigger: the user clicks "Check with AI" on the **maybe** bucket or on selected 
 ### W4 `score_job` (feature 002, optional, on demand)
 `load_facts` D (runs `extract_job_facts` from W3b first if the job has no AI facts yet) → `fit_score` L fast (dimension scores + evidence citing job facts and profile facts) → `apply_caps` D (pure domain rules, e.g. location/pay caps from the user's settings) → `store_score` D.
 
-### W5 `outreach_draft` (feature 004)
+### W5 `outreach_draft` (built in feature 002k, 2026-11-17)
+**What 002k built:** a one-node graph `outreach_draft` (`drafts/workflow/outreach.py`) on the existing runner, started by `POST /jobs/{id}/drafts`. It covers two draft types, a LinkedIn connection request (at most 200 characters) and a referral message, for a company contact or a typed name and role. The node reads the job's keywords once per description (`extract_job_keywords`, fast, untrusted text delimited and screened), picks profile facts, calls the drafting prompt (`draft_connection_request` and `draft_referral_message`, both fast; the eval compares `strong`), runs the truthfulness checks (numbers, years, technology terms, names, cited ids) and the tone rules, repairs once, else uses a plain template. **Names are placeholders** (`{recipient_first_name}`, `{my_name}`) filled in by the node after the checks, so contacts and the person's details never reach a prompt (002b FR-022; the AI sees only the recipient kind). Drafts are stored one per job, kind and recipient and are never sent. **Left for feature 004:** HR email and follow-up drafts, marking a draft "sent" by hand, draft versions.
+
+(Original plan, kept for 004:)
 Trigger: user picks a job/application and a draft type (referral request, LinkedIn note, HR email, follow-up).
 
 | # | Node | Type | Notes |
@@ -275,7 +278,10 @@ Trigger: user picks a job/application and a draft type (referral request, Linked
 | 4 | `review_draft` | ⏸ | user edits/approves; the app offers copy buttons and **never sends** |
 | 5 | `save_draft` | D | stored with versions; the user can mark it "sent" manually for tracking |
 
-### W6 `tailor_resume` (feature 005)
+### W6 `tailor_resume` (built in feature 002k, 2026-11-17)
+**What 002k built:** a one-node graph `tailor_resume` (`drafts/workflow/tailor.py`), started by `POST /jobs/{id}/tailored-resume`. The strong model rewords the summary and reorders and rewords the person's own bullets and skills; employers, titles, dates, schools and contact details are copied from the profile by id (`drafts/domain/resume_doc.py`), every number and technology in a reworded bullet must be in its source bullet, skills must be profile skills; one repair, else the profile in its own wording ordered by the job's keywords. The result is a stored document with a keyword match (matched, missing "not in your profile" or "in your profile but not in this resume"), editable in the app and rendered on request to PDF (reportlab) and DOCX (python-docx), one single column, no tables or images. **Decided in 002k:** reportlab instead of WeasyPrint (no system libraries in the image). **Left for feature 005:** content suggestions (W9), linking a resume version to an application, more than one template.
+
+(Original plan, kept for 005:)
 
 | # | Node | Type | Notes |
 |---|---|---|---|
