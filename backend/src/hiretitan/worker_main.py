@@ -13,6 +13,10 @@ from collections.abc import Mapping
 from pathlib import Path
 
 from hiretitan import prompts as hiretitan_prompts
+from hiretitan.drafts.workflow.common import DraftDeps
+from hiretitan.drafts.workflow.outreach import OUTREACH_WORKFLOW, outreach_workflow
+from hiretitan.drafts.workflow.tailor import TAILOR_WORKFLOW, tailor_workflow
+from hiretitan.drafts_wiring import SqlJobs, SqlProfileFacts, tech_terms
 from hiretitan.platform.clock import SystemClock
 from hiretitan.platform.config.settings import Settings, get_settings
 from hiretitan.platform.db import create_engine, session_factory
@@ -41,13 +45,19 @@ from hiretitan.seed_dir import resolve_seed_dir
 SEED_DIR = resolve_seed_dir()
 
 
-def workflow_registry(deps: IngestDeps, search: SearchDeps) -> Mapping[str, WorkflowDef]:
+def workflow_registry(
+    deps: IngestDeps, search: SearchDeps, drafts: DraftDeps | None = None
+) -> Mapping[str, WorkflowDef]:
     """Every workflow this install can run, by name. Features add theirs here."""
-    return {
+    registry: dict[str, WorkflowDef] = {
         WORKFLOW_NAME: profile_ingest_workflow(deps),
         SEARCH_WORKFLOW_NAME: job_search_workflow(search),
         RECHECK_WORKFLOW: recheck_workflow(search),
     }
+    if drafts is not None:
+        registry[OUTREACH_WORKFLOW] = outreach_workflow(drafts)
+        registry[TAILOR_WORKFLOW] = tailor_workflow(drafts)
+    return registry
 
 
 async def run_worker(settings: Settings, *, wait: bool = True) -> None:
@@ -93,12 +103,23 @@ async def run_worker(settings: Settings, *, wait: bool = True) -> None:
             provider=provider,
         ),
     )
+    draft_deps = DraftDeps(
+        sessions=sessions,
+        llm=built.llm,
+        prompts=ingest_deps.prompts,
+        profile=SqlProfileFacts(sessions),
+        jobs=SqlJobs(sessions),
+        clock=SystemClock(),
+        publish=publisher.publish,
+        tech_terms=tech_terms(tables.tech_names),
+        provider=provider,
+    )
     try:
         async with open_checkpointer(settings.database_url) as checkpointer:
             runtime.holder.runner = WorkflowRunner(
                 sessions,
                 checkpointer,
-                workflow_registry(ingest_deps, search_deps),
+                workflow_registry(ingest_deps, search_deps, draft_deps),
                 run_notifier(publisher),
             )
             async with runtime.app.open_async():

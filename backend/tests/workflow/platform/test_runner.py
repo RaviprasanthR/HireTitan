@@ -217,3 +217,30 @@ async def test_retries_then_failed(
 def test_retry_delays_are_10s_1min_5min() -> None:
     assert [retry_delay_seconds(n) for n in (1, 2, 3)] == [10, 60, 300]
     assert retry_delay_seconds(4) is None
+
+
+async def test_on_failed_hook_runs_once_when_the_run_finally_fails(
+    sessions: async_sessionmaker[AsyncSession], saver: BaseCheckpointSaver[Any]
+) -> None:
+    toy = Toy()
+
+    async def second(state: State) -> State:
+        raise ValueError("boom")
+
+    toy.second = second
+    failed: list[UUID] = []
+
+    async def on_failed(run: Run) -> None:
+        failed.append(run.id)
+        raise RuntimeError("a broken hook must not hide the failure")
+
+    definition = WorkflowDef(build=toy.build, initial_input=lambda run: {}, on_failed=on_failed)
+    runner = WorkflowRunner(sessions, saver, {"toy": definition})
+    run = await new_run(sessions)
+
+    with pytest.raises(ValueError):
+        await runner.execute(run.id, attempt=1, max_attempts=2)
+    assert failed == []
+    await runner.execute(run.id, attempt=2, max_attempts=2)
+    assert failed == [run.id]
+    assert (await current(sessions, run.id)).state.status is RunStatus.failed

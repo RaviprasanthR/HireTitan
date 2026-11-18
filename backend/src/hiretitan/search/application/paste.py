@@ -26,6 +26,7 @@ DESCRIPTION_MIN: Final = 50
 DESCRIPTION_MAX: Final = 30_000
 TITLE_MAX: Final = 200
 COMPANY_MAX: Final = 120
+LOCATION_MAX: Final = 120
 REASON: Final = "added by you"
 SOURCE_KIND: Final = "paste"
 
@@ -50,6 +51,7 @@ class PasteInput:
     description: str
     title: str | None = None
     company: str | None = None
+    location: str | None = None  # where the job is, as the person writes it
 
 
 @dataclass(frozen=True, slots=True)
@@ -145,6 +147,7 @@ def _candidates(found: DedupJob, others: list[DedupJob]) -> tuple[tuple[UUID, fl
 
 async def paste_job(store: PasteStore, data: PasteInput, *, now: datetime) -> PasteResult:
     url, description, title, company = _check(data)
+    location = _line(data.location)[:LOCATION_MAX] if data.location else ""
     canonical = canonical_url(url)
     assert canonical is not None  # _check refused anything else
     decision = DecisionInput("shown", "person", REASON)
@@ -168,7 +171,7 @@ async def paste_job(store: PasteStore, data: PasteInput, *, now: datetime) -> Pa
     facts = normalize_job(
         title=title,
         url=url,
-        location_text=None,
+        location_text=location or None,
         posted_at=None,
         description=description,
         requisition_id=None,
@@ -183,7 +186,7 @@ async def paste_job(store: PasteStore, data: PasteInput, *, now: datetime) -> Pa
             company_id=await store.company_id(company),
             company_name=company,
             title=facts.title,
-            location_text=None,
+            location_text=location or None,
             city=None,
             country=None,
             work_mode=facts.work_mode,

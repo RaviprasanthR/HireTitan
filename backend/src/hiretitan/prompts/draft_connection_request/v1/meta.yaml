@@ -1,0 +1,5 @@
+version: 1
+tier: fast
+max_output_tokens: 400
+changelog:
+  - "v1: first version. A LinkedIn connection note from the person's own profile facts, within a character budget; names are placeholders filled in by the app."

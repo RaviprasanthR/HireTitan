@@ -381,3 +381,35 @@ def test_FR015_planted_sender_in_contacts_code_is_caught(source: str) -> None:
 def test_FR015_contacts_globs_are_not_stale() -> None:
     # every pattern must still point at the search package, so a rename can't empty the scan
     assert all(pattern.startswith("search/") for pattern in CONTACTS_GLOBS)
+
+
+# Feature 002k (constitution I): the drafts module only writes text for the person to copy. It has
+# no way to send it and no HTTP client at all.
+DRAFTS_PACKAGE = Path("drafts")
+
+
+def _drafts_sources() -> list[tuple[Path, str]]:
+    return [
+        (p, s)
+        for p, s in _package_sources()
+        if p.relative_to(PACKAGE).is_relative_to(DRAFTS_PACKAGE)
+    ]
+
+
+def test_SC007_no_send_scans_drafts() -> None:
+    sources = _drafts_sources()
+    assert len(sources) > 10, "the scan must actually see the drafts module"
+    bad: dict[str, list[str]] = {}
+    for path, source in sources:
+        found = sending_violations(source) + contacts_client_violations(source)
+        if found:
+            bad[str(path.relative_to(PACKAGE))] = found
+    assert bad == {}
+
+
+@pytest.mark.parametrize(
+    "source",
+    ["import smtplib\n", "import httpx\n", "import requests\n", "from twilio.rest import Client\n"],
+)
+def test_SC007_planted_sender_or_client_in_drafts_is_caught(source: str) -> None:
+    assert sending_violations(source) or contacts_client_violations(source)

@@ -1,0 +1,5 @@
+version: 1
+tier: fast
+max_output_tokens: 700
+changelog:
+  - "v1: first version. A polite, not pushy LinkedIn message asking about a referral, from the person's own profile facts. Parts are returned separately so the app can check each."

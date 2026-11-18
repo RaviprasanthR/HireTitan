@@ -5,7 +5,7 @@ from __future__ import annotations
 import base64
 import binascii
 import json
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
@@ -13,12 +13,14 @@ from typing import Any, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Response
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from hiretitan.platform.clock import ClockPort
 from hiretitan.platform.runtime.infra.runs_repo import RunsRepo
+from hiretitan.platform.untrusted.sanitize import sanitize
+from hiretitan.platform.untrusted.screen import screen
 from hiretitan.platform.web.problems import ProblemError, problem
 from hiretitan.search.api.models import (
     DecisionOut,
@@ -41,6 +43,7 @@ from hiretitan.search.application.pipeline import (
 from hiretitan.search.application.resume_choice import ResumeLookup, clear_for_job, record_on_mark
 from hiretitan.search.application.search import RunQueue
 from hiretitan.search.domain.job_state import IllegalJobTransitionError, JobState, transition
+from hiretitan.search.domain.normalize import normalize_job
 from hiretitan.search.infra.interviews_repo import InterviewsRepo
 from hiretitan.search.infra.models import JobRow, JobSourceRow
 from hiretitan.search.infra.paste_store import SqlPasteStore
@@ -64,6 +67,17 @@ class SearchJobsApiDeps:
     clock: ClockPort
     # Checks a stored resume file for the "Resume used" choice (feature 002f).
     resume_lookup: Callable[[AsyncSession], ResumeLookup]
+    # What other features hold about a job goes with it when it is deleted (feature 002k). Each
+    # runs inside the delete's transaction, so a failure rolls the delete back.
+    job_cleanups: Sequence[Callable[[AsyncSession, UUID], Awaitable[None]]] = ()
+
+
+DESCRIPTION_MIN = 200
+DESCRIPTION_MAX = 30_000
+
+
+class DescriptionIn(BaseModel):
+    description: str = Field(max_length=200_000)
 
 
 class DecisionHistoryOut(DecisionOut):
@@ -93,6 +107,7 @@ class PasteIn(BaseModel):
     description: str = ""
     title: str | None = None
     company: str | None = None
+    location: str | None = Field(default=None, max_length=500)
 
 
 class JobDetailOut(JobCardOut):
@@ -288,7 +303,7 @@ def create_search_jobs_router(deps: SearchJobsApiDeps) -> APIRouter:
             try:
                 result = await paste_job(
                     SqlPasteStore(session),
-                    PasteInput(body.url, body.description, body.title, body.company),
+                    PasteInput(body.url, body.description, body.title, body.company, body.location),
                     now=deps.clock.now(),
                 )
             except PasteError as error:
@@ -410,7 +425,54 @@ def create_search_jobs_router(deps: SearchJobsApiDeps) -> APIRouter:
             row.inquired_on = None
             # what was recorded about the job goes with it (feature 002e, FR-011)
             await InterviewsRepo(session).delete_for_job(job_id)
+            for cleanup in deps.job_cleanups:
+                await cleanup(session, job_id)
             await session.commit()
         return Response(status_code=204)
+
+    @router.put("/{job_id}/description", response_model=JobDetailOut)
+    async def put_description(job_id: UUID, body: DescriptionIn) -> Any:
+        """The person pastes the posting's text, for a job found without it (feature 002k)."""
+        cleaned = sanitize(body.description)
+        if cleaned.truncated is not None or len(cleaned.text) > DESCRIPTION_MAX:
+            raise ProblemError(
+                422, f"The description must be at most {DESCRIPTION_MAX} characters."
+            )
+        if len(cleaned.text) < DESCRIPTION_MIN:
+            raise ProblemError(
+                422, f"The description must be at least {DESCRIPTION_MIN} characters."
+            )
+        flags = [
+            {
+                "rule_id": f.rule_id,
+                "severity": f.severity,
+                "excerpt": f.excerpt,
+                "location": f.location,
+            }
+            for f in screen(cleaned.text)
+        ]
+        async with deps.sessions() as session:
+            row = await load(session, job_id)
+            # what the new text asks for, as when a job is pasted; skills found earlier are kept
+            facts = normalize_job(
+                title=row.title,
+                url="https://pasted.invalid/",
+                location_text=row.location_text,
+                posted_at=None,
+                description=cleaned.text,
+                requisition_id=None,
+                stack_keywords=(),
+            )
+            skills = tuple(dict.fromkeys([*row.skills_found, *facts.skills_found]))
+            await JobsRepo(session).set_description(
+                job_id,
+                description=cleaned.text,
+                skills_found=skills,
+                years_found=facts.years_found if facts.years_found is not None else row.years_found,
+                injection_flags=flags,
+            )
+            await session.commit()
+            await session.refresh(row)
+            return await detail(session, row)
 
     return router
