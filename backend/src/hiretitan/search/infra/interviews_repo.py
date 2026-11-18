@@ -364,6 +364,20 @@ class InterviewsRepo:
                 summary[grouped_job] = (latest_state, latest_number)
         return summary
 
+    async def status_counts(self) -> dict[str, int]:
+        """How many pipeline jobs have each status, every job counted once: a job's latest round
+        (a failed round wins), else whether it was applied to or inquired about (FR-007)."""
+        jobs = await self._session.execute(
+            select(JobRow.id, JobRow.state).where(JobRow.state.in_(("applied", "inquired")))
+        )
+        states = dict(jobs.tuples().all())
+        rounds = await self.summaries(list(states))
+        counts = {"inquired": 0, "applied": 0, "scheduled": 0, "cleared": 0, "failed": 0}
+        for job_id, job_state in states.items():
+            status = rounds[job_id][0] if job_id in rounds else job_state
+            counts[status] = counts.get(status, 0) + 1
+        return counts
+
     async def rounds_matching(
         self, *, kind: str | None = None, state: str | None = None, source: str | None = None
     ) -> list[InterviewRoundRow]:

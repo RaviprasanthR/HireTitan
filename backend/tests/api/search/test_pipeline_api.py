@@ -16,6 +16,7 @@ from hiretitan.api_main import create_app
 from hiretitan.platform.clock import FakeClock
 from hiretitan.platform.config.settings import Settings
 from hiretitan.search.api.jobs import SearchJobsApiDeps, create_search_jobs_router
+from hiretitan.search.api.pipeline import PipelineApiDeps, create_pipeline_router
 from hiretitan.search.infra.interviews_repo import InterviewsRepo
 from hiretitan.search.infra.repos import CompaniesRepo, JobsRepo
 from hiretitan.search_wiring import SqlResumeLookup
@@ -41,7 +42,12 @@ async def env(sessions: async_sessionmaker[AsyncSession], tmp_path: Path) -> Asy
         sessions=sessions, queue=_Queue(), clock=FakeClock(NOW), resume_lookup=SqlResumeLookup
     )
     app = create_app(
-        Settings(), frontend_dist=tmp_path / "none", routers=[create_search_jobs_router(deps)]
+        Settings(),
+        frontend_dist=tmp_path / "none",
+        routers=[
+            create_search_jobs_router(deps),
+            create_pipeline_router(PipelineApiDeps(sessions)),
+        ],
     )
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
@@ -255,6 +261,36 @@ async def test_SC002_pipeline_status_column(env: Env) -> None:
     assert {plain_applied, plain_inquired} <= {
         UUID(i["id"]) for i in (await _pipeline(env))["items"]
     }
+
+
+async def test_pipeline_summary_counts_each_job_once_by_its_status(env: Env) -> None:
+    await add_job(env, "Plain applied", state="applied")
+    await add_job(env, "Plain inquired", state="inquired")
+    await add_job(env, "Second inquired", state="inquired")
+    scheduled = await add_job(env, "Round two", state="applied")
+    cleared = await add_job(env, "Round one", state="applied")
+    failed = await add_job(env, "Failed in three", state="applied")
+    await add_job(env, "Not in the pipeline", state="explore")
+    await _add_rounds(env, scheduled, ["cleared", "scheduled"])
+    await _add_rounds(env, cleared, ["cleared"])
+    await _add_rounds(env, failed, ["cleared", "cleared", "failed", "scheduled"])
+
+    response = await env.client.get("/api/v1/pipeline/summary")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "total": 6,
+        "inquired": 2,
+        "applied": 1,
+        "scheduled": 1,
+        "cleared": 1,
+        "failed": 1,
+    }
+
+
+async def test_pipeline_summary_of_an_empty_pipeline(env: Env) -> None:
+    response = await env.client.get("/api/v1/pipeline/summary")
+    assert response.json()["total"] == 0
 
 
 async def test_explore_list_has_no_interview(env: Env) -> None:
