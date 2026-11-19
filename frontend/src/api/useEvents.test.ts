@@ -139,4 +139,13 @@ describe('useEvents review fixes', () => {
     expect(refreshed).toEqual(expect.arrayContaining(['jobs', 'search-latest', 'search-run']))
     expect(invalidate.mock.calls.length).toBeGreaterThanOrEqual(10)
   })
+
+  it('US1_a_mail_connection_event_refreshes_the_gmail_section', () => {
+    const { source, invalidate } = setup()
+    invalidate.mockClear()
+
+    act(() => source.emit('mail.connection_changed', { state: 'connected' }))
+
+    expect(keys(invalidate)).toContainEqual(['mail'])
+  })
 })

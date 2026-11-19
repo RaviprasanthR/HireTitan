@@ -17,7 +17,7 @@ cp .env.example .env        # Windows PowerShell: Copy-Item .env.example .env
 docker compose up --build
 ```
 
-Then open <http://127.0.0.1:8000>. Details, what is sent to OpenAI and how to delete your data are in the [getting-started guide](docs/user-guide/getting-started.md); the starting preference values are in [preference-defaults](docs/user-guide/preference-defaults.md). Platforms: checked on Windows 11 by hand; Linux is checked in CI (the `compose-smoke` and `e2e` jobs); macOS is expected to work but has not been tested.
+Then open <http://127.0.0.1:8000>. Details, what is sent to OpenAI and how to delete your data are in the [getting-started guide](docs/user-guide/getting-started.md); the starting preference values are in [preference-defaults](docs/user-guide/preference-defaults.md). To read your job-alert emails (optional, read-only), follow the [Gmail setup guide](docs/gmail-setup.md). Platforms: checked on Windows 11 by hand; Linux is checked in CI (the `compose-smoke` and `e2e` jobs); macOS is expected to work but has not been tested.
 
 ## Planned features (first release)
 

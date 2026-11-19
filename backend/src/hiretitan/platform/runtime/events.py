@@ -32,6 +32,7 @@ EVENT_TYPES: Final = frozenset(
         "draft.failed",
         "tailored_resume.ready",
         "tailored_resume.failed",
+        "mail.connection_changed",
     }
 )
 

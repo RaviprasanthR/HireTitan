@@ -27,11 +27,13 @@ from starlette.types import ASGIApp, Lifespan, Message, Receive, Scope, Send
 from hiretitan.drafts.api.drafts import DraftsApiDeps, create_drafts_router
 from hiretitan.drafts.api.resumes import create_resumes_router as create_tailored_router
 from hiretitan.drafts_wiring import SqlContacts, SqlJobs, SqlProfileFacts, clear_drafts_for_job
-from hiretitan.mail_wiring import seed_mail_senders
+from hiretitan.mail.api.connection import MailApiDeps, create_connection_router
+from hiretitan.mail_wiring import build_connection_service, seed_mail_senders
 from hiretitan.platform.clock import SystemClock
 from hiretitan.platform.config.settings import Settings, get_settings
 from hiretitan.platform.db import create_engine, session_factory
 from hiretitan.platform.runtime.api import create_events_router, create_runs_router
+from hiretitan.platform.runtime.events import EventPublisher
 from hiretitan.platform.runtime.procrastinate import CHECK_PROVIDER_KEY_TASK, create_runtime
 from hiretitan.platform.security.logging import configure_logging
 from hiretitan.platform.storage.local import LocalFileStorage
@@ -306,6 +308,13 @@ def build_app(settings: Settings | None = None) -> FastAPI:
             )
         ),
         create_review_items_router(ReviewItemsApiDeps(sessions=deps.sessions, facts=RepoFacts)),
+        create_connection_router(
+            MailApiDeps(
+                build_connection_service(
+                    settings, deps.sessions, clock, EventPublisher(engine).publish
+                )
+            )
+        ),
         create_data_router(
             DataApiDeps(
                 sessions=deps.sessions,

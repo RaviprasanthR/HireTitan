@@ -20,6 +20,7 @@ const POLL_KEYS: QueryKey[] = [
   ['search-run'],
   ['drafts'],
   ['tailored-resume'],
+  ['mail'],
 ]
 
 /**
@@ -81,6 +82,8 @@ export function useEvents(): { connected: boolean } {
       'tailored_resume.failed',
     ])
       source.addEventListener(name, draftChanged)
+    // The Gmail connection changed (connected, disconnected, access ended): Settings refreshes.
+    source.addEventListener('mail.connection_changed', () => invalidate(['mail']))
     source.addEventListener('search.batch_done', searchChanged)
     source.addEventListener('search.finished', searchChanged)
 

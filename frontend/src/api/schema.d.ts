@@ -664,6 +664,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mail/connect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Connect */
+        post: operations["connect_api_v1_mail_connect_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mail/connection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Connection */
+        get: operations["get_connection_api_v1_mail_connection_get"];
+        put?: never;
+        post?: never;
+        /** Disconnect */
+        delete: operations["disconnect_api_v1_mail_connection_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mail/credentials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Put Credentials */
+        put: operations["put_credentials_api_v1_mail_credentials_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/onboarding": {
         parameters: {
             query?: never;
@@ -1317,6 +1369,11 @@ export interface components {
             /** Resume File Id */
             resume_file_id?: string | null;
         };
+        /** AuthorizeModel */
+        AuthorizeModel: {
+            /** Authorize Url */
+            authorize_url: string;
+        };
         /** Body_upload_resume_api_v1_resumes_post */
         Body_upload_resume_api_v1_resumes_post: {
             /** File */
@@ -1476,6 +1533,28 @@ export interface components {
              */
             setup_completed_at: string;
         };
+        /** ConnectionModel */
+        ConnectionModel: {
+            /** Address */
+            address: string | null;
+            /** Credentials From Environment */
+            credentials_from_environment: boolean;
+            /** Credentials Set */
+            credentials_set: boolean;
+            /** Last Check Started At */
+            last_check_started_at: string | null;
+            /** Last Error */
+            last_error: string | null;
+            /** Redirect Uri */
+            redirect_uri: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "not_connected" | "connected" | "needs_reconnect";
+            /** Window Hours */
+            window_hours: number;
+        };
         /** ContactModel */
         ContactModel: {
             /** Email */
@@ -1555,6 +1634,13 @@ export interface components {
             items: components["schemas"]["ContactOut"][];
             note: components["schemas"]["NoteOut"] | null;
         };
+        /** CredentialsBody */
+        CredentialsBody: {
+            /** Client Id */
+            client_id: string;
+            /** Client Secret */
+            client_secret: string;
+        };
         /** DecisionHistoryOut */
         DecisionHistoryOut: {
             /**
@@ -1608,6 +1694,11 @@ export interface components {
         DescriptionIn: {
             /** Description */
             description: string;
+        };
+        /** DisconnectModel */
+        DisconnectModel: {
+            /** Revoked */
+            revoked: boolean;
         };
         /** DiscoveryOut */
         DiscoveryOut: {
@@ -4818,6 +4909,99 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    connect_api_v1_mail_connect_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthorizeModel"];
+                };
+            };
+        };
+    };
+    get_connection_api_v1_mail_connection_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectionModel"];
+                };
+            };
+        };
+    };
+    disconnect_api_v1_mail_connection_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DisconnectModel"];
+                };
+            };
+        };
+    };
+    put_credentials_api_v1_mail_credentials_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CredentialsBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectionModel"];
                 };
             };
             /** @description Validation Error */

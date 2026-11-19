@@ -18,12 +18,19 @@ import os
 import tempfile
 import threading
 import time
+import uuid
 from collections.abc import Iterator, Mapping
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Final
 
+from hiretitan.mail.application.ports import (
+    CredentialsFromEnvironmentError,
+    GoogleSecrets,
+    SecretsFileError,
+)
 from hiretitan.platform.security.logging import register_secret
+
+__all__ = ["CredentialsFromEnvironmentError", "GoogleSecrets", "SecretsFile", "SecretsFileError"]
 
 ENV_CLIENT_ID: Final = "GOOGLE_OAUTH_CLIENT_ID"
 ENV_CLIENT_SECRET: Final = "GOOGLE_OAUTH_CLIENT_SECRET"  # noqa: S105  (a variable name)
@@ -34,23 +41,6 @@ _log = logging.getLogger(__name__)
 _WARNED: set[str] = set()
 _THREAD_LOCKS: dict[str, threading.RLock] = {}
 _THREAD_LOCKS_GUARD = threading.Lock()
-
-
-class CredentialsFromEnvironmentError(ValueError):
-    """The client id and secret come from the environment, so they cannot be saved here."""
-
-
-class SecretsFileError(RuntimeError):
-    """The secrets file cannot be trusted: damaged, or readable by other people."""
-
-
-@dataclass(frozen=True, slots=True)
-class GoogleSecrets:
-    """What is known. The values stay out of ``repr`` so a stray log line cannot show them."""
-
-    client_id: str | None = field(default=None, repr=False)
-    client_secret: str | None = field(default=None, repr=False)
-    refresh_token: str | None = field(default=None, repr=False)
 
 
 def _thread_lock(path: Path) -> threading.RLock:
@@ -78,24 +68,40 @@ class SecretsFile:
         lock_path = self._path.with_name(self._path.name + ".lock")
         with _thread_lock(self._path):
             self._path.parent.mkdir(parents=True, exist_ok=True)
+            owner = uuid.uuid4().hex  # written into the lock so only its owner removes it
             deadline = time.monotonic() + LOCK_WAIT_SECONDS
             while True:
                 try:
-                    os.close(os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY))
-                    break
+                    fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
                 except FileExistsError:
-                    with contextlib.suppress(OSError):
-                        if time.time() - lock_path.stat().st_mtime > LOCK_STALE_SECONDS:
-                            lock_path.unlink()  # left behind by a process that died
-                            continue
+                    self._take_over_if_stale(lock_path)
                     if time.monotonic() > deadline:
                         raise SecretsFileError("The Google secrets file is busy.") from None
                     time.sleep(0.01)
+                    continue
+                with os.fdopen(fd, "w", encoding="utf-8") as stream:
+                    stream.write(owner)
+                break
             try:
                 yield
             finally:
                 with contextlib.suppress(OSError):
-                    lock_path.unlink()
+                    if lock_path.read_text("utf-8") == owner:  # not one another process took over
+                        lock_path.unlink()
+
+    @staticmethod
+    def _take_over_if_stale(lock_path: Path) -> None:
+        """Clear a lock left by a process that died. The lock is moved aside with one atomic
+        rename, so of several waiters only one succeeds and nobody deletes a fresh lock."""
+        try:
+            if time.time() - lock_path.stat().st_mtime <= LOCK_STALE_SECONDS:
+                return
+            aside = lock_path.with_name(f"{lock_path.name}.stale-{uuid.uuid4().hex}")
+            os.replace(lock_path, aside)
+        except OSError:
+            return  # someone else got there first, or it is gone
+        with contextlib.suppress(OSError):
+            aside.unlink()
 
     def _check_private(self) -> None:
         if os.name == "nt":
@@ -184,7 +190,14 @@ class SecretsFile:
                 os.fsync(stream.fileno())
             with contextlib.suppress(OSError):
                 Path(temp_name).chmod(0o600)
-            os.replace(temp_name, self._path)
+            for attempt in range(5):
+                try:
+                    os.replace(temp_name, self._path)
+                    break
+                except PermissionError as error:  # Windows: another process has the file open
+                    if attempt == 4:
+                        raise SecretsFileError("The Google secrets file is busy.") from error
+                    time.sleep(0.05)
         except BaseException:
             with contextlib.suppress(OSError):
                 Path(temp_name).unlink()

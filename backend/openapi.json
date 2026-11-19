@@ -94,6 +94,19 @@
         "title": "AppliedIn",
         "type": "object"
       },
+      "AuthorizeModel": {
+        "properties": {
+          "authorize_url": {
+            "title": "Authorize Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "authorize_url"
+        ],
+        "title": "AuthorizeModel",
+        "type": "object"
+      },
       "Body_upload_resume_api_v1_resumes_post": {
         "properties": {
           "file": {
@@ -582,6 +595,81 @@
         "title": "CompletedOut",
         "type": "object"
       },
+      "ConnectionModel": {
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "credentials_from_environment": {
+            "title": "Credentials From Environment",
+            "type": "boolean"
+          },
+          "credentials_set": {
+            "title": "Credentials Set",
+            "type": "boolean"
+          },
+          "last_check_started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Check Started At"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "redirect_uri": {
+            "title": "Redirect Uri",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "not_connected",
+              "connected",
+              "needs_reconnect"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "window_hours": {
+            "title": "Window Hours",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "state",
+          "address",
+          "credentials_set",
+          "credentials_from_environment",
+          "redirect_uri",
+          "last_check_started_at",
+          "last_error",
+          "window_hours"
+        ],
+        "title": "ConnectionModel",
+        "type": "object"
+      },
       "ContactModel": {
         "additionalProperties": false,
         "properties": {
@@ -867,6 +955,31 @@
         "title": "ContactsOut",
         "type": "object"
       },
+      "CredentialsBody": {
+        "additionalProperties": false,
+        "properties": {
+          "client_id": {
+            "maxLength": 300,
+            "minLength": 10,
+            "pattern": "^\\S+$",
+            "title": "Client Id",
+            "type": "string"
+          },
+          "client_secret": {
+            "maxLength": 300,
+            "minLength": 10,
+            "pattern": "^\\S+$",
+            "title": "Client Secret",
+            "type": "string"
+          }
+        },
+        "required": [
+          "client_id",
+          "client_secret"
+        ],
+        "title": "CredentialsBody",
+        "type": "object"
+      },
       "DecisionHistoryOut": {
         "properties": {
           "created_at": {
@@ -1015,6 +1128,19 @@
           "description"
         ],
         "title": "DescriptionIn",
+        "type": "object"
+      },
+      "DisconnectModel": {
+        "properties": {
+          "revoked": {
+            "title": "Revoked",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "revoked"
+        ],
+        "title": "DisconnectModel",
         "type": "object"
       },
       "DiscoveryOut": {
@@ -8421,6 +8547,108 @@
         "summary": "Download Pdf",
         "tags": [
           "tailored-resumes"
+        ]
+      }
+    },
+    "/api/v1/mail/connect": {
+      "post": {
+        "operationId": "connect_api_v1_mail_connect_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthorizeModel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Connect",
+        "tags": [
+          "mail"
+        ]
+      }
+    },
+    "/api/v1/mail/connection": {
+      "delete": {
+        "operationId": "disconnect_api_v1_mail_connection_delete",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DisconnectModel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Disconnect",
+        "tags": [
+          "mail"
+        ]
+      },
+      "get": {
+        "operationId": "get_connection_api_v1_mail_connection_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectionModel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Connection",
+        "tags": [
+          "mail"
+        ]
+      }
+    },
+    "/api/v1/mail/credentials": {
+      "put": {
+        "operationId": "put_credentials_api_v1_mail_credentials_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CredentialsBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectionModel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Credentials",
+        "tags": [
+          "mail"
         ]
       }
     },

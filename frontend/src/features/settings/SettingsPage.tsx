@@ -3,6 +3,7 @@ import { apiFetch } from '@/api/client'
 import { useStatus } from '@/api/useStatus'
 import { Button } from '@/components/ui/button'
 import { DeleteAllData } from './DeleteAllData'
+import { GmailSection } from './GmailSection'
 
 const KEY_STATUS: Record<string, string> = {
   working: 'Found, working',
@@ -46,7 +47,7 @@ function KeyStatus({ status }: { status: string }) {
   )
 }
 
-/** The AI key status with Check again, and Delete all my data. Nothing else lives here. */
+/** The AI key status, Gmail job alerts, and Delete all my data. */
 export function SettingsPage() {
   const status = useStatus()
   return (
@@ -57,6 +58,7 @@ export function SettingsPage() {
       {status.data && (
         <div className="max-w-2xl space-y-8">
           <KeyStatus status={status.data.ai.status} />
+          <GmailSection />
           <DeleteAllData />
         </div>
       )}

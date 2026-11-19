@@ -5,7 +5,7 @@ one, so ``mail`` never imports ``search`` and a later mail feature can reuse the
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Protocol
 from uuid import UUID
@@ -81,9 +81,101 @@ class AlertJobsSink(Protocol):
     ) -> SinkCounts: ...
 
 
+class SecretsFileError(RuntimeError):
+    """The secrets file cannot be trusted: damaged, or readable by other people."""
+
+
+class CredentialsFromEnvironmentError(ValueError):
+    """The client id and secret come from the environment, so they cannot be saved here."""
+
+
+@dataclass(frozen=True, slots=True)
+class GoogleSecrets:
+    """What is known. The values stay out of ``repr`` so a stray log line cannot show them."""
+
+    client_id: str | None = field(default=None, repr=False)
+    client_secret: str | None = field(default=None, repr=False)
+    refresh_token: str | None = field(default=None, repr=False)
+
+
 class SecretsStore(Protocol):
     """The Google client credentials and the refresh token; never shown, logged or sent on."""
 
-    def has_credentials(self) -> bool: ...
+    @property
+    def credentials_from_environment(self) -> bool: ...
 
-    def has_token(self) -> bool: ...
+    def read(self) -> GoogleSecrets: ...
+
+    def save_credentials(self, client_id: str, client_secret: str) -> None: ...
+
+    def save_refresh_token(self, token: str) -> None: ...
+
+    def clear_token(self) -> None: ...
+
+    def clear_all(self) -> None: ...
+
+
+@dataclass(frozen=True, slots=True)
+class TokenGrant:
+    """Google's answer to a code exchange. The tokens stay out of ``repr``."""
+
+    access_token: str = field(repr=False)
+    refresh_token: str | None = field(repr=False)
+    scope: str
+
+
+class GoogleAuth(Protocol):
+    """Google's sign-in for the person's own OAuth client (research R1)."""
+
+    def authorize_url(
+        self, *, client_id: str, redirect_uri: str, state: str, code_challenge: str
+    ) -> str: ...
+
+    async def exchange_code(
+        self,
+        *,
+        client_id: str,
+        client_secret: str,
+        redirect_uri: str,
+        code: str,
+        code_verifier: str,
+    ) -> TokenGrant:
+        """Raises ``MailAccessEndedError`` when Google refuses the code, ``MailUnavailableError``
+        when it cannot be reached."""
+        ...
+
+    async def refresh(self, *, client_id: str, client_secret: str, refresh_token: str) -> str:
+        """A fresh access token. ``MailAccessEndedError`` on ``invalid_grant`` (FR-005)."""
+        ...
+
+    async def revoke(self, token: str) -> None:
+        """Hand the token back to Google. ``MailUnavailableError`` when it cannot be reached."""
+        ...
+
+
+class MailboxProfile(Protocol):
+    async def address_for(self, access_token: str) -> str:
+        """The mailbox's address (``users/me/profile``)."""
+        ...
+
+
+@dataclass(frozen=True, slots=True)
+class ConnectionRecord:
+    state: str
+    address: str
+    last_check_started_at: datetime | None
+    last_error: str | None
+
+
+class MailStore(Protocol):
+    """The connection row and the records kept about mail read. Each call is its own transaction."""
+
+    async def connection(self) -> ConnectionRecord | None: ...
+
+    async def connect(self, address: str, now: datetime) -> None: ...
+
+    async def set_state(self, state: str, error: str | None) -> None: ...
+
+    async def erase_all(self) -> None:
+        """Remove the connection and the records of email read and of checks (Disconnect)."""
+        ...

@@ -480,8 +480,11 @@ MAIL_BANNED_NAMES = frozenset(
 )
 # A Gmail path that changes or sends something. Reading is only messages and profile.
 MAIL_WRITE_PATH = re.compile(
-    r"/(send|drafts?|modify|batchModify|batchDelete|trash|untrash|delete|insert|import|watch|stop"
-    r"|labels|settings|threads)\b",
+    # a Gmail address or a ``users/me/...`` path that reaches a write or admin endpoint ...
+    r"(?:users/me|googleapis\.com)\S*/(?:send|drafts?|modify|batchModify|batchDelete|trash|untrash"
+    r"|delete|insert|import|watch|stop|labels|settings|threads)\b"
+    # ... or a bare path that is nothing but such an endpoint
+    r"|^/(?:send|drafts?|modify|batchModify|batchDelete|trash|untrash|delete|insert|import|watch)\b",
     re.IGNORECASE,
 )
 GMAIL_HOST = "gmail.googleapis.com"

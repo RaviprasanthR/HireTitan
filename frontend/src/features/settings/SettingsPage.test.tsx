@@ -26,13 +26,14 @@ function renderPage(keyStatus = 'working') {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('SettingsPage', () => {
-  it('FR020 settings shows key status and delete all only', async () => {
+  it('FR020 settings shows key status, Gmail and delete all only', async () => {
     const calls = renderPage()
 
     expect(await screen.findByText('Found, working')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Check again' })).toBeInTheDocument()
     expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual([
       'AI key',
+      'Gmail job alerts',
       expect.stringMatching(/delete all my data/i),
     ])
     expect(screen.queryByText(/budget|cap|spent|cost/i)).not.toBeInTheDocument() // SC003

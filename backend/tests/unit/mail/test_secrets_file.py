@@ -243,3 +243,53 @@ def test_FR003_the_secret_values_are_registered_with_the_log_scrubber(tmp_path: 
     out = stream.getvalue()
     assert "an-oddly-shaped-secret-without-prefix" not in out
     assert "an-oddly-shaped-refresh-token" not in out
+
+
+def _lock_path(tmp_path: Path) -> Path:
+    return tmp_path / "secrets" / "gmail.json.lock"
+
+
+def test_FR003_a_busy_lock_times_out_and_is_not_deleted(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from hiretitan.mail.application.ports import SecretsFileError
+    from hiretitan.mail.infra import secrets_file
+
+    monkeypatch.setattr(secrets_file, "LOCK_WAIT_SECONDS", 0.05)
+    secrets = make(tmp_path)
+    secrets.save_credentials(CLIENT_ID, CLIENT_SECRET)
+    _lock_path(tmp_path).write_text("someone-else", "utf-8")  # a live holder, just now
+
+    with pytest.raises(SecretsFileError):
+        secrets.save_refresh_token(REFRESH)
+
+    assert _lock_path(tmp_path).read_text("utf-8") == "someone-else"  # never stolen
+
+
+def test_FR003_a_stale_lock_is_taken_over(tmp_path: Path) -> None:
+    import time
+
+    secrets = make(tmp_path)
+    secrets.save_credentials(CLIENT_ID, CLIENT_SECRET)
+    lock = _lock_path(tmp_path)
+    lock.write_text("a-crashed-process", "utf-8")
+    old = time.time() - 600
+    os.utime(lock, (old, old))
+
+    secrets.save_refresh_token(REFRESH)
+
+    assert secrets.read().refresh_token == REFRESH
+    assert not lock.exists()
+
+
+def test_FR003_a_lock_that_was_taken_over_is_not_removed_by_its_old_holder(
+    tmp_path: Path,
+) -> None:
+    secrets = make(tmp_path)
+    secrets.save_credentials(CLIENT_ID, CLIENT_SECRET)
+
+    with secrets._locked():
+        # another process judged us stale and took the lock over
+        _lock_path(tmp_path).write_text("the-new-owner", "utf-8")
+
+    assert _lock_path(tmp_path).read_text("utf-8") == "the-new-owner"
