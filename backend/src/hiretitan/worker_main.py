@@ -29,6 +29,7 @@ from hiretitan.platform.runtime.events import EventPublisher, run_notifier
 from hiretitan.platform.runtime.procrastinate import Runtime, create_runtime
 from hiretitan.platform.runtime.resume_paused import resume_on_startup, resume_paused_runs
 from hiretitan.platform.runtime.runner import WorkflowDef, WorkflowRunner
+from hiretitan.platform.security.logging import configure_logging
 from hiretitan.platform.storage.local import LocalFileStorage
 from hiretitan.preferences.infra.repo import default_country_provider
 from hiretitan.profile.workflow.graph import WORKFLOW_NAME, IngestDeps, profile_ingest_workflow
@@ -130,6 +131,7 @@ async def run_worker(settings: Settings, *, wait: bool = True) -> None:
 
 
 def main() -> None:
+    configure_logging(get_settings().secrets())
     if sys.platform == "win32":
         # psycopg's async mode can't run on Windows' default Proactor loop.
         asyncio.run(run_worker(get_settings()), loop_factory=asyncio.SelectorEventLoop)

@@ -27,11 +27,13 @@ from starlette.types import ASGIApp, Lifespan, Message, Receive, Scope, Send
 from hiretitan.drafts.api.drafts import DraftsApiDeps, create_drafts_router
 from hiretitan.drafts.api.resumes import create_resumes_router as create_tailored_router
 from hiretitan.drafts_wiring import SqlContacts, SqlJobs, SqlProfileFacts, clear_drafts_for_job
+from hiretitan.mail_wiring import seed_mail_senders
 from hiretitan.platform.clock import SystemClock
 from hiretitan.platform.config.settings import Settings, get_settings
 from hiretitan.platform.db import create_engine, session_factory
 from hiretitan.platform.runtime.api import create_events_router, create_runs_router
 from hiretitan.platform.runtime.procrastinate import CHECK_PROVIDER_KEY_TASK, create_runtime
+from hiretitan.platform.security.logging import configure_logging
 from hiretitan.platform.storage.local import LocalFileStorage
 from hiretitan.platform.web.limits import BodyLimitMiddleware
 from hiretitan.platform.web.problems import ProblemError, problem
@@ -209,6 +211,7 @@ def build_app(settings: Settings | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         await seed_companies(deps.sessions, SEED_DIR / "companies.yaml")
+        await seed_mail_senders(deps.sessions, SEED_DIR / "mail_senders.yaml")
         # an install that finished setup before 002i, or whose approval failed, gets its rules
         await approve_first_rules_at_start(deps.sessions, synonyms, seed_tables.work_areas)
         async with runtime.app.open_async():  # the job queue connection, to defer jobs
@@ -307,7 +310,11 @@ def build_app(settings: Settings | None = None) -> FastAPI:
             DataApiDeps(
                 sessions=deps.sessions,
                 storage=deps.storage,
-                store=partial(SqlDeleteAllStore, company_seed=SEED_DIR / "companies.yaml"),
+                store=partial(
+                    SqlDeleteAllStore,
+                    company_seed=SEED_DIR / "companies.yaml",
+                    mail_seed=SEED_DIR / "mail_senders.yaml",
+                ),
                 enqueue_key_check=enqueue_key_check,
             )
         ),
@@ -317,8 +324,13 @@ def build_app(settings: Settings | None = None) -> FastAPI:
 
 def main() -> None:
     settings = get_settings()
+    configure_logging(settings.secrets())  # secrets and one-time codes never reach a log line
     config = uvicorn.Config(
-        build_app(settings), host=settings.host, port=settings.port, loop="none"
+        build_app(settings),
+        host=settings.host,
+        port=settings.port,
+        loop="none",
+        log_config=None,  # keep the redacting handler instead of uvicorn's own
     )
     asyncio.run(uvicorn.Server(config).serve(), loop_factory=server_loop_factory())
 

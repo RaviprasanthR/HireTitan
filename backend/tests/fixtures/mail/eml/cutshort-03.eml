@@ -1,0 +1,40 @@
+From: Cutshort <hello@cutshort.io>
+To: jobseeker@example.invalid
+Subject: 2 jobs picked for you
+Date: Sun, 15 Nov 2026 14:00:00 +0530
+Message-ID: <cutshort-03@mail.example.invalid>
+MIME-Version: 1.0
+Content-Type: multipart/alternative;
+ boundary="===============9105421176521511262=="
+
+--===============9105421176521511262==
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+
+Engineering Manager
+Marigold Labs
+https://cutshort.io/job/Engineering-Manager-Bengaluru-Marigold-Labs/SbY4RZMO?=
+ref=3Demail
+
+Software Engineer II
+Aspen Robotics
+https://cutshort.io/job/Software-Engineer-II-Bengaluru-Aspen-Robotics/Sxcyd4P=
+h?ref=3Demail
+
+--===============9105421176521511262==
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+<html><body style=3D'font-family:Arial'><table width=3D'600'><tr><td><h3>Jobs=
+ picked for you</h3><div><a href=3D'https://cutshort.io/job/Engineering-Manag=
+er-Bengaluru-Marigold-Labs/SbY4RZMO?ref=3Demail'><b>Engineering Manager</b></=
+a><div>Marigold Labs =C2=B7 Bengaluru</div><div>Node.js, TypeScript, MongoDB<=
+/div></div><div><a href=3D'https://cutshort.io/job/Software-Engineer-II-Benga=
+luru-Aspen-Robotics/Sxcyd4Ph?ref=3Demail'><b>Software Engineer II</b></a><div=
+>Aspen Robotics =C2=B7 Bengaluru</div><div>Node.js, TypeScript, MongoDB</div>=
+</div></td></tr><tr><td style=3D'font-size:11px;color:#777'><a href=3D'https:=
+//cutshort.io/jobs'>Browse jobs</a> =C2=B7 <a href=3D'https://cutshort.io/uns=
+ubscribe?x=3D1'>Unsubscribe</a></td></tr></table></body></html>
+
+--===============9105421176521511262==--

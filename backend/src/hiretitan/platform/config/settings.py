@@ -17,6 +17,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 LlmMode = Literal["openai", "fake"]
 CareerOpsMode = Literal["real", "fake"]
+MailMode = Literal["gmail", "fake"]
 
 
 class Settings(BaseSettings):
@@ -42,6 +43,17 @@ class Settings(BaseSettings):
     fake_career_ops_dir: Path | None = Field(
         default=None, validation_alias="HIRETITAN_FAKE_CAREER_OPS_DIR"
     )
+    # feature 002c: the read-only mail reader. ``fake`` serves synthetic mail from a folder (the
+    # e2e stack). The Google client id and secret are the person's own and may come from the
+    # environment instead of the secrets file; nothing is shipped (FR-001).
+    mail: MailMode = Field(default="gmail", validation_alias="HIRETITAN_MAIL")
+    fake_gmail_dir: Path | None = Field(default=None, validation_alias="HIRETITAN_FAKE_GMAIL_DIR")
+    google_oauth_client_id: SecretStr | None = Field(
+        default=None, validation_alias="GOOGLE_OAUTH_CLIENT_ID"
+    )
+    google_oauth_client_secret: SecretStr | None = Field(
+        default=None, validation_alias="GOOGLE_OAUTH_CLIENT_SECRET"
+    )
 
     explicit_database_url: SecretStr | None = Field(default=None, validation_alias="DATABASE_URL")
     postgres_user: str = Field(default="hiretitan", validation_alias="POSTGRES_USER")
@@ -58,6 +70,9 @@ class Settings(BaseSettings):
         "fake_llm_dir",
         "fake_career_ops_dir",
         "frontend_dist",
+        "fake_gmail_dir",
+        "google_oauth_client_id",
+        "google_oauth_client_secret",
         mode="before",
     )
     @classmethod
@@ -68,6 +83,16 @@ class Settings(BaseSettings):
             value = value.strip()
             return value or None
         return value
+
+    def secrets(self) -> list[SecretStr | None]:
+        """Every configured secret, so the logger can scrub it wherever it shows up."""
+        return [
+            self.openai_api_key,
+            self.explicit_database_url,
+            self.postgres_password,
+            self.google_oauth_client_id,
+            self.google_oauth_client_secret,
+        ]
 
     @property
     def database_url(self) -> str:

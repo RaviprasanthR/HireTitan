@@ -6,5 +6,6 @@ Data files the app loads on start. They are shipped with HireTitan and updated t
 |---|---|---|
 | `companies.yaml` | T057 (64 companies from the maintainer's sheet: 62 on the main tab, 2 on the second) | The shipped company list: key, name, city, website, careers URL, job-board vendor and id, resolution status. **Company-level facts only.** No HR contacts, notes or any personal data (constitution VIII). |
 | `title_synonyms.yaml` | T017 | Role phrases and their synonyms, in English, used to propose and apply search rules. |
+| `mail_senders.yaml` | 002c T003 | Job-alert sender addresses per site (LinkedIn, Naukri, Indeed, foundit, Instahyre, Cutshort). Addresses only, never mail content. Candidates until the maintainer verifies them (T005). |
 
 The company loader (T016) inserts new rows and updates only rows the person has not edited, hidden or deleted. Tests use synthetic copies in `tests/fixtures/companies/`, never this folder.

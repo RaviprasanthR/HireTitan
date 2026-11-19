@@ -1,0 +1,23 @@
+# Job-alert senders the mail reader may read (feature 002c, FR-010).
+#
+# CANDIDATE ADDRESSES, NOT YET VERIFIED (task T005): the maintainer checks each one against real
+# alerts in their own Gmail and corrects this file. A wrong or missing address only costs
+# coverage: every reader also matches its site's link shape, so it can never produce wrong jobs.
+# Only addresses live here, never mail content. They are the sites' own public addresses, not
+# personal data. Built-in rows can be switched off in Settings; the person adds their own there.
+senders:
+  linkedin:
+    - jobalerts-noreply@linkedin.com
+    - jobs-listings@linkedin.com
+  naukri:
+    - naukrialerts@naukri.com
+    - info@naukri.com
+  indeed:
+    - alert@indeed.com
+    - donotreply@jobalert.indeed.com
+  foundit:
+    - alerts@foundit.in
+  instahyre:
+    - alerts@instahyre.com
+  cutshort:
+    - hello@cutshort.io

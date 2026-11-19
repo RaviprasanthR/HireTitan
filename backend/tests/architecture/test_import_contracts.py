@@ -58,6 +58,16 @@ PLANTED_VIOLATIONS: dict[str, dict[str, str]] = {
     # feature 002: the search module is held to the same contracts
     "search_domain_imports_sqlalchemy": {"search/domain/bad.py": "import sqlalchemy\n"},
     "search_lower_layer_imports_higher": {"search/domain/bad.py": "import hiretitan.search.api\n"},
+    # feature 002c: the mail module is held to the same contracts
+    "mail_domain_imports_sqlalchemy": {"mail/domain/bad.py": "import sqlalchemy\n"},
+    "mail_infra_imports_api": {
+        "mail/api/__init__.py": "",
+        "mail/infra/bad.py": "import hiretitan.mail.api\n",
+    },
+    "mail_imports_search": {"mail/infra/bad.py": "import hiretitan.search.application\n"},
+    "mail_imports_profile": {"mail/domain/bad.py": "import hiretitan.profile.domain\n"},
+    "search_imports_mail": {"search/application/bad.py": "import hiretitan.mail.domain.senders\n"},
+    "profile_imports_mail": {"profile/application/bad.py": "import hiretitan.mail.infra\n"},
     "search_bypasses_application": {
         "search/application/bad.py": "import hiretitan.profile.infra\n",
     },
@@ -142,3 +152,12 @@ def test_FR022_drafts_workflow_may_not_import_contacts(tmp_path: Path) -> None:
 
     assert result.returncode != 0, result.stdout
     assert "BROKEN" in result.stdout
+
+
+def test_FR006_mail_contracts_present() -> None:
+    config = CONFIG.read_text(encoding="utf-8")
+    assert "contract:mail-boundary" in config
+    assert "contract:mail-layers" in config
+    assert config.count("hiretitan.mail.domain") >= 2  # pure-domain, and the others' boundaries
+    for module in ("hiretitan.mail.infra", "hiretitan.mail.workflow", "hiretitan.mail.api"):
+        assert config.count(module) >= 4, module  # forbidden for the four other modules

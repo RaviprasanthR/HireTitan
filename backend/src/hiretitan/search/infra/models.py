@@ -45,12 +45,14 @@ def _in(column: str, values: tuple[str, ...]) -> str:
 
 
 RULE_SET_STATUSES = ("proposed", "approved", "superseded")
-RUN_MODES = ("rules_and_ai", "rules_only")
+RUN_MODES = ("rules_and_ai", "rules_only", "mail_alerts")
 # "budget_reached" is an outcome of searches from before HireTitan dropped its AI budget
 RUN_OUTCOMES = ("finished", "stopped_by_user", "budget_reached", "out_of_credit", "failed")
 JOB_STATES = ("explore", "skipped", "inquired", "applied", "deleted")
 WORK_MODES = ("onsite", "hybrid", "remote")
-SOURCE_KINDS = ("company_board", "careers_page", "paste")
+SOURCE_KINDS = ("company_board", "careers_page", "paste", "email_alert")
+# the sites whose alert emails are read (feature 002c); mirrors hiretitan.mail.domain.senders
+ALERT_SITES = ("linkedin", "naukri", "indeed", "foundit", "instahyre", "cutshort", "other")
 DECISION_OUTCOMES = ("shown", "skipped")
 DECIDED_BY = ("rule", "ai", "person", "rules_only_fallback")
 DUPLICATE_STATUSES = ("open", "merged", "dismissed")
@@ -476,3 +478,33 @@ class PipelineSettingsRow(Base):
     last_resume_file_id: Mapped[UUID | None] = mapped_column(
         ForeignKey(f"{APP_SCHEMA}.resume_files.id", ondelete="SET NULL")
     )
+
+
+class AlertSightingRow(IdTimestampMixin, Base):
+    """One mention of a job in one alert email (feature 002c): the site, the link as the email gave
+    it and the alert's date. A job found in alerts has one or more. The read-email record may be
+    deleted (Disconnect); the sighting stays."""
+
+    __tablename__ = "alert_sightings"
+    __table_args__ = (
+        # NULLs stay distinct on purpose (Disconnect sets read_message_id to NULL on all of them)
+        UniqueConstraint(
+            "job_id", "read_message_id", name="uq_alert_sightings_job_id_read_message_id"
+        ),
+        CheckConstraint(_in("site", ALERT_SITES), name="site_values"),
+        CheckConstraint("char_length(link) <= 2000", name="link_length"),
+        Index(
+            "ix_alert_sightings_read_message_id",
+            "read_message_id",
+            postgresql_where=text("read_message_id IS NOT NULL"),
+        ),
+    )
+
+    job_id: Mapped[UUID] = mapped_column(ForeignKey(f"{APP_SCHEMA}.jobs.id", ondelete="CASCADE"))
+    read_message_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey(f"{APP_SCHEMA}.mail_read_messages.id", ondelete="SET NULL")
+    )
+    site: Mapped[str] = mapped_column(Text)
+    link: Mapped[str] = mapped_column(Text)
+    alert_date: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    posted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

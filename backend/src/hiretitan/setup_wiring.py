@@ -14,6 +14,8 @@ from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from hiretitan.mail.infra.repos import SendersRepo
+from hiretitan.mail.infra.seed import load_seed as load_mail_seed
 from hiretitan.platform.runtime.domain.run_state import RunStatus, WaitingFor
 from hiretitan.platform.runtime.infra.runs_repo import RunsRepo
 from hiretitan.preferences.application.service import get_preferences
@@ -94,9 +96,15 @@ class SqlDeleteAllStore:
     """``DeleteAllStore`` over every module's tables (a composition-level adapter, because it
     spans features, the job queue and the checkpoint store)."""
 
-    def __init__(self, session: AsyncSession, company_seed: Path | None = None) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        company_seed: Path | None = None,
+        mail_seed: Path | None = None,
+    ) -> None:
         self._session = session
         self._company_seed = company_seed
+        self._mail_seed = mail_seed
 
     async def cancel_open_runs(self) -> None:
         runs = RunsRepo(self._session)
@@ -135,4 +143,9 @@ class SqlDeleteAllStore:
         # The shipped company list, as a fresh install has it (FR-041).
         if self._company_seed is not None and await asyncio.to_thread(self._company_seed.exists):
             await load_seed(CompaniesRepo(self._session), self._company_seed)
+        # The shipped alert senders too, or Gmail would have nobody to ask for (FR-010).
+        if self._mail_seed is not None and await asyncio.to_thread(self._mail_seed.exists):
+            await SendersRepo(self._session).merge_seed(
+                await asyncio.to_thread(load_mail_seed, self._mail_seed)
+            )
         await self._session.commit()

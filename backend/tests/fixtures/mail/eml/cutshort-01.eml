@@ -1,0 +1,40 @@
+From: Cutshort <hello@cutshort.io>
+To: jobseeker@example.invalid
+Subject: 2 jobs picked for you
+Date: Mon, 16 Nov 2026 14:00:00 +0530
+Message-ID: <cutshort-01@mail.example.invalid>
+MIME-Version: 1.0
+Content-Type: multipart/alternative;
+ boundary="===============5812788994308717656=="
+
+--===============5812788994308717656==
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+
+Data Engineer
+Granite Insurance Tech
+https://cutshort.io/job/Data-Engineer-Gurugram-Granite-Insurance-Tech/6sF7bQz=
+E?ref=3Demail
+
+Software Engineer II
+Willow Education
+https://cutshort.io/job/Software-Engineer-II-Gurugram-Willow-Education/0vuqI5=
+ud?ref=3Demail
+
+--===============5812788994308717656==
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+<html><body style=3D'font-family:Arial'><table width=3D'600'><tr><td><h3>Jobs=
+ picked for you</h3><div><a href=3D'https://cutshort.io/job/Data-Engineer-Gur=
+ugram-Granite-Insurance-Tech/6sF7bQzE?ref=3Demail'><b>Data Engineer</b></a><d=
+iv>Granite Insurance Tech =C2=B7 Gurugram</div><div>Python, Django, PostgreSQ=
+L</div></div><div><a href=3D'https://cutshort.io/job/Software-Engineer-II-Gur=
+ugram-Willow-Education/0vuqI5ud?ref=3Demail'><b>Software Engineer II</b></a><=
+div>Willow Education =C2=B7 Gurugram</div><div>Python, Django, PostgreSQL</di=
+v></div></td></tr><tr><td style=3D'font-size:11px;color:#777'><a href=3D'http=
+s://cutshort.io/jobs'>Browse jobs</a> =C2=B7 <a href=3D'https://cutshort.io/u=
+nsubscribe?x=3D1'>Unsubscribe</a></td></tr></table></body></html>
+
+--===============5812788994308717656==--
