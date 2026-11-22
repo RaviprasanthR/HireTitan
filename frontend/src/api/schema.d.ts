@@ -733,6 +733,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mail/senders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Senders */
+        get: operations["list_senders_api_v1_mail_senders_get"];
+        put?: never;
+        /** Add Sender */
+        post: operations["add_sender_api_v1_mail_senders_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mail/senders/{sender_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove Sender */
+        delete: operations["remove_sender_api_v1_mail_senders__sender_id__delete"];
+        options?: never;
+        head?: never;
+        /** Switch Sender */
+        patch: operations["switch_sender_api_v1_mail_senders__sender_id__patch"];
+        trace?: never;
+    };
     "/api/v1/onboarding": {
         parameters: {
             query?: never;
@@ -2230,6 +2266,11 @@ export interface components {
             /** Display Name */
             display_name: string;
         };
+        /** NewSender */
+        NewSender: {
+            /** Address */
+            address: string;
+        };
         /** NoteIn */
         NoteIn: {
             /** Body */
@@ -3056,6 +3097,32 @@ export interface components {
             stop_message: string | null;
             /** Stop Requested */
             stop_requested: boolean;
+        };
+        /** SenderList */
+        SenderList: {
+            /** Items */
+            items: components["schemas"]["SenderOut"][];
+        };
+        /** SenderOut */
+        SenderOut: {
+            /** Address */
+            address: string;
+            /** Built In */
+            built_in: boolean;
+            /** Enabled */
+            enabled: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Site */
+            site: string;
+        };
+        /** SenderSwitch */
+        SenderSwitch: {
+            /** Enabled */
+            enabled: boolean;
         };
         /** SignalOut */
         SignalOut: {
@@ -5127,6 +5194,123 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ConnectionModel"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_senders_api_v1_mail_senders_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SenderList"];
+                };
+            };
+        };
+    };
+    add_sender_api_v1_mail_senders_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewSender"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SenderOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_sender_api_v1_mail_senders__sender_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sender_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    switch_sender_api_v1_mail_senders__sender_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sender_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SenderSwitch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SenderOut"];
                 };
             };
             /** @description Validation Error */

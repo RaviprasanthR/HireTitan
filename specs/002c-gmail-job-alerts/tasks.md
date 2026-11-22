@@ -127,10 +127,10 @@
 
 **Independent Test**: switch LinkedIn off, add a custom sender, check: LinkedIn not read, the custom sender read, nothing else listed (request log).
 
-- [ ] T036 [P] [US4] API tests `tests/api/mail/test_senders_api.py`: `test_US4_AS1_builtin_listed_all_on`, `test_US4_AS2_add_sender_201`, `test_add_duplicate_409`, `test_US4_AS3_switch_off`, `test_delete_builtin_409`, `test_delete_added_204`; workflow tests `test_US4_AS3_switched_off_site_not_queried`, `test_US4_AS2_no_jobs_from_added_sender_counted`.
-- [ ] T037 [US4] Router `hiretitan/mail/api/senders.py` (`GET/POST /mail/senders`, `PATCH/DELETE /mail/senders/{id}`, contract §Senders) and use cases until T036 passes.
-- [ ] T038 [P] [US4] Frontend tests first `features/settings/MailSenders.test.tsx` (`US4 AS1 list by site with switches`, `US4 AS2 add a sender`, `built-in cannot be removed`), then `MailSenders.tsx` inside the Gmail section.
-- [ ] T038r [US4] Review: React and python reviewers; fix; note.
+- [x] T036 [P] [US4] API tests `tests/api/mail/test_senders_api.py`: `test_US4_AS1_builtin_listed_all_on`, `test_US4_AS2_add_sender_201`, `test_add_duplicate_409`, `test_US4_AS3_switch_off`, `test_delete_builtin_409`, `test_delete_added_204`; workflow tests `test_US4_AS3_switched_off_site_not_queried`, `test_US4_AS2_no_jobs_from_added_sender_counted`.
+- [x] T037 [US4] Router `hiretitan/mail/api/senders.py` (`GET/POST /mail/senders`, `PATCH/DELETE /mail/senders/{id}`, contract §Senders) and use cases until T036 passes.
+- [x] T038 [P] [US4] Frontend tests first `features/settings/MailSenders.test.tsx` (`US4 AS1 list by site with switches`, `US4 AS2 add a sender`, `built-in cannot be removed`), then `MailSenders.tsx` inside the Gmail section.
+- [x] T038r [US4] Review: React and python reviewers; fix; note.
 
 ---
 

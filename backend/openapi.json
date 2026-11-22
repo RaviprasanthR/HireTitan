@@ -2720,6 +2720,21 @@
         "title": "NameOut",
         "type": "object"
       },
+      "NewSender": {
+        "additionalProperties": false,
+        "properties": {
+          "address": {
+            "maxLength": 1000,
+            "title": "Address",
+            "type": "string"
+          }
+        },
+        "required": [
+          "address"
+        ],
+        "title": "NewSender",
+        "type": "object"
+      },
       "NoteIn": {
         "properties": {
           "body": {
@@ -5486,6 +5501,70 @@
           "finished_at"
         ],
         "title": "SearchRunSummary",
+        "type": "object"
+      },
+      "SenderList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SenderOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "SenderList",
+        "type": "object"
+      },
+      "SenderOut": {
+        "properties": {
+          "address": {
+            "title": "Address",
+            "type": "string"
+          },
+          "built_in": {
+            "title": "Built In",
+            "type": "boolean"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "site": {
+            "title": "Site",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "address",
+          "site",
+          "built_in",
+          "enabled"
+        ],
+        "title": "SenderOut",
+        "type": "object"
+      },
+      "SenderSwitch": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "SenderSwitch",
         "type": "object"
       },
       "SignalOut": {
@@ -8862,6 +8941,153 @@
           }
         },
         "summary": "Put Credentials",
+        "tags": [
+          "mail"
+        ]
+      }
+    },
+    "/api/v1/mail/senders": {
+      "get": {
+        "operationId": "list_senders_api_v1_mail_senders_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SenderList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Senders",
+        "tags": [
+          "mail"
+        ]
+      },
+      "post": {
+        "operationId": "add_sender_api_v1_mail_senders_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewSender"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SenderOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Sender",
+        "tags": [
+          "mail"
+        ]
+      }
+    },
+    "/api/v1/mail/senders/{sender_id}": {
+      "delete": {
+        "operationId": "remove_sender_api_v1_mail_senders__sender_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sender_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Sender Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Remove Sender",
+        "tags": [
+          "mail"
+        ]
+      },
+      "patch": {
+        "operationId": "switch_sender_api_v1_mail_senders__sender_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sender_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Sender Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SenderSwitch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SenderOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Switch Sender",
         "tags": [
           "mail"
         ]

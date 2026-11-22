@@ -5,6 +5,7 @@ import { useSearchParams } from 'react-router'
 import { ApiError, apiFetch } from '@/api/client'
 import type { components } from '@/api/schema'
 import { Button } from '@/components/ui/button'
+import { MailSenders } from './MailSenders'
 
 type Connection = components['schemas']['ConnectionModel']
 
@@ -434,6 +435,7 @@ export function GmailSection() {
           </div>
         </div>
       )}
+      <MailSenders />
     </section>
   )
 }

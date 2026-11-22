@@ -29,6 +29,7 @@ from hiretitan.drafts.api.resumes import create_resumes_router as create_tailore
 from hiretitan.drafts_wiring import SqlContacts, SqlJobs, SqlProfileFacts, clear_drafts_for_job
 from hiretitan.mail.api.checks import MailChecksApiDeps, create_checks_router
 from hiretitan.mail.api.connection import MailApiDeps, create_connection_router
+from hiretitan.mail.api.senders import MailSendersApiDeps, create_senders_router
 from hiretitan.mail_wiring import (
     SqlCheckRuns,
     build_connection_service,
@@ -260,6 +261,7 @@ def build_app(settings: Settings | None = None) -> FastAPI:
                 clock=clock,
             )
         ),
+        create_senders_router(MailSendersApiDeps(sessions=deps.sessions)),
         create_duplicates_router(SearchDuplicatesApiDeps(sessions=deps.sessions, clock=clock)),
         create_companies_router(
             SearchCompaniesApiDeps(

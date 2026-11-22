@@ -36,7 +36,7 @@ def normalize_address(raw: str) -> str:
     """The address trimmed and lower-cased, or ``SenderError``."""
     address = raw.strip().lower()
     if not ADDRESS_MIN <= len(address) <= ADDRESS_MAX or not _ADDRESS.match(address):
-        raise SenderError(f"{raw!r} is not a plain email address.")
+        raise SenderError(f"{raw[:80]!r} is not a plain email address.")
     return address
 
 
