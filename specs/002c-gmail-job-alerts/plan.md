@@ -139,6 +139,20 @@ frontend/e2e/gmail-alerts.spec.ts            # fake Gmail journey
 
 Pause for the person's review after every phase.
 
+## Amendment 2026-11-23: Settings organised, AI key on the page (US6, FR-028 to FR-033)
+
+Folded into Phase 9 at Ravi's request. Constitution check: no new dependency; secrets stay out of the database and the repo (VIII); the key is never logged or returned (III); TDD as usual.
+
+**AI key store (`hiretitan.platform.llm.key_store`).** `KeyStore` keeps an OpenAI key in `<data_dir>/secrets/llm.json` (`{"openai_api_key": "..."}`), written atomically with owner-only permissions where supported, like `gmail.json`. `current()` answers `(key, source)` with source `env` (the `OPENAI_API_KEY` setting, which wins), `page` (the file) or `none`; the file is read again only when its modification time changes. Platform code, because both the API and the worker read it, and `mail` must not be imported by `platform`.
+
+**No restart (FR-030).** The OpenAI adapter takes a key *provider* instead of a key: on each request it asks the store for the current key and keeps one SDK client per key. `ProviderStatusService.has_key` already accepts a callable. Saving a key in the API defers the existing `check_provider_key` task; when the worker finds the key working it re-queues the runs paused for `key_missing` / `key_rejected` (the existing `after_key_works` hook, widened from `out_of_credit` to those reasons).
+
+**Redaction (SC-010).** The log redaction filter gains a callable source of secrets, so a key saved after start-up is scrubbed too; `configure_logging` passes `KeyStore.secrets`.
+
+**API (`hiretitan.setup`, contracts/rest-api.md §AI key).** `PUT /settings/ai-key` (save or replace; 422 shape check; 409 `key_from_environment`; 202 and a key check deferred), `DELETE /settings/ai-key` (204; 409 `key_from_environment`), and `GET /status` gains `ai.key_source`. Delete all my data removes `llm.json` (FR-033).
+
+**Frontend (`features/settings/`).** `SettingsPage` becomes three parts with an index of anchor links: `AiSection` (status, source, a password field with Save / Replace / Remove, Check again), `GmailSetup` (an ordered step list built from `GET /mail/connection`, `GET /mail/senders` and the last check: Google client, Connect, Senders, First check; each `done` / `current` / `waiting`, current open, done reopenable; the existing credential form, connect button, `MailSenders` and check button move into the steps), and `DataSection` (the existing Delete all my data). Pure step logic in `gmailSteps.ts` with its own tests. Styles follow the theme tokens; no new UI library.
+
 ## Complexity Tracking
 
 | Item | Why needed | Simpler alternative rejected because |

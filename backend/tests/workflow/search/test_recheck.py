@@ -109,3 +109,66 @@ async def test_recheck_without_a_reader_is_unchanged(env: Env) -> None:
     await recheck(env, job_id)
 
     assert await state_and_decision(env, job_id) == ("explore", "ai", "shown")
+
+
+async def _alert_job(env: Env, *, also_on_a_board: bool) -> tuple[UUID, str]:
+    from datetime import UTC, datetime
+
+    from hiretitan.search.infra.repos import JobsRepo
+
+    url = "https://jobs.example.invalid/view/12345"
+    now = datetime(2026, 11, 18, 9, tzinfo=UTC)
+    async with env.sessions() as session:
+        jobs = JobsRepo(session)
+        job = await jobs.add(
+            company_id=None,
+            company_name="Acme",
+            title="Backend Engineer",
+            canonical_url=url,
+            first_seen_at=now,
+            last_seen_at=now,
+            description="",
+            state="explore",
+        )
+        await jobs.add_source(job.id, kind="email_alert", url=url, seen_at=now, search_run_id=None)
+        if also_on_a_board:
+            await jobs.add_source(
+                job.id, kind="company_board", url=url, seen_at=now, search_run_id=None
+            )
+        await DecisionsRepo(session).record(
+            job.id,
+            outcome="shown",
+            decided_by="rules_only_fallback",
+            reason="Not checked by AI: no description yet",
+        )
+        await session.commit()
+        return job.id, url
+
+
+async def test_FR015_a_job_known_only_from_an_email_alert_is_never_fetched(env: Env) -> None:
+    """HireTitan never fetches the posting page of an alert site: the person opens the link and
+    pastes the description. "Check again" judges what is known and reads nothing."""
+    job_id, url = await _alert_job(env, also_on_a_board=False)
+    reader = FakeDescriptions({url: "Build Python APIs for payments."})
+    env.deps.descriptions = reader
+    env.llm.add({"decisions": [{"ref": "j1", "relevant": True, "reason": "Fits"}]})
+
+    await recheck(env, job_id)
+
+    assert reader.calls == []  # nothing was fetched
+    async with env.sessions() as session:
+        stored = await session.get(JobRow, job_id)
+    assert stored is not None
+    assert stored.description == ""
+    assert await state_and_decision(env, job_id) == ("explore", "ai", "shown")
+
+
+async def test_FR015_a_job_that_is_also_on_a_company_board_may_be_read(env: Env) -> None:
+    job_id, url = await _alert_job(env, also_on_a_board=True)
+    reader = FakeDescriptions({url: "Build Python APIs for payments."})
+    env.deps.descriptions = reader
+    env.llm.add({"decisions": [{"ref": "j1", "relevant": True, "reason": "Fits"}]})
+
+    await recheck(env, job_id)
+
+    assert reader.urls() == [url]

@@ -18,6 +18,7 @@ from hiretitan.drafts.workflow.common import DraftDeps
 from hiretitan.drafts.workflow.outreach import OUTREACH_WORKFLOW, outreach_workflow
 from hiretitan.drafts.workflow.tailor import TAILOR_WORKFLOW, tailor_workflow
 from hiretitan.drafts_wiring import SqlJobs, SqlProfileFacts, tech_terms
+from hiretitan.mail.workflow.ai_read import MailAiDeps
 from hiretitan.mail.workflow.check import MAIL_CHECK_WORKFLOW, CheckDeps, mail_check_workflow
 from hiretitan.mail.workflow.schedule import ScheduleDeps, daily_tick
 from hiretitan.mail_wiring import build_check_deps, chain_mail_after_search
@@ -142,6 +143,10 @@ async def run_worker(settings: Settings, *, wait: bool = True) -> None:
         search_deps.synonyms,
         tables.tech_names,
         lambda run_id: runtime.queue.enqueue(run_id),
+        # unknown alert layouts are read by the AI (FR-013a); no key: they wait for the next check
+        MailAiDeps(
+            sessions=sessions, llm=built.llm, prompts=ingest_deps.prompts, provider=provider
+        ),
     )
     schedule = ScheduleDeps(sessions=sessions, runs=mail_deps.runs, clock=SystemClock())
 

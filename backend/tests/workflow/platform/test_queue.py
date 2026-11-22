@@ -111,7 +111,9 @@ async def test_FR021_the_mail_tick_is_an_hourly_task_that_calls_the_hook(
         await runtime.app.configure_task("mail_tick").defer_async(timestamp=0)
         await runtime.app.run_worker_async(wait=False)
 
-    assert ticks == ["tick"]
+    # at least the deferred one; the hourly schedule may add its own if the clock crosses :07
+    assert ticks
+    assert set(ticks) == {"tick"}
 
 
 async def test_FR021_the_mail_tick_without_a_hook_does_nothing(database_url: str) -> None:

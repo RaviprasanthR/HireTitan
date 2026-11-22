@@ -23,6 +23,26 @@ from hiretitan.mail.domain.links import is_job_link, posting_id
 from hiretitan.mail.domain.mime import Flat, Link
 
 CARD_LINES_MAX: Final = 6
+CARD_VALUE_MAX: Final = 80  # a company or a place is short
+CARD_WORDS_MAX: Final = 8
+# Footer and notice words. When a card has fewer lines than the layout expects, the next line is
+# often the email's footer; it is never a company or a place (seen on a real alert, 2026-11-22).
+FOOTER_WORDS: Final = (
+    "intended for",
+    "you are receiving",
+    "you received",
+    "unsubscribe",
+    "manage your",
+    "manage alerts",
+    "job alert",
+    "privacy",
+    "help center",
+    "copyright",
+    "this email",
+    "notification",
+    "view all",
+    "see all",
+)
 
 # (the lines after the title, the link) -> (company, location)
 Assign = Callable[[list[str], Link], tuple[str | None, str | None]]
@@ -46,7 +66,7 @@ def read_cards(site: str, flat: Flat, alert_date: datetime, assign: Assign) -> l
             for line in flat.lines[link.line + 1 : max(end, link.line + 1)][:CARD_LINES_MAX]
             if not line.muted
         ]
-        company, location = assign(card, link)
+        company, location = (_plausible(value) for value in assign(card, link))
         jobs.append(
             AlertJob(
                 title=link.text[:TITLE_MAX],
@@ -61,6 +81,25 @@ def read_cards(site: str, flat: Flat, alert_date: datetime, assign: Assign) -> l
         if len(jobs) >= JOBS_PER_EMAIL_MAX:
             break
     return jobs
+
+
+def _plausible(value: str | None) -> str | None:
+    """The value when it can be a company or a place; footer text, a sentence, an address or a
+    link never is. Nothing is guessed in its place: it stays empty (FR-013)."""
+    if not value:
+        return None
+    lower = value.casefold()
+    if (
+        len(value) > CARD_VALUE_MAX
+        or len(value.split()) > CARD_WORDS_MAX
+        or "@" in value
+        or "©" in value
+        or "http" in lower
+        or "www." in lower
+        or any(words in lower for words in FOOTER_WORDS)
+    ):
+        return None
+    return value
 
 
 def _limit(value: str | None, size: int) -> str | None:

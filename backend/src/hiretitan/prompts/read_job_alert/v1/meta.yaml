@@ -1,0 +1,5 @@
+version: 1
+tier: fast
+max_output_tokens: 2500
+changelog:
+  - "v1: first version. Lists the jobs in a job-alert email no fixed reader knows; at most 30, each naming its link by the number it was shown."

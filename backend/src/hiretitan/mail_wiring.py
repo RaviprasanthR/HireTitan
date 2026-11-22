@@ -40,6 +40,7 @@ from hiretitan.mail.infra.repos import (
 from hiretitan.mail.infra.secrets_file import SecretsFile
 from hiretitan.mail.infra.seed import load_seed
 from hiretitan.mail.infra.store import SqlMailStore
+from hiretitan.mail.workflow.ai_read import MailAiDeps
 from hiretitan.mail.workflow.check import CheckDeps
 from hiretitan.mail.workflow.schedule import ScheduleDeps, after_company_search
 from hiretitan.platform.clock import ClockPort
@@ -109,6 +110,7 @@ def build_check_deps(
     synonyms: Mapping[str, tuple[str, ...]],
     tech_names: TechTable,
     enqueue: Callable[[UUID], Awaitable[None]],
+    ai: MailAiDeps | None = None,
 ) -> CheckDeps:
     """Everything the worker's mail check needs."""
     return CheckDeps(
@@ -118,6 +120,7 @@ def build_check_deps(
         runs=SqlCheckRuns(sessions, enqueue),
         clock=clock,
         publish=publish,
+        ai=ai,
     )
 
 
@@ -354,7 +357,11 @@ async def mail_run_details(session: AsyncSession, search_run_id: UUID) -> MailRu
         )
         .where(
             MailReadMessageRow.mail_check_id == check.id,
-            MailReadMessageRow.outcome.in_(("unreadable", "needs_ai", "no_jobs")),
+            or_(
+                MailReadMessageRow.outcome.in_(("unreadable", "needs_ai")),
+                # an email with no jobs in it that no one expected jobs from is not a problem
+                and_(MailReadMessageRow.outcome == "no_jobs", MailReadMessageRow.reader.is_(None)),
+            ),
         )
         .order_by(MailReadMessageRow.received_at.desc())
         .limit(50)

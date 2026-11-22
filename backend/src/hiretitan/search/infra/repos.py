@@ -411,6 +411,13 @@ class JobsRepo:
         )
         await self._session.flush()
 
+    async def source_kinds(self, job_id: UUID) -> set[str]:
+        """The kinds of source a job was found by (``company_board``, ``email_alert`` ...)."""
+        rows = await self._session.scalars(
+            select(JobSourceRow.kind).where(JobSourceRow.job_id == job_id)
+        )
+        return set(rows)
+
     async def add_source(
         self,
         job_id: UUID,

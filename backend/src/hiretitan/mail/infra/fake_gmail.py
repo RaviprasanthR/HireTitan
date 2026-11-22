@@ -39,6 +39,16 @@ def parse_query(query: str) -> tuple[list[str], int]:
     return senders, int(after_match.group(1))
 
 
+def _matches(sender: str, terms: list[str]) -> bool:
+    """An address term matches that address; a term with no ``@`` is a domain and matches the
+    addresses at it and at its sub-domains (as Gmail's ``from:`` does)."""
+    host = sender.rsplit("@", 1)[-1]
+    return any(
+        sender == term if "@" in term else host == term or host.endswith("." + term)
+        for term in terms
+    )
+
+
 class FakeGmail:
     def __init__(self, folder: Path) -> None:
         self._folder = folder
@@ -63,7 +73,7 @@ class FakeGmail:
     ) -> MessagePage:
         senders, after = parse_query(query)
         paths = await asyncio.to_thread(lambda: sorted((self._folder / "messages").glob("*.eml")))
-        found = [m for m in (self._read(p.stem) for p in paths) if m.sender in senders]
+        found = [m for m in (self._read(p.stem) for p in paths) if _matches(m.sender, senders)]
         found = [m for m in found if m.received_at.timestamp() > after]
         found.sort(key=lambda m: (m.received_at, m.id), reverse=True)
         start = int(page_token or 0)

@@ -341,6 +341,73 @@ describe('RunSummaryPage: mail run', () => {
     expect(await screen.findByRole('button', { name: 'Restore' })).toBeInTheDocument()
   })
 
+  it('US5 a check that found no mail says so and points to the sender list', async () => {
+    renderSummary(
+      mailRun(
+        { outcome: 'finished', finished_at: '2026-11-18T09:02:00Z', jobs_found: 0, added: 0 },
+        { ended: 'finished', emails_listed: 0, emails_skipped: 0, emails_read: 0 },
+      ),
+    )
+
+    const note = await screen.findByRole('status', { name: 'Mail check result' })
+    expect(note).toHaveTextContent('Gmail returned no mail from your job sites')
+    expect(note).toHaveTextContent('last 24 hours')
+    expect(within(note).getByRole('link', { name: /sender list/i })).toHaveAttribute(
+      'href',
+      '/settings',
+    )
+  })
+
+  it('US5 a check whose mail was all read before says so', async () => {
+    renderSummary(
+      mailRun(
+        { outcome: 'finished', finished_at: '2026-11-18T09:02:00Z', jobs_found: 0, added: 0 },
+        { ended: 'finished', emails_listed: 4, emails_skipped: 4, emails_read: 0 },
+      ),
+    )
+
+    expect(await screen.findByRole('status', { name: 'Mail check result' })).toHaveTextContent(
+      'All 4 emails were already read by an earlier check.',
+    )
+  })
+
+  it('US5 a check that read mail but found no jobs in it says so', async () => {
+    renderSummary(
+      mailRun(
+        { outcome: 'finished', finished_at: '2026-11-18T09:02:00Z', jobs_found: 0, added: 0 },
+        { ended: 'finished', emails_listed: 5, emails_skipped: 0, emails_read: 5 },
+      ),
+    )
+
+    expect(await screen.findByRole('status', { name: 'Mail check result' })).toHaveTextContent(
+      '5 emails were looked at, but none held a job alert HireTitan could read.',
+    )
+  })
+
+  it('US5 no note when the check found jobs', async () => {
+    renderSummary(
+      mailRun(
+        { outcome: 'finished', finished_at: '2026-11-18T09:02:00Z' },
+        { ended: 'finished', emails_listed: 4, emails_skipped: 0, emails_read: 4 },
+      ),
+    )
+
+    await screen.findByRole('heading', { name: 'Mail check summary' })
+    expect(screen.queryByRole('status', { name: 'Mail check result' })).not.toBeInTheDocument()
+  })
+
+  it('US5 no note while the check is still running or when it ended early', async () => {
+    renderSummary(
+      mailRun(
+        { outcome: 'failed', stop_message: 'Gmail did not answer.', finished_at: '2026-11-18T09:02:00Z', jobs_found: 0 },
+        { ended: 'gmail_unavailable', emails_listed: 0 },
+      ),
+    )
+
+    await screen.findByRole('heading', { name: 'Mail check summary' })
+    expect(screen.queryByRole('status', { name: 'Mail check result' })).not.toBeInTheDocument()
+  })
+
   it('FR012 says when there were more emails than one check reads', async () => {
     renderSummary(
       mailRun(

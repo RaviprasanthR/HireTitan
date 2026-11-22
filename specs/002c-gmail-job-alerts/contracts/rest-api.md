@@ -78,6 +78,20 @@ Stopping uses the existing `POST /search/runs/{id}/stop`.
 - `GET /jobs` filter `source`: new value `email_alert`.
 - Job cards and `GET /jobs/{id}`: `sources[]` items may have `kind: "email_alert"`, with `site` and `alert_date`; a new boolean `may_have_closed` (FR-020); `injection_flags` include mail signals with `location: "email"`.
 
+## AI key (`hiretitan.setup`, router prefix `/settings`) *(added 2026-11-23, US6)*
+
+### PUT /settings/ai-key
+
+Body `{"key": "sk-..."}`. The key must be 20 to 300 characters with no spaces (`422` with `errors=[{"field": "key", "message": ...}]`). `409 reason=key_from_environment` when `OPENAI_API_KEY` is set. Saves it to `<data_dir>/secrets/llm.json` and defers a key check; `202 {"key_source": "page", "status": "unknown"}`. The key is never echoed.
+
+### DELETE /settings/ai-key
+
+Removes a key saved on the page. `204`; `409 reason=key_from_environment` when the key comes from the environment. AI tasks then pause as for a missing key.
+
+### GET /status (existing, extended)
+
+`ai` gains `key_source`: `env`, `page` or `none`.
+
 ## Events (server-sent, existing stream)
 
 `search.batch_done` and `search.finished` as for company runs (a mail run's batch event carries `emails_read`, `emails_listed` and `added`); new `mail.connection_changed` (state only) so Settings refreshes.

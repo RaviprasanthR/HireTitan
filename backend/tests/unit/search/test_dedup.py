@@ -104,3 +104,30 @@ def test_same_posting_again_needs_company_city_and_a_near_identical_title() -> N
     assert not same_posting_again(
         _job("Senior Software Engineer-Frontend"), _job("Senior Software Engineer-Systems")
     )
+
+
+def test_FR021_a_short_title_inside_a_much_longer_one_is_not_a_candidate() -> None:
+    """Seen on a real search (2026-11-22): every word of the short title is in the long one, so a
+    word-set score is 100, but "X" and "X, team Y" are usually two different postings."""
+    pairs = [
+        ("Program Manager II", "Program Manager II, Global Catalog Operations"),
+        ("Program Manager II", "Manager II Program Management, Global Catalog Operations"),
+        ("Associate, Quality Services", "Associate, Quality Services, DEX SSD Field"),
+        ("Program Manager II", "Program Manager II, Amazon Books"),
+    ]
+    for short, long in pairs:
+        assert fuzzy_candidates(job(2, long), [job(1, short)]) == [], (short, long)
+        assert fuzzy_candidates(job(2, short), [job(1, long)]) == [], (short, long)
+
+
+def test_FR021_a_word_more_or_a_reordered_title_is_still_a_candidate() -> None:
+    assert (
+        len(
+            fuzzy_candidates(job(2, "Senior Backend Engineer"), [job(1, "Backend Engineer Senior")])
+        )
+        == 1
+    )
+    assert (
+        len(fuzzy_candidates(job(2, "Backend Engineer, Payments"), [job(1, "Backend Engineer")]))
+        == 1
+    )

@@ -115,6 +115,26 @@ Every check reads the alert emails received in the last 24 hours (the person's d
 
 ---
 
+### User Story 6 - A clear Settings page: AI key, Gmail set-up as a flow, senders, data (Priority: P2)
+
+*Added 2026-11-23 (Ravi: "properly style and organize settings ... a proper visual flow for setting up gmail connection, list of senders, options to configure api key via ui, segregate everything clearly"; folded into this feature's Phase 9).*
+
+Settings is one long column today: the AI key status (with "edit `.env` and restart"), the Gmail section, and Delete all my data. The person wants it organised into clearly separate parts, the Gmail set-up shown as a sequence of steps that says which are done, the sender list shown clearly by site, and the AI key entered on the page instead of in `.env`.
+
+**Why this priority**: setting up Gmail and the AI key are the two places a new person gets stuck; the features work without this, but are hard to set up.
+
+**Independent Test**: on a fresh install with no key and no Gmail, open Settings: three separate parts (AI, Gmail job alerts, Your data) with a short index; type an OpenAI key and save: it is checked and shows "working" without a restart, and it never appears again on the page or in any answer; the Gmail part shows numbered steps (Google client, Connect, Senders, First check) with the first one open and the others waiting; complete them one by one and see each marked done.
+
+**Acceptance Scenarios**:
+
+1. **Given** Settings, **When** the person opens it, **Then** it has separate parts, AI, Gmail job alerts and Your data, each with its own heading and a short line saying what it is for, and an index at the top that jumps to each part.
+2. **Given** no AI key, **When** the person types an OpenAI key and saves, **Then** the key is checked with the provider, the status shows "working" (or the provider's reason it is not), and AI tasks that were paused for the key continue, all without restarting HireTitan.
+3. **Given** a saved key, **When** the person looks at the page or at any answer from the app, **Then** the key itself is never shown; only whether one is set, where it comes from (this page or `.env`), and its status. They can replace it or remove it.
+4. **Given** a key set in `.env`, **When** the person opens the AI part, **Then** it says the key comes from `.env` (which wins over a key saved on the page) and offers no field to change it there.
+5. **Given** Gmail is not set up, **When** the person opens the Gmail part, **Then** it shows the steps in order: 1 Google client (ID and secret), 2 Connect (read-only), 3 Senders, 4 First check; each step shows done, current or waiting; only the current step is open, a done step can be reopened, and a waiting step says what it waits for.
+6. **Given** Gmail is connected, **When** the person looks at the Senders step, **Then** the built-in senders are listed by site, each site with its switch and its addresses, the site's domain that is also read, and the person's own senders below with Remove and an Add field.
+7. **Given** "Delete all my data", **When** the person opens Your data, **Then** it stands apart from the rest, with its warning, and also removes a key saved on the page.
+
 ### Edge Cases
 
 - An alert email in a layout HireTitan does not recognise (a site changed its template): the email is still read with the general reader; if no job can be taken out, it is counted under "could not read" with the sender and date, and nothing is invented.
@@ -147,7 +167,7 @@ Every check reads the alert emails received in the last 24 hours (the person's d
 
 **Which mail is read**
 
-- **FR-009**: HireTitan MUST read only emails from senders on the enabled sender list, received within the check window, and MUST NOT list, open or store any other mail.
+- **FR-009**: HireTitan MUST read only emails from senders on the enabled sender list or from the own domain of a built-in site that is switched on (for example `naukri.com`, including its sub-domains), received within the check window, and MUST NOT list, open or store any other mail. *Amended 2026-11-22 (Ravi): the built-in addresses are unverified guesses and sites change them, so the site's domain is asked for too. Only an email in which a fixed reader finds jobs is kept; any other mail from a site's domain is dropped without the AI and without being listed as unreadable. A custom sender is still an exact address, and the AI fallback never reads mail that came only through a site's domain.*
 - **FR-010**: HireTitan MUST ship a built-in list of job-alert senders for at least LinkedIn, Naukri, Indeed, Cutshort, Instahyre and foundit, which the person can switch off per site and extend with their own sender addresses.
 - **FR-011**: Every check MUST read only alert emails received in the 24 hours before it starts, and MUST NOT read an email a previous check already read.
 - **FR-012**: A check MUST read at most 200 emails and report when more remain.
@@ -181,6 +201,15 @@ Every check reads the alert emails received in the last 24 hours (the person's d
 - **FR-026**: Every check MUST end with a summary whose numbers add up: emails read, emails that could not be read, jobs found, new, already known, left out by rules, already in the pipeline, and possible duplicates.
 - **FR-027**: "Delete all my data" MUST remove the Gmail connection, stored access, sender settings and every record of read emails.
 
+**Settings** *(added 2026-11-23)*
+
+- **FR-028** *(added 2026-11-23)*: Settings MUST be organised into separate parts, AI, Gmail job alerts and Your data, each with a heading and a one-line purpose, with an index at the top that jumps to each part; it MUST work at phone width and with the keyboard.
+- **FR-029** *(added 2026-11-23)*: The person MUST be able to enter, replace and remove an OpenAI API key on the page. A saved key MUST be stored only in `<data_dir>/secrets/llm.json` (owner-only where the system supports it), MUST never be returned by any endpoint, shown on the page or written to a log, and MUST be checked with the provider when saved. A key in the environment (`OPENAI_API_KEY`) MUST win over a saved one, and the page MUST say so. *Amends ADR-09 ("keys in `.env` only").*
+- **FR-030** *(added 2026-11-23)*: A key saved, replaced or removed on the page MUST take effect for the API and the worker without a restart, and AI tasks paused because the key was missing or rejected MUST continue once the new key works.
+- **FR-031** *(added 2026-11-23)*: The Gmail part MUST show the set-up as ordered steps (Google client, Connect, Senders, First check), each marked done, current or waiting from the app's real state; only the current step is open by default and a done step can be reopened.
+- **FR-032** *(added 2026-11-23)*: The Senders step MUST list the built-in senders grouped by site (switch, addresses and the site's domain that is also read), then the person's own senders with Remove, then an Add field.
+- **FR-033** *(added 2026-11-23)*: "Delete all my data" MUST also remove a key saved on the page.
+
 ### Key Entities
 
 - **Gmail connection**: the person's link to their mailbox: the address, the stored read-only access (secret), when it was made, the last successful check, and its state (connected, needs reconnecting, not connected). One per install. Shared with later mail features.
@@ -202,6 +231,8 @@ Every check reads the alert emails received in the last 24 hours (the person's d
 - **SC-006**: After Disconnect, HireTitan holds no mail access, and the person's Google account shows the access removed.
 - **SC-007**: HireTitan can send, draft, delete or change no mail (the architecture test passes).
 - **SC-008**: In every check summary, jobs found = new + already known + left out + already in pipeline.
+- **SC-009** *(added 2026-11-23)*: A person with an OpenAI key and no `.env` edits gets AI working from Settings in under 2 minutes, without restarting HireTitan.
+- **SC-010** *(added 2026-11-23)*: The saved key appears in 0 API responses, 0 log lines and 0 rendered pages (shown by tests that look for it).
 
 ## Assumptions
 

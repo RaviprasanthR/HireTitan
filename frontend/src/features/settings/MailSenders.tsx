@@ -96,7 +96,9 @@ export function MailSenders() {
     <div className="space-y-3">
       <h3 className="font-medium">Senders HireTitan reads</h3>
       <p className="text-sm text-muted-small">
-        Only mail from these addresses is looked at. Switch a site off to stop reading it.
+        Mail from these addresses, and from each site's own domain (for example naukri.com), is
+        looked at; only job alerts in it are kept and the rest is dropped. Switch a site off to
+        stop reading it.
       </p>
       {error && (
         <p role="alert" className="text-sm text-danger">

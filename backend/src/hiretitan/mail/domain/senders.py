@@ -8,7 +8,7 @@ language (quotes, brackets, colons, spaces) gets through.
 from __future__ import annotations
 
 import re
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from email.utils import parseaddr
@@ -73,16 +73,64 @@ def window_start(now: datetime) -> datetime:
     return now - WINDOW
 
 
-def build_query(addresses: Sequence[str], now: datetime) -> str:
-    """The Gmail search: ``from:(a OR b) after:<epoch>`` and nothing else (FR-009).
+# The domain each built-in site sends its mail from. Mail from these domains is looked at as well
+# as the listed addresses, because a site's alert address changes without notice; only emails in
+# which a reader finds jobs are kept, the rest is dropped (2026-11-22, amends FR-009).
+SITE_DOMAINS: Final[dict[str, tuple[str, ...]]] = {
+    "linkedin": ("linkedin.com",),
+    "naukri": ("naukri.com",),
+    "indeed": ("indeed.com",),
+    "foundit": ("foundit.in",),
+    "instahyre": ("instahyre.com",),
+    "cutshort": ("cutshort.io",),
+}
+_ALL_DOMAINS: Final = frozenset(d for domains in SITE_DOMAINS.values() for d in domains)
 
-    Built from the sender list only. Every address is checked again here, so no text with a
-    meaning in Gmail's search language can reach the query, however the list was filled.
-    """
+
+def domains_of(sites: Iterable[str]) -> list[str]:
+    """The domains of the built-in sites among ``sites``, sorted."""
+    return sorted({d for site in sites for d in SITE_DOMAINS.get(site, ())})
+
+
+def site_for_address(address: str, sites: Iterable[str]) -> str | None:
+    """The built-in site (among ``sites``) whose domain the address is at, or its sub-domain.
+
+    ``noreply@mail.naukri.com`` belongs to Naukri; ``x@evilnaukri.com`` and
+    ``x@naukri.com.evil.example`` do not. ``None`` for anything that is not a plain address."""
+    try:
+        clean = normalize_address(address)
+    except SenderError:
+        return None
+    host = clean.rsplit("@", 1)[1]
+    for site in sorted(set(sites)):
+        for domain in SITE_DOMAINS.get(site, ()):
+            if host == domain or host.endswith("." + domain):
+                return site
+    return None
+
+
+def build_query(
+    addresses: Sequence[str],
+    now: datetime,
+    domains: Sequence[str] = (),
+    window: timedelta = WINDOW,
+) -> str:
+    """The Gmail search: ``from:(a OR b OR site.com) after:<epoch>`` and nothing else (FR-009).
+
+    Built from the sender list and the built-in site domains only. Every address and domain is
+    checked again here, so no text with a meaning in Gmail's search language can reach the query,
+    however the list was filled. A domain must be one of the built-in sites'."""
     clean = sorted({normalize_address(address) for address in addresses})
-    if not clean:
+    for domain in domains:
+        if domain not in _ALL_DOMAINS:
+            raise SenderError(f"{domain!r} is not a job site's domain.")
+    parts = [*clean, *sorted(set(domains))]
+    parts.sort(key=lambda p: ("@" not in p, p))  # addresses first, then domains
+    if not parts:
         raise SenderError("There is no sender to look for.")
-    return f"from:({' OR '.join(clean)}) after:{int(window_start(now).timestamp())}"
+    # a check always reads 24 hours (FR-011); only the layout tool looks further back
+    since = window_start(now) + WINDOW - window
+    return f"from:({' OR '.join(parts)}) after:{int(since.timestamp())}"
 
 
 _SENDER_QUERY: Final = re.compile(
@@ -90,15 +138,22 @@ _SENDER_QUERY: Final = re.compile(
 )
 
 
+def _valid_term(term: str) -> bool:
+    if term in _ALL_DOMAINS:
+        return True
+    try:
+        return normalize_address(term) == term
+    except SenderError:
+        return False
+
+
 def is_sender_query(query: str) -> bool:
-    """True only for what ``build_query`` makes: every address valid, then a time, nothing else."""
+    """True only for what ``build_query`` makes: every term a valid address or a built-in site's
+    domain, then a time, nothing else."""
     match = _SENDER_QUERY.match(query)
     if match is None:
         return False
-    try:
-        return all(normalize_address(a) == a for a in match.group("senders").split(" OR "))
-    except SenderError:
-        return False
+    return all(_valid_term(term) for term in match.group("senders").split(" OR "))
 
 
 def address_from_header(value: str) -> str:

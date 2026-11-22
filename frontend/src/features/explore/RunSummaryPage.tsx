@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { components } from '@/api/schema'
 import { Link, useParams } from 'react-router'
 import { BackButton } from '@/components/BackButton'
 import { ChartRow } from '@/components/FlowChart'
@@ -87,6 +88,33 @@ function minutesBetween(start: string | null, end: string | null): string | null
 
 /** What one search found, read and left out: a flow of steps and a bar first, then the details
  * (companies to check, left-out jobs to restore, every company) on request. */
+type MailPart = NonNullable<components['schemas']['SearchRunSummary']['mail']>
+
+/** Why a check that ended normally has nothing to show, in plain words (feature 002c, US5). */
+function MailNote({ mail, jobsFound }: { mail: MailPart; jobsFound: number }) {
+  if (mail.ended !== 'finished' || jobsFound > 0) return null
+  let text: string | null = null
+  if (mail.emails_listed === 0) {
+    text =
+      'Gmail returned no mail from your job sites in the last 24 hours. If you expected some, check that the senders are right.'
+  } else if (mail.emails_skipped === mail.emails_listed) {
+    text = `All ${mail.emails_listed} emails were already read by an earlier check.`
+  } else if (mail.emails_read > 0) {
+    text = `${mail.emails_read} emails were looked at, but none held a job alert HireTitan could read.`
+  }
+  if (text === null) return null
+  return (
+    <p role="status" aria-label="Mail check result" className="text-sm">
+      {text}{' '}
+      {mail.emails_listed === 0 && (
+        <Link to="/settings" className="text-link underline">
+          Open the sender list
+        </Link>
+      )}
+    </p>
+  )
+}
+
 export function RunSummaryPage() {
   const { id = '' } = useParams()
   const run = useRun(id)
@@ -167,6 +195,7 @@ export function RunSummaryPage() {
         </ChartRow>
       )}
 
+      {mail && <MailNote mail={mail} jobsFound={data.jobs_found} />}
       {mail?.more_remaining && (
         <p className="text-sm text-warning">
           There was more mail than one check reads, so the rest waits for the next check.

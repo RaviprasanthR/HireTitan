@@ -160,3 +160,47 @@ def test_FR013_the_same_posting_twice_in_one_email_is_one_job() -> None:
     )
 
     assert [j.posting_id for j in jobs] == ["3900000001"]
+
+
+def _card(after: list[str]) -> list:  # type: ignore[type-arg]
+    from datetime import UTC, datetime
+
+    from hiretitan.mail.domain.mime import Flat, Line, Link
+    from hiretitan.mail.domain.readers import linkedin
+
+    lines = [Line("Backend Engineer"), *[Line(t) for t in after]]
+    flat = Flat(
+        source="html",
+        lines=lines,
+        links=[Link("Backend Engineer", "https://www.linkedin.com/comm/jobs/view/4012345678/", 0)],
+    )
+    return linkedin.read(flat, datetime(2026, 11, 22, tzinfo=UTC))
+
+
+def test_FR013_a_footer_line_is_never_taken_for_a_company_or_place() -> None:
+    """Seen on a real alert (2026-11-22): the last job had no company line, so the footer under
+    it ("This email was intended for <name> ...") was read as the company."""
+    footers = [
+        "This email was intended for Jane Example (Building reliable backend systems)",
+        "You are receiving Job Alert emails.",
+        "Unsubscribe",
+        "Manage your job alerts",
+        "© 2026 LinkedIn Corporation, 1000 West Maude Avenue, Sunnyvale, CA 94085.",
+        "Learn why we included this: https://www.linkedin.com/help",
+        "help@example.invalid",
+    ]
+    for footer in footers:
+        (job,) = _card([footer, footer])
+        assert (job.company, job.location) == (None, None), footer
+
+
+def test_FR013_a_real_company_and_place_are_still_read() -> None:
+    (job,) = _card(["Acme Robotics", "Pune, Maharashtra, India"])
+
+    assert (job.company, job.location) == ("Acme Robotics", "Pune, Maharashtra, India")
+
+
+def test_FR013_a_long_sentence_is_not_a_company() -> None:
+    (job,) = _card(["We think you would be a great fit for this role at our company today", "Pune"])
+
+    assert job.company is None

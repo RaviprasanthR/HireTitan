@@ -18,6 +18,10 @@ from hiretitan.search.domain.places import key, same_city
 TITLE_SIMILARITY_MIN: Final = 92
 # Stricter than a candidate: a title that differs by a word (a level, a team) is another job.
 SAME_POSTING_TITLE_MIN: Final = 95
+# The shorter title must have at least two thirds as many words as the longer: "Backend Engineer"
+# and "Backend Engineer (Python)" are candidates, "Program Manager II" and "Program Manager II,
+# Global Catalog Operations" are two postings (a word-set score alone calls them identical).
+TITLE_WORDS_RATIO_MIN: Final = 2 / 3
 
 
 @dataclass(frozen=True, slots=True)
@@ -67,11 +71,21 @@ def fuzzy_candidates(found: DedupJob, existing: Iterable[DedupJob]) -> list[Dupl
             continue
         if exact_match(found, [other]) is not None:
             continue
-        score = fuzz.token_set_ratio(title, key(other.title))
+        other_title = key(other.title)
+        if not _close_in_size(title, other_title):
+            continue
+        score = fuzz.token_set_ratio(title, other_title)
         if score >= TITLE_SIMILARITY_MIN:
             first, second = sorted((found.id, other.id))
             pairs.append(DuplicatePair(first, second, score))
     return sorted(pairs, key=lambda p: (p.first, p.second))
+
+
+def _close_in_size(a: str, b: str) -> bool:
+    words_a, words_b = len(a.split()), len(b.split())
+    if not words_a or not words_b:
+        return False
+    return min(words_a, words_b) / max(words_a, words_b) >= TITLE_WORDS_RATIO_MIN
 
 
 def same_posting_again(found: DedupJob, other: DedupJob) -> bool:

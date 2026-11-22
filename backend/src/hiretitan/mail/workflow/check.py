@@ -18,7 +18,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from functools import partial
 from typing import Any, Final, TypedDict
 from uuid import UUID
@@ -27,6 +27,7 @@ from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph import END, START, StateGraph
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from hiretitan.mail.application.alert_prompt import shown_links
 from hiretitan.mail.application.ports import (
     AlertBatchSink,
     CheckRuns,
@@ -38,12 +39,18 @@ from hiretitan.mail.application.ports import (
 )
 from hiretitan.mail.domain.mime import Flat, UnreadableMessageError, flatten_message
 from hiretitan.mail.domain.readers import READERS, read_alert
-from hiretitan.mail.domain.senders import build_query
+from hiretitan.mail.domain.senders import build_query, domains_of, site_for_address
 from hiretitan.mail.infra.repos import (
     ConnectionRepo,
     MailChecksRepo,
     ReadMessagesRepo,
     SendersRepo,
+)
+from hiretitan.mail.workflow.ai_read import (
+    AI_EMAILS_MAX,
+    MailAiDeps,
+    MailAiUnavailableError,
+    read_with_ai,
 )
 from hiretitan.platform.clock import ClockPort
 from hiretitan.platform.runtime.infra.runs_repo import Run
@@ -77,6 +84,8 @@ class CheckDeps:
     publish: Publish | None = None
     # told when Gmail refuses the saved access (the connection is then marked "reconnect")
     on_access_ended: Callable[[str], Awaitable[None]] | None = None
+    # reads an email no fixed reader can (FR-013a); None: such an email is only counted
+    ai: MailAiDeps | None = None
 
 
 @dataclass
@@ -88,6 +97,10 @@ class _Totals:
     more_remaining: bool = False
     emails: list[ReadEmail] = field(default_factory=list)
     batches: int = 0
+    run_id: UUID | None = None  # the workflow run, for the AI call records
+    ai_asked: int = 0  # emails sent to the AI in this check
+    ai_down: bool = False  # the AI could not be asked: do not try again in this check
+    sites: frozenset[str] = frozenset()  # built-in sites switched on: their domains count too
 
 
 class _Nothing(Exception):
@@ -107,24 +120,68 @@ def _signals(flat: Flat) -> list[dict[str, Any]]:
     ]
 
 
-def read_email(message_id: str, sender: str, received_at: Any, raw: bytes, site: str) -> ReadEmail:
-    """One email in, what it yielded out. A built-in site whose reader finds nothing in a
-    non-empty email is counted as unreadable (FR-017); an unlisted sender waits for the AI. An
-    email with no trustworthy sender is unreadable and is never read for jobs."""
+def read_email_flat(
+    message_id: str, sender: str, received_at: Any, raw: bytes, site: str, listed: bool = True
+) -> tuple[ReadEmail, Flat | None]:
+    """One email in, what it yielded out, and the flattened email when a fixed reader could not
+    read it (so the AI can be asked). A built-in site whose reader finds nothing in a non-empty
+    email is counted as unreadable (FR-017); an unlisted sender waits for the AI. An email with no
+    trustworthy sender is unreadable and is never read for jobs, by a reader or by the AI."""
     if not sender:
-        return ReadEmail(message_id, NO_SENDER, received_at, "unreadable", None, [], [])
+        return ReadEmail(message_id, NO_SENDER, received_at, "unreadable", None, [], []), None
     try:
         flat = flatten_message(raw)
     except UnreadableMessageError:
-        return ReadEmail(message_id, sender, received_at, "unreadable", None, [], [])
+        return ReadEmail(message_id, sender, received_at, "unreadable", None, [], []), None
     jobs = read_alert(site, flat, received_at)
     signals = _signals(flat)
     if jobs:
-        return ReadEmail(message_id, sender, received_at, "read", site, jobs, signals)
+        return ReadEmail(message_id, sender, received_at, "read", site, jobs, signals), None
+    if not listed:
+        # mail from a site's domain, from an address not on the list: only an alert is kept; a
+        # receipt, a message or a newsletter is dropped quietly (no AI, not "could not read")
+        return ReadEmail(message_id, sender, received_at, "no_jobs", "domain", [], signals), None
     if not flat.lines and not flat.links:
-        return ReadEmail(message_id, sender, received_at, "no_jobs", None, [], signals)
+        return ReadEmail(message_id, sender, received_at, "no_jobs", None, [], signals), None
     outcome = "unreadable" if site in READERS else "needs_ai"
-    return ReadEmail(message_id, sender, received_at, outcome, None, [], signals)
+    return ReadEmail(message_id, sender, received_at, outcome, None, [], signals), flat
+
+
+def read_email(message_id: str, sender: str, received_at: Any, raw: bytes, site: str) -> ReadEmail:
+    """``read_email_flat`` without the flattened email: what the fixed readers made of it."""
+    return read_email_flat(message_id, sender, received_at, raw, site)[0]
+
+
+async def _ask_ai(
+    deps: CheckDeps, totals: _Totals, email: ReadEmail, flat: Flat, site: str
+) -> ReadEmail:
+    """The AI reads an email the fixed readers could not (FR-013a). It never fails the check:
+    with no AI set up the email stays as it was; an AI that cannot be asked keeps it for the next
+    check (``needs_ai``) and is not asked again in this one; an unusable answer is final."""
+    if deps.ai is None or totals.run_id is None:
+        return email
+    if not shown_links(flat):  # a job is named by its link: with none there is nothing to ask
+        return replace(email, outcome="unreadable")
+    if totals.ai_down or totals.ai_asked >= AI_EMAILS_MAX:
+        return replace(email, outcome="needs_ai")
+    totals.ai_asked += 1
+    try:
+        jobs = await read_with_ai(
+            deps.ai, flat, site=site, alert_date=email.received_at, run_id=totals.run_id
+        )
+    except MailAiUnavailableError:
+        totals.ai_down = True
+        _log.info("The AI could not be asked; its emails wait for the next check.")
+        return replace(email, outcome="needs_ai")
+    except Exception as error:
+        # only the kind of error is logged: a provider's message can quote what it was sent
+        _log.warning("The AI could not read one email (%s).", type(error).__name__)
+        return replace(email, outcome="needs_ai")
+    if jobs is None:
+        return replace(email, outcome="unreadable")
+    if not jobs:
+        return replace(email, outcome="no_jobs", reader="ai")
+    return replace(email, outcome="read", reader="ai", jobs=jobs)
 
 
 async def _publish(deps: CheckDeps, name: str, data: dict[str, Any]) -> None:
@@ -207,12 +264,22 @@ async def _read_one(
         _log.warning("One email could not be fetched.", exc_info=True)
         totals.unreadable += 1
         return
-    site = site_of.get(raw.sender, "other")
+    listed = raw.sender in site_of
+    site = site_of[raw.sender] if listed else site_for_address(raw.sender, totals.sites)
+    if site is None:
+        # Gmail matched the message by a display name or an alias, not by a listed address or a
+        # site's own domain: no reader and no AI looks at it, however it is dressed
+        totals.unreadable += 1
+        sender = raw.sender or NO_SENDER
+        totals.emails.append(ReadEmail(message_id, sender, now, "unreadable", None, [], []))
+        return
     try:
         # parsing up to 2 MB must not hold the worker's event loop
-        email = await asyncio.to_thread(
-            read_email, message_id, raw.sender, raw.received_at, raw.raw, site
+        email, flat = await asyncio.to_thread(
+            read_email_flat, message_id, raw.sender, raw.received_at, raw.raw, site, listed
         )
+        if flat is not None and email.outcome in ("unreadable", "needs_ai"):
+            email = await _ask_ai(deps, totals, email, flat, site)
     except Exception:
         _log.warning("One email could not be read.", exc_info=True)
         email = ReadEmail(
@@ -260,18 +327,20 @@ async def run_check(deps: CheckDeps, state: CheckState) -> CheckState:
         return {}
     search_run_id, check_id = started.search_run_id, started.mail_check_id
     now = deps.clock.now()
-    totals = _Totals()
+    totals = _Totals(run_id=workflow_run_id)
     ended, outcome, message = "finished", "finished", None
 
     try:
         async with deps.sessions() as session:
             senders = [s for s in await SendersRepo(session).list_all() if s.enabled]
             site_of = {s.address: s.site for s in senders}
+            totals.sites = frozenset(s.site for s in senders if s.built_in)
             await ConnectionRepo(session).mark_check_started(now)
             await session.commit()
         if not site_of:
             raise _Nothing
-        ids = await _list_ids(deps, build_query(sorted(site_of), now), totals)
+        query = build_query(sorted(site_of), now, domains_of(totals.sites))
+        ids = await _list_ids(deps, query, totals)
         totals.listed = len(ids)
         async with deps.sessions() as session:
             done = await ReadMessagesRepo(session).already_read(ids)

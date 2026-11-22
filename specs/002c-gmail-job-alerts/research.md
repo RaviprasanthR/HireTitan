@@ -35,7 +35,9 @@ Decisions for [plan.md](plan.md). Each: **Decision**, **Rationale**, **Alternati
 
 **Verify (T005)**: the maintainer checks each address in their own Gmail (search box, by hand) and corrects the seed; only addresses are recorded, never mail content. Addresses that belong to the sites are public facts, not personal data (constitution VIII).
 
-**Alternatives considered**: whole domains (`from:linkedin.com`: would also read messages, connection requests and receipts, against FR-009); a label the person sets up with a Gmail filter (extra work for every person; can be added later as a sender kind).
+**Amended 2026-11-22 (Ravi)**: the site's own domain (`SITE_DOMAINS` in `mail/domain/senders.py`) is asked for next to the addresses, for a site that is switched on; the real address may differ from these guesses. The cost is that connection requests, messages and receipts from those domains are also fetched and parsed on this computer: only an email a fixed reader finds jobs in is kept (and recorded as `read`); anything else is recorded as `no_jobs` with reader `domain` (id, sender, time only), never sent to the AI, never shown as unreadable. A message whose real From address is neither a listed address nor at a site's domain is still refused.
+
+**Alternatives considered (first version)**: whole domains (`from:linkedin.com`: would also read messages, connection requests and receipts, against FR-009; accepted later, see above); a label the person sets up with a Gmail filter (extra work for every person; can be added later as a sender kind).
 
 ## R4. Fixed readers per site, on the standard-library HTML parser
 
