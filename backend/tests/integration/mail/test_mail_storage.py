@@ -401,3 +401,54 @@ def test_DB_0023_downgrade_converts_instead_of_deleting(
         ("paste", "https://a.invalid/1"),
         ("paste", "https://a.invalid/2"),
     ]
+
+
+async def test_FR026_a_check_can_end_as_failed(db_session: AsyncSession) -> None:
+    run_id = await make_run(db_session)
+    db_session.add(check(run_id, ended="failed", emails_listed=9, emails_read=2))
+
+    await db_session.flush()
+
+
+async def test_FR021_only_one_mail_check_can_be_active(db_session: AsyncSession) -> None:
+    from hiretitan.platform.runtime.infra.runs_repo import RunsRepo
+
+    await RunsRepo(db_session).create("mail_check")
+    with pytest.raises(IntegrityError):
+        await RunsRepo(db_session).create("mail_check")
+    await db_session.rollback()
+
+
+async def test_DB_0024_the_name_look_ups_have_indexes(db_session: AsyncSession) -> None:
+    names = set(
+        (
+            await db_session.scalars(
+                text(
+                    "SELECT indexname FROM pg_indexes WHERE schemaname = 'app'"
+                    " AND tablename IN ('jobs', 'companies')"
+                )
+            )
+        ).all()
+    )
+
+    assert {"ix_jobs_company_name_lower", "ix_companies_name_lower"} <= names
+
+
+def test_DB_0024_up_and_down(
+    fresh_database_url: str, make_alembic_config: Callable[[str], Config]
+) -> None:
+    cfg = make_alembic_config(fresh_database_url)
+    command.upgrade(cfg, "0024")
+    engine = create_engine(fresh_database_url)
+    try:
+        command.downgrade(cfg, "0023")
+        with engine.connect() as conn:
+            left = conn.execute(
+                text(
+                    "SELECT indexname FROM pg_indexes"
+                    " WHERE indexname = 'ix_jobs_company_name_lower'"
+                )
+            ).all()
+        assert left == []
+    finally:
+        engine.dispose()

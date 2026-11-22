@@ -77,3 +77,24 @@ def test_FR009_a_gmail_query_character_cannot_ride_along() -> None:
     for address in ('a"b@c.co', "a(b@c.co", "a)b@c.co", "a{b@c.co", "a:b@c.co"):
         with pytest.raises(SenderError):
             normalize_address(address)
+
+
+@pytest.mark.parametrize(
+    ("header", "expected"),
+    [
+        ("Job Alerts <Alerts@Naukri.com>", "alerts@naukri.com"),
+        ("alerts@naukri.com", "alerts@naukri.com"),
+        # a display name that is itself an address is how a listed sender gets borrowed
+        ('"jobalerts-noreply@linkedin.com" <x@evil.example.invalid>', ""),
+        ("LinkedIn jobalerts-noreply@linkedin.com <x@evil.example.invalid>", ""),
+        ("", ""),
+        ("no address here", ""),
+        ("Bad <a b@c.co>", ""),
+        ("Nul <a" + chr(0) + "b@c.co>", ""),
+        ("Long <" + "x" * 400 + "@c.co>", ""),
+    ],
+)
+def test_SEC_the_sender_of_an_email_is_its_address_or_nothing(header: str, expected: str) -> None:
+    from hiretitan.mail.domain.senders import address_from_header
+
+    assert address_from_header(header) == expected

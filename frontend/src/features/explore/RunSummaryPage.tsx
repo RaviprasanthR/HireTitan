@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { BackButton } from '@/components/BackButton'
 import { ChartRow } from '@/components/FlowChart'
-import { OutcomeDonut, SearchFlow } from './SearchFlow'
+import { MailFlow, OutcomeDonut, SearchFlow } from './SearchFlow'
 import { Button } from '@/components/ui/button'
 import { OUTCOME_LABELS, formatDate, useRestore, useRun, useSkipped } from './api'
 
@@ -70,6 +70,12 @@ function SkippedJobs({ runId }: { runId: string }) {
   )
 }
 
+const UNREADABLE_WHY: Record<string, string> = {
+  unreadable: 'a layout HireTitan does not know',
+  needs_ai: 'waiting for the AI to read it',
+  no_jobs: 'no jobs in it',
+}
+
 const NEEDS_A_LOOK = new Set(['failed', 'blocked', 'unreadable'])
 
 function minutesBetween(start: string | null, end: string | null): string | null {
@@ -92,6 +98,7 @@ export function RunSummaryPage() {
   const leftOutByAi = Math.max(0, data.judged_by_ai - data.kept)
   const leftOut = data.skipped_by_rules + leftOutByAi
   const toCheck = data.companies.filter((company) => NEEDS_A_LOOK.has(company.result))
+  const mail = data.mode === 'mail_alerts' ? data.mail : null
   const took = minutesBetween(data.started_at, data.finished_at)
   const outcome = data.outcome ? (OUTCOME_LABELS[data.outcome] ?? data.outcome) : 'Running'
 
@@ -100,7 +107,9 @@ export function RunSummaryPage() {
       <BackButton to="/explore" />
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold">Search summary</h1>
+          <h1 className="text-2xl font-semibold">
+            {mail ? 'Mail check summary' : 'Search summary'}
+          </h1>
           <p className="text-muted-small">
             {formatDate(data.started_at)} · {outcome}
             {took ? ` · ${took}` : ''}
@@ -123,22 +132,53 @@ export function RunSummaryPage() {
         </div>
       </header>
 
-      <ChartRow>
-        <SearchFlow
-          counts={{
-            companiesRead: data.companies_read,
-            companiesTotal: data.companies_total,
-            toCheck: toCheck.length,
-            jobsFound: data.jobs_found,
-            byRules: data.skipped_by_rules,
-            judgedByAi: data.judged_by_ai,
-            byAi: leftOutByAi,
-            added: data.added,
-            merged: data.merged,
-          }}
-        />
-        <OutcomeDonut added={data.added} merged={data.merged} leftOut={leftOut} />
-      </ChartRow>
+      {mail ? (
+        <ChartRow>
+          <MailFlow
+            counts={{
+              emailsRead: mail.emails_read,
+              emailsNew: Math.max(0, mail.emails_listed - mail.emails_skipped),
+              unreadable: mail.emails_unreadable,
+              alreadyRead: mail.emails_skipped,
+              jobsFound: data.jobs_found,
+              byRules: data.skipped_by_rules,
+              added: data.added,
+              merged: data.merged,
+            }}
+          />
+          <OutcomeDonut added={data.added} merged={data.merged} leftOut={data.skipped_by_rules} />
+        </ChartRow>
+      ) : (
+        <ChartRow>
+          <SearchFlow
+            counts={{
+              companiesRead: data.companies_read,
+              companiesTotal: data.companies_total,
+              toCheck: toCheck.length,
+              jobsFound: data.jobs_found,
+              byRules: data.skipped_by_rules,
+              judgedByAi: data.judged_by_ai,
+              byAi: leftOutByAi,
+              added: data.added,
+              merged: data.merged,
+            }}
+          />
+          <OutcomeDonut added={data.added} merged={data.merged} leftOut={leftOut} />
+        </ChartRow>
+      )}
+
+      {mail?.more_remaining && (
+        <p className="text-sm text-warning">
+          There was more mail than one check reads, so the rest waits for the next check.
+        </p>
+      )}
+      {mail?.ended === 'access_ended' && (
+        <p className="text-sm">
+          <Link to="/settings" className="text-link underline">
+            Open Settings to connect Gmail again
+          </Link>
+        </p>
+      )}
 
       {(data.ai_note || data.stop_message) && (
         <div className="space-y-1 text-sm">
@@ -149,12 +189,36 @@ export function RunSummaryPage() {
 
       {details && (
         <div id="search-details" className="space-y-4">
-          {data.not_checked_by_ai > 0 && (
+          {mail && data.not_checked_by_ai > 0 && (
+            <p className="text-sm">
+              Jobs from alert emails have no description yet, so the AI did not check them. Add a
+              description to a job and the AI will look at it.
+            </p>
+          )}
+          {mail && mail.unreadable.length > 0 && (
+            <section className="space-y-2">
+              <h2 className="text-lg font-semibold">Emails HireTitan could not read</h2>
+              <ul aria-label="Emails that could not be read" className="space-y-1">
+                {mail.unreadable.map((email, index) => (
+                  <li
+                    key={`${email.sender}:${email.received_at}:${index}`}
+                    className="flex flex-wrap justify-between gap-3 rounded-md bg-surface px-3 py-2 text-sm"
+                  >
+                    <span>
+                      {email.sender} · {formatDate(email.received_at)}
+                    </span>
+                    <span className="text-warning">{UNREADABLE_WHY[email.why] ?? email.why}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+          {!mail && data.not_checked_by_ai > 0 && (
             <p className="text-sm">
               {data.not_checked_by_ai} jobs were not checked by the AI and are listed anyway.
             </p>
           )}
-          {toCheck.length > 0 && (
+          {!mail && toCheck.length > 0 && (
             <section className="space-y-2">
               <h2 className="text-lg font-semibold">Companies to check by hand</h2>
               <ul aria-label="Companies to check" className="space-y-1">
@@ -181,24 +245,26 @@ export function RunSummaryPage() {
             <div className="mt-3">{showLeftOut && <SkippedJobs runId={id} />}</div>
           </details>
 
-          <details className="rounded-lg bg-surface p-3">
-            <summary className="cursor-pointer font-medium">
-              All {data.companies.length} companies
-            </summary>
-            <ul aria-label="Companies" className="mt-3 space-y-1">
-              {data.companies.map((company) => (
-                <li
-                  key={company.company_id}
-                  className="flex flex-wrap justify-between gap-3 text-sm"
-                >
-                  <span>{company.company_name}</span>
-                  <span className={company.result === 'ok' ? 'text-muted-small' : 'text-warning'}>
-                    {companyResult(company.result, company.jobs_found, company.error)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </details>
+          {!mail && (
+            <details className="rounded-lg bg-surface p-3">
+              <summary className="cursor-pointer font-medium">
+                All {data.companies.length} companies
+              </summary>
+              <ul aria-label="Companies" className="mt-3 space-y-1">
+                {data.companies.map((company) => (
+                  <li
+                    key={company.company_id}
+                    className="flex flex-wrap justify-between gap-3 text-sm"
+                  >
+                    <span>{company.company_name}</span>
+                    <span className={company.result === 'ok' ? 'text-muted-small' : 'text-warning'}>
+                      {companyResult(company.result, company.jobs_found, company.error)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
         </div>
       )}
     </section>

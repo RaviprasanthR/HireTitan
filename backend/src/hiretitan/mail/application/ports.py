@@ -7,7 +7,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Protocol
+from typing import Any, Protocol
 from uuid import UUID
 
 from hiretitan.mail.domain.alerts import AlertJob
@@ -19,6 +19,10 @@ class MailAccessEndedError(Exception):
 
 class MailUnavailableError(Exception):
     """The mail provider did not answer, after the retries (a network or Google problem)."""
+
+
+class MailMessageNotFoundError(Exception):
+    """The message is gone (deleted since it was listed)."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -69,16 +73,68 @@ class SinkCounts:
         return self.new + self.already_known + self.left_out + self.already_in_pipeline
 
 
-class AlertJobsSink(Protocol):
-    """Hands alert jobs to the search module: rules, deduplication, Explore."""
+@dataclass(frozen=True, slots=True)
+class ReadEmail:
+    """One email a check read, with what it yielded. The body is never part of this (FR-016)."""
+
+    message_id: str
+    sender: str
+    received_at: datetime
+    outcome: str  # read | no_jobs | unreadable | needs_ai
+    reader: str | None
+    jobs: list[AlertJob]
+    injection_signals: list[dict[str, Any]]
+
+
+class AlertBatchSink(Protocol):
+    """Records a batch of read emails and hands their jobs to the search module (rules,
+    deduplication, Explore), all in one transaction: an email is never marked read without its
+    jobs being stored, and the other way round (FR-011)."""
 
     async def store(
         self,
+        *,
         search_run_id: UUID,
-        message_id: UUID | None,
-        jobs: Sequence[AlertJob],
+        mail_check_id: UUID,
+        batch_no: int,
+        emails: Sequence[ReadEmail],
         now: datetime,
     ) -> SinkCounts: ...
+
+
+@dataclass(frozen=True, slots=True)
+class StartedCheck:
+    search_run_id: UUID
+    mail_check_id: UUID
+    window_start: datetime
+
+
+class CheckNotReadyError(Exception):
+    """A check cannot start: ``reason`` is ``not_connected``, ``needs_reconnect``,
+    ``search_running`` or ``no_rules``."""
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
+        self.reason = reason
+
+
+class CheckRuns(Protocol):
+    """A mail check is a search run (research R8); this is how the mail module reaches it."""
+
+    async def start(self, *, trigger: str, now: datetime) -> StartedCheck:
+        """Create the run and its check record and queue it. ``CheckNotReadyError`` when not
+        connected, access ended, another search runs, or the rules are not approved."""
+        ...
+
+    async def locate(self, workflow_run_id: UUID) -> StartedCheck | None:
+        """The check a queued workflow run belongs to."""
+        ...
+
+    async def stop_requested(self, search_run_id: UUID) -> bool: ...
+
+    async def finish(
+        self, search_run_id: UUID, *, outcome: str, message: str | None, now: datetime
+    ) -> None: ...
 
 
 class SecretsFileError(RuntimeError):

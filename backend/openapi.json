@@ -2084,6 +2084,11 @@
             ],
             "title": "Location Text"
           },
+          "may_have_closed": {
+            "default": false,
+            "title": "May Have Closed",
+            "type": "boolean"
+          },
           "posted_at": {
             "anyOf": [
               {
@@ -2332,6 +2337,11 @@
             ],
             "title": "Location Text"
           },
+          "may_have_closed": {
+            "default": false,
+            "title": "May Have Closed",
+            "type": "boolean"
+          },
           "posted_at": {
             "anyOf": [
               {
@@ -2538,6 +2548,95 @@
           "truncated"
         ],
         "title": "LinkedinImportOut",
+        "type": "object"
+      },
+      "MailRunOut": {
+        "description": "What a mail check read (feature 002c): only for runs in the mode ``mail_alerts``.",
+        "properties": {
+          "emails_listed": {
+            "title": "Emails Listed",
+            "type": "integer"
+          },
+          "emails_read": {
+            "title": "Emails Read",
+            "type": "integer"
+          },
+          "emails_skipped": {
+            "title": "Emails Skipped",
+            "type": "integer"
+          },
+          "emails_unreadable": {
+            "title": "Emails Unreadable",
+            "type": "integer"
+          },
+          "ended": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended"
+          },
+          "more_remaining": {
+            "title": "More Remaining",
+            "type": "boolean"
+          },
+          "trigger": {
+            "title": "Trigger",
+            "type": "string"
+          },
+          "unreadable": {
+            "items": {
+              "$ref": "#/components/schemas/MailUnreadableOut"
+            },
+            "title": "Unreadable",
+            "type": "array"
+          },
+          "window_start": {
+            "format": "date-time",
+            "title": "Window Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "trigger",
+          "window_start",
+          "emails_listed",
+          "emails_skipped",
+          "emails_read",
+          "emails_unreadable",
+          "more_remaining",
+          "ended",
+          "unreadable"
+        ],
+        "title": "MailRunOut",
+        "type": "object"
+      },
+      "MailUnreadableOut": {
+        "properties": {
+          "received_at": {
+            "format": "date-time",
+            "title": "Received At",
+            "type": "string"
+          },
+          "sender": {
+            "title": "Sender",
+            "type": "string"
+          },
+          "why": {
+            "title": "Why",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sender",
+          "received_at",
+          "why"
+        ],
+        "title": "MailUnreadableOut",
         "type": "object"
       },
       "MissingOut": {
@@ -2911,6 +3010,11 @@
               }
             ],
             "title": "Location Text"
+          },
+          "may_have_closed": {
+            "default": false,
+            "title": "May Have Closed",
+            "type": "boolean"
           },
           "merged_into": {
             "anyOf": [
@@ -5077,6 +5181,16 @@
             "title": "Kept",
             "type": "integer"
           },
+          "mail": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MailRunOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "merged": {
             "title": "Merged",
             "type": "integer"
@@ -5247,6 +5361,16 @@
             "title": "Kept",
             "type": "integer"
           },
+          "mail": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MailRunOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "merged": {
             "title": "Merged",
             "type": "integer"
@@ -5397,6 +5521,20 @@
           }
         },
         "title": "StartIn",
+        "type": "object"
+      },
+      "StartedCheckOut": {
+        "properties": {
+          "search_run_id": {
+            "format": "uuid",
+            "title": "Search Run Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "search_run_id"
+        ],
+        "title": "StartedCheckOut",
         "type": "object"
       },
       "StartedOut": {
@@ -6017,9 +6155,32 @@
       },
       "hiretitan__search__api__models__SourceOut": {
         "properties": {
+          "alert_date": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alert Date"
+          },
           "kind": {
             "title": "Kind",
             "type": "string"
+          },
+          "site": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site"
           },
           "url": {
             "title": "Url",
@@ -8547,6 +8708,27 @@
         "summary": "Download Pdf",
         "tags": [
           "tailored-resumes"
+        ]
+      }
+    },
+    "/api/v1/mail/checks": {
+      "post": {
+        "operationId": "start_check_api_v1_mail_checks_post",
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StartedCheckOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Start Check",
+        "tags": [
+          "mail"
         ]
       }
     },

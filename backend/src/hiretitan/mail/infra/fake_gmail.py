@@ -13,10 +13,11 @@ import json
 import re
 from email import policy
 from email.parser import BytesParser
-from email.utils import parseaddr, parsedate_to_datetime
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 
 from hiretitan.mail.application.ports import MessagePage, RawMessage
+from hiretitan.mail.domain.senders import address_from_header
 
 _FROM = re.compile(r"from:\(([^)]*)\)")
 _AFTER = re.compile(r"after:(\d+)")
@@ -48,7 +49,7 @@ class FakeGmail:
             raise ValueError(f"Not a message id: {message_id!r}")
         raw = (self._folder / "messages" / f"{message_id}.eml").read_bytes()
         message = BytesParser(policy=policy.default).parsebytes(raw, headersonly=True)
-        sender = parseaddr(str(message["From"]))[1].lower()
+        sender = address_from_header(str(message["From"]))
         return RawMessage(message_id, parsedate_to_datetime(str(message["Date"])), sender, raw)
 
     async def profile(self) -> str:

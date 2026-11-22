@@ -172,8 +172,9 @@ class ReadMessagesRepo:
         injection_signals: list[Any],
         mail_check_id: UUID | None,
         read_at: datetime,
-    ) -> None:
-        """Note that a message was read; a message seen before (waiting for the AI) is updated."""
+    ) -> UUID:
+        """Note that a message was read; a message seen before (waiting for the AI) is updated.
+        Returns the record's id (the one that stays when a final answer was already there)."""
         values: dict[str, Any] = {
             "sender": sender,
             "received_at": received_at,
@@ -188,13 +189,21 @@ class ReadMessagesRepo:
         statement = pg_insert(MailReadMessageRow).values(provider_message_id=message_id, **values)
         # Only a message still waiting for the AI is overwritten: a slower check that also saw it
         # as ``needs_ai`` must not undo a final answer.
-        await self._session.execute(
+        row_id = await self._session.scalar(
             statement.on_conflict_do_update(
                 index_elements=[MailReadMessageRow.provider_message_id],
                 set_=values,
                 where=MailReadMessageRow.outcome == "needs_ai",
-            )
+            ).returning(MailReadMessageRow.id)
         )
+        if row_id is None:  # a final answer was already there: keep it, say which record it is
+            row_id = await self._session.scalar(
+                select(MailReadMessageRow.id).where(
+                    MailReadMessageRow.provider_message_id == message_id
+                )
+            )
+        assert row_id is not None
+        return cast(UUID, row_id)
 
     async def count(self) -> int:
         return int(await self._session.scalar(select(func.count(MailReadMessageRow.id))) or 0)
@@ -218,6 +227,38 @@ class MailChecksRepo:
     async def get_for_run(self, search_run_id: UUID) -> MailCheckRow | None:
         return await self._session.scalar(
             select(MailCheckRow).where(MailCheckRow.search_run_id == search_run_id)
+        )
+
+    async def get(self, check_id: UUID) -> MailCheckRow | None:
+        return await self._session.get(MailCheckRow, check_id)
+
+    async def mark_failed(self, check_id: UUID) -> None:
+        """End a check the runner gave up on (its totals so far stay as they were)."""
+        await self._session.execute(
+            update(MailCheckRow).where(MailCheckRow.id == check_id).values(ended="failed")
+        )
+
+    async def set_counts(
+        self,
+        check_id: UUID,
+        *,
+        listed: int,
+        skipped: int,
+        read: int,
+        unreadable: int,
+        more_remaining: bool,
+    ) -> None:
+        """The running totals, written after every batch so the page can show progress."""
+        await self._session.execute(
+            update(MailCheckRow)
+            .where(MailCheckRow.id == check_id)
+            .values(
+                emails_listed=listed,
+                emails_skipped=skipped,
+                emails_read=read,
+                emails_unreadable=unreadable,
+                more_remaining=more_remaining,
+            )
         )
 
     async def finish(

@@ -1,4 +1,4 @@
-import { Building2, CircleCheck, ListFilter, Search, Sparkles } from 'lucide-react'
+import { Building2, CircleCheck, ListFilter, Mail, Search, Sparkles } from 'lucide-react'
 import { Donut } from '@/components/Donut'
 import { FlowChart } from '@/components/FlowChart'
 
@@ -44,6 +44,49 @@ export function SearchFlow({ counts: c }: { counts: FlowCounts }) {
           value: `${c.judgedByAi} checked`,
           note: `${c.byAi} left out`,
         },
+        {
+          key: 'new',
+          icon: CircleCheck,
+          title: 'New jobs',
+          value: String(c.added),
+          note: `${c.merged} already known`,
+        },
+      ]}
+    />
+  )
+}
+
+export type MailFlowCounts = {
+  emailsRead: number
+  emailsNew: number // the emails this check had not read before
+  unreadable: number
+  alreadyRead: number
+  jobsFound: number
+  byRules: number
+  added: number
+  merged: number
+}
+
+/** A mail check as a flow chart: emails read, jobs found, the rules, new jobs. */
+export function MailFlow({ counts: c }: { counts: MailFlowCounts }) {
+  return (
+    <FlowChart
+      label="How the mail check went"
+      steps={[
+        {
+          key: 'emails',
+          icon: Mail,
+          title: 'Emails read',
+          value: `${c.emailsRead} of ${c.emailsNew}`,
+          note:
+            c.unreadable > 0
+              ? `${c.unreadable} could not be read`
+              : c.alreadyRead > 0
+                ? `${c.alreadyRead} read before`
+                : undefined,
+        },
+        { key: 'found', icon: Search, title: 'Jobs found', value: String(c.jobsFound) },
+        { key: 'rules', icon: ListFilter, title: 'Your rules', value: `${c.byRules} left out` },
         {
           key: 'new',
           icon: CircleCheck,

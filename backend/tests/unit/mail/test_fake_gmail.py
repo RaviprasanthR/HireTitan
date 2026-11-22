@@ -97,13 +97,19 @@ async def test_FR009_a_query_that_is_not_senders_and_time_is_refused(
         await FakeGmail(mailbox).list_ids(query)
 
 
+async def _no_publish(name: str, data: dict[str, object]) -> None:
+    return None
+
+
 def test_FR001_wiring_picks_the_scripted_mailbox_when_asked(mailbox: Path) -> None:
     from hiretitan.mail_wiring import build_reader
     from hiretitan.platform.config.settings import Settings
 
     reader = build_reader(
-        Settings(_env_file=None, HIRETITAN_MAIL="fake", HIRETITAN_FAKE_GMAIL_DIR=str(mailbox))
-    )  # type: ignore[call-arg]
+        Settings(_env_file=None, HIRETITAN_MAIL="fake", HIRETITAN_FAKE_GMAIL_DIR=str(mailbox)),  # type: ignore[call-arg]
+        None,  # type: ignore[arg-type]  (a scripted mailbox never touches the database)
+        _no_publish,
+    )
 
     assert isinstance(reader, FakeGmail)
 
@@ -113,7 +119,11 @@ def test_FR001_a_scripted_mailbox_needs_its_folder() -> None:
     from hiretitan.platform.config.settings import Settings
 
     with pytest.raises(ValueError, match="HIRETITAN_FAKE_GMAIL_DIR"):
-        build_reader(Settings(_env_file=None, HIRETITAN_MAIL="fake"))  # type: ignore[call-arg]
+        build_reader(
+            Settings(_env_file=None, HIRETITAN_MAIL="fake"),  # type: ignore[call-arg]
+            None,  # type: ignore[arg-type]
+            _no_publish,
+        )
 
 
 @pytest.mark.parametrize("message_id", ["../profile", "..\\x", "a/b", "", "a.b", "x y"])

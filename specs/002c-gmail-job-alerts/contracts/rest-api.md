@@ -61,7 +61,7 @@ Only for senders the person added; `409 reason=built_in` otherwise. `204`.
 
 ### POST /mail/checks
 
-Starts a check now (`trigger = button`). `202 {"search_run_id": "…"}`. `409 reason=not_connected`, `409 reason=search_running` (one search at a time), `409 reason=needs_reconnect`.
+Starts a check now (`trigger = button`). `202 {"search_run_id": "…"}`. `409 reason=not_connected`, `409 reason=search_running` (one search at a time), `409 reason=needs_reconnect`, `409 reason=rules_not_approved`. A check that hits an unexpected error ends as `failed` (`mail.ended = failed`); a message whose `From` display name is itself an address is never trusted (no jobs are read from it).
 
 Stopping uses the existing `POST /search/runs/{id}/stop`.
 
@@ -80,7 +80,7 @@ Stopping uses the existing `POST /search/runs/{id}/stop`.
 
 ## Events (server-sent, existing stream)
 
-`search.progress` and `search.ended` as for company runs (a mail run's progress carries `emails_read` and `emails_listed`); new `mail.connection_changed` (state only) so Settings refreshes.
+`search.batch_done` and `search.finished` as for company runs (a mail run's batch event carries `emails_read`, `emails_listed` and `added`); new `mail.connection_changed` (state only) so Settings refreshes.
 
 ## Outbound requests (the only ones; contract tests enforce them)
 

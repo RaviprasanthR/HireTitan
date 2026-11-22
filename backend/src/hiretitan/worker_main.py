@@ -17,6 +17,8 @@ from hiretitan.drafts.workflow.common import DraftDeps
 from hiretitan.drafts.workflow.outreach import OUTREACH_WORKFLOW, outreach_workflow
 from hiretitan.drafts.workflow.tailor import TAILOR_WORKFLOW, tailor_workflow
 from hiretitan.drafts_wiring import SqlJobs, SqlProfileFacts, tech_terms
+from hiretitan.mail.workflow.check import MAIL_CHECK_WORKFLOW, CheckDeps, mail_check_workflow
+from hiretitan.mail_wiring import build_check_deps
 from hiretitan.platform.clock import SystemClock
 from hiretitan.platform.config.settings import Settings, get_settings
 from hiretitan.platform.db import create_engine, session_factory
@@ -47,7 +49,10 @@ SEED_DIR = resolve_seed_dir()
 
 
 def workflow_registry(
-    deps: IngestDeps, search: SearchDeps, drafts: DraftDeps | None = None
+    deps: IngestDeps,
+    search: SearchDeps,
+    drafts: DraftDeps | None = None,
+    mail: CheckDeps | None = None,
 ) -> Mapping[str, WorkflowDef]:
     """Every workflow this install can run, by name. Features add theirs here."""
     registry: dict[str, WorkflowDef] = {
@@ -55,6 +60,8 @@ def workflow_registry(
         SEARCH_WORKFLOW_NAME: job_search_workflow(search),
         RECHECK_WORKFLOW: recheck_workflow(search),
     }
+    if mail is not None:
+        registry[MAIL_CHECK_WORKFLOW] = mail_check_workflow(mail)
     if drafts is not None:
         registry[OUTREACH_WORKFLOW] = outreach_workflow(drafts)
         registry[TAILOR_WORKFLOW] = tailor_workflow(drafts)
@@ -115,12 +122,21 @@ async def run_worker(settings: Settings, *, wait: bool = True) -> None:
         tech_terms=tech_terms(tables.tech_names),
         provider=provider,
     )
+    mail_deps = build_check_deps(
+        settings,
+        sessions,
+        SystemClock(),
+        publisher.publish,
+        search_deps.synonyms,
+        tables.tech_names,
+        lambda run_id: runtime.queue.enqueue(run_id),
+    )
     try:
         async with open_checkpointer(settings.database_url) as checkpointer:
             runtime.holder.runner = WorkflowRunner(
                 sessions,
                 checkpointer,
-                workflow_registry(ingest_deps, search_deps, draft_deps),
+                workflow_registry(ingest_deps, search_deps, draft_deps, mail_deps),
                 run_notifier(publisher),
             )
             async with runtime.app.open_async():

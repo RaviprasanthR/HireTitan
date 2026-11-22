@@ -664,6 +664,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mail/checks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start Check */
+        post: operations["start_check_api_v1_mail_checks_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mail/connect": {
         parameters: {
             query?: never;
@@ -1998,6 +2015,11 @@ export interface components {
             listed: boolean;
             /** Location Text */
             location_text: string | null;
+            /**
+             * May Have Closed
+             * @default false
+             */
+            may_have_closed: boolean;
             /** Posted At */
             posted_at: string | null;
             /** Restored */
@@ -2063,6 +2085,11 @@ export interface components {
             listed: boolean;
             /** Location Text */
             location_text: string | null;
+            /**
+             * May Have Closed
+             * @default false
+             */
+            may_have_closed: boolean;
             /** Posted At */
             posted_at: string | null;
             /** Restored */
@@ -2123,6 +2150,45 @@ export interface components {
             skipped_companies: number;
             /** Truncated */
             truncated: boolean;
+        };
+        /**
+         * MailRunOut
+         * @description What a mail check read (feature 002c): only for runs in the mode ``mail_alerts``.
+         */
+        MailRunOut: {
+            /** Emails Listed */
+            emails_listed: number;
+            /** Emails Read */
+            emails_read: number;
+            /** Emails Skipped */
+            emails_skipped: number;
+            /** Emails Unreadable */
+            emails_unreadable: number;
+            /** Ended */
+            ended: string | null;
+            /** More Remaining */
+            more_remaining: boolean;
+            /** Trigger */
+            trigger: string;
+            /** Unreadable */
+            unreadable: components["schemas"]["MailUnreadableOut"][];
+            /**
+             * Window Start
+             * Format: date-time
+             */
+            window_start: string;
+        };
+        /** MailUnreadableOut */
+        MailUnreadableOut: {
+            /**
+             * Received At
+             * Format: date-time
+             */
+            received_at: string;
+            /** Sender */
+            sender: string;
+            /** Why */
+            why: string;
         };
         /** MissingOut */
         MissingOut: {
@@ -2233,6 +2299,11 @@ export interface components {
             listed: boolean;
             /** Location Text */
             location_text: string | null;
+            /**
+             * May Have Closed
+             * @default false
+             */
+            may_have_closed: boolean;
             /** Merged Into */
             merged_into: string | null;
             /** Posted At */
@@ -2888,6 +2959,7 @@ export interface components {
             judged_by_ai: number;
             /** Kept */
             kept: number;
+            mail?: components["schemas"]["MailRunOut"] | null;
             /** Merged */
             merged: number;
             /** Mode */
@@ -2942,6 +3014,7 @@ export interface components {
             judged_by_ai: number;
             /** Kept */
             kept: number;
+            mail?: components["schemas"]["MailRunOut"] | null;
             /** Merged */
             merged: number;
             /** Mode */
@@ -2988,6 +3061,14 @@ export interface components {
              * @enum {string}
              */
             mode: "rules_and_ai" | "rules_only";
+        };
+        /** StartedCheckOut */
+        StartedCheckOut: {
+            /**
+             * Search Run Id
+             * Format: uuid
+             */
+            search_run_id: string;
         };
         /** StartedOut */
         StartedOut: {
@@ -3204,8 +3285,12 @@ export interface components {
         };
         /** SourceOut */
         hiretitan__search__api__models__SourceOut: {
+            /** Alert Date */
+            alert_date?: string | null;
             /** Kind */
             kind: string;
+            /** Site */
+            site?: string | null;
             /** Url */
             url: string;
         };
@@ -4918,6 +5003,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_check_api_v1_mail_checks_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StartedCheckOut"];
                 };
             };
         };

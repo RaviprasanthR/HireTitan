@@ -62,6 +62,12 @@ class CompanyRow(IdTimestampMixin, Base):
     __tablename__ = "companies"
     __table_args__ = (
         UniqueConstraint("key"),  # several rows without a key are allowed (NULLs differ)
+        # a company found by name (alert postings, pasted jobs)
+        Index(
+            "ix_companies_name_lower",
+            text("lower(name)"),
+            postgresql_where=text("deleted_at IS NULL"),
+        ),
         CheckConstraint(_in("origin", COMPANY_ORIGINS), name="origin_values"),
         CheckConstraint(_in("resolution", RESOLUTIONS), name="resolution_values"),
         CheckConstraint("char_length(name) BETWEEN 1 AND 120", name="name_length"),
@@ -197,6 +203,7 @@ class JobRow(IdTimestampMixin, Base):
         ),
         Index("ix_jobs_state_sort", "state", text("sort_key DESC"), "id"),
         Index("ix_jobs_company", "company_id"),
+        Index("ix_jobs_company_name_lower", text("lower(company_name)")),
     )
 
     company_id: Mapped[UUID | None] = mapped_column(

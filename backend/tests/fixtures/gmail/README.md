@@ -14,3 +14,5 @@ synthetic ones. Until then the contract tests prove the code against the documen
 | `revoke_ok.json` | `POST oauth2.googleapis.com/revoke` |
 | `profile.json` | `GET gmail.googleapis.com/gmail/v1/users/me/profile` |
 | `unauthorized.json` | any Gmail call with an expired access token (HTTP 401) |
+| `messages_list.json`, `messages_list_page2.json`, `messages_empty.json` | `GET .../users/me/messages?q=...`, a page with a next-page token, the last page, no match |
+| (built in the test) | `GET .../users/me/messages/{id}?format=raw`: `raw` is the base64url message, `internalDate` the received time in ms |

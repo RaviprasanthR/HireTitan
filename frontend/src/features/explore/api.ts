@@ -154,6 +154,31 @@ export function useStartSearch() {
   })
 }
 
+export type MailConnection = components['schemas']['ConnectionModel']
+
+/** Whether Gmail is connected, for the "Check job-alert mail" button. Settings owns the setup;
+ * a failed read just hides the button. */
+export function useMailConnection() {
+  return useQuery({
+    queryKey: ['mail', 'connection'],
+    queryFn: () => apiFetch<MailConnection>('/mail/connection'),
+    refetchOnWindowFocus: false,
+  })
+}
+
+export function useStartMailCheck() {
+  const refresh = useRefreshing()
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: () => apiFetch<{ search_run_id: string }>('/mail/checks', { method: 'POST' }),
+    onSuccess: async () => {
+      await refresh()
+      await client.invalidateQueries({ queryKey: ['mail'] }) // "last check started" in Settings
+    },
+    onError: refresh, // e.g. "a search is running": show the run that is
+  })
+}
+
 export function useStopSearch() {
   const refresh = useRefreshing()
   return useMutation({
@@ -198,6 +223,27 @@ export function useDecideDuplicate() {
   })
 }
 
+const SITES: Record<string, string> = {
+  linkedin: 'LinkedIn',
+  naukri: 'Naukri',
+  indeed: 'Indeed',
+  foundit: 'foundit',
+  instahyre: 'Instahyre',
+  cutshort: 'Cutshort',
+  other: 'a sender you added',
+}
+
+export function siteLabel(site: string | null | undefined): string | null {
+  return site ? (SITES[site] ?? site) : null
+}
+
+/** "Email alert · LinkedIn, 17 Nov 2026": which site's alert showed the job, and when. */
+export function alertLabel(source: { site?: string | null; alert_date?: string | null }): string {
+  const site = siteLabel(source.site)
+  const date = formatDate(source.alert_date)
+  return ['Email alert', [site, date].filter(Boolean).join(', ')].filter(Boolean).join(' · ')
+}
+
 export function sourceLabel(kind: string): string {
   switch (kind) {
     case 'company_board':
@@ -205,6 +251,7 @@ export function sourceLabel(kind: string): string {
     case 'careers_page':
       return 'Careers page'
     case 'gmail_alert':
+    case 'email_alert':
       return 'Email alert'
     case 'aggregator':
       return 'Job site'

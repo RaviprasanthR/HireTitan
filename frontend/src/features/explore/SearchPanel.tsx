@@ -4,8 +4,15 @@ import { CircularProgress } from '@/components/CircularProgress'
 import { Button } from '@/components/ui/button'
 import { nextPhrase } from './phrases'
 import { ChartRow } from '@/components/FlowChart'
-import { OutcomeDonut, SearchFlow } from './SearchFlow'
-import { type RunSummary, useLatestRun, useStartSearch, useStopSearch } from './api'
+import { MailFlow, OutcomeDonut, SearchFlow } from './SearchFlow'
+import {
+  type RunSummary,
+  useLatestRun,
+  useMailConnection,
+  useStartMailCheck,
+  useStartSearch,
+  useStopSearch,
+} from './api'
 
 const ENDED: Record<string, string> = {
   finished: 'Search finished.',
@@ -15,6 +22,22 @@ const ENDED: Record<string, string> = {
   out_of_credit:
     'Your AI account is out of credit, so the search stopped. Jobs found so far are kept.',
   failed: 'The search stopped because of an error. Jobs found so far are kept.',
+}
+
+const ENDED_MAIL: Record<string, string> = {
+  finished: 'Mail check finished.',
+  stopped_by_user: 'Mail check stopped. Jobs found so far are kept.',
+  failed: 'Mail check stopped before it could finish. Jobs found so far are kept.',
+}
+
+const isMailRun = (run: RunSummary | null) => run?.mode === 'mail_alerts'
+
+/** Emails the check had not read before, and how far it has got. */
+function mailProgress(run: RunSummary) {
+  const mail = run.mail
+  const fresh = mail ? Math.max(0, mail.emails_listed - mail.emails_skipped) : 0
+  const done = mail ? mail.emails_read + mail.emails_unreadable : 0
+  return { mail, fresh, done }
 }
 
 /** Companies checked and new jobs found: the one line of progress the person needs. */
@@ -40,9 +63,17 @@ function Progress({
   stopping: boolean
   stop: ReturnType<typeof useStopSearch>
 }) {
-  const started = run !== null && run.companies_total > 0 && run.companies_read > 0
+  const mailRun = isMailRun(run)
+  const mailNow = run && mailRun ? mailProgress(run) : null
+  const started = mailNow
+    ? mailNow.done > 0 && mailNow.fresh > 0
+    : run !== null && run.companies_total > 0 && run.companies_read > 0
   const percent =
-    started && run ? Math.round((run.companies_read / run.companies_total) * 100) : null
+    started && run
+      ? mailNow
+        ? Math.min(100, Math.round((mailNow.done / mailNow.fresh) * 100))
+        : Math.round((run.companies_read / run.companies_total) * 100)
+      : null
   const [phrase, setPhrase] = useState(() => nextPhrase(null))
   useEffect(() => {
     if (stopping) return
@@ -51,7 +82,11 @@ function Progress({
   }, [stopping])
   return (
     <div className="flex items-center gap-4">
-      <CircularProgress label="Search progress" value={percent} animated={!stopping} />
+      <CircularProgress
+        label={mailRun ? 'Mail check progress' : 'Search progress'}
+        value={percent}
+        animated={!stopping}
+      />
       <div className="min-w-0 space-y-1.5">
         {/* a changing phrase is decoration: it is hidden from screen readers, which hear the
             one steady status line above instead */}
@@ -60,7 +95,18 @@ function Progress({
             {phrase}
           </p>
         )}
-        {started && run && <p className="text-sm text-muted-small">{counts(run, ' so far')}</p>}
+        {started && run && mailNow?.mail && (
+          <p className="text-sm text-muted-small">
+            {`Read ${mailNow.mail.emails_read} of ${mailNow.fresh} new emails${
+              mailNow.mail.emails_unreadable > 0
+                ? ` (${mailNow.mail.emails_unreadable} could not be read)`
+                : ''
+            } · ${run.added} new jobs so far`}
+          </p>
+        )}
+        {started && run && !mailNow && (
+          <p className="text-sm text-muted-small">{counts(run, ' so far')}</p>
+        )}
         {run && !stopping && (
           <Button
             type="button"
@@ -87,6 +133,37 @@ function Progress({
  * says how many new jobs it found. */
 function Ended({ run }: { run: RunSummary }) {
   const leftOutByAi = Math.max(0, run.judged_by_ai - run.kept)
+  const mail = run.mail
+  if (run.mode === 'mail_alerts' && mail) {
+    const fresh = Math.max(0, mail.emails_listed - mail.emails_skipped)
+    return (
+      <div className="space-y-3">
+        {run.stop_message && <p className="text-sm">{run.stop_message}</p>}
+        {mail.ended === 'access_ended' && (
+          <p className="text-sm">
+            <Link to="/settings" className="text-link underline">
+              Open Settings to connect Gmail again
+            </Link>
+          </p>
+        )}
+        <ChartRow>
+          <MailFlow
+            counts={{
+              emailsRead: mail.emails_read,
+              emailsNew: fresh,
+              unreadable: mail.emails_unreadable,
+              alreadyRead: mail.emails_skipped,
+              jobsFound: run.jobs_found,
+              byRules: run.skipped_by_rules,
+              added: run.added,
+              merged: run.merged,
+            }}
+          />
+          <OutcomeDonut added={run.added} merged={run.merged} leftOut={run.skipped_by_rules} />
+        </ChartRow>
+      </div>
+    )
+  }
   return (
     <div className="space-y-3">
       {run.stop_message && <p className="text-sm">{run.stop_message}</p>}
@@ -122,37 +199,55 @@ function Ended({ run }: { run: RunSummary }) {
 export function SearchPanel() {
   const latest = useLatestRun()
   const start = useStartSearch()
+  const startMail = useStartMailCheck()
+  const connection = useMailConnection()
   const stop = useStopSearch()
   // The run that was the latest when "Search now" was pressed. Until a different run shows up (or
   // the start fails, or the server has answered and the latest run is read again) the panel is
   // already searching, so there is no moment that looks idle or shows "0 of 0" (US2 AS1).
-  const [clicked, setClicked] = useState<{ base: string | null } | null>(null)
+  const [clicked, setClicked] = useState<{ base: string | null; mail: boolean } | null>(null)
+  const launcher = clicked?.mail ? startMail : start
   const run = latest.data ?? null
   const active = run !== null && run.outcome === null
   const resumable =
     run != null &&
+    !isMailRun(run) &&
     ['stopped_by_user', 'budget_reached', 'out_of_credit', 'failed'].includes(run.outcome ?? '')
   const starting =
     clicked !== null &&
-    !start.isError &&
+    !launcher.isError &&
     (run?.id ?? null) === clicked.base &&
-    !(start.isSuccess && !latest.isFetching)
+    !(launcher.isSuccess && !latest.isFetching)
   const searching = active || starting
   const stopping = active && run !== null && (run.stop_requested || stop.isSuccess)
 
   const begin = () => {
-    setClicked({ base: run?.id ?? null })
+    start.reset()
+    startMail.reset()
+    setClicked({ base: run?.id ?? null, mail: false })
     start.mutate('rules_and_ai') // the AI always judges; without a working key the jobs say so
   }
+  const beginMail = () => {
+    start.reset()
+    startMail.reset()
+    setClicked({ base: run?.id ?? null, mail: true })
+    startMail.mutate()
+  }
+  // what the panel is doing now: the button just pressed while starting, else the active run
+  const watching = starting ? clicked?.mail === true : active && isMailRun(run)
 
   // One status line that is always on the page, so a screen reader announces each change of it
   // (a live region that arrives together with its text is often not announced).
   const message = searching
     ? stopping
       ? 'Stopping… jobs found so far are kept.'
-      : 'Searching your companies…'
+      : watching
+        ? 'Reading your job-alert mail…'
+        : 'Searching your companies…'
     : run
-      ? (ENDED[run.outcome ?? ''] ?? 'Search ended.')
+      ? isMailRun(run)
+        ? (ENDED_MAIL[run.outcome ?? ''] ?? 'Mail check ended.')
+        : (ENDED[run.outcome ?? ''] ?? 'Search ended.')
       : ''
 
   return (
@@ -173,6 +268,16 @@ export function SearchPanel() {
                 </Button>
               </>
             )}
+            {connection.data?.state === 'connected' && (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={startMail.isPending}
+                onClick={beginMail}
+              >
+                Check job-alert mail
+              </Button>
+            )}
             <Button type="button" variant="success" disabled={start.isPending} onClick={begin}>
               {resumable ? 'Continue searching' : 'Search now'}
             </Button>
@@ -184,9 +289,9 @@ export function SearchPanel() {
       ) : (
         run && <Ended run={run} />
       )}
-      {start.isError && (
+      {launcher.isError && (
         <p role="alert" className="text-sm text-danger">
-          {start.error.message}
+          {launcher.error.message}
         </p>
       )}
     </section>

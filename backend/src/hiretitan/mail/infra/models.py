@@ -28,7 +28,7 @@ CONNECTION_STATES = ("connected", "needs_reconnect")
 PURPOSES = ("job_alert",)
 READ_OUTCOMES = ("read", "no_jobs", "unreadable", "needs_ai")
 CHECK_TRIGGERS = ("daily", "button", "search_now")
-CHECK_ENDINGS = ("finished", "stopped", "access_ended", "gmail_unavailable")
+CHECK_ENDINGS = ("finished", "stopped", "access_ended", "gmail_unavailable", "failed")
 
 
 def _in(column: str, values: tuple[str, ...]) -> str:

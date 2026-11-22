@@ -444,8 +444,18 @@ JOB_SITE_HOSTS = (
 
 # What the mail package may import: the standard library except the network and process modules
 # below, plus these third-party roots. Adding a root is a deliberate review.
+# langgraph: the check workflow (mail/workflow) is a LangGraph graph like the other workflows
 MAIL_THIRD_PARTY = frozenset(
-    {"hiretitan", "sqlalchemy", "pydantic", "yaml", "fastapi", "starlette", "procrastinate"}
+    {
+        "hiretitan",
+        "sqlalchemy",
+        "pydantic",
+        "yaml",
+        "fastapi",
+        "starlette",
+        "procrastinate",
+        "langgraph",
+    }
 )
 MAIL_BANNED_IMPORTS = (
     "smtplib",
