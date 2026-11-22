@@ -99,6 +99,8 @@ class SearchStore:
         job = await self._jobs.get(seen.job_id)
         if job is None:
             return
+        if job.state == "deleted":
+            return  # a job the person deleted is left exactly as it is
         job.last_seen_at = now
         job.listed = True
         await self._session.flush()
@@ -213,7 +215,7 @@ class AlertSearchStore(SearchStore):
 
     async def exact_matches(
         self, canonical: str | None, vendor: str | None, requisition_id: str | None
-    ) -> list[DedupJob]:
+    ) -> list[KnownJob]:
         clauses = []
         if canonical:
             clauses.append(JobRow.canonical_url == canonical)
@@ -224,7 +226,9 @@ class AlertSearchStore(SearchStore):
         if not clauses:
             return []
         rows = await self._session.scalars(select(JobRow).where(or_(*clauses)))
-        return [_dedup(r) for r in rows]
+        # a job that is still there comes before a deleted one, so a live match always wins
+        ordered = sorted(rows, key=lambda r: (r.state == "deleted", r.created_at, r.id))
+        return [KnownJob(_dedup(r), r.state) for r in ordered]
 
     async def jobs_of_company(self, name: str) -> list[KnownJob]:
         rows = await self._session.scalars(

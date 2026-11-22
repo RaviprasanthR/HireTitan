@@ -38,6 +38,7 @@ function mailRun(over: Record<string, unknown> = {}, mail: Record<string, unknow
       more_remaining: false,
       ended: null,
       unreadable: [],
+      already_in_pipeline: [],
       ...mail,
     },
     ...over,
@@ -293,6 +294,26 @@ describe('RunSummaryPage: mail run', () => {
     expect(within(list).getByText(/layout HireTitan does not know/i)).toBeInTheDocument()
     expect(within(list).getByText(/waiting for the AI/i)).toBeInTheDocument()
     expect(screen.queryByText(/Companies to check by hand/)).not.toBeInTheDocument()
+  })
+
+  it('US3 AS4 jobs already in the pipeline are listed, not shown again', async () => {
+    const user = userEvent.setup()
+    renderSummary(
+      mailRun(
+        { outcome: 'finished', finished_at: '2026-11-18T09:02:00Z' },
+        {
+          ended: 'finished',
+          already_in_pipeline: [{ job_id: 'j7', title: 'Data Engineer', company: 'Granite Tech' }],
+        },
+      ),
+    )
+
+    await user.click(await screen.findByRole('button', { name: 'Show details' }))
+
+    const list = screen.getByRole('list', { name: /already in your pipeline/i })
+    const link = within(list).getByRole('link', { name: 'Data Engineer' })
+    expect(link).toHaveAttribute('href', '/jobs/j7')
+    expect(within(list).getByText(/Granite Tech/)).toBeInTheDocument()
   })
 
   it('US2 the left-out jobs of a mail check can be restored', async () => {

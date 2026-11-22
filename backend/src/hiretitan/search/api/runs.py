@@ -77,6 +77,14 @@ class MailUnreadableOut(BaseModel):
     why: str  # unreadable | needs_ai | no_jobs
 
 
+class MailPipelineOut(BaseModel):
+    """An alert posting that is already in the pipeline: not listed again (US3 AS4)."""
+
+    job_id: UUID
+    title: str
+    company: str
+
+
 class MailRunOut(BaseModel):
     """What a mail check read (feature 002c): only for runs in the mode ``mail_alerts``."""
 
@@ -89,6 +97,7 @@ class MailRunOut(BaseModel):
     more_remaining: bool
     ended: str | None
     unreadable: list[MailUnreadableOut]
+    already_in_pipeline: list[MailPipelineOut] = []
 
 
 class SearchRunSummary(BaseModel):

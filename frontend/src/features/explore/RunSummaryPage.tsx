@@ -195,6 +195,21 @@ export function RunSummaryPage() {
               description to a job and the AI will look at it.
             </p>
           )}
+          {mail && mail.already_in_pipeline.length > 0 && (
+            <section className="space-y-2">
+              <h2 className="text-lg font-semibold">Already in your pipeline</h2>
+              <ul aria-label="Already in your pipeline" className="space-y-1">
+                {mail.already_in_pipeline.map((job) => (
+                  <li key={job.job_id} className="rounded-md bg-surface px-3 py-2 text-sm">
+                    <Link to={`/jobs/${job.job_id}`} className="font-medium text-link underline">
+                      {job.title}
+                    </Link>{' '}
+                    · {job.company}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
           {mail && mail.unreadable.length > 0 && (
             <section className="space-y-2">
               <h2 className="text-lg font-semibold">Emails HireTitan could not read</h2>

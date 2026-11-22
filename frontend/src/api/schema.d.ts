@@ -2152,10 +2152,30 @@ export interface components {
             truncated: boolean;
         };
         /**
+         * MailPipelineOut
+         * @description An alert posting that is already in the pipeline: not listed again (US3 AS4).
+         */
+        MailPipelineOut: {
+            /** Company */
+            company: string;
+            /**
+             * Job Id
+             * Format: uuid
+             */
+            job_id: string;
+            /** Title */
+            title: string;
+        };
+        /**
          * MailRunOut
          * @description What a mail check read (feature 002c): only for runs in the mode ``mail_alerts``.
          */
         MailRunOut: {
+            /**
+             * Already In Pipeline
+             * @default []
+             */
+            already_in_pipeline: components["schemas"]["MailPipelineOut"][];
             /** Emails Listed */
             emails_listed: number;
             /** Emails Read */

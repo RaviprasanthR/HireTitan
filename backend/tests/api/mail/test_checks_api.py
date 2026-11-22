@@ -138,6 +138,7 @@ async def test_FR021_post_check_202(env: Env) -> None:
         "more_remaining": False,
         "ended": None,
         "unreadable": [],
+        "already_in_pipeline": [],
     }
 
 

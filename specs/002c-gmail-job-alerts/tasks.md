@@ -110,12 +110,12 @@
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T034 [P] [US3] Workflow tests `tests/workflow/mail/test_dedup.py`: `test_US3_AS1_same_link_in_several_alerts_one_job_all_sightings`, `test_US3_AS2_alert_matches_searched_job_adds_source`, `test_US3_AS3_near_match_other_site_is_candidate_not_merged`, `test_US3_AS4_pipeline_job_not_listed_again_summary_says_which`, `test_US3_AS5_deleted_job_stays_deleted`, `test_US3_AS5_not_the_same_pair_not_proposed_again`, `test_US3_AS6_email_never_read_twice`, `test_SC003_shared_link_or_posting_id_always_one_job`.
+- [x] T034 [P] [US3] Workflow tests `tests/workflow/mail/test_dedup.py`: `test_US3_AS1_same_link_in_several_alerts_one_job_all_sightings`, `test_US3_AS2_alert_matches_searched_job_adds_source`, `test_US3_AS3_near_match_other_site_is_candidate_not_merged`, `test_US3_AS4_pipeline_job_not_listed_again_summary_says_which`, `test_US3_AS5_deleted_job_stays_deleted`, `test_US3_AS5_not_the_same_pair_not_proposed_again`, `test_US3_AS6_email_never_read_twice`, `test_SC003_shared_link_or_posting_id_always_one_job`.
 
 ### Implementation for User Story 3
 
-- [ ] T035 [US3] Make T034 pass in `hiretitan/search/application/alerts.py` and `search_store.py` (exact match by canonical link or `(site, posting id)`, `fuzzy_candidates`, `same_posting_again`, respect `deleted` and "not the same"); the summary's "already in pipeline as <title>" list in the `mail` member.
-- [ ] T035r [US3] Review: python reviewer over T034–T035; fix; note in `docs/CONTEXT.md`.
+- [x] T035 [US3] Make T034 pass in `hiretitan/search/application/alerts.py` and `search_store.py` (exact match by canonical link or `(site, posting id)`, `fuzzy_candidates`, `same_posting_again`, respect `deleted` and "not the same"); the summary's "already in pipeline as <title>" list in the `mail` member.
+- [x] T035r [US3] Review: python reviewer over T034–T035; fix; note in `docs/CONTEXT.md`.
 
 **Checkpoint**: the MVP (US1–US3) is complete; Ravi can use it daily with the button.
 

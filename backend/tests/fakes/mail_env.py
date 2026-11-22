@@ -16,7 +16,9 @@ NOW = datetime(2026, 11, 18, 9, tzinfo=UTC)
 async def make_run(session: AsyncSession, mode: str = "mail_alerts") -> UUID:
     rules = RuleSetsRepo(session)
     rule_set = await rules.approve((await rules.propose({}, {})).id)
-    workflow = await RunsRepo(session).create("mail_check")
+    workflow = await RunsRepo(session).create(
+        "mail_check" if mode == "mail_alerts" else "job_search"
+    )
     run = await SearchRunsRepo(session).create(
         workflow_run_id=workflow.id, rule_set_id=rule_set.id, mode=mode, company_order=[]
     )

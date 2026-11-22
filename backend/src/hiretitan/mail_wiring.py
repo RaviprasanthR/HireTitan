@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from hiretitan.mail.application.connection import ConnectionService, Publish
@@ -42,11 +42,12 @@ from hiretitan.mail.infra.store import SqlMailStore
 from hiretitan.mail.workflow.check import CheckDeps
 from hiretitan.platform.clock import ClockPort
 from hiretitan.platform.config.settings import Settings
-from hiretitan.search.api.runs import MailRunOut, MailUnreadableOut
+from hiretitan.search.api.runs import MailPipelineOut, MailRunOut, MailUnreadableOut
 from hiretitan.search.application.alerts import AlertPosting, store_alert_postings
 from hiretitan.search.application.search import SearchAlreadyRunningError
 from hiretitan.search.domain.rules_serialization import rules_from_dict
 from hiretitan.search.domain.tech_names import TechTable
+from hiretitan.search.infra.models import AlertSightingRow, JobRow, RelevanceDecisionRow
 from hiretitan.search.infra.repos import RuleSetsRepo, SearchRunsRepo
 from hiretitan.search.infra.search_store import AlertSearchStore
 
@@ -324,6 +325,33 @@ async def mail_run_details(session: AsyncSession, search_run_id: UUID) -> MailRu
         .order_by(MailReadMessageRow.received_at.desc())
         .limit(50)
     )
+    # jobs this check left out because the person already has them in the pipeline, and jobs in
+    # the pipeline that an email of this check showed again (same link); deleted jobs never count
+    left_out = (
+        select(JobRow.id)
+        .join(RelevanceDecisionRow, RelevanceDecisionRow.job_id == JobRow.id)
+        .where(
+            RelevanceDecisionRow.search_run_id == search_run_id,
+            RelevanceDecisionRow.rule_key == "already_in_pipeline",
+        )
+    )
+    sighted = (
+        select(AlertSightingRow.job_id)
+        .join(MailReadMessageRow, MailReadMessageRow.id == AlertSightingRow.read_message_id)
+        .where(MailReadMessageRow.mail_check_id == check.id)
+    )
+    pipeline = await session.execute(
+        select(JobRow.id, JobRow.title, JobRow.company_name)
+        .where(
+            JobRow.state != "deleted",
+            or_(
+                JobRow.id.in_(left_out),
+                and_(JobRow.state.in_(("applied", "inquired")), JobRow.id.in_(sighted)),
+            ),
+        )
+        .order_by(JobRow.title, JobRow.id)
+        .limit(200)
+    )
     return MailRunOut(
         trigger=check.trigger,
         window_start=check.window_start,
@@ -336,5 +364,8 @@ async def mail_run_details(session: AsyncSession, search_run_id: UUID) -> MailRu
         unreadable=[
             MailUnreadableOut(sender=r.sender, received_at=r.received_at, why=r.outcome)
             for r in rows
+        ],
+        already_in_pipeline=[
+            MailPipelineOut(job_id=r.id, title=r.title, company=r.company_name) for r in pipeline
         ],
     )

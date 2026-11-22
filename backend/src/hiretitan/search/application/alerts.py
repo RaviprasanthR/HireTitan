@@ -43,6 +43,7 @@ from hiretitan.search.domain.rules import SearchRules
 from hiretitan.search.domain.tech_names import TechTable
 
 SOURCE_KIND: Final = "email_alert"
+PIPELINE_STATES: Final = ("applied", "inquired")
 NO_COMPANY: Final = "Company not shown in the alert"
 FALLBACK_REASON: Final = "Not checked by AI: no description yet"
 SOURCE_URL_MAX: Final = 1000
@@ -106,7 +107,7 @@ class AlertStore(SearchTransaction, Protocol):
 
     async def exact_matches(
         self, canonical: str | None, vendor: str | None, requisition_id: str | None
-    ) -> list[DedupJob]: ...
+    ) -> list[KnownJob]: ...
 
     async def jobs_of_company(self, name: str) -> list[KnownJob]: ...
 
@@ -155,6 +156,7 @@ async def store_alert_postings(
     # look-ups cannot see them yet.
     in_batch: dict[str, str] = {}  # key -> the clean link of the job it belongs to
     possible = 0
+    pipeline_again = 0
     known_by_key: dict[str, UUID] = {}
 
     for posting in postings:
@@ -202,14 +204,15 @@ async def store_alert_postings(
             posting.site,
             posting.posting_id,
         )
-        found = exact_match(
-            candidate,
-            await store.exact_matches(facts.canonical_url, posting.site, posting.posting_id),
-        )
+        matches = await store.exact_matches(facts.canonical_url, posting.site, posting.posting_id)
+        found = exact_match(candidate, [k.dedup for k in matches])
         if found is not None:
             seen.append(SeenJob(found, source_url, SOURCE_KIND))
             known_by_key[source_url] = found
             store.queue_sighting_for_job(found, sighting)
+            matched = next(k for k in matches if k.dedup.id == found)
+            if matched.state in PIPELINE_STATES:
+                pipeline_again += 1  # the same link as a job in the pipeline: counted there
             continue
 
         decision: DecisionInput
@@ -227,7 +230,7 @@ async def store_alert_postings(
                 (
                     k
                     for k in same_company
-                    if k.state in ("applied", "inquired") and same_posting_again(candidate, k.dedup)
+                    if k.state in PIPELINE_STATES and same_posting_again(candidate, k.dedup)
                 ),
                 None,
             )
@@ -296,9 +299,9 @@ async def store_alert_postings(
     )
     return AlertCounts(
         new=counts.added,
-        already_known=len(seen),
+        already_known=len(seen) - pipeline_again,
         left_out=left_out,
-        already_in_pipeline=len(in_pipeline_titles),
+        already_in_pipeline=len(in_pipeline_titles) + pipeline_again,
         possible_duplicates=possible,
         in_pipeline_titles=tuple(in_pipeline_titles),
         progress=counts.progress,
