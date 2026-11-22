@@ -140,10 +140,10 @@
 
 **Independent Test**: with the clock faked, the hourly tick starts a check once 24 hours have passed and not before; Search now queues a mail check after the company run; summary counts add up.
 
-- [ ] T039 [P] [US5] Tests `tests/workflow/mail/test_schedule.py`: `test_US5_AS1_daily_tick_checks_after_24h`, `test_FR021_tick_skips_when_search_running`, `test_FR021_tick_checks_soon_after_start_when_overdue`, `test_FR021_search_now_queues_mail_check_when_connected`, `test_FR021_not_connected_never_checks`; `tests/unit/mail/test_summary.py`: `test_SC008_counts_add_up` (jobs found = new + already known + left out + already in pipeline), `test_FR012_200_cap_reported`; `tests/workflow/mail/test_speed.py::test_SC005_fifty_emails_under_two_minutes` (50 fixture emails on the fake Gmail, real Postgres; a generous bound for CI).
-- [ ] T040 [US5] Periodic task (`cron="7 * * * *"`) in `hiretitan/platform/runtime/procrastinate.py` calling a mail-wiring hook; Search now chaining at the end of the company search workflow (`hiretitan/search/workflow/graph.py` end node enqueues through a callback set in `search_wiring.py`, so `search` still does not import `mail`); until T039 passes.
-- [ ] T041 [P] [US5] Frontend: Gmail section shows "Each check reads job-alert emails from the last 24 hours" and the last check time (`US5 AS4`); the mail summary shows the 200-cap message (`FR012`); tests first in `GmailSection.test.tsx`, `RunSummaryPage.test.tsx`.
-- [ ] T041r [US5] Review: python reviewer (scheduling, concurrency with company searches), React reviewer; fix; note.
+- [x] T039 [P] [US5] Tests `tests/workflow/mail/test_schedule.py`: `test_US5_AS1_daily_tick_checks_after_24h`, `test_FR021_tick_skips_when_search_running`, `test_FR021_tick_checks_soon_after_start_when_overdue`, `test_FR021_search_now_queues_mail_check_when_connected`, `test_FR021_not_connected_never_checks`; `tests/unit/mail/test_summary.py`: `test_SC008_counts_add_up` (jobs found = new + already known + left out + already in pipeline), `test_FR012_200_cap_reported`; `tests/workflow/mail/test_speed.py::test_SC005_fifty_emails_under_two_minutes` (50 fixture emails on the fake Gmail, real Postgres; a generous bound for CI).
+- [x] T040 [US5] Periodic task (`cron="7 * * * *"`) in `hiretitan/platform/runtime/procrastinate.py` calling a mail-wiring hook; Search now chaining at the end of the company search workflow (`hiretitan/search/workflow/graph.py` end node enqueues through a callback set in `search_wiring.py`, so `search` still does not import `mail`); until T039 passes.
+- [x] T041 [P] [US5] Frontend: Gmail section shows "Each check reads job-alert emails from the last 24 hours" and the last check time (`US5 AS4`); the mail summary shows the 200-cap message (`FR012`); tests first in `GmailSection.test.tsx`, `RunSummaryPage.test.tsx`.
+- [x] T041r [US5] Review: python reviewer (scheduling, concurrency with company searches), React reviewer; fix; note.
 
 ---
 

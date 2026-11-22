@@ -152,6 +152,58 @@ describe('GmailSection', () => {
     expect(assign).not.toHaveBeenCalled()
   })
 
+  it('US5 AS5 says each check reads the last 24 hours and when the last one ran', async () => {
+    connection = {
+      ...base,
+      state: 'connected',
+      address: 'jobseeker@example.invalid',
+      credentials_set: true,
+      last_check_started_at: '2026-11-18T12:00:00Z',
+    }
+    renderSection()
+
+    expect(
+      await screen.findByText('Each check reads job-alert emails from the last 24 hours.'),
+    ).toBeInTheDocument()
+    expect(screen.getByText(/^Last check: 18 Nov 2026, \d\d:\d\d$/)).toBeInTheDocument()
+  })
+
+  it('US5 AS5 the window comes from the server and shows while access has ended', async () => {
+    connection = {
+      ...base,
+      state: 'needs_reconnect',
+      address: 'jobseeker@example.invalid',
+      credentials_set: true,
+      window_hours: 48,
+      last_error: 'Gmail access has ended.',
+    }
+    renderSection()
+
+    expect(
+      await screen.findByText('Each check reads job-alert emails from the last 48 hours.'),
+    ).toBeInTheDocument()
+  })
+
+  it('US5 AS5 a connection that was never checked says so', async () => {
+    connection = {
+      ...base,
+      state: 'connected',
+      address: 'jobseeker@example.invalid',
+      credentials_set: true,
+    }
+    renderSection()
+
+    expect(await screen.findByText('Not checked yet.')).toBeInTheDocument()
+  })
+
+  it('US5 AS5 the 24 hours note is not shown when Gmail is not connected', async () => {
+    connection = { ...base, credentials_set: true }
+    renderSection()
+
+    await screen.findByRole('button', { name: 'Connect Gmail' })
+    expect(screen.queryByText(/from the last 24 hours/)).not.toBeInTheDocument()
+  })
+
   it('US1 AS2 connected as', async () => {
     connection = {
       ...base,

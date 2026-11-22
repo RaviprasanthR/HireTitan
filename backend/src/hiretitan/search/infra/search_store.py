@@ -33,6 +33,9 @@ from hiretitan.search.infra.models import (
 from hiretitan.search.infra.repos import DecisionsRepo, DuplicatesRepo, JobsRepo, SearchRunsRepo
 
 WORKFLOW = "job_search"
+# One lock for every way a search or a mail check can start: the database index stops two runs of
+# the same kind, this stops a company search and a mail check starting at the same moment.
+START_LOCK = 4_2002_0001
 
 
 class SearchStore:
@@ -47,6 +50,9 @@ class SearchStore:
         return await self._runs.active() is not None
 
     async def create_run(self, rule_set_id: UUID, mode: str, started_at: datetime) -> StartedSearch:
+        await self._session.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": START_LOCK})
+        if await self._runs.active() is not None:  # looked at again, now that no one else can start
+            raise SearchAlreadyRunningError
         try:
             async with self._session.begin_nested():
                 workflow = await RunsRepo(self._session).create(self.workflow_name)

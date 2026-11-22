@@ -5,6 +5,7 @@ import { useSearchParams } from 'react-router'
 import { ApiError, apiFetch } from '@/api/client'
 import type { components } from '@/api/schema'
 import { Button } from '@/components/ui/button'
+import { formatDate } from '../explore/api'
 import { MailSenders } from './MailSenders'
 
 type Connection = components['schemas']['ConnectionModel']
@@ -354,6 +355,25 @@ function ConnectButton({ label }: { label: string }) {
   )
 }
 
+function formatTime(value: string): string {
+  return new Date(value).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+}
+
+/** What a check reads, and when one last ran, so a person who has not checked for days knows
+ *  that older alerts were not read (feature 002c, US5 AS5). */
+function CheckWindow({ connection }: { connection: Connection }) {
+  return (
+    <div className="space-y-1 text-sm text-muted-small">
+      <p>{`Each check reads job-alert emails from the last ${connection.window_hours} hours.`}</p>
+      <p>
+        {connection.last_check_started_at
+          ? `Last check: ${formatDate(connection.last_check_started_at)}, ${formatTime(connection.last_check_started_at)}`
+          : 'Not checked yet.'}
+      </p>
+    </div>
+  )
+}
+
 /** Settings > Gmail job alerts: save the person's own Google client, connect read-only,
  *  disconnect. Nothing here reads mail (feature 002c, US1). */
 export function GmailSection() {
@@ -420,12 +440,14 @@ export function GmailSection() {
       {data && data.state === 'connected' && (
         <div className="space-y-3">
           <p>{`Connected as ${data.address}`}</p>
+          <CheckWindow connection={data} />
           <Disconnect onDone={(revoked) => setRevokeFailed(!revoked)} />
         </div>
       )}
       {data && data.state === 'needs_reconnect' && (
         <div className="space-y-3">
           <p>{`Connected as ${data.address}`}</p>
+          <CheckWindow connection={data} />
           <p role="alert" className="text-sm text-danger">
             {data.last_error ?? 'Gmail access has ended. Connect again.'}
           </p>

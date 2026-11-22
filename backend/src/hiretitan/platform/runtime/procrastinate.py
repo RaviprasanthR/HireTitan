@@ -27,6 +27,8 @@ from hiretitan.platform.runtime.runner import (
 
 RUN_WORKFLOW_TASK = "run_workflow"
 CHECK_PROVIDER_KEY_TASK = "check_provider_key"
+MAIL_TICK_TASK = "mail_tick"
+MAIL_TICK_CRON = "7 * * * *"  # seven minutes past every hour
 MAX_ATTEMPTS = len(RETRY_DELAYS_SECONDS) + 1
 
 logger = logging.getLogger(__name__)
@@ -84,6 +86,8 @@ class Runtime:
     # on the queue. The key check cannot see the credit balance, so a run that is still out of
     # credit simply pauses again with the provider's message.
     after_key_works: Callable[[], Awaitable[object]] | None = None
+    # The hourly mail tick (feature 002c). Set by the composition root; None: no mail checks.
+    mail_tick: Callable[[], Awaitable[object]] | None = None
 
     @property
     def queue(self) -> ProcrastinateQueue:
@@ -113,5 +117,11 @@ def create_runtime(database_url: str) -> Runtime:
         if status == "working" and runtime.after_key_works is not None:
             await runtime.after_key_works()
         return status
+
+    @app.periodic(cron=MAIL_TICK_CRON)
+    @app.task(name=MAIL_TICK_TASK, queueing_lock=MAIL_TICK_TASK)
+    async def mail_tick(timestamp: int) -> None:
+        if runtime.mail_tick is not None:
+            await runtime.mail_tick()
 
     return runtime

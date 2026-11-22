@@ -90,3 +90,33 @@ async def test_worker_main_starts_checks_the_key_and_exits_when_idle(
         status = await ProviderStatusRepo(session).get("fake")
     assert status is not None
     assert status.status == "working"
+
+
+async def test_FR021_the_mail_tick_is_an_hourly_task_that_calls_the_hook(
+    database_url: str,
+) -> None:
+    runtime = create_runtime(database_url)
+    ticks: list[str] = []
+
+    async def hook() -> None:
+        ticks.append("tick")
+
+    runtime.mail_tick = hook
+    periodic = runtime.app.periodic_registry.periodic_tasks
+    assert [(key[0], task.cron) for key, task in periodic.items() if key[0] == "mail_tick"] == [
+        ("mail_tick", "7 * * * *")
+    ]
+
+    async with runtime.app.open_async():
+        await runtime.app.configure_task("mail_tick").defer_async(timestamp=0)
+        await runtime.app.run_worker_async(wait=False)
+
+    assert ticks == ["tick"]
+
+
+async def test_FR021_the_mail_tick_without_a_hook_does_nothing(database_url: str) -> None:
+    runtime = create_runtime(database_url)
+
+    async with runtime.app.open_async():
+        await runtime.app.configure_task("mail_tick").defer_async(timestamp=0)
+        await runtime.app.run_worker_async(wait=False)  # no error: the hook is simply not set

@@ -72,7 +72,7 @@ export function useEvents(): { connected: boolean } {
     source.addEventListener('profile.updated', () => invalidate(['profile'], ['onboarding']))
     // A search batch is stored: the new jobs and the progress appear now (FR-008).
     const searchChanged = () =>
-      invalidate(['jobs'], ['search-latest'], ['search-run'], ['search-runs'], ['status'])
+      invalidate(['jobs'], ['search-latest'], ['search-run'], ['search-runs'], ['status'], ['mail'])
     // A draft or tailored resume was written, or could not be (feature 002k).
     const draftChanged = () => invalidate(['drafts'], ['tailored-resume'], ['tailored-resumes'])
     for (const name of [

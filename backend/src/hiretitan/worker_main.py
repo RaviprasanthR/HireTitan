@@ -8,6 +8,7 @@ until stopped.
 from __future__ import annotations
 
 import asyncio
+import logging
 import sys
 from collections.abc import Mapping
 from pathlib import Path
@@ -18,7 +19,8 @@ from hiretitan.drafts.workflow.outreach import OUTREACH_WORKFLOW, outreach_workf
 from hiretitan.drafts.workflow.tailor import TAILOR_WORKFLOW, tailor_workflow
 from hiretitan.drafts_wiring import SqlJobs, SqlProfileFacts, tech_terms
 from hiretitan.mail.workflow.check import MAIL_CHECK_WORKFLOW, CheckDeps, mail_check_workflow
-from hiretitan.mail_wiring import build_check_deps
+from hiretitan.mail.workflow.schedule import ScheduleDeps, daily_tick
+from hiretitan.mail_wiring import build_check_deps, chain_mail_after_search
 from hiretitan.platform.clock import SystemClock
 from hiretitan.platform.config.settings import Settings, get_settings
 from hiretitan.platform.db import create_engine, session_factory
@@ -66,6 +68,16 @@ def workflow_registry(
         registry[OUTREACH_WORKFLOW] = outreach_workflow(drafts)
         registry[TAILOR_WORKFLOW] = tailor_workflow(drafts)
     return registry
+
+
+async def _tick_at_start(runtime: Runtime) -> None:
+    """A check overdue after days off happens soon after starting (FR-021); never stops start-up."""
+    if runtime.mail_tick is None:
+        return
+    try:
+        await runtime.mail_tick()
+    except Exception:
+        logging.getLogger(__name__).warning("The mail tick at start-up failed.", exc_info=True)
 
 
 async def run_worker(settings: Settings, *, wait: bool = True) -> None:
@@ -131,16 +143,24 @@ async def run_worker(settings: Settings, *, wait: bool = True) -> None:
         tables.tech_names,
         lambda run_id: runtime.queue.enqueue(run_id),
     )
+    schedule = ScheduleDeps(sessions=sessions, runs=mail_deps.runs, clock=SystemClock())
+
+    async def mail_tick() -> object:
+        return await daily_tick(schedule)
+
+    runtime.mail_tick = mail_tick
     try:
         async with open_checkpointer(settings.database_url) as checkpointer:
             runtime.holder.runner = WorkflowRunner(
                 sessions,
                 checkpointer,
                 workflow_registry(ingest_deps, search_deps, draft_deps, mail_deps),
-                run_notifier(publisher),
+                # a finished company search is followed by a mail check (Search now, FR-021)
+                chain_mail_after_search(run_notifier(publisher), sessions, schedule),
             )
             async with runtime.app.open_async():
                 await resume_on_startup(built.provider_status, sessions, runtime.queue)
+                await _tick_at_start(runtime)
                 await runtime.app.run_worker_async(wait=wait)
     finally:
         await engine.dispose()

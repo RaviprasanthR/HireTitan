@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from datetime import datetime
@@ -40,8 +41,12 @@ from hiretitan.mail.infra.secrets_file import SecretsFile
 from hiretitan.mail.infra.seed import load_seed
 from hiretitan.mail.infra.store import SqlMailStore
 from hiretitan.mail.workflow.check import CheckDeps
+from hiretitan.mail.workflow.schedule import ScheduleDeps, after_company_search
 from hiretitan.platform.clock import ClockPort
 from hiretitan.platform.config.settings import Settings
+from hiretitan.platform.runtime.domain.run_state import RunStatus
+from hiretitan.platform.runtime.infra.runs_repo import Run
+from hiretitan.platform.runtime.runner import Notify
 from hiretitan.search.api.runs import MailPipelineOut, MailRunOut, MailUnreadableOut
 from hiretitan.search.application.alerts import AlertPosting, store_alert_postings
 from hiretitan.search.application.search import SearchAlreadyRunningError
@@ -49,7 +54,10 @@ from hiretitan.search.domain.rules_serialization import rules_from_dict
 from hiretitan.search.domain.tech_names import TechTable
 from hiretitan.search.infra.models import AlertSightingRow, JobRow, RelevanceDecisionRow
 from hiretitan.search.infra.repos import RuleSetsRepo, SearchRunsRepo
+from hiretitan.search.infra.search_store import WORKFLOW as SEARCH_WORKFLOW
 from hiretitan.search.infra.search_store import AlertSearchStore
+
+_log = logging.getLogger(__name__)
 
 
 async def seed_mail_senders(sessions: async_sessionmaker[AsyncSession], path: Path) -> int:
@@ -111,6 +119,32 @@ def build_check_deps(
         clock=clock,
         publish=publish,
     )
+
+
+def chain_mail_after_search(
+    notify: Notify,
+    sessions: async_sessionmaker[AsyncSession],
+    schedule: ScheduleDeps,
+) -> Notify:
+    """Wrap the runner's notice: when a company search has finished (not stopped, not failed),
+    Gmail is read too (FR-021, "Search now"). The mail check starts only after the search run is
+    marked done, because only one search may be active at a time."""
+
+    async def wrapped(run: Run) -> None:
+        await notify(run)
+        if run.workflow != SEARCH_WORKFLOW or run.state.status is not RunStatus.done:
+            return
+        try:
+            async with sessions() as session:
+                search_run = await SearchRunsRepo(session).by_workflow_run(run.id)
+            if search_run is None or search_run.outcome != "finished":
+                return
+            await after_company_search(schedule)
+        except Exception:
+            # the search itself is done and its result stands; reading mail is a bonus
+            _log.warning("Could not start the mail check after a search.", exc_info=True)
+
+    return wrapped
 
 
 def make_stop_check(
