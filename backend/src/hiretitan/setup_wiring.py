@@ -7,6 +7,8 @@ The setup module may not import other features directly, so this composition-lev
 from __future__ import annotations
 
 import asyncio
+import os
+from collections.abc import Callable
 from pathlib import Path
 from uuid import UUID
 
@@ -15,6 +17,7 @@ from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from hiretitan.mail.infra.repos import SendersRepo
+from hiretitan.mail.infra.secrets_file import SecretsFile
 from hiretitan.mail.infra.seed import load_seed as load_mail_seed
 from hiretitan.platform.runtime.domain.run_state import RunStatus, WaitingFor
 from hiretitan.platform.runtime.infra.runs_repo import RunsRepo
@@ -149,3 +152,14 @@ class SqlDeleteAllStore:
                 await asyncio.to_thread(load_mail_seed, self._mail_seed)
             )
         await self._session.commit()
+
+
+def secrets_forgetter(data_dir: Path, forget_ai_key: Callable[[], None]) -> Callable[[], None]:
+    """Delete all my data: the AI key saved on the page and the Google client and token file
+    (FR-027). Values set in the environment stay where the person put them."""
+
+    def forget() -> None:
+        forget_ai_key()
+        SecretsFile(data_dir / "secrets" / "gmail.json", os.environ).clear_all()
+
+    return forget

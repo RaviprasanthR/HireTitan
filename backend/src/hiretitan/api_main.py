@@ -79,7 +79,7 @@ from hiretitan.setup.api.data import DataApiDeps, create_data_router
 from hiretitan.setup.api.onboarding import OnboardingApiDeps, create_onboarding_router
 from hiretitan.setup.api.review_items import ReviewItemsApiDeps, create_review_items_router
 from hiretitan.setup.api.status import StatusApiDeps, create_status_router
-from hiretitan.setup_wiring import RepoFacts, SqlDeleteAllStore
+from hiretitan.setup_wiring import RepoFacts, SqlDeleteAllStore, secrets_forgetter
 
 API_PREFIX: Final = "/api/v1"
 MULTIPART_OVERHEAD: Final = 64 * 1024  # boundaries and headers around the file
@@ -356,7 +356,9 @@ def build_app(settings: Settings | None = None) -> FastAPI:
                     mail_seed=SEED_DIR / "mail_senders.yaml",
                 ),
                 enqueue_key_check=enqueue_key_check,
-                forget_secrets=keys.forget if keys else (lambda: None),
+                forget_secrets=secrets_forgetter(
+                    settings.data_dir, keys.forget if keys else (lambda: None)
+                ),
             )
         ),
     ]
