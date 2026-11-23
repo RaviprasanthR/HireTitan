@@ -7,7 +7,12 @@ export type CompanyPage = components['schemas']['CompanyPage']
 export type Discovery = components['schemas']['DiscoveryOut']
 
 export type CompanyFilter = 'all' | 'check_manually'
-export type CompanyFields = { name: string; careers_url: string; city?: string; website?: string }
+export type CompanyFields = {
+  name: string
+  careers_url?: string
+  city?: string
+  website?: string
+}
 export type CompanyEdit = Partial<{
   name: string
   city: string
@@ -75,7 +80,9 @@ export function useDecideBoard(id: string) {
   const refresh = useRefreshCompanies()
   return useMutation({
     mutationFn: (decision: 'confirm' | 'reject') =>
-      apiFetch<Company>(`/companies/${id}/discovery/${decision}`, { method: 'POST' }),
+      apiFetch<Company>(`/companies/${id}/discovery/${decision}`, {
+        method: 'POST',
+      }),
     onSuccess: refresh,
   })
 }
@@ -113,7 +120,10 @@ export function useAddContact(companyId: string) {
   const refresh = useRefreshContacts(companyId)
   return useMutation({
     mutationFn: (values: ContactInput) =>
-      apiFetch<Contact>(`/companies/${companyId}/contacts`, { method: 'POST', json: values }),
+      apiFetch<Contact>(`/companies/${companyId}/contacts`, {
+        method: 'POST',
+        json: values,
+      }),
     onSuccess: refresh,
   })
 }
@@ -143,7 +153,10 @@ export function useSaveNote(companyId: string) {
   const refresh = useRefreshContacts(companyId)
   return useMutation({
     mutationFn: (body: string) =>
-      apiFetch<Note>(`/companies/${companyId}/note`, { method: 'PUT', json: { body } }),
+      apiFetch<Note>(`/companies/${companyId}/note`, {
+        method: 'PUT',
+        json: { body },
+      }),
     onSuccess: refresh,
   })
 }

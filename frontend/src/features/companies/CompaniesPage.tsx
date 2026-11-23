@@ -3,10 +3,6 @@ import {
   ArrowUp,
   BadgeCheck,
   Building2,
-  ChevronDown,
-  ChevronUp,
-  Eye,
-  EyeOff,
   Globe,
   MessageCircleQuestion,
   Pencil,
@@ -14,7 +10,6 @@ import {
   Radar,
   Search,
   StickyNote,
-  Trash2,
   Users,
 } from 'lucide-react'
 import { useState } from 'react'
@@ -56,7 +51,15 @@ function PipelineChip({ company }: { company: Company }) {
 }
 
 /** A small round icon button; each action has its own colour and a tooltip. */
-function EditForm({ company, onDone }: { company: Company; onDone: () => void }) {
+function EditForm({
+  company,
+  onDone,
+  onDelete,
+}: {
+  company: Company
+  onDone: () => void
+  onDelete: () => void
+}) {
   const edit = useEditCompany()
   const [values, setValues] = useState({
     name: company.name,
@@ -94,12 +97,36 @@ function EditForm({ company, onDone }: { company: Company; onDone: () => void })
           {edit.error.message}
         </p>
       )}
-      <div className="flex gap-2 sm:col-span-2">
+      <div className="flex flex-wrap gap-2 sm:col-span-2">
         <Button type="submit" size="sm" disabled={edit.isPending} variant="success">
           Save
         </Button>
         <Button type="button" variant="cancel" size="sm" onClick={onDone}>
           Cancel
+        </Button>
+        {company.hidden && (
+          // hiding is gone from the list; a company hidden before can come back to searches
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={edit.isPending}
+            onClick={() =>
+              edit.mutate({ id: company.id, changes: { hidden: false } }, { onSuccess: onDone })
+            }
+          >
+            Search this company again
+          </Button>
+        )}
+        <Button
+          type="button"
+          variant="danger"
+          size="sm"
+          className="ml-auto"
+          aria-label={`Delete ${company.name}`}
+          onClick={onDelete}
+        >
+          Delete
         </Button>
       </div>
     </form>
@@ -128,7 +155,13 @@ const PIPELINE_TEXT = {
 
 /** Everything the list knows about a company, shown when its row is expanded. */
 function Details({ company, checked }: { company: Company; checked: string | null }) {
-  const board = [BOARD_STATUS[company.board_status], company.ats_vendor, company.board_id]
+  const board = [
+    company.board_status === 'unresolved' && !company.careers_url
+      ? 'No careers page: searches skip it'
+      : BOARD_STATUS[company.board_status],
+    company.ats_vendor,
+    company.board_id,
+  ]
     .filter(Boolean)
     .join(' · ')
   const lastChecked = checked
@@ -149,7 +182,7 @@ function Details({ company, checked }: { company: Company; checked: string | nul
     ['Last check', lastChecked],
   ]
   if (company.last_check_error) rows.push(['Last problem', company.last_check_error])
-  rows.push(['Visibility', company.hidden ? 'Hidden from the list' : 'Shown'])
+  if (company.hidden) rows.push(['Searches', 'Left out (hidden before)'])
   // the rows split into two cards, in the look of the Preferences and Search rules pages
   const whereLabels = ['Location', 'Pipeline', 'Website', 'Careers page']
   const where = rows.filter(([label]) => whereLabels.includes(label))
@@ -205,7 +238,6 @@ function CompanyRow({ company }: { company: Company }) {
   const [editing, setEditing] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [showPanel, setShowPanel] = useState(false)
-  const edit = useEditCompany()
   const remove = useDeleteCompany()
   const contacts = `${company.contact_count} contact${company.contact_count === 1 ? '' : 's'}`
   // Deleting one of the person's own companies removes its contacts and note (FR-023); a
@@ -224,21 +256,27 @@ function CompanyRow({ company }: { company: Company }) {
         showPanel || editing || confirming ? '' : 'hover:bg-[#9c4f37]/25'
       }`}
     >
-      <div className={`flex min-h-8 flex-wrap items-center gap-x-4 gap-y-1 ${COLUMNS}`}>
+      {/* A click anywhere on the row opens or closes it; the name is the same switch for the
+          keyboard. Links and buttons in the row keep their own job. */}
+      <div
+        className={`flex min-h-8 cursor-pointer flex-wrap items-center gap-x-4 gap-y-1 ${COLUMNS}`}
+        onClick={(event) => {
+          const target = event.target as HTMLElement
+          if (target.closest('a, button, input, select, textarea, label')) return
+          setShowPanel(!showPanel)
+        }}
+      >
         <div className="min-w-0">
           <h2 className="min-w-0 truncate font-semibold">
-            {company.careers_url ? (
-              <a
-                href={company.careers_url}
-                target="_blank"
-                rel="noreferrer noopener"
-                className="hover:text-orange-300 hover:underline"
-              >
-                {company.name}
-              </a>
-            ) : (
-              company.name
-            )}
+            <button
+              type="button"
+              aria-expanded={showPanel}
+              aria-label={`Details for ${company.name}`}
+              onClick={() => setShowPanel(!showPanel)}
+              className="max-w-full truncate rounded text-left hover:text-orange-300 focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {company.name}
+            </button>
             {company.hidden && <span className="ml-2 text-sm text-muted-small">(hidden)</span>}
           </h2>
         </div>
@@ -268,15 +306,6 @@ function CompanyRow({ company }: { company: Company }) {
         <div className="ml-auto flex justify-end gap-1 md:ml-0">
           {!editing && !confirming && (
             <>
-              <IconButton
-                title="Details"
-                label={`Details for ${company.name}`}
-                tone="text-slate-300 hover:bg-slate-400/20 hover:text-white"
-                aria-expanded={showPanel}
-                onClick={() => setShowPanel(!showPanel)}
-              >
-                {showPanel ? <ChevronUp aria-hidden /> : <ChevronDown aria-hidden />}
-              </IconButton>
               {company.website ? (
                 <Button
                   asChild
@@ -298,20 +327,6 @@ function CompanyRow({ company }: { company: Company }) {
                 <span className="size-7" aria-hidden />
               )}
               <IconButton
-                title={company.hidden ? 'Show' : 'Hide'}
-                label={`${company.hidden ? 'Show' : 'Hide'} ${company.name}`}
-                tone="text-yellow-300 hover:bg-yellow-500/20 hover:text-yellow-200"
-                disabled={edit.isPending}
-                onClick={() =>
-                  edit.mutate({
-                    id: company.id,
-                    changes: { hidden: !company.hidden },
-                  })
-                }
-              >
-                {company.hidden ? <Eye aria-hidden /> : <EyeOff aria-hidden />}
-              </IconButton>
-              <IconButton
                 title="Edit"
                 label={`Edit ${company.name}`}
                 tone="text-emerald-300 hover:bg-emerald-500/20 hover:text-emerald-200"
@@ -319,24 +334,20 @@ function CompanyRow({ company }: { company: Company }) {
               >
                 <Pencil aria-hidden />
               </IconButton>
-              <IconButton
-                title="Delete"
-                label={`Delete ${company.name}`}
-                tone="text-rose-300 hover:bg-rose-500/20 hover:text-rose-200"
-                onClick={() => setConfirming(true)}
-              >
-                <Trash2 aria-hidden />
-              </IconButton>
             </>
           )}
         </div>
       </div>
-      {edit.isError && !editing && (
-        <p role="alert" className="text-sm text-danger">
-          {edit.error.message}
-        </p>
+      {editing && (
+        <EditForm
+          company={company}
+          onDone={() => setEditing(false)}
+          onDelete={() => {
+            setEditing(false)
+            setConfirming(true)
+          }}
+        />
       )}
-      {editing && <EditForm company={company} onDone={() => setEditing(false)} />}
       {showPanel && (
         <div className="space-y-3 pt-2 pb-2">
           <Details company={company} checked={checked} />
@@ -489,7 +500,7 @@ export function CompaniesPage() {
       <p>
         {all.length > 0
           ? 'No companies match this search.'
-          : 'No companies yet. Add one by its careers page link.'}
+          : 'No companies yet. Add one with the button above.'}
       </p>
     )
   else

@@ -57,7 +57,10 @@ async def add_company(
     city: str | None = None,
     website: str | None = None,
 ) -> CompanyView:
-    """A company of the person's own. It stays unresolved, and is not read, until they decide."""
+    """A company of the person's own. It stays unresolved, and is not read, until they decide.
+
+    The careers link is optional: a company with no careers site is still worth keeping for its
+    contacts and notes; a search has nothing to read for it and skips it."""
     fields = {
         "name": name,
         "careers_url": careers_url,
@@ -70,8 +73,6 @@ async def add_company(
     except CompanyError as error:
         problems = list(error.errors)
         values = {}
-    if not careers_url.strip():
-        problems.append(FieldIssue("careers_url", "Add the link to the company's careers page."))
     if problems:
         raise CompanyError(problems)
     row = await store.add(origin="user", resolution="unresolved", **values)

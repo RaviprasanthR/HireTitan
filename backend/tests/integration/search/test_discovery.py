@@ -200,12 +200,14 @@ async def test_a_board_that_cannot_be_read_still_shows_the_match(session: AsyncS
     assert found.suggestion.live_jobs is None
 
 
-async def test_the_company_needs_a_name_and_a_careers_link(session: AsyncSession) -> None:
+async def test_the_company_needs_a_name_and_any_careers_link_must_be_valid(
+    session: AsyncSession,
+) -> None:
     repo = CompaniesRepo(session)
 
     with pytest.raises(CompanyError) as raised:
         await add_company(repo, name="", careers_url="")
-    assert [e.field for e in raised.value.errors] == ["name", "careers_url"]
+    assert [e.field for e in raised.value.errors] == ["name"]  # a careers link is optional
 
     with pytest.raises(CompanyError) as raised:
         await add_company(repo, name="Acme", careers_url="ftp://x.example.com")
