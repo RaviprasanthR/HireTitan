@@ -89,7 +89,7 @@ test('SC001_journey_completes', async ({ page, request }) => {
   ])
 
   // A13 (SC008): delete everything, typed confirmation, back to the first card.
-  await page.goto('/settings')
+  await page.goto('/settings/data') // Settings has tabs since 002c US6
   await page.getByRole('button', { name: 'Delete all my data' }).click()
   const confirm = page.getByRole('button', { name: 'Delete everything' })
   await expect(confirm).toBeDisabled()

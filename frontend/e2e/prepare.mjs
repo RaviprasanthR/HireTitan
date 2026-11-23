@@ -20,7 +20,15 @@ cpSync(join(root, 'backend', 'seed', 'title_synonyms.yaml'), join(seed, 'title_s
 // the reviewed area and technology tables (feature 002i); the app refuses to start without them
 cpSync(join(root, 'backend', 'seed', 'work_areas.yaml'), join(seed, 'work_areas.yaml'))
 cpSync(join(root, 'backend', 'seed', 'tech_names.yaml'), join(seed, 'tech_names.yaml'))
+// the shipped job-alert senders (feature 002c), so the fake mailbox's alerts have a sender to match
+cpSync(join(root, 'backend', 'seed', 'mail_senders.yaml'), join(seed, 'mail_senders.yaml'))
 const boards = join(root, '.e2e', 'fake_career_ops')
 rmSync(boards, { recursive: true, force: true })
 cpSync(join(root, 'backend', 'tests', 'fixtures', 'career_ops', 'e2e'), boards, { recursive: true })
-console.log(`prepared ${target}, ${seed} and ${boards}`)
+// The fake mailbox (feature 002c, HIRETITAN_MAIL=fake): its address, and an empty messages folder
+// the Gmail journey fills with synthetic alerts dated just before it runs.
+const mailbox = join(root, '.e2e', 'fake_gmail')
+rmSync(mailbox, { recursive: true, force: true })
+mkdirSync(join(mailbox, 'messages'), { recursive: true })
+writeFileSync(join(mailbox, 'profile.json'), JSON.stringify({ address: 'jane@example.invalid' }))
+console.log(`prepared ${target}, ${seed}, ${boards} and ${mailbox}`)
