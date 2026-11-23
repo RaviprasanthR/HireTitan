@@ -235,3 +235,34 @@ async def test_FR021_a_mail_check_and_a_company_search_cannot_start_together(env
             await session.execute(text("DELETE FROM app.search_runs"))
             await session.execute(text("DELETE FROM app.workflow_runs"))
             await session.commit()
+
+
+async def ended_last_check(env: Env, ended: str, ago: timedelta) -> None:
+    """A check that ran ``ago`` and ended as ``ended``."""
+    env.add("linkedin-01")
+    await env.check()
+    async with env.sessions() as session:
+        await session.execute(text("UPDATE app.mail_checks SET ended = :e"), {"e": ended})
+        await ConnectionRepo(session).mark_check_started(NOW - ago)
+        await session.commit()
+    env.queued.clear()
+
+
+@pytest.mark.parametrize("ended", ["gmail_unavailable", "failed"])
+async def test_FR021_a_failed_check_is_tried_again_an_hour_later(env: Env, ended: str) -> None:
+    await ended_last_check(env, ended, timedelta(hours=1, minutes=5))
+
+    assert await daily_tick(schedule(env)) is not None
+
+
+async def test_FR021_a_failed_check_is_not_retried_within_the_hour(env: Env) -> None:
+    await ended_last_check(env, "gmail_unavailable", timedelta(minutes=30))
+
+    assert await daily_tick(schedule(env)) is None
+
+
+@pytest.mark.parametrize("ended", ["finished", "stopped"])
+async def test_FR021_a_check_that_ended_normally_waits_the_full_day(env: Env, ended: str) -> None:
+    await ended_last_check(env, ended, timedelta(hours=2))
+
+    assert await daily_tick(schedule(env)) is None

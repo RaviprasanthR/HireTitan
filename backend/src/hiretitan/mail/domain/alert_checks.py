@@ -20,7 +20,7 @@ from typing import Final
 from urllib.parse import urlsplit
 
 from hiretitan.mail.domain.alerts import COMPANY_MAX, LOCATION_MAX, TITLE_MAX, AlertJob
-from hiretitan.mail.domain.links import posting_id
+from hiretitan.mail.domain.links import on_site, posting_id
 from hiretitan.mail.domain.mime import Flat
 
 JOBS_MAX: Final = 30
@@ -84,7 +84,7 @@ def accept(
             continue
         href = flat.links[index - 1].href
         title = _in_email(item.title, segments, minimum=TITLE_MIN)
-        if title is None or not _web_link(href):
+        if title is None or not _web_link(href) or not on_site(site, href):
             continue
         used.add(index)
         company = _in_email(item.company, segments, minimum=VALUE_MIN)

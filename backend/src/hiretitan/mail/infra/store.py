@@ -35,8 +35,10 @@ class SqlMailStore:
 
     async def erase_all(self) -> None:
         async with self._sessions() as session:
-            # read-email records first: the checks they point at are removed next
+            # the link first: it waits for a batch being stored (which holds it shared), and any
+            # later batch finds no link and stores nothing (CheckAbandonedError)
+            await ConnectionRepo(session).remove()
+            # read-email records before the checks they point at
             await ReadMessagesRepo(session).clear()
             await MailChecksRepo(session).clear()
-            await ConnectionRepo(session).remove()
             await session.commit()

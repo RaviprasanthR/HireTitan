@@ -19,6 +19,7 @@ from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from hiretitan.mail.application.ports import (
+    CheckAbandonedError,
     MailAccessEndedError,
     MailMessageNotFoundError,
     MailUnavailableError,
@@ -682,15 +683,15 @@ async def test_edge_a_run_deleted_by_delete_all_ends_quietly(env: Env) -> None:
         await session.execute(text("DELETE FROM app.search_runs"))
         await session.commit()
 
-    result = await env.deps.sink.store(
-        search_run_id=started.search_run_id,
-        mail_check_id=started.mail_check_id,
-        batch_no=1,
-        emails=[],
-        now=NOW,
-    )
-
-    assert result.found == 0  # no crash on a run that no longer exists
+    # the sink stores nothing and says the check has lost its run; the check then stops
+    with pytest.raises(CheckAbandonedError):
+        await env.deps.sink.store(
+            search_run_id=started.search_run_id,
+            mail_check_id=started.mail_check_id,
+            batch_no=1,
+            emails=[],
+            now=NOW,
+        )
 
 
 async def test_SEC_the_runner_giving_up_ends_the_check_as_failed(env: Env) -> None:
@@ -709,3 +710,64 @@ async def test_SEC_the_runner_giving_up_ends_the_check_as_failed(env: Env) -> No
     assert (await the_check(env, started.search_run_id)).ended == "failed"
     finished = await the_run(env, started.search_run_id)
     assert (finished.outcome, finished.finished_at is not None) == ("failed", True)
+
+
+async def test_FR016_an_error_while_reading_puts_no_email_text_in_the_log(
+    env: Env, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    env.add("linkedin-01")
+
+    def broken(*_args: Any, **_kwargs: Any) -> Any:
+        raise ValueError("Senior Data Engineer at Aspen Robotics, secret-email-text")
+
+    monkeypatch.setattr("hiretitan.mail.workflow.check.read_email_flat", broken)
+
+    run_id = await env.check()
+
+    assert (await the_check(env, run_id)).emails_unreadable == 1
+    logged = "\n".join(
+        f"{r.getMessage()} {r.exc_text or ''} {r.exc_info or ''}" for r in caplog.records
+    )
+    assert "secret-email-text" not in logged
+    assert "ValueError" in logged
+
+
+async def test_a_check_that_cannot_be_queued_ends_failed_and_blocks_nothing(env: Env) -> None:
+    async def broken_queue(_run_id: UUID) -> None:
+        raise RuntimeError("the job queue did not answer")
+
+    runs = SqlCheckRuns(env.sessions, broken_queue)
+
+    with pytest.raises(RuntimeError):
+        await runs.start(trigger="button", now=env.clock.now())
+
+    async with env.sessions() as session:
+        assert await SearchRunsRepo(session).active() is None  # the next search can start
+        check = (await session.scalars(select(MailCheckRow))).one()
+        assert check.ended == "failed"
+        statuses = (await session.execute(text("SELECT status FROM app.workflow_runs"))).scalars()
+        assert set(statuses) == {"failed"}
+    # and the next check starts normally
+    env.add("linkedin-01")
+    await env.check()
+
+
+async def test_edge_a_check_whose_connection_went_away_stops_and_stores_nothing(env: Env) -> None:
+    # Disconnect gave up waiting for the check (or Delete all ran): the batch must not be stored
+    # and the check must not go on reading Gmail, nor say it read emails it then threw away.
+    env.add("linkedin-01")
+    env.add("naukri-01")
+    started = await env.runs.start(trigger="button", now=NOW)
+    async with env.sessions() as session:
+        await ConnectionRepo(session).remove()
+        await session.commit()
+
+    await env.run_started(started.search_run_id)
+
+    check = await the_check(env, started.search_run_id)
+    assert check.ended == "stopped"
+    assert check.emails_read == 0
+    assert (await the_run(env, started.search_run_id)).outcome == "stopped_by_user"
+    async with env.sessions() as session:
+        assert (await session.scalars(select(MailReadMessageRow))).all() == []
+        assert await session.scalar(select(func.count()).select_from(JobRow)) == 0

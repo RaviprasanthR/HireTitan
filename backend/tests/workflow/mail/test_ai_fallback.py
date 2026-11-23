@@ -124,6 +124,14 @@ async def test_FR013a_the_link_is_the_emails_own_never_the_ais(env: Env) -> None
 async def test_FR013a_an_unknown_layout_from_a_builtin_site_is_read_by_ai_too(env: Env) -> None:
     with_ai(env, FakeLlm(by_task={TASK: [TWO_JOBS]}))
     env.add("unknown-01", as_sender="naukrialerts@naukri.com")
+    # a new Naukri layout still links through Naukri's own site
+    path = env.mailbox / "messages" / "unknown-01.eml"
+    path.write_text(
+        path.read_text("utf-8").replace(
+            "href=3D'https://", "href=3D'https://www.naukri.com/r?u=https://"
+        ),
+        "utf-8",
+    )
 
     run_id = await env.check()
 
@@ -131,6 +139,18 @@ async def test_FR013a_an_unknown_layout_from_a_builtin_site_is_read_by_ai_too(en
     assert (await the_check(env, run_id)).emails_unreadable == 0
     async with env.sessions() as session:
         assert set((await session.scalars(select(JobRow.ats_vendor))).all()) == {"naukri"}
+
+
+async def test_SEC_an_alert_dressed_as_a_builtin_site_adds_no_job_linking_elsewhere(
+    env: Env,
+) -> None:
+    # "from Naukri", but every job links to another site: the AI's answer is not used
+    with_ai(env, FakeLlm(by_task={TASK: [TWO_JOBS]}))
+    env.add("unknown-01", as_sender="naukrialerts@naukri.com")
+
+    await env.check()
+
+    assert await count(env, JobRow) == 0
 
 
 async def test_FR013a_invented_values_are_dropped(env: Env) -> None:

@@ -31,6 +31,8 @@ function run(over: Record<string, unknown> = {}) {
   }
 }
 
+let lastClient: QueryClient
+
 function renderPanel(latest: unknown, extra?: (call: Call) => unknown) {
   const calls = stubApi((call) => {
     const custom = extra?.(call)
@@ -51,6 +53,7 @@ function renderPanel(latest: unknown, extra?: (call: Call) => unknown) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
+  lastClient = client
   render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
@@ -86,7 +89,9 @@ describe('SearchPanel', () => {
     await user.click(screen.getByRole('button', { name: 'Search now' }))
 
     await waitFor(() =>
-      expect(calls.find((c) => c.method === 'POST')?.body).toEqual({ mode: 'rules_and_ai' }),
+      expect(calls.find((c) => c.method === 'POST')?.body).toEqual({
+        mode: 'rules_and_ai',
+      }),
     )
   })
 
@@ -143,7 +148,9 @@ describe('SearchPanel', () => {
     const user = userEvent.setup()
     renderPanel(null, (call) =>
       call.method === 'POST' && call.path === '/search/runs'
-        ? problem(409, 'A search is already running.', { reason: 'search_already_running' })
+        ? problem(409, 'A search is already running.', {
+            reason: 'search_already_running',
+          })
         : undefined,
     )
 
@@ -183,7 +190,12 @@ describe('SearchPanel', () => {
     let latest: unknown = run({ id: 's1', outcome: 'finished' })
     renderPanel(null, (call) => {
       if (call.method === 'POST' && call.path === '/search/runs')
-        latest = run({ id: 's2', companies_total: 10, companies_read: 3, added: 2 })
+        latest = run({
+          id: 's2',
+          companies_total: 10,
+          companies_read: 3,
+          added: 2,
+        })
       if (call.path === '/search/latest') return latest
       return undefined
     })
@@ -254,6 +266,26 @@ describe('SearchPanel', () => {
     expect(await screen.findByText(/Stopping… jobs found so far are kept/)).toBeInTheDocument()
   })
 
+  it('a stop pressed on one run does not carry over to the next run', async () => {
+    const user = userEvent.setup()
+    let latest: unknown = run()
+    renderPanel(null, (call) => (call.path === '/search/latest' ? latest : undefined))
+
+    await user.click(await screen.findByRole('button', { name: 'Stop' }))
+    await screen.findByText(/Stopping…/)
+    latest = run({
+      outcome: 'stopped_by_user',
+      finished_at: '2026-11-06T09:05:00Z',
+    })
+    await lastClient.invalidateQueries({ queryKey: ['search-latest'] }) // what the run's end event does
+    await user.click(await screen.findByRole('button', { name: 'Continue searching' }))
+    latest = run({ id: 's2', run_id: 'r2' })
+    await lastClient.invalidateQueries({ queryKey: ['search-latest'] })
+
+    expect(await screen.findByText('Searching your companies…')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Stop' })).toBeInTheDocument()
+  })
+
   it('US2_AS4_shows_stopping_while_a_stop_is_requested', async () => {
     renderPanel(run({ stop_requested: true }))
     expect(await screen.findByText(/Stopping… jobs found so far are kept/)).toBeInTheDocument()
@@ -313,7 +345,14 @@ describe('SearchPanel', () => {
   })
 
   it('US2_AS5_finished_says_how_many_new_jobs_without_batches', async () => {
-    renderPanel(run({ outcome: 'finished', batches_done: 3, companies_read: 20, added: 6 }))
+    renderPanel(
+      run({
+        outcome: 'finished',
+        batches_done: 3,
+        companies_read: 20,
+        added: 6,
+      }),
+    )
     expect(await screen.findByText(/Search finished/)).toBeInTheDocument()
     // the last search is shown as the summary's flow chart and donut, at the top of Explore
     const flow = screen.getByRole('list', { name: 'How the search went' })

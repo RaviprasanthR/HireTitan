@@ -40,6 +40,11 @@ class ConnectionRepo:
     async def get(self) -> MailConnectionRow | None:
         return await self._session.scalar(select(MailConnectionRow))
 
+    async def get_for_share(self) -> MailConnectionRow | None:
+        """The link, locked until the transaction ends: a Disconnect or Delete all removing it
+        waits for a batch being stored, and a batch after it finds no link."""
+        return await self._session.scalar(select(MailConnectionRow).with_for_update(read=True))
+
     async def connect(self, address: str, now: datetime) -> MailConnectionRow:
         """Create the link, or update it (a reconnect): connected, the error cleared."""
         values: dict[str, Any] = {
@@ -223,6 +228,11 @@ class MailChecksRepo:
         self._session.add(row)
         await self._session.flush()
         return row
+
+    async def latest(self) -> MailCheckRow | None:
+        return await self._session.scalar(
+            select(MailCheckRow).order_by(MailCheckRow.created_at.desc()).limit(1)
+        )
 
     async def get_for_run(self, search_run_id: UUID) -> MailCheckRow | None:
         return await self._session.scalar(

@@ -17,9 +17,11 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import traceback
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field, replace
 from functools import partial
+from pathlib import Path
 from typing import Any, Final, TypedDict
 from uuid import UUID
 
@@ -30,6 +32,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from hiretitan.mail.application.alert_prompt import shown_links
 from hiretitan.mail.application.ports import (
     AlertBatchSink,
+    CheckAbandonedError,
     CheckRuns,
     MailAccessEndedError,
     MailMessageNotFoundError,
@@ -105,6 +108,16 @@ class _Totals:
 
 class _Nothing(Exception):
     """No sender is on: the check ends at once with nothing listed."""
+
+
+def _where(error: BaseException) -> str:
+    """The error's type and the line it came from, never its message: an error raised while
+    reading an email can carry the email's text, which must not reach a log line (FR-016)."""
+    frames = traceback.extract_tb(error.__traceback__)
+    if not frames:
+        return type(error).__name__
+    last = frames[-1]
+    return f"{type(error).__name__} at {Path(last.filename).name}:{last.lineno}"
 
 
 def _signals(flat: Flat) -> list[dict[str, Any]]:
@@ -260,8 +273,8 @@ async def _read_one(
         totals.unreadable += 1
         totals.emails.append(ReadEmail(message_id, NO_SENDER, now, "unreadable", None, [], []))
         return
-    except Exception:
-        _log.warning("One email could not be fetched.", exc_info=True)
+    except Exception as error:
+        _log.warning("One email could not be fetched (%s).", _where(error))
         totals.unreadable += 1
         return
     listed = raw.sender in site_of
@@ -280,8 +293,8 @@ async def _read_one(
         )
         if flat is not None and email.outcome in ("unreadable", "needs_ai"):
             email = await _ask_ai(deps, totals, email, flat, site)
-    except Exception:
-        _log.warning("One email could not be read.", exc_info=True)
+    except Exception as error:
+        _log.warning("One email could not be read (%s).", _where(error))
         email = ReadEmail(
             message_id, raw.sender or NO_SENDER, raw.received_at, "unreadable", None, [], []
         )
@@ -361,6 +374,11 @@ async def run_check(deps: CheckDeps, state: CheckState) -> CheckState:
                 ended, outcome = "stopped", "stopped_by_user"
     except _Nothing:
         pass
+    except CheckAbandonedError:
+        # Disconnect or Delete all while reading: what was read is dropped, nothing more is read
+        ended, outcome, message = "stopped", "stopped_by_user", None
+        totals.emails = []
+        totals.read = totals.unreadable = 0
     except MailAccessEndedError as error:
         ended, outcome, message = "access_ended", "failed", "Gmail access has ended."
         _log.warning("A mail check ended: Gmail access has ended.")
@@ -369,16 +387,16 @@ async def run_check(deps: CheckDeps, state: CheckState) -> CheckState:
     except MailUnavailableError:
         ended, outcome, message = "gmail_unavailable", "failed", "Gmail did not answer."
         _log.warning("A mail check ended: Gmail did not answer.")
-    except Exception:
+    except Exception as error:
         # whatever else went wrong: the check ends as failed (never left "running", never retried
         # into the same failure) and the next one can start
-        _log.exception("A mail check failed.")
+        _log.error("A mail check failed (%s).", _where(error))
         ended, outcome, message = "failed", "failed", ERROR_MESSAGE
 
     try:
         await _flush(deps, totals, search_run_id, check_id)
-    except Exception:
-        _log.exception("The last emails of a mail check could not be stored.")
+    except Exception as error:
+        _log.error("The last emails of a mail check could not be stored (%s).", _where(error))
         ended, outcome, message = "failed", "failed", ERROR_MESSAGE
     await _finish(deps, totals, search_run_id, check_id, ended, outcome, message)
     return {}

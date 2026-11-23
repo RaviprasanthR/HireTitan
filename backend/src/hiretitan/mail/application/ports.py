@@ -39,6 +39,11 @@ class RawMessage:
     raw: bytes
 
 
+class CheckAbandonedError(Exception):
+    """The connection, the run or its rules went away while a check was reading (Disconnect or
+    Delete all): nothing more may be stored and the check stops."""
+
+
 class MailReader(Protocol):
     """Read-only access to one mailbox. There is no call that sends, drafts or changes mail."""
 

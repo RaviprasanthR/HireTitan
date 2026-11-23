@@ -187,3 +187,32 @@ def test_FR013a_posting_id_only_when_the_site_is_known() -> None:
 
     assert known.posting_id == "3978721496"
     assert unknown.posting_id is None
+
+
+def test_SEC_a_built_in_sites_job_must_link_to_that_site() -> None:
+    # a planted or spoofed alert "from LinkedIn" cannot add a job that links somewhere else
+    flat = Flat(
+        source="html",
+        lines=[Line("Data Engineer"), Line("Acme")],
+        links=[
+            Link("View", "https://login-linkedin.example/jobs/view/3978721496", 0),
+            Link("View", "https://www.linkedin.com.evil.example/jobs/1", 0),
+            Link("View", "https://www.linkedin.com/comm/jobs/view/3978721496/", 0),
+        ],
+    )
+
+    jobs = accept(
+        [Proposed("Data Engineer", "Acme", None, i) for i in (1, 2, 3)],
+        flat,
+        site="linkedin",
+        alert_date=DATE,
+        shown=3,
+    )
+
+    assert [j.link for j in jobs] == ["https://www.linkedin.com/comm/jobs/view/3978721496/"]
+
+
+def test_SEC_an_added_senders_job_may_link_anywhere_on_the_web() -> None:
+    (job,) = run(proposed(), site="other")
+
+    assert job.link.startswith("https://digest.example/")

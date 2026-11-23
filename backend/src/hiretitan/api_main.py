@@ -46,6 +46,7 @@ from hiretitan.platform.runtime.events import EventPublisher
 from hiretitan.platform.runtime.procrastinate import CHECK_PROVIDER_KEY_TASK, create_runtime
 from hiretitan.platform.security.logging import configure_logging
 from hiretitan.platform.storage.local import LocalFileStorage
+from hiretitan.platform.web.cross_site import CrossSiteGuardMiddleware
 from hiretitan.platform.web.limits import BodyLimitMiddleware
 from hiretitan.platform.web.problems import ProblemError, problem
 from hiretitan.preferences.api.router import PreferencesApiDeps, create_preferences_router
@@ -174,6 +175,8 @@ def create_app(
         BodyLimitMiddleware, path=f"{API_PREFIX}/resumes", limit=MAX_BYTES + MULTIPART_OVERHEAD
     )
     app.add_middleware(SecurityHeadersMiddleware)
+    # a change sent by another site's page is refused (002c final review, cross-site requests)
+    app.add_middleware(CrossSiteGuardMiddleware)
     # outermost: a request for any other name never reaches a route (002c US6 review)
     app.add_middleware(
         TrustedHostMiddleware,
@@ -228,6 +231,9 @@ def build_app(settings: Settings | None = None) -> FastAPI:
     async def enqueue_key_check() -> None:
         await runtime.app.configure_task(CHECK_PROVIDER_KEY_TASK).defer_async()
 
+    mail_connection = build_connection_service(
+        settings, deps.sessions, clock, EventPublisher(engine).publish
+    )
     synonyms = load_title_synonyms(SEED_DIR / "title_synonyms.yaml")
     seed_tables = load_seed_tables(SEED_DIR)  # area and technology tables; a bad file stops start
 
@@ -339,13 +345,7 @@ def build_app(settings: Settings | None = None) -> FastAPI:
             )
         ),
         create_review_items_router(ReviewItemsApiDeps(sessions=deps.sessions, facts=RepoFacts)),
-        create_connection_router(
-            MailApiDeps(
-                build_connection_service(
-                    settings, deps.sessions, clock, EventPublisher(engine).publish
-                )
-            )
-        ),
+        create_connection_router(MailApiDeps(mail_connection)),
         create_data_router(
             DataApiDeps(
                 sessions=deps.sessions,
@@ -356,6 +356,7 @@ def build_app(settings: Settings | None = None) -> FastAPI:
                     mail_seed=SEED_DIR / "mail_senders.yaml",
                 ),
                 enqueue_key_check=enqueue_key_check,
+                disconnect_mail=mail_connection.disconnect,
                 forget_secrets=secrets_forgetter(
                     settings.data_dir, keys.forget if keys else (lambda: None)
                 ),

@@ -103,6 +103,20 @@ def _parts(site: str, link: str) -> tuple[_Rule, str, str, str] | None:
     return rule, host, split.path, split.query
 
 
+def on_site(site: str, link: str) -> bool:
+    """For a built-in site: the link is on the site's own domain (or a subdomain), so an alert
+    dressed as that site cannot add a job pointing elsewhere. An added sender's links (no rule)
+    may be anywhere on the web."""
+    rule = RULES.get(site)
+    if rule is None:
+        return True
+    try:
+        host = (urlsplit(link.strip()).hostname or "").lower()
+    except ValueError:
+        return False
+    return _host_is(host, rule.hosts)
+
+
 def posting_id(site: str, link: str) -> str | None:
     """The site's own number for the posting, when the link shows one."""
     parts = _parts(site, link)

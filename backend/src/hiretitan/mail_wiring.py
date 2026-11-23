@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from hiretitan.mail.application.connection import ConnectionService, Publish
 from hiretitan.mail.application.consents import PendingConsents
 from hiretitan.mail.application.ports import (
+    CheckAbandonedError,
     CheckNotReadyError,
     GoogleAuth,
     MailboxProfile,
@@ -46,7 +47,7 @@ from hiretitan.mail.workflow.schedule import ScheduleDeps, after_company_search
 from hiretitan.platform.clock import ClockPort
 from hiretitan.platform.config.settings import Settings
 from hiretitan.platform.runtime.domain.run_state import RunStatus
-from hiretitan.platform.runtime.infra.runs_repo import Run
+from hiretitan.platform.runtime.infra.runs_repo import Run, RunsRepo
 from hiretitan.platform.runtime.runner import Notify
 from hiretitan.search.api.runs import MailPipelineOut, MailRunOut, MailUnreadableOut
 from hiretitan.search.application.alerts import AlertPosting, store_alert_postings
@@ -228,13 +229,13 @@ class SqlAlertSink:
     ) -> SinkCounts:
         async with self._sessions() as session:
             run = await SearchRunsRepo(session).get(search_run_id)
-            if run is None or await ConnectionRepo(session).get() is None:
+            if run is None or await ConnectionRepo(session).get_for_share() is None:
                 # Delete all my data or Disconnect happened while this check was running: nothing
                 # may be written back (the read-email records, the jobs) after the person said no
-                return SinkCounts()
+                raise CheckAbandonedError
             rule_set = await RuleSetsRepo(session).get(run.rule_set_id)
             if rule_set is None:
-                return SinkCounts()
+                raise CheckAbandonedError
             reads = ReadMessagesRepo(session)
             postings: list[AlertPosting] = []
             for email in emails:
@@ -285,6 +286,9 @@ class SqlAlertSink:
         )
 
 
+CHECK_NOT_QUEUED = "The mail check could not be started. Please try again."
+
+
 class SqlCheckRuns:
     """A mail check as a search run: creates it, finds it again, and ends it (``CheckRuns``)."""
 
@@ -316,8 +320,24 @@ class SqlCheckRuns:
             window = window_start(now)
             check = await MailChecksRepo(session).create(started.search_run_id, trigger, window)
             await session.commit()
-        await self._enqueue(started.run_id)
+        try:
+            await self._enqueue(started.run_id)
+        except BaseException:
+            # nothing will ever run it: end it now, or it would block every later search and check
+            await self._abandon(started.run_id, started.search_run_id, check.id, now)
+            raise
         return StartedCheck(started.search_run_id, check.id, window)
+
+    async def _abandon(
+        self, run_id: UUID, search_run_id: UUID, check_id: UUID, now: datetime
+    ) -> None:
+        async with self._sessions() as session:
+            await RunsRepo(session).transition(run_id, RunStatus.failed)
+            await MailChecksRepo(session).mark_failed(check_id)
+            await SearchRunsRepo(session).finish(
+                search_run_id, outcome="failed", finished_at=now, stop_message=CHECK_NOT_QUEUED
+            )
+            await session.commit()
 
     async def locate(self, workflow_run_id: UUID) -> StartedCheck | None:
         async with self._sessions() as session:

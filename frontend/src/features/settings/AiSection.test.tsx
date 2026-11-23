@@ -36,7 +36,12 @@ beforeEach(() => {
         return problem(422, 'Unprocessable', {
           detail: 'A key is 20 to 300 characters with no spaces.',
           reason: 'invalid_key',
-          errors: [{ field: 'key', message: 'A key is 20 to 300 characters with no spaces.' }],
+          errors: [
+            {
+              field: 'key',
+              message: 'A key is 20 to 300 characters with no spaces.',
+            },
+          ],
         })
       ai = { ...ai, key_source: 'page', status: 'unknown' }
       return new Response(JSON.stringify({ key_source: 'page', status: 'unknown' }), { status: 202 })
@@ -51,12 +56,15 @@ beforeEach(() => {
 })
 
 function renderSection() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
   render(
     <QueryClientProvider client={client}>
       <AiSection />
     </QueryClientProvider>,
   )
+  return client
 }
 
 describe('AiSection', () => {
@@ -140,7 +148,12 @@ describe('AiSection', () => {
   })
 
   it('out of credit shows the provider message', async () => {
-    ai = { ...ai, status: 'out_of_credit', key_source: 'page', message: 'You exceeded your quota.' }
+    ai = {
+      ...ai,
+      status: 'out_of_credit',
+      key_source: 'page',
+      message: 'You exceeded your quota.',
+    }
     renderSection()
 
     expect(await screen.findByText('You exceeded your quota.')).toBeInTheDocument()
@@ -152,22 +165,28 @@ describe('AiSection: the key heartbeat', () => {
     ai = { ...ai, status: 'working', key_source: 'page' }
     renderSection()
 
-    const beat = await screen.findByRole('img', { name: 'AI key working: heartbeat' })
+    const beat = await screen.findByRole('img', {
+      name: 'AI key working: heartbeat',
+    })
     expect(beat).toHaveClass('ht-ecg-live')
   })
 
   it('a key being checked beats too, a missing or rejected key is a flat line', async () => {
     ai = { ...ai, status: 'unknown', key_source: 'page' }
     renderSection()
-    expect(await screen.findByRole('img', { name: 'AI key being checked: heartbeat' })).toHaveClass(
-      'ht-ecg-live',
-    )
+    expect(
+      await screen.findByRole('img', {
+        name: 'AI key being checked: heartbeat',
+      }),
+    ).toHaveClass('ht-ecg-live')
   })
 
   it('a missing key is a flat line', async () => {
     renderSection()
 
-    const flat = await screen.findByRole('img', { name: 'AI key missing: flat line' })
+    const flat = await screen.findByRole('img', {
+      name: 'AI key missing: flat line',
+    })
     expect(flat).not.toHaveClass('ht-ecg-live')
   })
 })
@@ -195,8 +214,37 @@ describe('AiSection: review fixes', () => {
     ai = { ...ai, status: 'working' }
     await user.click(screen.getByRole('button', { name: 'Check again' }))
 
+    // the answer is announced in the same status line that said "Checking"
     await waitFor(() =>
-      expect(screen.queryByRole('status', { name: 'Key result' })).not.toBeInTheDocument(),
+      expect(screen.getByRole('status', { name: 'Key result' })).toHaveTextContent(
+        'Saved. The key works.',
+      ),
     )
+  })
+
+  it('after Remove, the focus goes to the key field', async () => {
+    ai = { ...ai, status: 'working', key_source: 'page' }
+    const user = userEvent.setup()
+    renderSection()
+
+    await user.click(await screen.findByRole('button', { name: 'Remove key' }))
+    await user.click(screen.getByRole('button', { name: 'Yes, remove the key' }))
+
+    await waitFor(() => expect(screen.getByLabelText('OpenAI API key')).toHaveFocus())
+  })
+
+  it('the saved key is not kept in memory by the save request', async () => {
+    const user = userEvent.setup()
+    const client = renderSection()
+
+    await user.type(await screen.findByLabelText('OpenAI API key'), KEY)
+    await user.click(screen.getByRole('button', { name: 'Save key' }))
+    await screen.findByText('Saved. Checking the key…')
+
+    const kept = client
+      .getMutationCache()
+      .getAll()
+      .map((m) => JSON.stringify(m.state.variables))
+    expect(kept.join(' ')).not.toContain(KEY)
   })
 })

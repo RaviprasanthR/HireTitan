@@ -29,14 +29,42 @@ const SOURCE: Record<string, string> = {
 }
 
 type Beat = { label: string; live: boolean; tone: string }
-const FLAT: Beat = { label: 'AI key missing: flat line', live: false, tone: 'ht-ecg-grey' }
+const FLAT: Beat = {
+  label: 'AI key missing: flat line',
+  live: false,
+  tone: 'ht-ecg-grey',
+}
 const BEAT: Record<string, Beat> = {
-  working: { label: 'AI key working: heartbeat', live: true, tone: 'ht-ecg-green' },
-  unknown: { label: 'AI key being checked: heartbeat', live: true, tone: 'ht-ecg-blue' },
-  missing: { label: 'AI key missing: flat line', live: false, tone: 'ht-ecg-grey' },
-  rejected: { label: 'AI key rejected: flat line', live: false, tone: 'ht-ecg-red' },
-  unreachable: { label: 'AI provider unreachable: flat line', live: false, tone: 'ht-ecg-yellow' },
-  out_of_credit: { label: 'AI key out of credit: flat line', live: false, tone: 'ht-ecg-orange' },
+  working: {
+    label: 'AI key working: heartbeat',
+    live: true,
+    tone: 'ht-ecg-green',
+  },
+  unknown: {
+    label: 'AI key being checked: heartbeat',
+    live: true,
+    tone: 'ht-ecg-blue',
+  },
+  missing: {
+    label: 'AI key missing: flat line',
+    live: false,
+    tone: 'ht-ecg-grey',
+  },
+  rejected: {
+    label: 'AI key rejected: flat line',
+    live: false,
+    tone: 'ht-ecg-red',
+  },
+  unreachable: {
+    label: 'AI provider unreachable: flat line',
+    live: false,
+    tone: 'ht-ecg-yellow',
+  },
+  out_of_credit: {
+    label: 'AI key out of credit: flat line',
+    live: false,
+    tone: 'ht-ecg-orange',
+  },
 }
 
 // one beat: flat, a small bump, the spike down and up, flat again; drawn twice across the box
@@ -82,12 +110,19 @@ export function AiSection() {
   const [saved, setSaved] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const removeButton = useRef<HTMLButtonElement>(null)
+  const keyField = useRef<HTMLInputElement>(null)
   const returnFocus = useRef(false)
+  const focusField = useRef(false)
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['status'] })
 
+  // the key is read from the field when sent, never handed to the mutation as its variables,
+  // so the query cache keeps no copy of it after saving
   const save = useMutation({
-    mutationFn: (value: string) =>
-      apiFetch('/settings/ai-key', { method: 'PUT', json: { key: value } }),
+    mutationFn: () =>
+      apiFetch('/settings/ai-key', {
+        method: 'PUT',
+        json: { key: key.trim() },
+      }),
     onSuccess: async () => {
       setKey('') // the key never stays on the page
       setSaved(true)
@@ -101,6 +136,7 @@ export function AiSection() {
       return apiFetch('/settings/ai-key', { method: 'DELETE' })
     },
     onSuccess: async () => {
+      focusField.current = true // the button that had the focus is gone
       setConfirming(false)
       setSaved(false)
       await refresh()
@@ -118,8 +154,15 @@ export function AiSection() {
 
   const ai = status.data?.ai
   const source = ai?.key_source ?? 'none'
-  // "Saved. Checking the key…" shows only until the check has answered
-  const checking = saved && ai?.status === 'unknown'
+  // after a save, one status line (always on the page, so each change is announced) says the key
+  // is being checked, then what the check found
+  const result = !saved
+    ? ''
+    : ai?.status === 'unknown'
+      ? 'Saved. Checking the key…'
+      : ai?.status === 'working'
+        ? 'Saved. The key works.'
+        : `Saved. ${KEY_STATUS[ai?.status ?? ''] ?? 'The key could not be checked'}.`
   // Cancel puts the focus back on the button that opened the question
   useEffect(() => {
     if (!confirming && returnFocus.current) {
@@ -128,13 +171,19 @@ export function AiSection() {
     }
   }, [confirming])
   const editable = ai !== undefined && source !== 'env' && ai.provider !== 'fake'
+  useEffect(() => {
+    if (focusField.current && source === 'none') {
+      focusField.current = false
+      keyField.current?.focus()
+    }
+  }, [source])
 
   function submit(event: React.FormEvent) {
     event.preventDefault()
     if (save.isPending) return
     setError(null)
     setSaved(false)
-    save.mutate(key.trim())
+    save.mutate()
   }
 
   return (
@@ -178,6 +227,7 @@ export function AiSection() {
               </label>
               <div className="flex flex-wrap gap-3">
                 <input
+                  ref={keyField}
                   id="ai-key"
                   type="password"
                   autoComplete="off"
@@ -198,11 +248,9 @@ export function AiSection() {
               </p>
             </form>
           )}
-          {checking && (
-            <p role="status" aria-label="Key result" className="text-sm text-success">
-              Saved. Checking the key…
-            </p>
-          )}
+          <p role="status" aria-label="Key result" className="text-sm empty:hidden">
+            {result}
+          </p>
           {error && (
             <p role="alert" className="text-sm text-danger">
               {error}

@@ -205,7 +205,10 @@ export function SearchPanel() {
   // The run that was the latest when "Search now" was pressed. Until a different run shows up (or
   // the start fails, or the server has answered and the latest run is read again) the panel is
   // already searching, so there is no moment that looks idle or shows "0 of 0" (US2 AS1).
-  const [clicked, setClicked] = useState<{ base: string | null; mail: boolean } | null>(null)
+  const [clicked, setClicked] = useState<{
+    base: string | null
+    mail: boolean
+  } | null>(null)
   const launcher = clicked?.mail ? startMail : start
   const run = latest.data ?? null
   const active = run !== null && run.outcome === null
@@ -222,12 +225,14 @@ export function SearchPanel() {
   const stopping = active && run !== null && (run.stop_requested || stop.isSuccess)
 
   const begin = () => {
+    stop.reset() // a stop pressed on the last run is not this run's
     start.reset()
     startMail.reset()
     setClicked({ base: run?.id ?? null, mail: false })
     start.mutate('rules_and_ai') // the AI always judges; without a working key the jobs say so
   }
   const beginMail = () => {
+    stop.reset()
     start.reset()
     startMail.reset()
     setClicked({ base: run?.id ?? null, mail: true })

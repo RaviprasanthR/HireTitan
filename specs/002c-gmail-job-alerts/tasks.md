@@ -175,7 +175,7 @@
 - [x] T056 [US6] Docs: ADR-09 amended in `docs/architecture.md` (key on the page in a secrets file; `.env` still wins), `docs/user-guide/getting-started.md` (key in Settings), `docs/gmail-setup.md` (the steps match the page), README.
 - [x] T057 [US6] Review: security reviewer (key storage, redaction, no echo), React reviewer (layout, accessibility, step logic); fix; note in `docs/CONTEXT.md`; rebuild the dev stack for Ravi to look at.
 
-- [ ] T050 Final review (python/FastAPI, database, security, React reviewers over the whole branch); fix; then full gates: backend suite with the coverage gate, ruff, `ruff format --check`, `mypy --strict`, `lint-imports`, licence gate; frontend tests, tsc, eslint, `npm run build`; all Playwright journeys. Push and open the PR to `master` only when Ravi asks.
+- [x] T050 Final review (python/FastAPI, database, security, React reviewers over the whole branch); fix; then full gates: backend suite with the coverage gate, ruff, `ruff format --check`, `mypy --strict`, `lint-imports`, licence gate; frontend tests, tsc, eslint, `npm run build`; all Playwright journeys. Push and open the PR to `master` only when Ravi asks.
 
 ---
 
