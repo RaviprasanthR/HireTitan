@@ -521,3 +521,221 @@ describe('GmailSection', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/not a google client file/i)
   })
 })
+
+describe('GmailSection: the set-up as steps (US6)', () => {
+  function steps() {
+    // the steps themselves, not the items of a list inside a step
+    return Array.from(screen.getByRole('list', { name: 'Gmail set-up steps' }).children) as HTMLElement[]
+  }
+
+  function step(n: number): HTMLElement {
+    const found = steps()[n]
+    if (!found) throw new Error(`no step ${n + 1}`)
+    return found
+  }
+
+  it('US6 AS5 a fresh install shows four steps, the first open and the rest waiting', async () => {
+    renderSection()
+
+    await screen.findByRole('list', { name: 'Gmail set-up steps' })
+    const [client, connect, senders, check] = [step(0), step(1), step(2), step(3)]
+    expect(client).toHaveAttribute('aria-current', 'step')
+    expect(within(client).getByRole('heading', { name: 'Google client' })).toBeInTheDocument()
+    expect(within(client).getByLabelText('Client ID')).toBeInTheDocument() // open
+    expect(within(connect).getByText('Waits for Google client')).toBeInTheDocument()
+    expect(within(senders).getByText('Waits for Connect')).toBeInTheDocument()
+    expect(within(check).getByText('Waits for Connect')).toBeInTheDocument()
+  })
+
+  it('US6 AS5 saving the client marks it done and opens Connect', async () => {
+    const user = userEvent.setup()
+    renderSection()
+
+    await user.type(await screen.findByLabelText('Client ID'), 'client-id-0123456789')
+    await user.type(screen.getByLabelText('Client secret'), 'client-secret-0123456789')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => expect(step(1)).toHaveAttribute('aria-current', 'step'))
+    expect(within(step(0)).getByText('Done')).toBeInTheDocument()
+    expect(within(step(0)).getByText('Client ID and secret saved.')).toBeInTheDocument()
+    expect(within(step(1)).getByRole('button', { name: 'Connect Gmail' })).toBeInTheDocument()
+  })
+
+  it('US6 AS6 connected: the senders step shows a summary and opens to the list', async () => {
+    connection = { ...base, state: 'connected', address: 'jobseeker@example.invalid', credentials_set: true }
+    const user = userEvent.setup()
+    calls = stubApi((call) => {
+      if (call.path === '/mail/connection') return connection
+      if (call.path === '/mail/senders')
+        return {
+          items: [
+            { id: 's1', address: 'jobalerts-noreply@linkedin.com', site: 'linkedin', built_in: true, enabled: true },
+            { id: 's2', address: 'naukrialerts@naukri.com', site: 'naukri', built_in: true, enabled: false },
+          ],
+        }
+      return undefined
+    })
+    renderSection()
+
+    await screen.findByText(/1 of 2 senders on/)
+    const senders = step(2)
+    await user.click(within(senders).getByRole('button', { name: 'Show senders' }))
+
+    expect(await within(senders).findByRole('group', { name: 'LinkedIn' })).toBeInTheDocument()
+    expect(within(senders).getByRole('button', { name: 'Hide senders' })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    )
+  })
+
+  it('US6 AS5 connected and never checked: the first check is next and can be started', async () => {
+    connection = { ...base, state: 'connected', address: 'jobseeker@example.invalid', credentials_set: true }
+    const user = userEvent.setup()
+    calls = stubApi((call) => {
+      if (call.path === '/mail/connection') return connection
+      if (call.method === 'POST' && call.path === '/mail/checks')
+        return new Response(JSON.stringify({ search_run_id: 'r1' }), { status: 202 })
+      return undefined
+    })
+    renderSection()
+
+    await screen.findByRole('list', { name: 'Gmail set-up steps' })
+    const check = step(3)
+    expect(check).toHaveAttribute('aria-current', 'step')
+    await user.click(within(check).getByRole('button', { name: 'Check job-alert mail' }))
+
+    await waitFor(() =>
+      expect(calls.some((c) => c.method === 'POST' && c.path === '/mail/checks')).toBe(true),
+    )
+    expect(await within(check).findByRole('link', { name: 'Explore' })).toHaveAttribute('href', '/')
+  })
+
+  it('US6 AS5 everything done: no step is current, each keeps its summary', async () => {
+    connection = {
+      ...base,
+      state: 'connected',
+      address: 'jobseeker@example.invalid',
+      credentials_set: true,
+      last_check_started_at: '2026-11-22T12:00:00Z',
+    }
+    renderSection()
+
+    await screen.findByRole('list', { name: 'Gmail set-up steps' })
+    expect(steps().filter((s) => s.getAttribute('aria-current') === 'step')).toEqual([])
+    expect(screen.getByText('Connected as jobseeker@example.invalid')).toBeInTheDocument()
+    expect(screen.getByText(/Last check:/)).toBeInTheDocument()
+    expect(screen.getAllByText('Done')).toHaveLength(4)
+  })
+})
+
+describe('GmailSection: review fixes', () => {
+  function steps() {
+    return Array.from(
+      screen.getByRole('list', { name: 'Gmail set-up steps' }).children,
+    ) as HTMLElement[]
+  }
+  const linkedin = {
+    items: [
+      { id: 's1', address: 'a@linkedin.com', site: 'linkedin', built_in: true, enabled: true },
+    ],
+  }
+
+  it('after Disconnect an opened step closes and the new current step opens', async () => {
+    connection = {
+      ...base,
+      state: 'connected',
+      address: 'jobseeker@example.invalid',
+      credentials_set: true,
+    }
+    const user = userEvent.setup()
+    calls = stubApi((call) => {
+      if (call.method === 'DELETE' && call.path === '/mail/connection') {
+        connection = { ...base, credentials_set: true }
+        return { revoked: true }
+      }
+      if (call.path === '/mail/connection') return connection
+      if (call.path === '/mail/senders') return linkedin
+      return undefined
+    })
+    renderSection()
+
+    await user.click(await screen.findByRole('button', { name: 'Show senders' }))
+    await screen.findByRole('group', { name: 'LinkedIn' })
+    await user.click(screen.getByRole('button', { name: 'Disconnect' }))
+    await user.click(await screen.findByRole('button', { name: 'Disconnect Gmail' }))
+
+    await waitFor(() =>
+      expect(screen.queryByRole('group', { name: 'LinkedIn' })).not.toBeInTheDocument(),
+    )
+    const connect = steps()[1] as HTMLElement
+    expect(connect).toHaveAttribute('aria-current', 'step')
+    expect(within(connect).getByRole('button', { name: 'Connect Gmail' })).toBeInTheDocument()
+  })
+
+  it('access ended: the summary does not say connected, and the client can be changed', async () => {
+    connection = {
+      ...base,
+      state: 'needs_reconnect',
+      address: 'jobseeker@example.invalid',
+      credentials_set: true,
+      last_error: 'Gmail access has ended. Connect again.',
+    }
+    renderSection()
+
+    expect(
+      await screen.findByText('Was connected as jobseeker@example.invalid.'),
+    ).toBeInTheDocument()
+    expect(screen.queryByText('Connected as jobseeker@example.invalid')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Change client ID and secret' })).toBeInTheDocument()
+  })
+
+  it('once checked, the check step offers the check itself, not a second click', async () => {
+    connection = {
+      ...base,
+      state: 'connected',
+      address: 'jobseeker@example.invalid',
+      credentials_set: true,
+      last_check_started_at: '2026-11-22T12:00:00Z',
+    }
+    renderSection()
+
+    await screen.findByRole('list', { name: 'Gmail set-up steps' })
+    const check = steps()[3] as HTMLElement
+    expect(within(check).getByRole('button', { name: 'Check job-alert mail' })).toBeInTheDocument()
+  })
+
+  it('Disconnect is offered once, in the Connect step', async () => {
+    connection = {
+      ...base,
+      state: 'connected',
+      address: 'jobseeker@example.invalid',
+      credentials_set: true,
+    }
+    renderSection()
+
+    await screen.findByText('Connected as jobseeker@example.invalid')
+    expect(screen.getAllByRole('button', { name: 'Disconnect' })).toHaveLength(1)
+  })
+
+  it('the senders step has one heading, the step title', async () => {
+    connection = {
+      ...base,
+      state: 'connected',
+      address: 'jobseeker@example.invalid',
+      credentials_set: true,
+    }
+    const user = userEvent.setup()
+    calls = stubApi((call) => {
+      if (call.path === '/mail/connection') return connection
+      if (call.path === '/mail/senders') return linkedin
+      return undefined
+    })
+    renderSection()
+
+    await user.click(await screen.findByRole('button', { name: 'Show senders' }))
+    expect(
+      screen.queryByRole('heading', { name: 'Senders HireTitan reads' }),
+    ).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Senders' })).toBeInTheDocument()
+  })
+})

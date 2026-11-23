@@ -22,6 +22,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, Response
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.types import ASGIApp, Lifespan, Message, Receive, Scope, Send
 
 from hiretitan.drafts.api.drafts import DraftsApiDeps, create_drafts_router
@@ -39,6 +40,7 @@ from hiretitan.mail_wiring import (
 from hiretitan.platform.clock import SystemClock
 from hiretitan.platform.config.settings import Settings, get_settings
 from hiretitan.platform.db import create_engine, session_factory
+from hiretitan.platform.llm.key_store import key_store_for
 from hiretitan.platform.runtime.api import create_events_router, create_runs_router
 from hiretitan.platform.runtime.events import EventPublisher
 from hiretitan.platform.runtime.procrastinate import CHECK_PROVIDER_KEY_TASK, create_runtime
@@ -72,6 +74,7 @@ from hiretitan.search_wiring import (
     seed_companies,
 )
 from hiretitan.seed_dir import resolve_seed_dir
+from hiretitan.setup.api.ai_key import AiKeyApiDeps, create_ai_key_router
 from hiretitan.setup.api.data import DataApiDeps, create_data_router
 from hiretitan.setup.api.onboarding import OnboardingApiDeps, create_onboarding_router
 from hiretitan.setup.api.review_items import ReviewItemsApiDeps, create_review_items_router
@@ -171,6 +174,11 @@ def create_app(
         BodyLimitMiddleware, path=f"{API_PREFIX}/resumes", limit=MAX_BYTES + MULTIPART_OVERHEAD
     )
     app.add_middleware(SecurityHeadersMiddleware)
+    # outermost: a request for any other name never reaches a route (002c US6 review)
+    app.add_middleware(
+        TrustedHostMiddleware,
+        allowed_hosts=[h.strip() for h in settings.allowed_hosts.split(",") if h.strip()],
+    )
     app.add_exception_handler(RequestValidationError, _validation_handler)
     app.add_exception_handler(StarletteHTTPException, _http_handler)
     app.add_exception_handler(ProblemError, _problem_handler)
@@ -209,6 +217,12 @@ def build_app(settings: Settings | None = None) -> FastAPI:
     )
 
     provider = "fake" if settings.llm == "fake" else "openai"
+    # the AI key saved from Settings (002c US6); the fake AI has none to set
+    keys = (
+        None
+        if settings.llm == "fake"
+        else key_store_for(settings.data_dir, settings.openai_api_key)
+    )
     clock = SystemClock()
 
     async def enqueue_key_check() -> None:
@@ -310,8 +324,10 @@ def build_app(settings: Settings | None = None) -> FastAPI:
                 provider=provider,
                 facts=RepoFacts,
                 enqueue_key_check=enqueue_key_check,
+                key_source=(lambda: keys.current()[1]) if keys else (lambda: "env"),
             )
         ),
+        create_ai_key_router(AiKeyApiDeps(keys=keys, enqueue_key_check=enqueue_key_check)),
         create_onboarding_router(
             OnboardingApiDeps(
                 sessions=deps.sessions,
@@ -340,6 +356,7 @@ def build_app(settings: Settings | None = None) -> FastAPI:
                     mail_seed=SEED_DIR / "mail_senders.yaml",
                 ),
                 enqueue_key_check=enqueue_key_check,
+                forget_secrets=keys.forget if keys else (lambda: None),
             )
         ),
     ]

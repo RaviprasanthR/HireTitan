@@ -54,27 +54,46 @@ class OpenAiAdapter:
 
     def __init__(
         self,
-        api_key: SecretStr | None,
+        api_key: SecretStr | Callable[[], str | None] | None,
         catalog: ModelCatalog,
         *,
         http_client: httpx2.AsyncClient | None = None,
         on_key_rejected: Callable[[], Awaitable[None]] | None = None,
         on_out_of_credit: Callable[[str], Awaitable[None]] | None = None,
     ) -> None:
-        self._has_key = api_key is not None
+        # The key is asked for on every request, so a key saved in Settings works without a
+        # restart (FR-030); a fixed key (tests, older callers) is wrapped the same way.
+        if callable(api_key):
+            self._key: Callable[[], str | None] = api_key
+        else:
+            fixed = api_key.get_secret_value() if api_key else None
+            self._key = lambda: fixed
         self._catalog = catalog
         self._on_key_rejected = on_key_rejected
         self._on_out_of_credit = on_out_of_credit
-        self._client = openai.AsyncOpenAI(
-            api_key=api_key.get_secret_value() if api_key else "unset",
-            base_url=allowed_base_url("api.openai.com"),
-            max_retries=0,
-            timeout=_TIMEOUT_SECONDS,
-            http_client=http_client,
-        )
+        self._http_client = http_client
+        self._clients: dict[str, openai.AsyncOpenAI] = {}
+
+    @property
+    def _client(self) -> openai.AsyncOpenAI:
+        """The SDK client for the current key (one per key; an old key's client is dropped)."""
+        key = self._key()
+        if not key:
+            raise AiUnavailable("key_missing")
+        client = self._clients.get(key)
+        if client is None:
+            client = openai.AsyncOpenAI(
+                api_key=key,
+                base_url=allowed_base_url("api.openai.com"),
+                max_retries=0,
+                timeout=_TIMEOUT_SECONDS,
+                http_client=self._http_client,
+            )
+            self._clients = {key: client}
+        return client
 
     async def generate[T: BaseModel](self, req: LlmRequest[T]) -> LlmResult[T]:
-        if not self._has_key:
+        if not self._key():
             raise AiUnavailable("key_missing")
         model = self._catalog.model_for(PROVIDER, req.tier)
         started = time.perf_counter()

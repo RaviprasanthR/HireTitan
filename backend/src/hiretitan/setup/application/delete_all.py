@@ -32,8 +32,10 @@ async def delete_all(
     store: DeleteAllStore,
     storage: FileWiper,
     enqueue_key_check: Callable[[], Awaitable[None]],
+    forget_secrets: Callable[[], None] = lambda: None,
 ) -> None:
     await store.cancel_open_runs()
     await store.wipe_and_reseed()
     storage.delete_all()
+    forget_secrets()
     await enqueue_key_check()

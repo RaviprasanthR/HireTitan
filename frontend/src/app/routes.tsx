@@ -59,6 +59,7 @@ export const routes: RouteObject[] = [
           { path: '/jobs/:id/resume', element: <TailoredResumePage /> },
           { path: '/review', element: <ReviewPage /> },
           { path: '/settings', element: <SettingsPage /> },
+          { path: '/settings/:tab', element: <SettingsPage /> },
           { path: '*', element: <NotFoundPage /> },
         ],
       },

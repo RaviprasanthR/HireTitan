@@ -29,10 +29,9 @@ from hiretitan.platform.llm.factory import build_llm
 from hiretitan.platform.llm.models import ModelCatalog
 from hiretitan.platform.llm.prompts import PromptRegistry
 from hiretitan.platform.runtime.checkpointer import open_checkpointer
-from hiretitan.platform.runtime.domain.run_state import PauseReason
 from hiretitan.platform.runtime.events import EventPublisher, run_notifier
 from hiretitan.platform.runtime.procrastinate import Runtime, create_runtime
-from hiretitan.platform.runtime.resume_paused import resume_on_startup, resume_paused_runs
+from hiretitan.platform.runtime.resume_paused import resume_after_key_works, resume_on_startup
 from hiretitan.platform.runtime.runner import WorkflowDef, WorkflowRunner
 from hiretitan.platform.security.logging import configure_logging
 from hiretitan.platform.storage.local import LocalFileStorage
@@ -89,10 +88,12 @@ async def run_worker(settings: Settings, *, wait: bool = True) -> None:
     built = build_llm(settings, sessions, publisher.publish)
     runtime.provider_status = built.provider_status
 
-    async def requeue_out_of_credit() -> int:
-        return await resume_paused_runs(sessions, runtime.queue, PauseReason.out_of_credit)
+    async def requeue_paused() -> int:
+        # every run a key problem paused: out of credit, and a missing or rejected key that was
+        # then saved in Settings (no restart, FR-030)
+        return await resume_after_key_works(sessions, runtime.queue)
 
-    runtime.after_key_works = requeue_out_of_credit
+    runtime.after_key_works = requeue_paused
     provider = "fake" if settings.llm == "fake" else "openai"
     ingest_deps = IngestDeps(
         sessions=sessions,

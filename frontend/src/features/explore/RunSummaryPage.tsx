@@ -107,7 +107,7 @@ function MailNote({ mail, jobsFound }: { mail: MailPart; jobsFound: number }) {
     <p role="status" aria-label="Mail check result" className="text-sm">
       {text}{' '}
       {mail.emails_listed === 0 && (
-        <Link to="/settings" className="text-link underline">
+        <Link to="/settings/gmail" className="text-link underline">
           Open the sender list
         </Link>
       )}
@@ -203,7 +203,7 @@ export function RunSummaryPage() {
       )}
       {mail?.ended === 'access_ended' && (
         <p className="text-sm">
-          <Link to="/settings" className="text-link underline">
+          <Link to="/settings/gmail" className="text-link underline">
             Open Settings to connect Gmail again
           </Link>
         </p>

@@ -13,7 +13,7 @@ You need [Docker](https://www.docker.com/products/docker-desktop/).
 
 ```bash
 cp .env.example .env        # Windows PowerShell: Copy-Item .env.example .env
-# edit .env: set POSTGRES_PASSWORD (and OPENAI_API_KEY, or leave it empty to type your profile in by hand)
+# edit .env: set POSTGRES_PASSWORD. Your OpenAI key can go in .env (OPENAI_API_KEY) or be typed in Settings later
 docker compose up --build
 ```
 

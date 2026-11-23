@@ -229,7 +229,7 @@ describe('SearchPanel: mail and company search together', () => {
 
     expect(await screen.findByRole('link', { name: /settings/i })).toHaveAttribute(
       'href',
-      '/settings',
+      '/settings/gmail',
     )
   })
 })
@@ -354,7 +354,7 @@ describe('RunSummaryPage: mail run', () => {
     expect(note).toHaveTextContent('last 24 hours')
     expect(within(note).getByRole('link', { name: /sender list/i })).toHaveAttribute(
       'href',
-      '/settings',
+      '/settings/gmail',
     )
   })
 
@@ -432,7 +432,7 @@ describe('RunSummaryPage: mail run', () => {
     )
 
     expect(await screen.findByText('Gmail access has ended.')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /settings/i })).toHaveAttribute('href', '/settings')
+    expect(screen.getByRole('link', { name: /settings/i })).toHaveAttribute('href', '/settings/gmail')
   })
 
   it('a company search keeps its own summary', async () => {

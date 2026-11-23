@@ -32,6 +32,12 @@ class Settings(BaseSettings):
     openai_api_key: SecretStr | None = Field(default=None, validation_alias="OPENAI_API_KEY")
     data_dir: Path = Field(default=Path("./data"), validation_alias="HIRETITAN_DATA_DIR")
     host: str = Field(default="127.0.0.1", validation_alias="HIRETITAN_HOST")
+    # The names the API answers to (the Host header). There is no login and the port is published
+    # on localhost only; refusing any other name stops a web page that points its own name at
+    # 127.0.0.1 ("DNS rebinding") from reaching the API. "test" is the reserved name tests use.
+    allowed_hosts: str = Field(
+        default="127.0.0.1,localhost,[::1],::1,test", validation_alias="HIRETITAN_ALLOWED_HOSTS"
+    )
     port: int = Field(default=8000, ge=1, le=65535, validation_alias="HIRETITAN_PORT")
     llm: LlmMode = Field(default="openai", validation_alias="HIRETITAN_LLM")
     frontend_dist: Path | None = Field(default=None, validation_alias="HIRETITAN_FRONTEND_DIST")

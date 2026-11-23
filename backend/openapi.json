@@ -35,6 +35,16 @@
             ],
             "title": "Checked At"
           },
+          "key_source": {
+            "default": "env",
+            "enum": [
+              "env",
+              "page",
+              "none"
+            ],
+            "title": "Key Source",
+            "type": "string"
+          },
           "message": {
             "anyOf": [
               {
@@ -2437,6 +2447,41 @@
           "first_search_id"
         ],
         "title": "JobDetailOut",
+        "type": "object"
+      },
+      "KeyIn": {
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "maxLength": 1000,
+            "title": "Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key"
+        ],
+        "title": "KeyIn",
+        "type": "object"
+      },
+      "KeySaved": {
+        "properties": {
+          "key_source": {
+            "const": "page",
+            "title": "Key Source",
+            "type": "string"
+          },
+          "status": {
+            "const": "unknown",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key_source",
+          "status"
+        ],
+        "title": "KeySaved",
         "type": "object"
       },
       "KeywordMatchOut": {
@@ -10443,6 +10488,59 @@
         "summary": "Stop",
         "tags": [
           "search"
+        ]
+      }
+    },
+    "/api/v1/settings/ai-key": {
+      "delete": {
+        "operationId": "remove_key_api_v1_settings_ai_key_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Remove Key",
+        "tags": [
+          "settings"
+        ]
+      },
+      "put": {
+        "operationId": "save_key_api_v1_settings_ai_key_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KeyIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KeySaved"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Save Key",
+        "tags": [
+          "settings"
         ]
       }
     },

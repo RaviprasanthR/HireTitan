@@ -32,7 +32,7 @@ export function SetupGate() {
   const { step } = query.data
   if (step === 'done') return <Outlet />
 
-  if (pathname === '/settings') {
+  if (pathname === '/settings' || pathname.startsWith('/settings/')) {
     return (
       <SetupLayout closeTo="/">
         <SettingsPage />

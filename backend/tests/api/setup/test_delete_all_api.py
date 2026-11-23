@@ -21,6 +21,7 @@ from hiretitan.platform.clock import FakeClock
 from hiretitan.platform.config.settings import Settings
 from hiretitan.platform.llm.infra.calls_repo import CallsRepo, LlmCallRecord
 from hiretitan.platform.llm.infra.provider_status_repo import ProviderStatusRepo
+from hiretitan.platform.llm.key_store import KeyStore
 from hiretitan.platform.runtime.domain.run_state import RunStatus
 from hiretitan.platform.runtime.infra.runs_repo import RunsRepo
 from hiretitan.platform.storage.local import LocalFileStorage
@@ -90,6 +91,9 @@ async def env(
                     storage=storage,
                     store=partial(SqlDeleteAllStore, company_seed=seed),
                     enqueue_key_check=enqueue_key_check,
+                    forget_secrets=KeyStore(
+                        tmp_path / "data" / "secrets" / "llm.json", None
+                    ).forget,
                 )
             ),
             create_onboarding_router(
@@ -417,3 +421,13 @@ async def test_SC005_delete_all_removes_resume_choices_and_last_choice(env: Env)
     async with env.sessions() as session:
         assert (await session.scalars(select(PipelineDetailsRow))).all() == []  # no name, no note
         assert (await session.scalars(select(PipelineSettingsRow))).all() == []  # no last choice
+
+
+async def test_FR033_delete_all_removes_saved_key(env: Env) -> None:
+    keys = KeyStore(env.data_dir / "secrets" / "llm.json", None)
+    keys.save("sk-test-0123456789abcdefghij")
+
+    response = await env.client.post("/api/v1/data/delete-all", json={"confirm": "DELETE"})
+
+    assert response.status_code == 204
+    assert keys.current() == (None, "none")

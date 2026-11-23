@@ -10,8 +10,10 @@ Cutshort send you, and add those jobs to Explore. This page is the one-time setu
 
 - It asks Google for **read-only** access (`gmail.readonly`) and nothing wider. If Google ever
   grants more than that, HireTitan refuses it and hands it back at once.
-- It only asks Gmail for mail **from the sender addresses on the list in Settings** (you can switch
-  any of them off or add your own), from the **last 24 hours** of each check.
+- It only asks Gmail for mail **from the sender addresses on the list in Settings, and from each
+  job site's own domain** (for example `naukri.com`), from the **last 24 hours** of each check. Mail
+  from a site's domain that holds no job alert is dropped. You can switch any site off, or add your
+  own addresses.
 - It **never sends, deletes, labels or changes** a message, and it does not keep the emails: only a
   note of which messages it has read, so none is read twice.
 - Your Google client ID, client secret and sign-in token stay in your own data folder
@@ -46,8 +48,9 @@ Google: the client stays in "Testing" mode with you as its only user.
    client_secret.json** and choose the JSON file you downloaded in step 6 (Google offers a
    *Download JSON* button when the client is created), or paste the **Client ID** and **Client
    secret** by hand. The file is read in your browser and only the two values are used. Press
-   **Save**, then **Connect Gmail**. Settings also lists these steps with links to each Google page
-   and a **Copy** button for the redirect address.
+   **Save**, then **Connect Gmail**. Settings → Gmail job alerts shows the whole set-up as four
+   steps (Google client, Connect, Senders, First check), each marked done, next or waiting; the
+   first step lists these Google pages with links and a **Copy** button for the redirect address.
 9. **Allow access in Google.** Google warns that the app is not verified; that is expected for your
    own client in Testing mode. Choose *Continue*, check that the only permission listed is
    *View your email messages and settings*, and allow it. You land back in HireTitan, which says

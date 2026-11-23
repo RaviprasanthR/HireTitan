@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertDialog } from 'radix-ui'
 import { useState } from 'react'
-import { useSearchParams } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { ApiError, apiFetch } from '@/api/client'
 import type { components } from '@/api/schema'
 import { Button } from '@/components/ui/button'
-import { formatDate } from '../explore/api'
+import { formatDate, useStartMailCheck } from '../explore/api'
+import { type GmailStep, type StepId, type StepState, gmailSteps } from './gmailSteps'
 import { MailSenders } from './MailSenders'
 
 type Connection = components['schemas']['ConnectionModel']
@@ -111,8 +112,8 @@ function readText(file: File): Promise<string> {
 function CopyAddress({ address }: { address: string }) {
   const [copied, setCopied] = useState(false)
   return (
-    <span className="inline-flex items-center gap-2">
-      <code>{address}</code>
+    <span className="inline-flex max-w-full flex-wrap items-center gap-2">
+      <code className="break-all">{address}</code>
       <Button
         type="button"
         variant="outline"
@@ -338,7 +339,7 @@ function ConnectButton({ label }: { label: string }) {
     <div className="space-y-2">
       <Button
         type="button"
-        disabled={connect.isPending || connect.isSuccess}
+        disabled={connect.isPending}
         onClick={() => {
           setError(null)
           connect.mutate()
@@ -374,32 +375,174 @@ function CheckWindow({ connection }: { connection: Connection }) {
   )
 }
 
-/** Settings > Gmail job alerts: save the person's own Google client, connect read-only,
- *  disconnect. Nothing here reads mail (feature 002c, US1). */
+const STEP_LABEL: Record<StepState, string> = { done: 'Done', current: 'Next', waiting: 'Waiting' }
+
+function StepMarker({ number, state }: { number: number; state: StepState }) {
+  return (
+    <span className={`ht-step-marker ht-step-marker-${state}`} aria-hidden="true">
+      {state === 'done' ? '✓' : number}
+    </span>
+  )
+}
+
+function FirstCheck() {
+  const start = useStartMailCheck()
+  return (
+    <div className="space-y-2">
+      <Button
+        type="button"
+        disabled={start.isPending || start.isSuccess}
+        onClick={() => start.mutate()}
+      >
+        Check job-alert mail
+      </Button>
+      {start.isSuccess && (
+        <p role="status" className="text-sm text-success">
+          Checking your mail. The jobs it finds appear in{' '}
+          <Link to="/" className="text-link underline">
+            Explore
+          </Link>
+          .
+        </p>
+      )}
+      {start.isError && (
+        <p role="alert" className="text-sm text-danger">
+          {messageOf(start.error)}
+        </p>
+      )}
+    </div>
+  )
+}
+
+/** Settings > Gmail job alerts: the set-up as ordered steps (Google client, Connect, Senders,
+ *  First check), each done, next or waiting from the app's real state (002c US1, US6). A done
+ *  step keeps a one-line summary and its main action; it can be opened again. */
 export function GmailSection() {
   const connection = useQuery({
     queryKey: CONNECTION_KEY,
     queryFn: () => apiFetch<Connection>('/mail/connection'),
   })
-  const [changing, setChanging] = useState(false)
+  const senders = useQuery({
+    queryKey: ['mail', 'senders'],
+    queryFn: () => apiFetch<{ items: { enabled: boolean }[] }>('/mail/senders'),
+  })
+  // a step the person opened stays open only while the steps stay as they were: after Connect,
+  // Disconnect or a saved client, the page opens the new current step again
+  const [opened, setOpenedState] = useState<{ id: StepId; key: string } | null>(null)
   const [revokeFailed, setRevokeFailed] = useState(false)
   const data = connection.data
+  // an unknown sender list (still loading, or not answered) never blocks the next step
+  const enabled = senders.data ? senders.data.items.filter((s) => s.enabled).length : 1
+  const steps = data ? gmailSteps(data, enabled) : []
+  const current = steps.find((s) => s.state === 'current')?.id
+  const stateKey = steps.map((s) => s.state).join(',')
+  const open = opened && opened.key === stateKey ? opened.id : current
+  const setOpened = (id: StepId | null) => setOpenedState(id ? { id, key: stateKey } : null)
+  const toggle = (id: StepId) => setOpened(open === id ? null : id)
+
+  function summary(step: GmailStep, conn: Connection) {
+    switch (step.id) {
+      case 'client':
+        if (conn.credentials_from_environment)
+          return 'The Google client ID and secret are set in the environment.'
+        return step.state === 'done' ? 'Client ID and secret saved.' : null
+      case 'connect':
+        if (conn.state === 'needs_reconnect') return `Was connected as ${conn.address}.`
+        return conn.state === 'not_connected' ? 'Not connected' : `Connected as ${conn.address}`
+      case 'senders':
+        return senders.data
+          ? `${enabled} of ${senders.data.items.length} senders on, plus each site's own domain.`
+          : null
+      case 'check':
+        return conn.state === 'not_connected' ? null : <CheckWindow connection={conn} />
+    }
+  }
+
+  function body(step: GmailStep, conn: Connection) {
+    switch (step.id) {
+      case 'client':
+        return conn.credentials_from_environment ? null : (
+          <Credentials
+            connection={conn}
+            onDone={() => setOpened(null)}
+            onCancel={conn.credentials_set ? () => setOpened(null) : undefined}
+          />
+        )
+      case 'connect':
+        if (conn.state === 'connected') return null
+        return (
+          <div className="space-y-3">
+            {conn.state === 'needs_reconnect' && (
+              <p role="alert" className="text-sm text-danger">
+                {conn.last_error ?? step.note ?? 'Gmail access has ended. Connect again.'}
+              </p>
+            )}
+            {conn.credentials_set || conn.credentials_from_environment ? (
+              <ConnectButton
+                label={conn.state === 'needs_reconnect' ? 'Reconnect Gmail' : 'Connect Gmail'}
+              />
+            ) : (
+              <p className="text-sm text-muted-small">Save your Google client first (step 1).</p>
+            )}
+          </div>
+        )
+      case 'senders':
+        return <MailSenders heading={false} />
+      case 'check':
+        return conn.state === 'connected' ? <FirstCheck /> : null
+    }
+  }
+
+  function actions(step: GmailStep, conn: Connection) {
+    // the client can be changed whenever Gmail is not connected (a rotated secret is a common
+    // reason a reconnect fails)
+    if (step.id === 'client' && step.state === 'done' && conn.state !== 'connected') {
+      if (conn.credentials_from_environment || open === 'client') return null
+      return (
+        <Button type="button" variant="outline" size="xs" onClick={() => setOpened('client')}>
+          Change client ID and secret
+        </Button>
+      )
+    }
+    if (step.id === 'connect' && conn.state !== 'not_connected')
+      return <Disconnect onDone={(revoked) => setRevokeFailed(!revoked)} />
+    if (step.id === 'senders' && step.state === 'done')
+      return (
+        <Button
+          type="button"
+          variant="outline"
+          size="xs"
+          aria-expanded={open === 'senders'}
+          onClick={() => toggle('senders')}
+        >
+          {open === 'senders' ? 'Hide senders' : 'Show senders'}
+        </Button>
+      )
+    if (step.id === 'check' && step.state === 'done') return <FirstCheck />
+    return null
+  }
 
   return (
-    <section className="space-y-3" aria-labelledby="gmail-heading">
-      <h2 id="gmail-heading" className="text-lg font-medium">
-        Gmail job alerts
-      </h2>
-      <p className="text-sm text-muted-small">
-        HireTitan can only read the job-alert emails from senders you allow.
-      </p>
-      <p className="text-sm text-muted-small">
-        It never sends, deletes or changes mail, and you can disconnect at any time.{' '}
-        <a href={GMAIL_GUIDE} target="_blank" rel="noreferrer" className="text-link underline">
-          Read the setup guide
-        </a>
-        .
-      </p>
+    <section
+      id="gmail-settings"
+      aria-labelledby="gmail-heading"
+      className="ht-detail-card ht-settings-gmail space-y-4 scroll-mt-6"
+    >
+      <header className="space-y-1">
+        <h2 id="gmail-heading" className="text-lg font-semibold">
+          Gmail job alerts
+        </h2>
+        <p className="text-sm text-muted-small">
+          HireTitan can only read the job-alert emails from senders you allow.
+        </p>
+        <p className="text-sm text-muted-small">
+          It never sends, deletes or changes mail, and you can disconnect at any time.{' '}
+          <a href={GMAIL_GUIDE} target="_blank" rel="noreferrer" className="text-link underline">
+            Read the setup guide
+          </a>
+          .
+        </p>
+      </header>
       <Result state={data?.state} />
       {revokeFailed && data?.state === 'not_connected' && (
         <p role="alert" aria-label="Disconnect result" className="text-sm text-danger">
@@ -409,55 +552,40 @@ export function GmailSection() {
       )}
       {connection.isPending && <p>Loading…</p>}
       {connection.isError && <p role="alert">Could not load the Gmail connection.</p>}
-      {data && data.state === 'not_connected' && (
-        <div className="space-y-3">
-          <p>Not connected</p>
-          {data.credentials_from_environment ? (
-            <p className="text-sm text-muted-small">
-              The Google client ID and secret are set in the environment.
-            </p>
-          ) : (
-            (!data.credentials_set || changing) && (
-              <Credentials
-                connection={data}
-                onDone={() => setChanging(false)}
-                onCancel={changing ? () => setChanging(false) : undefined}
-              />
+      {data && (
+        <ol aria-label="Gmail set-up steps" className="ht-steps">
+          {steps.map((step, index) => {
+            const isOpen = open === step.id
+            const line = summary(step, data)
+            const buttons = actions(step, data)
+            return (
+              <li
+                key={step.id}
+                className={`ht-step ht-step-${step.state}`}
+                aria-current={step.state === 'current' ? 'step' : undefined}
+              >
+                <StepMarker number={index + 1} state={step.state} />
+                <div className="min-w-0 flex-1 space-y-2">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <h3 className="font-medium">{step.title}</h3>
+                    <span className="text-xs uppercase tracking-wide text-muted-small">
+                      {step.state === 'waiting' && step.waitsFor
+                        ? `Waits for ${step.waitsFor}`
+                        : STEP_LABEL[step.state]}
+                    </span>
+                  </div>
+                  {(step.state !== 'done' || isOpen) && (
+                    <p className="text-sm text-muted-small">{step.purpose}</p>
+                  )}
+                  {line && <div className="text-sm">{line}</div>}
+                  {isOpen && body(step, data)}
+                  {buttons && <div className="flex flex-wrap gap-3">{buttons}</div>}
+                </div>
+              </li>
             )
-          )}
-          {data.credentials_set && (
-            <div className="flex flex-wrap gap-3">
-              <ConnectButton label="Connect Gmail" />
-              {!data.credentials_from_environment && !changing && (
-                <Button type="button" variant="outline" onClick={() => setChanging(true)}>
-                  Change client ID and secret
-                </Button>
-              )}
-            </div>
-          )}
-        </div>
+          })}
+        </ol>
       )}
-      {data && data.state === 'connected' && (
-        <div className="space-y-3">
-          <p>{`Connected as ${data.address}`}</p>
-          <CheckWindow connection={data} />
-          <Disconnect onDone={(revoked) => setRevokeFailed(!revoked)} />
-        </div>
-      )}
-      {data && data.state === 'needs_reconnect' && (
-        <div className="space-y-3">
-          <p>{`Connected as ${data.address}`}</p>
-          <CheckWindow connection={data} />
-          <p role="alert" className="text-sm text-danger">
-            {data.last_error ?? 'Gmail access has ended. Connect again.'}
-          </p>
-          <div className="flex flex-wrap gap-3">
-            <ConnectButton label="Reconnect Gmail" />
-            <Disconnect onDone={(revoked) => setRevokeFailed(!revoked)} />
-          </div>
-        </div>
-      )}
-      <MailSenders />
     </section>
   )
 }

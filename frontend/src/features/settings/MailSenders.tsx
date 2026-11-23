@@ -34,7 +34,7 @@ function bySite(senders: Sender[]): [string, Sender[]][] {
 
 /** Settings > Gmail job alerts > Senders: which addresses count as job alerts (feature 002c, US4).
  *  A site's switch covers all its addresses; the person's own addresses can be added and removed. */
-export function MailSenders() {
+export function MailSenders({ heading = true }: { heading?: boolean } = {}) {
   const queryClient = useQueryClient()
   const senders = useQuery({
     queryKey: KEY,
@@ -94,7 +94,7 @@ export function MailSenders() {
 
   return (
     <div className="space-y-3">
-      <h3 className="font-medium">Senders HireTitan reads</h3>
+      {heading && <h3 className="font-medium">Senders HireTitan reads</h3>}
       <p className="text-sm text-muted-small">
         Mail from these addresses, and from each site's own domain (for example naukri.com), is
         looked at; only job alerts in it are kept and the rest is dropped. Switch a site off to

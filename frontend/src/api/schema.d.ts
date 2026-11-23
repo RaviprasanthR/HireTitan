@@ -1336,6 +1336,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/settings/ai-key": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Save Key */
+        put: operations["save_key_api_v1_settings_ai_key_put"];
+        post?: never;
+        /** Remove Key */
+        delete: operations["remove_key_api_v1_settings_ai_key_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/status": {
         parameters: {
             query?: never;
@@ -1408,6 +1426,12 @@ export interface components {
         AiOut: {
             /** Checked At */
             checked_at: string | null;
+            /**
+             * Key Source
+             * @default env
+             * @enum {string}
+             */
+            key_source: "env" | "page" | "none";
             /** Message */
             message: string | null;
             /** Provider */
@@ -2145,6 +2169,24 @@ export interface components {
             work_mode: string | null;
             /** Years Found */
             years_found: string | null;
+        };
+        /** KeyIn */
+        KeyIn: {
+            /** Key */
+            key: string;
+        };
+        /** KeySaved */
+        KeySaved: {
+            /**
+             * Key Source
+             * @constant
+             */
+            key_source: "page";
+            /**
+             * Status
+             * @constant
+             */
+            status: "unknown";
         };
         /** KeywordMatchOut */
         KeywordMatchOut: {
@@ -6355,6 +6397,57 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    save_key_api_v1_settings_ai_key_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KeyIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KeySaved"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_key_api_v1_settings_ai_key_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

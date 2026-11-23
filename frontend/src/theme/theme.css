@@ -350,6 +350,123 @@ button[data-variant="secondary"]:hover:not(:disabled) {
 .ht-detail-description { --accent: #4cc9f0; }
 .ht-detail-sources { --accent: #56d4dd; }
 .ht-detail-interview { --accent: #a371f7; }
+.ht-settings-ai { --accent: #a371f7; }
+.ht-settings-gmail { --accent: #4cc9f0; }
+
+/* Settings index: one tile per part (002c US6) */
+.ht-settings-index-link {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.55rem 0.9rem;
+  border-radius: 0.6rem;
+  border: 1px solid var(--ht-divider);
+  background: rgb(255 255 255 / 0.03);
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+.ht-settings-index-link:hover,
+.ht-settings-index-link:focus-visible {
+  border-color: #4cc9f0;
+  background: rgb(76 201 240 / 0.08);
+}
+
+/* Set-up steps: a numbered marker per step on a line that joins them */
+.ht-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.ht-step {
+  position: relative;
+  display: flex;
+  gap: 0.9rem;
+  padding: 0 0 1.25rem;
+}
+.ht-step:last-child {
+  padding-bottom: 0;
+}
+.ht-step:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  left: 0.875rem;
+  top: 1.9rem;
+  bottom: 0.15rem;
+  width: 2px;
+  background: #5b6b80; /* 3:1 against the card, unlike the divider */
+}
+.ht-step-done:not(:last-child)::before {
+  background: #3fb950;
+}
+.ht-step-marker {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 2px solid #5b6b80;
+  color: var(--ht-muted, #9ba8ab);
+  background: var(--ht-surface, #11212d);
+}
+.ht-step-marker-done {
+  border-color: #3fb950;
+  background: rgb(63 185 80 / 0.18);
+  color: #7ee787;
+}
+.ht-step-marker-current {
+  border-color: #4cc9f0;
+  background: rgb(76 201 240 / 0.15);
+  color: #e8fbff;
+  box-shadow: 0 0 0 4px rgb(76 201 240 / 0.12);
+}
+.ht-step-waiting h3 {
+  color: var(--ht-muted, #9ba8ab);
+}
+/* AI key heartbeat: a moving ECG trace while the key works, a flat line when it does not */
+.ht-ecg {
+  width: 6.5rem;
+  height: 1.5rem;
+  flex: none;
+}
+.ht-ecg path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.ht-ecg-ghost {
+  opacity: 0.2;
+}
+.ht-ecg-live .ht-ecg-trace {
+  stroke-dasharray: 46 194;
+  animation: ht-ecg-run 1.8s linear infinite;
+  filter: drop-shadow(0 0 3px currentColor);
+}
+.ht-ecg-blue.ht-ecg-live .ht-ecg-trace {
+  animation-duration: 2.8s;
+}
+@keyframes ht-ecg-run {
+  from { stroke-dashoffset: 240; }
+  to { stroke-dashoffset: 0; }
+}
+.ht-ecg-green { color: #3fb950; }
+.ht-ecg-blue { color: #79c0ff; }
+.ht-ecg-grey { color: #8c97a9; }
+.ht-ecg-red { color: #ff7b72; }
+.ht-ecg-yellow { color: #f2cc60; }
+.ht-ecg-orange { color: #ffa657; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ht-settings-index-link { transition: none; }
+  .ht-ecg-live .ht-ecg-trace {
+    animation: none;
+    stroke-dasharray: none;
+  }
+}
 .ht-pref-looking { --accent: #f0a35e; }
 .ht-pref-where { --accent: #4cc9f0; }
 .ht-pref-pay { --accent: #3fb950; }

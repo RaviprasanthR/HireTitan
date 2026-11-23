@@ -141,7 +141,7 @@ function Ended({ run }: { run: RunSummary }) {
         {run.stop_message && <p className="text-sm">{run.stop_message}</p>}
         {mail.ended === 'access_ended' && (
           <p className="text-sm">
-            <Link to="/settings" className="text-link underline">
+            <Link to="/settings/gmail" className="text-link underline">
               Open Settings to connect Gmail again
             </Link>
           </p>
