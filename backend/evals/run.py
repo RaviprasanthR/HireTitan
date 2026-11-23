@@ -23,6 +23,8 @@ from pydantic import BaseModel
 
 import hiretitan.prompts as hiretitan_prompts
 from evals.extract_profile.cases import CASES_DIR, EXPECTED_DIR
+from evals.mail_alerts.runner import evaluate as evaluate_mail_alerts
+from evals.mail_alerts.runner import render_report as render_mail_alerts
 from hiretitan.platform.llm.infra.calls_repo import LlmCallRecord
 from hiretitan.platform.llm.models import ModelCatalog, UnknownModelError
 from hiretitan.platform.llm.port import AiUnavailable, LlmPort, LlmRequest
@@ -444,6 +446,16 @@ def _main_drafts(
     return 0 if all(r.passes for r in reports) else 3
 
 
+def _main_mail_alerts(args: argparse.Namespace, today: Callable[[], str]) -> int:
+    """No AI and no credit: the fixed readers over the synthetic alert emails (SC-002)."""
+    report = evaluate_mail_alerts()
+    args.reports_dir.mkdir(parents=True, exist_ok=True)
+    out = args.reports_dir / f"mail_alerts-{today()}.md"
+    out.write_text(render_mail_alerts(report, day=today()), encoding="utf-8")
+    print(f"Report written to {out}")
+    return 0 if report.passes else 3
+
+
 def main(
     argv: Sequence[str] | None = None,
     *,
@@ -459,6 +471,7 @@ def main(
             "extract_jobs_from_page",
             "outreach_drafts",
             "tailor_resume",
+            "mail_alerts",
         ],
     )
     parser.add_argument("--models", default="fast", help="comma list of tiers or model names")
@@ -480,6 +493,8 @@ def main(
     )
     parser.add_argument("--reports-dir", type=Path, default=REPORTS_DIR)
     args = parser.parse_args(argv)
+    if args.eval == "mail_alerts":
+        return _main_mail_alerts(args, today)
 
     catalog = ModelCatalog.load()
     cases = load_cases() if args.eval == "extract_profile" else []
