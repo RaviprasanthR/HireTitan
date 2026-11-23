@@ -68,6 +68,20 @@ class AlertPosting:
     posted_at: datetime | None
     injection_signals: list[dict[str, Any]]
     read_message_id: UUID | None
+    read_by: str = "fixed"  # who gave the company and place: "fixed" or "ai" (FR-013d)
+
+
+@dataclass(frozen=True, slots=True)
+class AlertReading:
+    """A new reading of a job already stored: what may fix its company and place (FR-013d)."""
+
+    company: str | None
+    company_id: UUID | None
+    location_text: str | None
+    city: str | None
+    country: str | None
+    work_mode: str | None
+    read_by: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -112,6 +126,10 @@ class AlertStore(SearchTransaction, Protocol):
     async def jobs_of_company(self, name: str) -> list[KnownJob]: ...
 
     async def company_id(self, name: str) -> UUID | None: ...
+
+    async def refresh_alert_job(self, job_id: UUID, reading: AlertReading) -> None:
+        """Fix the company and place of a job known only from alerts (FR-013d)."""
+        ...
 
     def queue_sighting(self, source_url: str, sighting: Sighting) -> None:
         """Note a sighting of the job this batch inserts under ``source_url``; written with it."""
@@ -210,6 +228,19 @@ async def store_alert_postings(
             seen.append(SeenJob(found, source_url, SOURCE_KIND))
             known_by_key[source_url] = found
             store.queue_sighting_for_job(found, sighting)
+            if company or facts.location_text:
+                await store.refresh_alert_job(
+                    found,
+                    AlertReading(
+                        company=company or None,
+                        company_id=await store.company_id(company) if company else None,
+                        location_text=facts.location_text,
+                        city=facts.city,
+                        country=facts.country,
+                        work_mode=facts.work_mode,
+                        read_by=posting.read_by,
+                    ),
+                )
             matched = next(k for k in matches if k.dedup.id == found)
             if matched.state in PIPELINE_STATES:
                 pipeline_again += 1  # the same link as a job in the pipeline: counted there
@@ -287,6 +318,7 @@ async def store_alert_postings(
                 decision=decision,
                 candidates=others,
                 description_status="none",
+                alert_read_by=posting.read_by,
             )
         )
         store.queue_sighting(source_url, sighting)

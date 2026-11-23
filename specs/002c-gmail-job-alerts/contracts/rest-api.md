@@ -63,6 +63,8 @@ Only for senders the person added; `409 reason=built_in` otherwise. `204`.
 
 Starts a check now (`trigger = button`). `202 {"search_run_id": "…"}`. `409 reason=not_connected`, `409 reason=search_running` (one search at a time), `409 reason=needs_reconnect`, `409 reason=rules_not_approved`. A check that hits an unexpected error ends as `failed` (`mail.ended = failed`); a message whose `From` display name is itself an address is never trusted (no jobs are read from it).
 
+Optional body *(added 2026-11-24, FR-013e)*: `{"reread_last_day": true}` forgets which emails of the last 24 hours were read, in the same transaction that creates the check (only once no other check or search runs; a `409` forgets nothing), so they are read again. No body, or `false`, is a plain check.
+
 Stopping uses the existing `POST /search/runs/{id}/stop`.
 
 ### Existing endpoints, extended

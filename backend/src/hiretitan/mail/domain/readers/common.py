@@ -18,6 +18,7 @@ from hiretitan.mail.domain.alerts import (
     LOCATION_MAX,
     TITLE_MAX,
     AlertJob,
+    is_boilerplate,
 )
 from hiretitan.mail.domain.links import is_job_link, posting_id
 from hiretitan.mail.domain.mime import Flat, Link
@@ -25,25 +26,6 @@ from hiretitan.mail.domain.mime import Flat, Link
 CARD_LINES_MAX: Final = 6
 CARD_VALUE_MAX: Final = 80  # a company or a place is short
 CARD_WORDS_MAX: Final = 8
-# Footer and notice words. When a card has fewer lines than the layout expects, the next line is
-# often the email's footer; it is never a company or a place (seen on a real alert, 2026-11-22).
-FOOTER_WORDS: Final = (
-    "intended for",
-    "you are receiving",
-    "you received",
-    "unsubscribe",
-    "manage your",
-    "manage alerts",
-    "job alert",
-    "privacy",
-    "help center",
-    "copyright",
-    "this email",
-    "notification",
-    "view all",
-    "see all",
-)
-
 # (the lines after the title, the link) -> (company, location)
 Assign = Callable[[list[str], Link], tuple[str | None, str | None]]
 
@@ -57,7 +39,13 @@ def read_cards(site: str, flat: Flat, alert_date: datetime, assign: Assign) -> l
     seen: set[str] = set()
     for index, link in enumerate(job_links):
         pid = posting_id(site, link.href)
-        if pid is None or pid in seen or not link.text or len(link.href) > LINK_MAX:
+        if (
+            pid is None
+            or pid in seen
+            or not link.text
+            or len(link.href) > LINK_MAX
+            or is_boilerplate(link.text)
+        ):
             continue
         seen.add(pid)
         end = job_links[index + 1].line if index + 1 < len(job_links) else len(flat.lines)
@@ -96,7 +84,7 @@ def _plausible(value: str | None) -> str | None:
         or "©" in value
         or "http" in lower
         or "www." in lower
-        or any(words in lower for words in FOOTER_WORDS)
+        or is_boilerplate(value)
     ):
         return None
     return value

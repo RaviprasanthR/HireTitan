@@ -16,6 +16,13 @@ Cutshort send you, and add those jobs to Explore. This page is the one-time setu
   own addresses.
 - It **never sends, deletes, labels or changes** a message, and it does not keep the emails: only a
   note of which messages it has read, so none is read twice.
+- **With an AI key set, the AI reads each alert email** to take out the title, company and place
+  of every job, because the sites change their email layouts often. The email's text (cleaned up,
+  never your Google sign-in) goes to your AI provider for that. A company or place the AI names
+  that is not written in the email is dropped, and the email's footer ("This email was intended
+  for ...") is never taken as a value. Without a key, HireTitan's own readers read the emails.
+- **Read the last day again** (Settings → Gmail, after the first check) reads the last 24 hours of
+  alerts once more, so jobs found earlier get the company and place a better reading finds.
 - Your Google client ID, client secret and sign-in token stay in your own data folder
   (`secrets/gmail.json`), on your computer. They are never shown, logged or sent to the AI.
 - **Disconnect** in Settings hands the access back to Google and deletes the saved token and the

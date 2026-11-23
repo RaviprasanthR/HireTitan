@@ -216,3 +216,62 @@ def test_SEC_an_added_senders_job_may_link_anywhere_on_the_web() -> None:
     (job,) = run(proposed(), site="other")
 
     assert job.link.startswith("https://digest.example/")
+
+
+def footer_email() -> Flat:
+    return Flat(
+        source="html",
+        lines=[
+            Line("Backend Engineer"),
+            Line("This email was intended for Jane Doe (Backend Developer)"),
+            Line("Learn why we included this."),
+            Line("You are receiving Job Alert emails"),
+        ],
+        links=[Link("Backend Engineer", "https://digest.example/jobs/ccc333", 0)],
+    )
+
+
+def test_FR013c_a_footer_line_is_never_a_company_or_place_from_the_ai() -> None:
+    jobs = accept(
+        [
+            Proposed(
+                "Backend Engineer",
+                "This email was intended for Jane Doe (Backend Developer)",
+                "Learn why we included this.",
+                1,
+            )
+        ],
+        footer_email(),
+        site="other",
+        alert_date=DATE,
+        shown=1,
+    )
+
+    assert [(j.title, j.company, j.location) for j in jobs] == [("Backend Engineer", None, None)]
+
+
+def test_FR013c_a_footer_line_is_never_a_title_from_the_ai() -> None:
+    jobs = accept(
+        [Proposed("You are receiving Job Alert emails", None, None, 1)],
+        footer_email(),
+        site="other",
+        alert_date=DATE,
+        shown=1,
+    )
+
+    assert jobs == []
+
+
+def test_FR013c_boilerplate_phrases() -> None:
+    from hiretitan.mail.domain.alerts import is_boilerplate
+
+    for text in (
+        "This email was intended for Jane Doe",
+        "Learn why we included this.",
+        "Unsubscribe",
+        "You are receiving Job Alert emails",
+        "Manage your alerts",
+    ):
+        assert is_boilerplate(text), text
+    for text in ("Backend Engineer", "Granite Insurance Tech", "Bengaluru, Karnataka, India"):
+        assert not is_boilerplate(text), text

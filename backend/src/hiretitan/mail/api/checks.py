@@ -26,6 +26,11 @@ class MailChecksApiDeps:
     clock: ClockPort
 
 
+class StartCheckBody(BaseModel):
+    # FR-013e: forget which emails of the last 24 hours were read, so they are read again
+    reread_last_day: bool = False
+
+
 class StartedCheckOut(BaseModel):
     search_run_id: UUID
 
@@ -34,9 +39,10 @@ def create_checks_router(deps: MailChecksApiDeps) -> APIRouter:
     router = APIRouter(prefix="/mail", tags=["mail"])
 
     @router.post("/checks", status_code=202)
-    async def start_check() -> StartedCheckOut:
+    async def start_check(body: StartCheckBody | None = None) -> StartedCheckOut:
+        reread = body is not None and body.reread_last_day
         try:
-            started = await deps.runs.start(trigger="button", now=deps.clock.now())
+            started = await deps.runs.start(trigger="button", now=deps.clock.now(), reread=reread)
         except CheckNotReadyError as error:
             reason = "rules_not_approved" if error.reason == "no_rules" else error.reason
             raise ProblemError(

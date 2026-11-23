@@ -179,6 +179,28 @@
 
 ---
 
+## Phase 10: The AI reads alerts first (amendment 2026-11-24, FR-013b to FR-013e, SC-011)
+
+**Purpose**: Ravi's first real alert showed the guessed fixed layouts missing the company; with a key the AI reads every alert, the fixed readers become the fallback, and jobs already stored can be fixed.
+
+**Independent Test**: with a scripted AI, a LinkedIn alert whose fixed reading gives "Company not shown" ends with the company the email shows; with no key the same email is read by the fixed reader as before; "Read the last day again" fixes a job stored earlier with a wrong company.
+
+- [x] T058 [P] Tests for FR-013c in `backend/tests/unit/mail/test_alert_checks.py` and `backend/tests/unit/mail/test_readers.py`: footer lines ("This email was intended for …", "Learn why we included this", "Unsubscribe", "You are receiving …") are never a title, company or place, from `accept` or any fixed reader; built as small flattened emails in the tests (no new fixture file, so the 62-email set and its counts stay as they are)
+- [x] T059 Implement `is_boilerplate` in `backend/src/hiretitan/mail/domain/alert_checks.py` and apply it in `accept` and the readers' shared output step (makes T058 pass)
+- [x] T060 [P] Tests for FR-013b in `backend/tests/workflow/mail/test_ai_fallback.py` (and `test_check.py`): with an AI, an email from an enabled sender goes to the AI even when a fixed reader read it; AI fields win and fixed-reader jobs with other links are added; domain-only mail goes to the AI only when a fixed reader found jobs; AI unavailable, empty/unusable answer or more than 50 emails → the fixed reader's result; no AI → unchanged; SC-002's no-AI test still passes with `ai=None`
+- [x] T061 Implement AI-first routing and the merge in `backend/src/hiretitan/mail/workflow/check.py` (`AI_EMAILS_MAX` 50, `reader` `ai` / `ai+<site>`)
+- [x] T062 [P] Tests for FR-013d in the alert store tests under `backend/tests/integration/search/`: an alert-only job not in the pipeline gets a missing or fixed-reader company/place replaced by a new reading; an AI-given value is replaced only by an AI reading; an applied/inquired job or one with a non-alert source is never changed
+- [x] T063 Implement FR-013d: `read_by` on `AlertPosting`, `jobs.alert_read_by` (new Alembic migration), the update in `backend/src/hiretitan/search/application/alerts.py` and `search/infra/search_store.py`; `SqlAlertSink` passes `read_by`
+- [x] T064 [P] Tests for FR-013e: API test in `backend/tests/api/mail/` (`reread_last_day` forgets only the last 24 hours' read records, 409 while a check runs, still one check at a time) and `frontend/src/features/settings/GmailSection.test.tsx` (button, note, starts a check)
+- [x] T065 Implement "Read the last day again": `POST /mail/checks` body in `backend/src/hiretitan/mail/api/`, the repo method, `contracts/rest-api.md`, and the button in `frontend/src/features/settings/` (makes T064 pass)
+- [x] T066 [P] `read_job_alert` eval: `backend/evals/read_job_alert/runner.py` scoring SC-011, task in `backend/evals/run.py` (cost estimate, `--yes`, stops on `AiUnavailable`), unit tests in `backend/tests/unit/evals/test_read_job_alert_eval.py` with a scripted AI
+- [ ] T067 Ravi runs the eval on his key (`PYTHONPATH=backend backend/.venv/Scripts/python.exe -m evals.run read_job_alert --models fast --yes`); commit the report; SC-011 must pass before the PR merges
+- [x] T068 E2E: scripted `read_job_alert` replies for the Gmail journey's alerts in `frontend/e2e/` so it runs the AI-first path; all 4 journeys pass
+- [x] T069 Docs: `docs/architecture.md` W10, `docs/user-guide/` Gmail page (the AI reads alert text when a key is set), Settings Gmail part says so too, `success-criteria-map.md` (SC-011), `docs/CONTEXT.md`
+- [ ] T070r Review (python, security, React) over Phase 10, fix findings, full gates (backend with coverage, frontend, ruff, mypy, lint-imports, licence), rebuild the dev stack, then Ravi re-reads his last day on :8000
+
+**Order**: T058→T059, T060→T061 and T062→T063 can run side by side; T064→T065 after T061; T066 any time, T067 after T059 and T061; T068 after T061; T069 and T070r last.
+
 ## Dependencies & Execution Order
 
 ### Phase dependencies

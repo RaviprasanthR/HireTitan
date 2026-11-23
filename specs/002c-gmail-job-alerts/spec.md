@@ -21,6 +21,12 @@ Job sites such as LinkedIn, Naukri, Indeed, Cutshort, Instahyre and foundit offe
 - Q: What happens to alert jobs from companies not on the company list? → A: They are shown in Explore; the search rules still filter them; the company is not added to the list.
 - Q: Should the AI relevance check judge alert jobs that have no description? → A: No. Alert jobs are filtered by the rules only and marked "not checked by AI"; the AI check runs once the person pastes the description.
 
+### Session 2026-11-24 (amendment, Ravi)
+
+- Context: on Ravi's first real LinkedIn alert the fixed LinkedIn reader got the company wrong on all 4 jobs (3 "Company not shown", 1 took the footer line "This email was intended for …" as the company). The fixed layouts are guesses (T005 not done), so they will keep missing.
+- Q: Should the AI read alert emails first instead of only as a fallback? → A: **AI first.** With an AI key set, the AI reads every alert email; the fixed readers are the fallback (no key, AI unavailable, the per-check AI cap reached, or an answer with no usable job). The checks that reject a value not in the email stay. This replaces the 2026-11-18 answer above. Every alert email's sanitised text now goes to the AI provider when a key is set.
+- Q: The 4 jobs already stored with a wrong company? → A: Add "Read the last day again", and let a later reading fix the company and place of a job known only from alerts.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Connect my Gmail, read-only (Priority: P1)
@@ -142,7 +148,8 @@ Settings is one long column today: the AI key status (with "edit `.env` and rest
 - An alert link is a tracking redirect: HireTitan keeps the link as given for the person to open, and uses the posting identifier inside it, when the site's link format shows one, to recognise repeats; it never follows the redirect.
 - More alert emails in a day than one check reads: a check reads at most 200 alert emails and says so when there are more ("Read 200 of 240 emails; check again to continue"); the next check skips the ones already read.
 - HireTitan was not running for several days: only the last 24 hours are read when it starts again; older alerts are not, and Settings shows when the last check ran.
-- No AI key, or the AI is unavailable: fixed readers still work; an email that needs the AI is counted "could not read" and is read again on a later check once the AI is back.
+- No AI key, or the AI is unavailable: fixed readers still work; an email that needs the AI is counted "could not read" and is read again on a later check once the AI is back. *(2026-11-24: with a key the AI reads first; these are the fallback cases.)*
+- An alert's footer ("This email was intended for …", "Learn why we included this") is never taken as a company or place, by the AI or a fixed reader.
 - Google limits or a network failure in the middle of a check: emails read so far are kept, the check ends with "Stopped: Gmail did not answer. Check again later.", and the next check continues where it stopped.
 - The person disconnects while a check runs: the check stops, nothing more is read.
 - Two checks at once (a double click, or Search now while a check runs): the second waits or says one is already running; no email is read twice.
@@ -175,7 +182,11 @@ Settings is one long column today: the AI key status (with "edit `.env` and rest
 **Reading jobs out of alerts**
 
 - **FR-013**: For each alert email, HireTitan MUST take out every job it lists, with the title, company, location, posting link, site, and the alert's date, and MUST NOT invent any value the email does not give.
-- **FR-013a**: Emails from the built-in sites MUST first be read by a fixed reader for that site, with no AI. Only an email no fixed reader can read (an unknown layout or a sender the person added) MAY go to the AI, as sanitised, delimited text with a strict, length-bounded output of job fields; a value the AI returns that does not appear in the email MUST be dropped.
+- **FR-013a**: Emails from the built-in sites MUST first be read by a fixed reader for that site, with no AI. Only an email no fixed reader can read (an unknown layout or a sender the person added) MAY go to the AI, as sanitised, delimited text with a strict, length-bounded output of job fields; a value the AI returns that does not appear in the email MUST be dropped. *Superseded 2026-11-24 by FR-013b.*
+- **FR-013b** *(added 2026-11-24, Ravi)*: When an AI key is set, every alert email from an enabled sender address MUST be read by the AI first (sanitised, delimited text, strict length-bounded job fields; a value not in the email is dropped, as in FR-013a). Mail that came only through a built-in site's domain (FR-009) goes to the AI only when a fixed reader found at least one job in it. The jobs kept are the AI's, plus any job a fixed reader found whose link the AI did not return. The fixed readers alone are used when there is no key, the AI cannot be asked, at most 50 emails per check have gone to the AI, or the AI's answer has no usable job.
+- **FR-013c** *(added 2026-11-24)*: Footer and boilerplate lines of an alert ("This email was intended for …", "Learn why we included this", "Unsubscribe", "You are receiving …" and the like) MUST NOT be stored as a job's title, company or place, whoever read the email.
+- **FR-013d** *(added 2026-11-24)*: When a job known only from email alerts and not in the pipeline (applied, inquired) is read again, a company or place the new reading gives MUST replace a missing one ("Company not shown") or one a fixed reader gave; one the AI gave is replaced only by another AI reading.
+- **FR-013e** *(added 2026-11-24)*: The person MUST be able to "Read the last day again" from Settings: it forgets which emails of the last 24 hours were read (an exception to FR-011) and starts a check, so better reading reaches jobs already stored (FR-013d). It reads nothing older than 24 hours and never runs beside another check.
 - **FR-014**: Alert content MUST be treated as untrusted: sanitised, delimited and screened for instructions to an AI; signals MUST be stored and shown on the job; only structured, length-bounded job data may leave the reading step.
 - **FR-015**: HireTitan MUST NOT fetch the posting pages of LinkedIn, Naukri, Indeed or the other alert sites; the person opens the link themselves and may paste the description.
 - **FR-016**: Only the job data taken out of an email and the email's identifier, sender and date MAY be stored; the email's body MUST NOT be kept after it is read.
@@ -224,7 +235,8 @@ Settings is one long column today: the AI key status (with "edit `.env` and rest
 ### Measurable Outcomes
 
 - **SC-001**: A person who has a Google account connects Gmail by following the guide in under 15 minutes, the first time.
-- **SC-002**: On a test set of at least 60 alert emails (at least 10 per built-in site), at least 95% of the listed jobs are taken out with the correct title, company and link, and 0 values are invented; at least 90% of the built-in sites' emails are read without the AI.
+- **SC-002**: On a test set of at least 60 alert emails (at least 10 per built-in site), at least 95% of the listed jobs are taken out with the correct title, company and link, and 0 values are invented; at least 90% of the built-in sites' emails are read without the AI. *(2026-11-24: kept as the bar for the fixed readers, which are now the no-key fallback.)*
+- **SC-011** *(added 2026-11-24)*: With the AI reading first, on the same test set plus the unknown layouts: at least 95% of listed jobs have the correct title, company and link, the company is filled for at least 95% of the jobs whose email shows one, 0 values are invented, 0 footer lines are stored as values, and planted instructions have no effect. Measured by the `read_job_alert` eval on the person's key on the `fast` tier; the report gives tokens per email (the model catalogue keeps no prices, so the cost is read on the provider's usage page).
 - **SC-003**: The same posting mentioned in several alerts appears as one job in 100% of the test cases that share a link or a site's posting identifier.
 - **SC-004**: 0 emails from senders outside the enabled list are listed or opened during a check (shown by a recorded request log in tests).
 - **SC-005**: A check of a day's alerts (up to 50 emails) finishes in under 2 minutes.

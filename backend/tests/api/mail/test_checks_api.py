@@ -379,3 +379,98 @@ async def test_US2_AS6_the_email_instruction_signal_is_on_the_job(env: Env) -> N
     card = (await env.client.get(f"/api/v1/jobs/{job_id}")).json()
 
     assert [f["location"] for f in card["injection_flags"]] == ["email"]
+
+
+async def read_record(env: Env, message_id: str, received: datetime) -> None:
+    async with env.sessions() as session:
+        session.add(
+            MailReadMessageRow(
+                provider_message_id=message_id,
+                sender="jobalerts-noreply@linkedin.com",
+                received_at=received,
+                purpose="job_alert",
+                outcome="read",
+                reader="linkedin",
+                jobs_found=1,
+                injection_signals=[],
+                read_at=received,
+            )
+        )
+        await session.commit()
+
+
+async def provider_ids(env: Env) -> set[str]:
+    async with env.sessions() as session:
+        rows = await session.scalars(text("SELECT provider_message_id FROM app.mail_read_messages"))
+        return set(rows)
+
+
+async def test_FR013e_read_the_last_day_again_forgets_only_the_last_24_hours(env: Env) -> None:
+    await connected(env)
+    await approved_rules(env)
+    await read_record(env, "recent", NOW - timedelta(hours=3))
+    await read_record(env, "old", NOW - timedelta(hours=30))
+
+    response = await env.client.post("/api/v1/mail/checks", json={"reread_last_day": True})
+
+    assert response.status_code == 202
+    assert len(env.queue.enqueued) == 1
+    assert await provider_ids(env) == {"old"}
+
+
+async def test_FR013e_a_plain_check_forgets_nothing(env: Env) -> None:
+    await connected(env)
+    await approved_rules(env)
+    await read_record(env, "recent", NOW - timedelta(hours=3))
+
+    response = await env.client.post("/api/v1/mail/checks", json={"reread_last_day": False})
+
+    assert response.status_code == 202
+    assert await provider_ids(env) == {"recent"}
+
+
+async def test_FR013e_read_again_while_a_check_runs_forgets_nothing(env: Env) -> None:
+    await connected(env)
+    await approved_rules(env)
+    await read_record(env, "recent", NOW - timedelta(hours=3))
+    assert (await env.client.post("/api/v1/mail/checks")).status_code == 202
+
+    response = await env.client.post("/api/v1/mail/checks", json={"reread_last_day": True})
+
+    assert response.status_code == 409
+    assert response.json()["reason"] == "search_running"
+    assert await provider_ids(env) == {"recent"}
+
+
+async def test_FR013e_read_again_drops_the_forgotten_emails_sightings(env: Env) -> None:
+    # read again, each email adds its sighting anew: the old one must not stay as a second alert
+    await connected(env)
+    await approved_rules(env)
+    await read_record(env, "recent", NOW - timedelta(hours=3))
+    async with env.sessions() as session:
+        job = await JobsRepo(session).add(
+            company_name="Aspen Robotics",
+            title="Data Engineer",
+            first_seen_at=NOW,
+            last_seen_at=NOW,
+            description="",
+            state="explore",
+        )
+        message_id = (await session.scalars(text("SELECT id FROM app.mail_read_messages"))).one()
+        session.add(
+            AlertSightingRow(
+                job_id=job.id,
+                read_message_id=message_id,
+                site="linkedin",
+                link="https://www.linkedin.com/comm/jobs/view/1/",
+                alert_date=NOW,
+            )
+        )
+        await session.commit()
+
+    response = await env.client.post("/api/v1/mail/checks", json={"reread_last_day": True})
+
+    assert response.status_code == 202
+    async with env.sessions() as session:
+        left = (await session.scalars(text("SELECT count(*) FROM app.alert_sightings"))).one()
+    assert left == 0

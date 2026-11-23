@@ -7,7 +7,7 @@ it does not know. The layouts are guesses until the maintainer checks them (T005
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -204,3 +204,25 @@ def test_FR013_a_long_sentence_is_not_a_company() -> None:
     (job,) = _card(["We think you would be a great fit for this role at our company today", "Pune"])
 
     assert job.company is None
+
+
+def test_FR013c_a_fixed_reader_never_takes_the_footer_as_a_company_or_place() -> None:
+    from hiretitan.mail.domain.mime import Flat, Line, Link
+
+    flat = Flat(
+        source="html",
+        lines=[
+            Line("Backend Engineer"),
+            Line("Learn why we included this."),
+            Line("This email was intended for Jane"),
+        ],
+        links=[
+            Link(
+                "Backend Engineer", "https://www.linkedin.com/comm/jobs/view/4000000001/?refId=x", 0
+            )
+        ],
+    )
+
+    jobs = read_alert("linkedin", flat, datetime(2026, 11, 24, 8, tzinfo=UTC))
+
+    assert [(j.title, j.company, j.location) for j in jobs] == [("Backend Engineer", None, None)]

@@ -345,7 +345,8 @@ def test_DB_0023_downgrade_converts_instead_of_deleting(
     fresh_database_url: str, make_alembic_config: Callable[[str], Config]
 ) -> None:
     cfg = make_alembic_config(fresh_database_url)
-    command.upgrade(cfg, "0023")
+    # seeded at head (the models match the newest schema), then taken back down through 0023
+    command.upgrade(cfg, "head")
 
     async def seed() -> tuple[UUID, UUID]:
         engine = create_engine_for(fresh_database_url)

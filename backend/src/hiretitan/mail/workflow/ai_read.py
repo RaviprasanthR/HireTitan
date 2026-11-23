@@ -13,6 +13,7 @@ it makes up, can reach a job. Only the email's own links are ever used, and none
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Final
@@ -32,7 +33,7 @@ from hiretitan.platform.llm.validation import TaskSpec, ValidatedLlm
 from hiretitan.prompts.read_job_alert.v1.checks import rule_errors
 
 PROMPT_NAME: Final = "read_job_alert"
-AI_EMAILS_MAX: Final = 30  # emails sent to the AI in one check: the cost has a ceiling
+AI_EMAILS_MAX: Final = 50  # emails sent to the AI in one check: the cost has a ceiling (FR-013b)
 
 
 class MailAiUnavailableError(Exception):
@@ -47,6 +48,43 @@ class MailAiDeps:
     provider: str = "openai"
 
 
+async def ask_alert_ai(
+    llm: LlmPort,
+    record: Callable[[LlmCallRecord], Awaitable[None]],
+    prompts: PromptRegistry,
+    flat: Flat,
+    *,
+    site: str,
+    alert_date: datetime,
+    run_id: UUID | None = None,
+    provider: str = "openai",
+    tier: str = "fast",
+) -> list[AlertJob] | None:
+    """The AI's reading of one email, checked against the email (also run by the eval): the jobs
+    it backs up, or ``None`` with no usable answer. ``AiUnavailable`` and provider errors pass."""
+    prompt = prompts.load(PROMPT_NAME)
+    schema: type[BaseModel] = prompt.output_schema
+    shown = len(shown_links(flat))
+    request = LlmRequest(
+        task=PROMPT_NAME,
+        prompt=render_alert_prompt(prompt, flat),
+        output_schema=schema,
+        tier=tier,  # type: ignore[arg-type]
+        max_output_tokens=prompt.version.max_output_tokens,
+    )
+    chain = ValidatedLlm(llm, record, provider=provider)
+    answered = await chain.run(
+        request,
+        TaskSpec(fallback=lambda: schema.model_validate({"jobs": []}), rules=rule_errors(shown)),
+        run_id=run_id,
+    )
+    if answered.outcome == "fallback":
+        return None
+    jobs: list[Any] = answered.value.jobs
+    proposed = [Proposed(j.title, j.company, j.location, j.link_index) for j in jobs]
+    return accept(proposed, flat, site=site, alert_date=alert_date, shown=shown)
+
+
 async def read_with_ai(
     deps: MailAiDeps, flat: Flat, *, site: str, alert_date: datetime, run_id: UUID
 ) -> list[AlertJob] | None:
@@ -58,30 +96,16 @@ async def read_with_ai(
             await CallsRepo(session).record(call)
             await session.commit()
 
-    prompt = deps.prompts.load(PROMPT_NAME)
-    schema: type[BaseModel] = prompt.output_schema
-    shown = len(shown_links(flat))
-    request = LlmRequest(
-        task=PROMPT_NAME,
-        prompt=render_alert_prompt(prompt, flat),
-        output_schema=schema,
-        tier="fast",
-        max_output_tokens=prompt.version.max_output_tokens,
-    )
-    chain = ValidatedLlm(deps.llm, record, provider=deps.provider)
     try:
-        answered = await chain.run(
-            request,
-            TaskSpec(
-                fallback=lambda: schema.model_validate({"jobs": []}),
-                rules=rule_errors(shown),
-            ),
+        return await ask_alert_ai(
+            deps.llm,
+            record,
+            deps.prompts,
+            flat,
+            site=site,
+            alert_date=alert_date,
             run_id=run_id,
+            provider=deps.provider,
         )
     except (AiUnavailable, RetryableLlmError) as error:
         raise MailAiUnavailableError(str(error)) from error
-    if answered.outcome == "fallback":
-        return None
-    jobs: list[Any] = answered.value.jobs
-    proposed = [Proposed(j.title, j.company, j.location, j.link_index) for j in jobs]
-    return accept(proposed, flat, site=site, alert_date=alert_date, shown=shown)

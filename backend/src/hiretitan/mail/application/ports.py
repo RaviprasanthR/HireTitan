@@ -126,9 +126,10 @@ class CheckNotReadyError(Exception):
 class CheckRuns(Protocol):
     """A mail check is a search run (research R8); this is how the mail module reaches it."""
 
-    async def start(self, *, trigger: str, now: datetime) -> StartedCheck:
+    async def start(self, *, trigger: str, now: datetime, reread: bool = False) -> StartedCheck:
         """Create the run and its check record and queue it. ``CheckNotReadyError`` when not
-        connected, access ended, another search runs, or the rules are not approved."""
+        connected, access ended, another search runs, or the rules are not approved. ``reread``
+        forgets which emails of the check's window were read, in the same transaction (FR-013e)."""
         ...
 
     async def locate(self, workflow_run_id: UUID) -> StartedCheck | None:

@@ -7,7 +7,8 @@ each batch records the emails and stores their jobs in one transaction. Stop is 
 batches and once more at the end (FR-010). It ends with the counts, which add up (FR-026).
 
 Untrusted mail (constitution III): the email is flattened in memory, screened, and dropped; no
-subject, snippet or body is stored (FR-016). Nothing here calls an AI: only fixed readers run.
+subject, snippet or body is stored (FR-016). With an AI set up, the AI reads each alert first and
+the fixed readers are the fallback (FR-013b, amended 2026-11-24).
 
 Whatever goes wrong, the check ends: Gmail refusing or not answering ends it with a reason, and
 any other error ends it as failed, so a run is never left "running" and the next check can start.
@@ -40,6 +41,7 @@ from hiretitan.mail.application.ports import (
     MailUnavailableError,
     ReadEmail,
 )
+from hiretitan.mail.domain.alert_checks import merge
 from hiretitan.mail.domain.mime import Flat, UnreadableMessageError, flatten_message
 from hiretitan.mail.domain.readers import READERS, read_alert
 from hiretitan.mail.domain.senders import build_query, domains_of, site_for_address
@@ -136,8 +138,9 @@ def _signals(flat: Flat) -> list[dict[str, Any]]:
 def read_email_flat(
     message_id: str, sender: str, received_at: Any, raw: bytes, site: str, listed: bool = True
 ) -> tuple[ReadEmail, Flat | None]:
-    """One email in, what it yielded out, and the flattened email when a fixed reader could not
-    read it (so the AI can be asked). A built-in site whose reader finds nothing in a non-empty
+    """One email in, what the fixed readers made of it, and the flattened email whenever the AI may
+    read it too (FR-013b): an email from a listed sender, or site-domain mail in which a reader
+    found jobs. A built-in site whose reader finds nothing in a non-empty
     email is counted as unreadable (FR-017); an unlisted sender waits for the AI. An email with no
     trustworthy sender is unreadable and is never read for jobs, by a reader or by the AI."""
     if not sender:
@@ -149,7 +152,7 @@ def read_email_flat(
     jobs = read_alert(site, flat, received_at)
     signals = _signals(flat)
     if jobs:
-        return ReadEmail(message_id, sender, received_at, "read", site, jobs, signals), None
+        return ReadEmail(message_id, sender, received_at, "read", site, jobs, signals), flat
     if not listed:
         # mail from a site's domain, from an address not on the list: only an alert is kept; a
         # receipt, a message or a newsletter is dropped quietly (no AI, not "could not read")
@@ -168,15 +171,18 @@ def read_email(message_id: str, sender: str, received_at: Any, raw: bytes, site:
 async def _ask_ai(
     deps: CheckDeps, totals: _Totals, email: ReadEmail, flat: Flat, site: str
 ) -> ReadEmail:
-    """The AI reads an email the fixed readers could not (FR-013a). It never fails the check:
-    with no AI set up the email stays as it was; an AI that cannot be asked keeps it for the next
-    check (``needs_ai``) and is not asked again in this one; an unusable answer is final."""
+    """The AI reads the email first (FR-013b); the fixed readers' result is the fallback. It never
+    fails the check. With no AI set up the email stays as the fixed readers left it. An AI that
+    cannot be asked is not asked again in this check: an email the readers read keeps their jobs,
+    one they could not read waits for the next check (``needs_ai``). An unusable or empty answer
+    leaves the readers' jobs; with none, the email is final (``unreadable`` or ``no_jobs``)."""
     if deps.ai is None or totals.run_id is None:
         return email
+    fixed = email.jobs
     if not shown_links(flat):  # a job is named by its link: with none there is nothing to ask
-        return replace(email, outcome="unreadable")
+        return email if fixed else replace(email, outcome="unreadable")
     if totals.ai_down or totals.ai_asked >= AI_EMAILS_MAX:
-        return replace(email, outcome="needs_ai")
+        return email if fixed else replace(email, outcome="needs_ai")
     totals.ai_asked += 1
     try:
         jobs = await read_with_ai(
@@ -184,17 +190,21 @@ async def _ask_ai(
         )
     except MailAiUnavailableError:
         totals.ai_down = True
-        _log.info("The AI could not be asked; its emails wait for the next check.")
-        return replace(email, outcome="needs_ai")
+        _log.info("The AI could not be asked; the fixed readers' reading is used.")
+        return email if fixed else replace(email, outcome="needs_ai")
     except Exception as error:
         # only the kind of error is logged: a provider's message can quote what it was sent
         _log.warning("The AI could not read one email (%s).", type(error).__name__)
-        return replace(email, outcome="needs_ai")
-    if jobs is None:
-        return replace(email, outcome="unreadable")
+        return email if fixed else replace(email, outcome="needs_ai")
     if not jobs:
+        if fixed:
+            return email
+        if jobs is None:
+            return replace(email, outcome="unreadable")
         return replace(email, outcome="no_jobs", reader="ai")
-    return replace(email, outcome="read", reader="ai", jobs=jobs)
+    merged = merge(jobs, fixed)
+    reader = "ai" if len(merged) == len(jobs) else f"ai+{email.reader}"
+    return replace(email, outcome="read", reader=reader, jobs=merged)
 
 
 async def _publish(deps: CheckDeps, name: str, data: dict[str, Any]) -> None:
@@ -291,7 +301,7 @@ async def _read_one(
         email, flat = await asyncio.to_thread(
             read_email_flat, message_id, raw.sender, raw.received_at, raw.raw, site, listed
         )
-        if flat is not None and email.outcome in ("unreadable", "needs_ai"):
+        if flat is not None:
             email = await _ask_ai(deps, totals, email, flat, site)
     except Exception as error:
         _log.warning("One email could not be read (%s).", _where(error))

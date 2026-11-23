@@ -170,7 +170,12 @@ export function useStartMailCheck() {
   const refresh = useRefreshing()
   const client = useQueryClient()
   return useMutation({
-    mutationFn: () => apiFetch<{ search_run_id: string }>('/mail/checks', { method: 'POST' }),
+    // `reread`: forget which emails of the last 24 hours were read, so they are read again (FR-013e)
+    mutationFn: (reread?: boolean) =>
+      apiFetch<{ search_run_id: string }>('/mail/checks', {
+        method: 'POST',
+        ...(reread ? { json: { reread_last_day: true } } : {}),
+      }),
     onSuccess: async () => {
       await refresh()
       await client.invalidateQueries({ queryKey: ['mail'] }) // "last check started" in Settings

@@ -30,3 +30,34 @@ class AlertJob:
     # the posting date, only when the alert states one (drives "may have closed", FR-020)
     posted_at: datetime | None = None
     injection_signals: list[dict[str, Any]] = field(default_factory=list)
+    # who gave the company and place: "fixed" (a site's reader) or "ai" (FR-013d)
+    read_by: str = "fixed"
+
+
+# Footer and notice words (FR-013c). An alert's footer is never a title, a company or a place,
+# whoever read the email: a fixed reader whose layout guess runs past the last card, or the AI
+# (seen on real LinkedIn alerts: "This email was intended for ...", "Learn why we included this").
+FOOTER_WORDS = (
+    "intended for",
+    "you are receiving",
+    "you received",
+    "learn why",
+    "why we included",
+    "unsubscribe",
+    "manage your",
+    "manage alerts",
+    "job alert",
+    "privacy",
+    "help center",
+    "copyright",
+    "this email",
+    "notification",
+    "view all",
+    "see all",
+)
+
+
+def is_boilerplate(text: str) -> bool:
+    """True for a line of an alert's footer or notices, in any letter case."""
+    lower = " ".join(text.casefold().split())
+    return any(words in lower for words in FOOTER_WORDS)

@@ -6,7 +6,8 @@ where the email backs it up:
 * the link is taken from the email's own list by number; a number that was not on offer, a link that
   is not a web address, or a link already used for another job drops the job;
 * the title must be words the email contains, or the job is dropped;
-* a company or place that is not in the email is left empty, never kept (nothing is invented).
+* a company or place that is not in the email is left empty, never kept (nothing is invented);
+* a footer line ("This email was intended for ...") is never a title, company or place (FR-013c).
 """
 
 from __future__ import annotations
@@ -14,12 +15,18 @@ from __future__ import annotations
 import re
 import unicodedata
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import Final
 from urllib.parse import urlsplit
 
-from hiretitan.mail.domain.alerts import COMPANY_MAX, LOCATION_MAX, TITLE_MAX, AlertJob
+from hiretitan.mail.domain.alerts import (
+    COMPANY_MAX,
+    LOCATION_MAX,
+    TITLE_MAX,
+    AlertJob,
+    is_boilerplate,
+)
 from hiretitan.mail.domain.links import on_site, posting_id
 from hiretitan.mail.domain.mime import Flat
 
@@ -50,8 +57,8 @@ def _in_email(value: str | None, segments: Sequence[str], *, minimum: int) -> st
     if not value:
         return None
     needle = _line(value)
-    if len(needle) < minimum:
-        return None
+    if len(needle) < minimum or is_boilerplate(needle):
+        return None  # a footer line is never a value (FR-013c)
     pattern = re.compile(r"(?<!\w)" + re.escape(needle) + r"(?!\w)", re.IGNORECASE)
     for segment in segments:
         found = pattern.search(segment)
@@ -98,8 +105,33 @@ def accept(
                 posting_id=posting_id(site, href),
                 site=site,
                 alert_date=alert_date,
+                read_by="ai",
             )
         )
         if len(jobs) == JOBS_MAX:
             break
     return jobs
+
+
+def merge(ai_jobs: Sequence[AlertJob], fixed_jobs: Sequence[AlertJob]) -> list[AlertJob]:
+    """The AI's jobs first, each filled in from the fixed reader's job for the same link where the
+    AI left a value empty; then the fixed reader's jobs the AI did not name (FR-013b)."""
+
+    def key(job: AlertJob) -> str:
+        return job.posting_id or job.link
+
+    fixed_by_key = {key(job): job for job in fixed_jobs}
+    merged: list[AlertJob] = []
+    for job in ai_jobs:
+        fixed = fixed_by_key.pop(key(job), None)
+        if fixed is not None:
+            job = replace(
+                job,
+                company=job.company or fixed.company,
+                location=job.location or fixed.location,
+                posted_at=job.posted_at or fixed.posted_at,
+            )
+        merged.append(job)
+    named = {key(job) for job in merged}
+    merged += [job for job in fixed_jobs if key(job) not in named]
+    return merged

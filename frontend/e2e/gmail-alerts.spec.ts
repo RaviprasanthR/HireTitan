@@ -35,7 +35,7 @@ function stageMailbox(mail: Record<string, string>) {
 }
 
 type Source = { kind: string; site?: string | null }
-type Job = { id: string; title: string; company: string; sources: Source[] }
+type Job = { id: string; title: string; company_name: string; sources: Source[] }
 const exploreJobs = async (request: APIRequestContext): Promise<Job[]> =>
   (await (await request.get('/api/v1/jobs?list=explore')).json()).items
 const fromMail = (jobs: Job[]) => jobs.filter((j) => j.sources.some((s) => s.kind === 'email_alert'))
@@ -85,8 +85,12 @@ test('SC001_gmail_alerts_journey', async ({ page, request }) => {
   // mention the LinkedIn ones.
   await expect.poll(async () => fromMail(await exploreJobs(request)).length).toBeGreaterThan(0)
   const listed = fromMail(await exploreJobs(request))
-  const keys = listed.map((j) => `${j.title}|${j.company}`)
+  const keys = listed.map((j) => `${j.title}|${j.company_name}`)
   expect(new Set(keys).size).toBe(keys.length)
+  // The AI read each alert first (FR-013b, scripted in fake_llm/e2e/read_job_alert.json): for
+  // Bluefin Travel it gives the title "Backend Engineer" (words of the email's line "Senior Backend
+  // Engineer"), which wins over the fixed reader's.
+  expect(listed.find((j) => j.company_name === 'Bluefin Travel')?.title).toBe('Backend Engineer')
   const table = page.getByRole('table', { name: 'Jobs' })
   await expect(table.getByText(/LinkedIn|Naukri/).first()).toBeVisible()
 

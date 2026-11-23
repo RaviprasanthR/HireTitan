@@ -374,3 +374,91 @@ async def test_SEC_two_postings_with_the_same_site_and_posting_id_in_one_batch_a
 
     assert len(await jobs(db_session)) == 1
     assert await db_session.scalar(select(func.count()).select_from(AlertSightingRow)) == 2
+
+
+async def test_FR013d_a_later_reading_fills_a_missing_company_and_place(
+    db_session: AsyncSession,
+) -> None:
+    run_id = await make_run(db_session)
+    await store(db_session, run_id, [posting(company=None, location=None)])
+
+    await store(db_session, run_id, [replace(posting(), read_by="ai")], batch=2)
+
+    (job,) = await jobs(db_session)
+    assert (job.company_name, job.location_text, job.city) == ("Aspen Robotics", "Pune", "Pune")
+    assert job.alert_read_by == "ai"
+
+
+async def test_FR013d_the_ai_replaces_what_a_fixed_reader_gave(db_session: AsyncSession) -> None:
+    run_id = await make_run(db_session)
+    await store(db_session, run_id, [posting(company="This email was for Jane", location="Learn")])
+
+    await store(
+        db_session, run_id, [replace(posting(company="Aspen Robotics"), read_by="ai")], batch=2
+    )
+
+    (job,) = await jobs(db_session)
+    assert (job.company_name, job.location_text) == ("Aspen Robotics", "Pune")
+
+
+async def test_FR013d_a_fixed_reader_never_replaces_what_the_ai_gave(
+    db_session: AsyncSession,
+) -> None:
+    run_id = await make_run(db_session)
+    await store(db_session, run_id, [replace(posting(company="Aspen Robotics"), read_by="ai")])
+
+    await store(db_session, run_id, [posting(company="Somewhere Else", location="Delhi")], batch=2)
+
+    (job,) = await jobs(db_session)
+    assert (job.company_name, job.location_text, job.alert_read_by) == (
+        "Aspen Robotics",
+        "Pune",
+        "ai",
+    )
+
+
+async def test_FR013d_a_fixed_reader_may_fill_what_the_ai_left_empty(
+    db_session: AsyncSession,
+) -> None:
+    run_id = await make_run(db_session)
+    await store(db_session, run_id, [replace(posting(company=None, location=None), read_by="ai")])
+
+    await store(db_session, run_id, [posting()], batch=2)
+
+    (job,) = await jobs(db_session)
+    assert (job.company_name, job.location_text) == ("Aspen Robotics", "Pune")
+
+
+@pytest.mark.parametrize("state", ["applied", "inquired", "deleted"])
+async def test_FR013d_a_job_in_the_pipeline_or_deleted_is_never_changed(
+    db_session: AsyncSession, state: str
+) -> None:
+    run_id = await make_run(db_session)
+    await store(db_session, run_id, [posting(company=None)])
+    (job,) = await jobs(db_session)
+    job.state = state
+    if state == "applied":
+        job.applied_on = NOW.date()
+    if state == "inquired":
+        job.inquired_on = NOW.date()
+    await db_session.flush()
+
+    await store(db_session, run_id, [replace(posting(), read_by="ai")], batch=2)
+
+    await db_session.refresh(job)
+    assert job.company_name == NO_COMPANY
+
+
+async def test_FR013d_a_job_with_another_source_is_never_changed(db_session: AsyncSession) -> None:
+    run_id = await make_run(db_session)
+    await store(db_session, run_id, [posting(company=None)])
+    (job,) = await jobs(db_session)
+    await JobsRepo(db_session).add_source(
+        job.id, kind="paste", url="https://example.invalid/p", seen_at=NOW, search_run_id=None
+    )
+    await db_session.flush()
+
+    await store(db_session, run_id, [replace(posting(), read_by="ai")], batch=2)
+
+    await db_session.refresh(job)
+    assert job.company_name == NO_COMPANY

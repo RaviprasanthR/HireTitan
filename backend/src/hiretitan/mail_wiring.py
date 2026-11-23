@@ -10,7 +10,7 @@ from datetime import datetime
 from pathlib import Path
 from uuid import UUID
 
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, delete, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from hiretitan.mail.application.connection import ConnectionService, Publish
@@ -263,6 +263,7 @@ class SqlAlertSink:
                         posted_at=job.posted_at,
                         injection_signals=email.injection_signals,
                         read_message_id=message_id,
+                        read_by=job.read_by,
                     )
                     for job in email.jobs
                 )
@@ -300,7 +301,7 @@ class SqlCheckRuns:
         self._sessions = sessions
         self._enqueue = enqueue
 
-    async def start(self, *, trigger: str, now: datetime) -> StartedCheck:
+    async def start(self, *, trigger: str, now: datetime, reread: bool = False) -> StartedCheck:
         async with self._sessions() as session:
             connection = await ConnectionRepo(session).get()
             if connection is None:
@@ -318,6 +319,17 @@ class SqlCheckRuns:
             except SearchAlreadyRunningError as error:
                 raise CheckNotReadyError("search_running") from error
             window = window_start(now)
+            if reread:
+                # only once this check holds the one-at-a-time lock (the run above): a check that is
+                # already reading never sees its records vanish. The forgotten emails' sightings go
+                # too: reading them again adds each one anew, never as a second alert.
+                forgotten = select(MailReadMessageRow.id).where(
+                    MailReadMessageRow.received_at >= window
+                )
+                await session.execute(
+                    delete(AlertSightingRow).where(AlertSightingRow.read_message_id.in_(forgotten))
+                )
+                await ReadMessagesRepo(session).forget_since(window)
             check = await MailChecksRepo(session).create(started.search_run_id, trigger, window)
             await session.commit()
         try:

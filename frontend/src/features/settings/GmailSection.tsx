@@ -399,17 +399,29 @@ function StepMarker({ number, state }: { number: number; state: StepState }) {
   )
 }
 
-function FirstCheck() {
+/** The check step. Once a check has run it can also read the last day again (FR-013e), so jobs
+ *  stored earlier get the company and place a better reading finds. */
+function FirstCheck({ checkedBefore = false }: { checkedBefore?: boolean }) {
   const start = useStartMailCheck()
+  const busy = start.isPending || start.isSuccess
   return (
     <div className="space-y-2">
-      <Button
-        type="button"
-        disabled={start.isPending || start.isSuccess}
-        onClick={() => start.mutate()}
-      >
-        Check job-alert mail
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" disabled={busy} onClick={() => start.mutate(false)}>
+          Check job-alert mail
+        </Button>
+        {checkedBefore && (
+          <Button type="button" variant="outline" disabled={busy} onClick={() => start.mutate(true)}>
+            Read the last day again
+          </Button>
+        )}
+      </div>
+      {checkedBefore && (
+        <p className="text-sm text-muted-small">
+          Read again reads the last 24 hours of alert mail again and fixes the company and place of
+          jobs it found before. With an AI key set, the AI reads each alert email&apos;s text.
+        </p>
+      )}
       {start.isSuccess && (
         <p role="status" className="text-sm text-success">
           Checking your mail. The jobs it finds appear in{' '}
@@ -532,7 +544,7 @@ export function GmailSection() {
           {open === 'senders' ? 'Hide senders' : 'Show senders'}
         </Button>
       )
-    if (step.id === 'check' && step.state === 'done') return <FirstCheck />
+    if (step.id === 'check' && step.state === 'done') return <FirstCheck checkedBefore />
     return null
   }
 

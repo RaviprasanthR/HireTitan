@@ -166,6 +166,13 @@ class ReadMessagesRepo:
         )
         return set(rows)
 
+    async def forget_since(self, when: datetime) -> None:
+        """Forget the emails received since ``when`` (FR-013e). Their sightings keep their jobs;
+        the link to the email record goes empty, as on Disconnect."""
+        await self._session.execute(
+            delete(MailReadMessageRow).where(MailReadMessageRow.received_at >= when)
+        )
+
     async def record(
         self,
         message_id: str,

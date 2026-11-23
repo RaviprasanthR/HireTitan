@@ -153,6 +153,22 @@ Folded into Phase 9 at Ravi's request. Constitution check: no new dependency; se
 
 **Frontend (`features/settings/`).** `SettingsPage` becomes three parts with an index of anchor links: `AiSection` (status, source, a password field with Save / Replace / Remove, Check again), `GmailSetup` (an ordered step list built from `GET /mail/connection`, `GET /mail/senders` and the last check: Google client, Connect, Senders, First check; each `done` / `current` / `waiting`, current open, done reopenable; the existing credential form, connect button, `MailSenders` and check button move into the steps), and `DataSection` (the existing Delete all my data). Pure step logic in `gmailSteps.ts` with its own tests. Styles follow the theme tokens; no new UI library.
 
+## Amendment 2026-11-24: the AI reads alerts first (FR-013b to FR-013e, SC-011)
+
+Ravi's first real LinkedIn alert showed the guessed fixed layouts missing the company. Constitution check: no new dependency or prompt (the existing `read_job_alert` v1 and its `accept` checks are reused, so "AI never invents" holds: a value not in the email is dropped); the email's sanitised text was already allowed to reach the provider for the fallback, now for every alert when a key is set (said in the spec, the Settings Gmail part and the user guide); no-send rule unchanged; TDD as usual; the eval gate (SC-011) must pass before the PR merges.
+
+**Check step (`mail/workflow/check.py`).** `_read_one` runs the fixed readers as now (they also decide whether domain-only mail is an alert), then asks the AI when `deps.ai` is set and the email came from an enabled sender address, or came through a site's domain and a fixed reader found jobs. `_ask_ai` becomes "AI first": an answer with accepted jobs is merged with the fixed reader's jobs by clean link (the AI's fields win; fixed-reader jobs whose link the AI did not return are added); an AI that cannot be asked, an unusable or empty answer, or the cap leave the fixed reader's result as it was (an email the fixed readers could not read keeps today's `needs_ai`/`unreadable` handling). `AI_EMAILS_MAX` goes from 30 to 50; `reader` is `ai`, or `ai+<site>` when both contributed.
+
+**Footer guard (`mail/domain/alert_checks.py`).** A pure `is_boilerplate(text)` over a short phrase list (case-insensitive, start of line) used by `accept` and by the fixed readers' common output step: such a value becomes empty (a title that is boilerplate drops the job).
+
+**Fixing stored jobs (`search/application/alerts.py`, `search/infra/search_store.py`).** `AlertPosting` gains `read_by: "ai" | "fixed"`; for an exact match whose sources are all `email_alert` and whose state is not applied/inquired, the store updates `company_name`/`location_text` (and `company_id` by name lookup) following FR-013d. The job remembers who gave its company in `jobs.alert_read_by` (nullable text, migration).
+
+**Read the last day again (FR-013e).** `POST /mail/checks` takes `{"reread_last_day": true}`; under the existing one-check lock the API deletes `mail_read_messages` rows received in the last 24 hours (sightings keep their job; their `read_message_id` goes null as now on delete) and starts the check. Contract in `contracts/rest-api.md`. Frontend: a secondary button in the Gmail part's First check step and after a check's summary, with a one-line note that it reads the last 24 hours again with the AI.
+
+**Eval (`backend/evals/read_job_alert/`).** Runner over `tests/fixtures/mail` (all 62 + the 3 unknown layouts + the planted-instruction emails) with `expected.yaml`, scoring SC-011; `python -m evals.run read_job_alert --models fast --yes`, prints a cost estimate first, stops on `AiUnavailable`. Report in `evals/reports/`.
+
+**E2E.** The Gmail journey runs the scripted AI: add scripted `read_job_alert` replies for its fixture alerts so it covers the AI-first path; a no-key journey is not needed (unit and workflow tests cover the fallback).
+
 ## Complexity Tracking
 
 | Item | Why needed | Simpler alternative rejected because |

@@ -240,6 +240,8 @@ class JobRow(IdTimestampMixin, Base):
     injection_flags: Mapped[list[JsonDict]] = mapped_column(
         JSONB, server_default=text("'[]'::jsonb")
     )
+    # for a job read from alert emails: who gave its company and place, "fixed" or "ai" (FR-013d)
+    alert_read_by: Mapped[str | None] = mapped_column(Text)
 
 
 class JobSourceRow(IdTimestampMixin, Base):

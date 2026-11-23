@@ -318,17 +318,123 @@ async def test_FR014_a_job_from_an_email_with_instructions_carries_the_warning(e
     assert {f["location"] for j in jobs for f in j.injection_flags} == {"email"}
 
 
-async def test_SC002_builtin_emails_read_without_ai(env: Env) -> None:
-    llm = FakeLlm()  # nothing scripted: any call would fail the test
-    with_ai(env, llm)
+async def test_SC002_builtin_emails_read_without_ai_when_none_is_set_up(env: Env) -> None:
+    # FR-013b: with no AI the fixed readers read the built-in sites alone, as before
     env.add("linkedin-01", "naukri-01", "indeed-01", "cutshort-01")
 
     run_id = await env.check()
 
-    assert llm.calls == []
     check = await the_check(env, run_id)
     assert (check.emails_read, check.emails_unreadable) == (4, 0)
     assert await count(env, JobRow) > 0
+    assert {m.reader for m in await messages(env)} == {"linkedin", "naukri", "indeed", "cutshort"}
+
+
+def linkedin_answer(*jobs: tuple[str, str | None, str | None, int]) -> dict[str, Any]:
+    return {
+        "jobs": [
+            {"title": t, "company": c, "location": loc, "link_index": i} for t, c, loc, i in jobs
+        ]
+    }
+
+
+async def linkedin_jobs(env: Env) -> list[tuple[str, str, str | None]]:
+    async with env.sessions() as session:
+        rows = (await session.scalars(select(JobRow).order_by(JobRow.title))).all()
+    return [(j.title, j.company_name, j.location_text) for j in rows]
+
+
+async def test_FR013b_a_builtin_alert_is_read_by_the_ai_first(env: Env) -> None:
+    # the fixed reader reads linkedin-01 too; with an AI the AI's reading wins
+    llm = FakeLlm(
+        by_task={
+            TASK: [
+                linkedin_answer(
+                    ("Data Engineer", "Aspen Robotics", "Chennai", 1),
+                    ("Python Developer", "Nimbus Telecom", "Remote, India", 2),
+                    ("QA Automation Engineer", "Willow Education", "Remote, India", 3),
+                )
+            ]
+        }
+    )
+    with_ai(env, llm)
+    env.add("linkedin-01")
+
+    await env.check()
+
+    assert len(llm.calls) == 1
+    assert ("Data Engineer", "Aspen Robotics", "Chennai") in await linkedin_jobs(env)
+    (message,) = await messages(env)
+    assert (message.outcome, message.reader, message.jobs_found) == ("read", "ai", 3)
+
+
+async def test_FR013b_jobs_only_the_fixed_reader_found_are_kept_and_empty_ai_values_filled(
+    env: Env,
+) -> None:
+    with_ai(env, FakeLlm(by_task={TASK: [linkedin_answer(("Data Engineer", None, None, 1))]}))
+    env.add("linkedin-01")
+
+    await env.check()
+
+    assert await linkedin_jobs(env) == [
+        ("Data Engineer", "Aspen Robotics", "Remote, India"),
+        ("Python Developer", "Nimbus Telecom", "Remote, India"),
+        ("QA Automation Engineer", "Willow Education", "Remote, India"),
+    ]
+    (message,) = await messages(env)
+    assert (message.reader, message.jobs_found) == ("ai+linkedin", 3)
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [AiUnavailable("key_rejected"), {"jobs": []}, {"not": "an answer"}],
+    ids=["ai_unavailable", "no_jobs", "unusable"],
+)
+async def test_FR013b_without_a_usable_ai_answer_the_fixed_reading_stands(
+    env: Env, answer: object
+) -> None:
+    with_ai(env, FakeLlm(by_task={TASK: [answer]}))
+    env.add("linkedin-01")
+
+    run_id = await env.check()
+
+    assert len(await linkedin_jobs(env)) == 3
+    (message,) = await messages(env)
+    assert (message.outcome, message.reader, message.jobs_found) == ("read", "linkedin", 3)
+    assert (await the_check(env, run_id)).emails_unreadable == 0
+
+
+async def test_FR013b_site_domain_mail_goes_to_the_ai_only_when_a_reader_found_jobs(
+    env: Env,
+) -> None:
+    llm = FakeLlm(by_task={TASK: [linkedin_answer(("Data Engineer", None, "Chennai", 1))]})
+    with_ai(env, llm)
+    env.add("linkedin-01", as_sender="digest@mail.linkedin.com")  # an alert: read, AI asked
+    env.add("unknown-01", as_sender="news@linkedin.com")  # not an alert: dropped, no AI
+
+    await env.check()
+
+    assert len(llm.calls) == 1
+    assert ("Data Engineer", "Aspen Robotics", "Chennai") in await linkedin_jobs(env)
+    readers = sorted(str(m.reader) for m in await messages(env))
+    assert readers == ["ai+linkedin", "domain"]
+
+
+async def test_FR013b_past_the_ai_cap_the_fixed_readers_read_on(env: Env) -> None:
+    llm = FakeLlm(by_task={TASK: [{"jobs": []}] * AI_EMAILS_MAX})
+    with_ai(env, llm)
+    env.copies("linkedin-01", AI_EMAILS_MAX + 2)
+
+    run_id = await env.check()
+
+    assert len(llm.calls) == AI_EMAILS_MAX
+    check = await the_check(env, run_id)
+    assert (check.emails_read, check.emails_unreadable) == (AI_EMAILS_MAX + 2, 0)
+    assert {m.reader for m in await messages(env)} == {"linkedin"}
+
+
+def test_FR013b_the_ai_cap_is_50_emails_a_check() -> None:
+    assert AI_EMAILS_MAX == 50
 
 
 async def test_FR013a_the_ai_call_is_recorded_without_the_email(env: Env) -> None:

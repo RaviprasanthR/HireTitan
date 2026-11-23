@@ -759,6 +759,44 @@ describe('GmailSection: review fixes', () => {
     expect(within(check).getByRole('button', { name: 'Check job-alert mail' })).toBeInTheDocument()
   })
 
+  it('FR-013e once checked, the check step can read the last day again', async () => {
+    connection = {
+      ...base,
+      state: 'connected',
+      address: 'jobseeker@example.invalid',
+      credentials_set: true,
+      last_check_started_at: '2026-11-22T12:00:00Z',
+    }
+    const user = userEvent.setup()
+    calls = stubApi((call) => {
+      if (call.path === '/mail/connection') return connection
+      if (call.method === 'POST' && call.path === '/mail/checks')
+        return new Response(JSON.stringify({ search_run_id: 'r1' }), { status: 202 })
+      return undefined
+    })
+    renderSection()
+
+    await screen.findByRole('list', { name: 'Gmail set-up steps' })
+    const check = steps()[3] as HTMLElement
+    expect(within(check).getByText(/reads the last 24 hours of alert mail again/i)).toBeInTheDocument()
+    await user.click(within(check).getByRole('button', { name: 'Read the last day again' }))
+
+    await waitFor(() =>
+      expect(
+        calls.filter((c) => c.method === 'POST' && c.path === '/mail/checks').map((c) => c.body),
+      ).toEqual([{ reread_last_day: true }]),
+    )
+    expect(await within(check).findByRole('link', { name: 'Explore' })).toHaveAttribute('href', '/')
+  })
+
+  it('FR-013e never checked: no read-again button yet', async () => {
+    connection = { ...base, state: 'connected', address: 'jobseeker@example.invalid', credentials_set: true }
+    renderSection()
+
+    await screen.findByRole('list', { name: 'Gmail set-up steps' })
+    expect(screen.queryByRole('button', { name: 'Read the last day again' })).not.toBeInTheDocument()
+  })
+
   it('Disconnect is offered once, in the Connect step', async () => {
     connection = {
       ...base,

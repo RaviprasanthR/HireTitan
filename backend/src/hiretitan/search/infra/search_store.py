@@ -12,7 +12,14 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from hiretitan.platform.runtime.infra.runs_repo import RunsRepo
-from hiretitan.search.application.alerts import KnownJob, Sighting
+from hiretitan.search.application.alerts import (
+    NO_COMPANY,
+    PIPELINE_STATES,
+    AlertReading,
+    KnownJob,
+    Sighting,
+)
+from hiretitan.search.application.alerts import SOURCE_KIND as ALERT_SOURCE_KIND
 from hiretitan.search.application.search import (
     BatchCounts,
     CompanyOutcome,
@@ -27,6 +34,7 @@ from hiretitan.search.infra.models import (
     AlertSightingRow,
     CompanyRow,
     JobRow,
+    JobSourceRow,
     SearchRunCompanyRow,
     SearchRunRow,
 )
@@ -95,6 +103,7 @@ class SearchStore:
             requisition_id=job.requisition_id,
             state=state,
             injection_flags=job.injection_flags,
+            alert_read_by=job.alert_read_by,
         )
         await self._jobs.add_source(
             row.id, kind=job.source_kind, url=job.source_url, seen_at=now, search_run_id=run_id
@@ -250,6 +259,34 @@ class AlertSearchStore(SearchStore):
             .order_by(CompanyRow.created_at, CompanyRow.id)
             .limit(1)
         )
+
+    async def refresh_alert_job(self, job_id: UUID, reading: AlertReading) -> None:
+        """FR-013d: a job known only from alerts and not in the pipeline takes the company and
+        place of a new reading where it has none, or where the stored one came from a fixed reader
+        (or this reading is the AI's). Anything else about the job is left as it is."""
+        job = await self._session.get(JobRow, job_id)
+        if job is None or job.state in (*PIPELINE_STATES, "deleted"):
+            return
+        other_source = await self._session.scalar(
+            select(JobSourceRow.id)
+            .where(JobSourceRow.job_id == job_id, JobSourceRow.kind != ALERT_SOURCE_KIND)
+            .limit(1)
+        )
+        if other_source is not None:
+            return
+        may_replace = job.alert_read_by != "ai" or reading.read_by == "ai"
+        changed = False
+        if reading.company and (job.company_name == NO_COMPANY or may_replace):
+            job.company_name = reading.company
+            job.company_id = reading.company_id
+            changed = True
+        if reading.location_text and (job.location_text is None or may_replace):
+            job.location_text = reading.location_text
+            job.city, job.country, job.work_mode = reading.city, reading.country, reading.work_mode
+            changed = True
+        if changed and may_replace:
+            job.alert_read_by = reading.read_by
+        await self._session.flush()
 
     def queue_sighting(self, source_url: str, sighting: Sighting) -> None:
         self._by_url.append((source_url, sighting))
