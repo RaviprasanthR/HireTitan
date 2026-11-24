@@ -48,7 +48,7 @@ RULE_SET_STATUSES = ("proposed", "approved", "superseded")
 RUN_MODES = ("rules_and_ai", "rules_only", "mail_alerts")
 # "budget_reached" is an outcome of searches from before HireTitan dropped its AI budget
 RUN_OUTCOMES = ("finished", "stopped_by_user", "budget_reached", "out_of_credit", "failed")
-JOB_STATES = ("explore", "skipped", "inquired", "applied", "deleted")
+JOB_STATES = ("explore", "skipped", "inquired", "applied", "deleted", "staged")
 WORK_MODES = ("onsite", "hybrid", "remote")
 SOURCE_KINDS = ("company_board", "careers_page", "paste", "email_alert")
 # the sites whose alert emails are read (feature 002c); mirrors hiretitan.mail.domain.senders

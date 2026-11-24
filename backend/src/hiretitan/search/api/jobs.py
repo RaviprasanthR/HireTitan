@@ -31,10 +31,12 @@ from hiretitan.search.api.models import (
     with_resumes,
 )
 from hiretitan.search.application.interviews import InterviewInputError
+from hiretitan.search.application.job_rules import check_recheckable, restore_skipped
 from hiretitan.search.application.paste import PasteError, PasteInput, paste_job
 from hiretitan.search.application.pipeline import (
     JobNotFoundError,
     PipelineDateError,
+    PipelineRuleError,
     mark_applied,
     mark_inquired,
     undo_applied,
@@ -42,9 +44,11 @@ from hiretitan.search.application.pipeline import (
 )
 from hiretitan.search.application.resume_choice import ResumeLookup, clear_for_job, record_on_mark
 from hiretitan.search.application.search import RunQueue
-from hiretitan.search.domain.job_state import IllegalJobTransitionError, JobState, transition
+from hiretitan.search.domain.job_state import IllegalJobTransitionError, JobState
 from hiretitan.search.domain.normalize import normalize_job
 from hiretitan.search.infra.interviews_repo import InterviewsRepo
+from hiretitan.search.infra.job_ops import JobGoneError
+from hiretitan.search.infra.job_ops import delete_job as remove_job
 from hiretitan.search.infra.models import JobRow, JobSourceRow
 from hiretitan.search.infra.paste_store import SqlPasteStore
 from hiretitan.search.infra.pipeline_settings_repo import PipelineSettingsRepo
@@ -57,7 +61,6 @@ from hiretitan.search.infra.repos import (
 from hiretitan.search.workflow.recheck import RECHECK_WORKFLOW
 
 DEFAULT_LIMIT = 25
-RECHECKABLE = "rules_only_fallback"
 
 
 @dataclass(frozen=True)
@@ -108,6 +111,7 @@ class PasteIn(BaseModel):
     title: str | None = None
     company: str | None = None
     location: str | None = Field(default=None, max_length=500)
+    link_only: bool = False  # 002m: only the link, title and company; the description later
 
 
 class JobDetailOut(JobCardOut):
@@ -145,6 +149,10 @@ def _decode(token: str) -> Cursor:
         return Cursor(value, UUID(data["id"]))
     except (ValueError, KeyError, TypeError, binascii.Error) as error:
         raise ProblemError(422, "That page marker is not valid.") from error
+
+
+def _rule(error: PipelineRuleError) -> ProblemError:
+    return ProblemError(409, str(error), reason=error.reason)
 
 
 def _not_found() -> ProblemError:
@@ -269,11 +277,11 @@ def create_search_jobs_router(deps: SearchJobsApiDeps) -> APIRouter:
     @router.post("/{job_id}/restore")
     async def restore(job_id: UUID) -> JobDetailOut:
         async with deps.sessions() as session:
-            row = await load(session, job_id)
-            if row.state != JobState.skipped:
-                raise ProblemError(409, "Only a skipped job can be restored.", reason="not_skipped")
-            row.state = JobState.explore.value
-            row.restored = True
+            await load(session, job_id)
+            try:
+                await restore_skipped(JobsRepo(session), job_id)
+            except PipelineRuleError as error:
+                raise _rule(error) from error
             await session.commit()
             return await detail(session, await load(session, job_id))
 
@@ -282,16 +290,10 @@ def create_search_jobs_router(deps: SearchJobsApiDeps) -> APIRouter:
         async with deps.sessions() as session:
             row = await load(session, job_id)
             current = await DecisionsRepo(session).current(job_id)
-            if (
-                row.state != JobState.explore
-                or current is None
-                or current.decided_by != RECHECKABLE
-            ):
-                raise ProblemError(
-                    409,
-                    "Only a job the AI has not checked can be checked again.",
-                    reason="not_recheckable",
-                )
+            try:
+                check_recheckable(JobState(row.state), current.decided_by if current else None)
+            except PipelineRuleError as error:
+                raise _rule(error) from error
             run = await RunsRepo(session).create(RECHECK_WORKFLOW, subject_id=job_id)
             await session.commit()
         await deps.queue.enqueue(run.id)
@@ -303,7 +305,14 @@ def create_search_jobs_router(deps: SearchJobsApiDeps) -> APIRouter:
             try:
                 result = await paste_job(
                     SqlPasteStore(session),
-                    PasteInput(body.url, body.description, body.title, body.company, body.location),
+                    PasteInput(
+                        body.url,
+                        body.description,
+                        body.title,
+                        body.company,
+                        body.location,
+                        link_only=body.link_only,
+                    ),
                     now=deps.clock.now(),
                 )
             except PasteError as error:
@@ -322,11 +331,7 @@ def create_search_jobs_router(deps: SearchJobsApiDeps) -> APIRouter:
     async def applied(job_id: UUID, body: AppliedIn | None = None) -> Any:
         today = deps.clock.now().date()
         async with deps.sessions() as session:
-            row = await load(session, job_id)  # a deleted job is not found
-            if row.state == JobState.applied:
-                raise ProblemError(
-                    409, "You already marked this job as applied.", reason="already_applied"
-                )
+            await load(session, job_id)  # a deleted job is not found
             try:
                 await mark_applied(
                     JobsRepo(session),
@@ -340,6 +345,8 @@ def create_search_jobs_router(deps: SearchJobsApiDeps) -> APIRouter:
                     str(error),
                     errors=[{"field": "applied_on", "message": str(error)}],
                 )
+            except PipelineRuleError as error:
+                raise _rule(error) from error
             except JobNotFoundError as error:
                 raise _not_found() from error
             except IllegalJobTransitionError as error:
@@ -353,8 +360,8 @@ def create_search_jobs_router(deps: SearchJobsApiDeps) -> APIRouter:
     async def undo(job_id: UUID) -> JobDetailOut:
         async with deps.sessions() as session:
             row = await load(session, job_id)
-            if row.state != JobState.applied:
-                raise ProblemError(409, "This job is not marked as applied.", reason="not_applied")
+            if row.state != JobState.applied:  # checked before the interview data is cleared
+                raise _rule(PipelineRuleError("not_applied", "This job is not marked as applied."))
             await clear_for_job(JobsRepo(session), InterviewsRepo(session), job_id)  # FR-008
             await undo_applied(JobsRepo(session), job_id)
             await session.commit()
@@ -364,17 +371,7 @@ def create_search_jobs_router(deps: SearchJobsApiDeps) -> APIRouter:
     async def inquired(job_id: UUID, body: InquiredIn | None = None) -> Any:
         today = deps.clock.now().date()
         async with deps.sessions() as session:
-            row = await load(session, job_id)
-            if row.state == JobState.inquired:
-                raise ProblemError(
-                    409, "You already marked this job as inquired.", reason="already_inquired"
-                )
-            if row.state == JobState.applied:
-                raise ProblemError(
-                    409,
-                    "You already applied to this job, so it cannot be marked as inquired.",
-                    reason="already_applied",
-                )
+            await load(session, job_id)
             try:
                 await mark_inquired(
                     JobsRepo(session),
@@ -388,6 +385,8 @@ def create_search_jobs_router(deps: SearchJobsApiDeps) -> APIRouter:
                     str(error),
                     errors=[{"field": "inquired_on", "message": str(error)}],
                 )
+            except PipelineRuleError as error:
+                raise _rule(error) from error
             except JobNotFoundError as error:
                 raise _not_found() from error
             except IllegalJobTransitionError as error:
@@ -401,9 +400,9 @@ def create_search_jobs_router(deps: SearchJobsApiDeps) -> APIRouter:
     async def undo_inquiry(job_id: UUID) -> JobDetailOut:
         async with deps.sessions() as session:
             row = await load(session, job_id)
-            if row.state != JobState.inquired:
-                raise ProblemError(
-                    409, "This job is not marked as inquired.", reason="not_inquired"
+            if row.state != JobState.inquired:  # checked before the interview data is cleared
+                raise _rule(
+                    PipelineRuleError("not_inquired", "This job is not marked as inquired.")
                 )
             await clear_for_job(JobsRepo(session), InterviewsRepo(session), job_id)  # FR-008
             await undo_inquired(JobsRepo(session), job_id)
@@ -413,20 +412,12 @@ def create_search_jobs_router(deps: SearchJobsApiDeps) -> APIRouter:
     @router.delete("/{job_id}", status_code=204)
     async def delete_job(job_id: UUID) -> Response:
         async with deps.sessions() as session:
-            await InterviewsRepo(session).lock_job(job_id)  # a contact save cannot slip in after
-            row = await load(session, job_id, deleted_ok=True)
             try:
-                transition(JobState(row.state), JobState.deleted)
+                await remove_job(session, job_id, deps.job_cleanups)
+            except JobGoneError as error:
+                raise _not_found() from error
             except IllegalJobTransitionError as error:
                 raise ProblemError(409, str(error)) from error
-            # The date of the old state goes with it (the table requires it).
-            row.state = JobState.deleted.value
-            row.applied_on = None
-            row.inquired_on = None
-            # what was recorded about the job goes with it (feature 002e, FR-011)
-            await InterviewsRepo(session).delete_for_job(job_id)
-            for cleanup in deps.job_cleanups:
-                await cleanup(session, job_id)
             await session.commit()
         return Response(status_code=204)
 

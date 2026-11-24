@@ -88,6 +88,15 @@ class SqlTurnStore:
             )
             return {str(ref) for refs in found for ref in refs}
 
+    async def last_person_text(self, conversation_id: UUID) -> str | None:
+        async with self._sessions() as session:
+            return await session.scalar(
+                select(MessageRow.text)
+                .where(MessageRow.conversation_id == conversation_id, MessageRow.author == "person")
+                .order_by(MessageRow.seq.desc())
+                .limit(1)
+            )
+
     async def record_round(self, rounds: LlmRound) -> None:
         async with self._sessions() as session:
             await CallsRepo(session).record(

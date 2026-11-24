@@ -42,6 +42,76 @@ NOW = datetime(2026, 11, 24, 10, 0, tzinfo=UTC)
 ITEM = {"action": "delete_job", "args": {"job": "job:00000000-0000-0000-0000-000000000001"}}
 
 
+def test_002m_0029_staged_posting_up_down(
+    fresh_database_url: str, make_alembic_config: Callable[[str], Config]
+) -> None:
+    cfg = make_alembic_config(fresh_database_url)
+    command.upgrade(cfg, "0028")
+    engine = create_engine(fresh_database_url)
+    try:
+
+        def states() -> str:
+            found = inspect(engine).get_check_constraints("jobs", schema="app")
+            return next(c["sqltext"] for c in found if c["name"].endswith("state_values"))
+
+        assert "assistant_staged" not in inspect(engine).get_table_names(schema="app")
+        assert "staged" not in states()
+        command.upgrade(cfg, "0029")
+        assert "assistant_staged" in inspect(engine).get_table_names(schema="app")
+        assert "staged" in states()
+        command.downgrade(cfg, "0028")
+        assert "assistant_staged" not in inspect(engine).get_table_names(schema="app")
+        assert "staged" not in states()
+    finally:
+        engine.dispose()
+
+
+def test_002m_0028_email_draft_kind_up_down(
+    fresh_database_url: str, make_alembic_config: Callable[[str], Config]
+) -> None:
+    cfg = make_alembic_config(fresh_database_url)
+    command.upgrade(cfg, "0027")
+    engine = create_engine(fresh_database_url)
+    try:
+
+        def kinds_rule() -> str:
+            found = inspect(engine).get_check_constraints("outreach_drafts", schema="app")
+            return next(
+                c["sqltext"]
+                for c in found
+                if c["name"].endswith("kind_values") and "recipient" not in c["name"]
+            )
+
+        assert "email" not in kinds_rule()
+        command.upgrade(cfg, "0028")
+        assert "email" in kinds_rule()
+        command.downgrade(cfg, "0027")
+        assert "email" not in kinds_rule()
+    finally:
+        engine.dispose()
+
+
+def test_FR014_0027_summary_column_up_down(
+    fresh_database_url: str, make_alembic_config: Callable[[str], Config]
+) -> None:
+    cfg = make_alembic_config(fresh_database_url)
+    command.upgrade(cfg, "0026")
+    engine = create_engine(fresh_database_url)
+    try:
+
+        def columns() -> set[str]:
+            found = inspect(engine).get_columns("assistant_changes", schema="app")
+            return {c["name"] for c in found}
+
+        assert "summary" not in columns()
+        command.upgrade(cfg, "0027")
+        assert "summary" in columns()
+        command.downgrade(cfg, "0026")
+        assert "summary" not in columns()
+    finally:
+        engine.dispose()
+
+
 def test_FR026_0026_migration_up_down(
     fresh_database_url: str, make_alembic_config: Callable[[str], Config]
 ) -> None:

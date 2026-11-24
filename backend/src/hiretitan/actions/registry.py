@@ -4,11 +4,17 @@ from __future__ import annotations
 
 from hiretitan.actions import (
     companies,
+    company_changes,
     contacts,
+    interview_changes,
     interviews,
+    job_changes,
     jobs,
     mail,
     profile,
+    risky_companies,
+    risky_jobs,
+    risky_profile,
     search,
     settings,
 )
@@ -26,6 +32,12 @@ def build_catalogue() -> Catalogue:
         *interviews.READS,
         *profile.READS,
         *settings.READS,
+        *job_changes.CHANGES,
+        *company_changes.CHANGES,
+        *interview_changes.CHANGES,
+        *risky_jobs.CHANGES,
+        *risky_companies.CHANGES,
+        *risky_profile.CHANGES,
     ):
         catalogue.register(spec)
     return catalogue

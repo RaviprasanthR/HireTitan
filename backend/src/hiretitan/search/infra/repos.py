@@ -395,6 +395,15 @@ class JobsRepo:
         value = await self._session.scalar(select(JobRow.state).where(JobRow.id == job_id))
         return JobState(value) if value is not None else None
 
+    async def mark_restored(self, job_id: UUID) -> None:
+        """A hidden job back in Explore, remembered as restored by the person."""
+        await self._session.execute(
+            update(JobRow)
+            .where(JobRow.id == job_id)
+            .values(state=JobState.explore.value, restored=True)
+        )
+        await self._session.flush()
+
     async def set_status(
         self,
         job_id: UUID,

@@ -79,7 +79,7 @@ class ListRoundsArgs(BaseModel):
 
 async def list_rounds(ctx: ActionContext, args: ListRoundsArgs) -> PrivateResult:
     query = select(InterviewRoundRow, JobRow).join(JobRow, JobRow.id == InterviewRoundRow.job_id)
-    query = query.where(JobRow.state != "deleted")
+    query = query.where(JobRow.state.not_in(("deleted", "staged")))
     if args.job:
         query = query.where(JobRow.id == Ref.parse(args.job, expect="job").id)
     if args.upcoming:

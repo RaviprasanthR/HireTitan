@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 import logging
 import time
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Final, Literal
@@ -52,6 +52,12 @@ MAX_ROUNDS: Final = 6
 TURN_SECONDS: Final = 90.0
 TASK: Final = "mikasa_turn"
 REFUSED_TEXT: Final = "Sorry, I couldn't do that."
+# Shown for anything that is not about the person's own HireTitan data (FR-030, FR-031). The
+# panel shows the quick actions under it.
+OFF_TOPIC_TEXT: Final = (
+    "I can only help with your own job search in HireTitan: your jobs, companies, searches, "
+    "job-alert mail and interviews. Try one of the quick actions."
+)
 UNBACKED_TEXT: Final = (
     "I don't see that in your confirmed profile, so I won't say it. "
     "You can check your profile on [[page:/profile]]."
@@ -80,6 +86,12 @@ class EmptyMessageError(TurnError):
 
 class LooksLikePostingError(TurnError):
     reason = "looks_like_posting"
+
+
+class InjectionRefusedError(TurnError):
+    """The message carries text that tries to give the assistant orders (FR-032)."""
+
+    reason = "injection_refused"
 
 
 # ---- events streamed to the panel (contracts/rest-api.md, "Turn stream") ---------------------
@@ -120,7 +132,30 @@ class DoneEvent:
     name: Literal["done"] = "done"
 
 
-TurnEvent = TextEvent | RefEvent | NoticeEvent | ErrorEvent | DoneEvent
+@dataclass(frozen=True, slots=True)
+class ChangeEvent:
+    """A small change applied at once, with its Undo (FR-014)."""
+
+    change_id: UUID
+    action: str
+    summary: str
+    undo_until: datetime | None
+    invalidate: list[list[str]]
+    name: Literal["change"] = "change"
+
+
+@dataclass(frozen=True, slots=True)
+class CardEvent:
+    """A risky change waiting for the person's confirmation (FR-010)."""
+
+    card_id: UUID
+    summary: str
+    items: list[dict[str, Any]]
+    expires_at: datetime
+    name: Literal["card"] = "card"
+
+
+TurnEvent = TextEvent | RefEvent | NoticeEvent | ErrorEvent | DoneEvent | ChangeEvent | CardEvent
 
 
 @dataclass(frozen=True, slots=True)
@@ -134,6 +169,11 @@ class TurnDeps:
     max_rounds: int = MAX_ROUNDS
     turn_seconds: float = TURN_SECONDS
     monotonic: Callable[[], float] = time.monotonic
+    # tells the other open tabs which lists changed (FR-004); none in tests that don't care
+    publish: Callable[[list[list[str]]], Awaitable[None]] | None = None
+    # The tool-less topic check of a typed message (FR-030): True on topic, False off topic, None
+    # when the check could not be made (then FR-031 still applies).
+    topic: Callable[[str], Awaitable[bool | None]] | None = None
 
 
 async def begin(deps: TurnDeps, conversation_id: UUID, text: str) -> UUID:
@@ -150,11 +190,19 @@ async def begin(deps: TurnDeps, conversation_id: UUID, text: str) -> UUID:
     if not await deps.store.claim_turn(conversation_id, now):
         raise TurnRunningError
     try:
+        flags = screen(text)
         signals = [
             {"rule": flag.rule_id, "severity": flag.severity, "excerpt": flag.excerpt}
-            for flag in screen(text)
+            for flag in flags
         ]
-        return await deps.store.add_person_message(conversation_id, text, signals, now)
+        message_id = await deps.store.add_person_message(conversation_id, text, signals, now)
+        if any(flag.severity in ("medium", "high") for flag in flags):
+            # refused before any AI call; the message and its signal stay for the person to see
+            await deps.store.release_turn(conversation_id)
+            raise InjectionRefusedError
+        return message_id
+    except InjectionRefusedError:
+        raise
     except BaseException:
         await deps.store.release_turn(conversation_id)
         raise
@@ -173,6 +221,8 @@ class _Turn:
     """What a turn has gathered so far."""
 
     live: list[str] = field(default_factory=list)  # text already streamed
+    held: list[str] = field(default_factory=list)  # text waiting for a first action (FR-031)
+    acted: bool = False  # a catalogue action has run in this turn
     buffered: list[str] = field(default_factory=list)  # text held for the profile check
     refs: list[str] = field(default_factory=list)
     trace: list[dict[str, Any]] = field(default_factory=list)
@@ -180,16 +230,26 @@ class _Turn:
     context: list[str] = field(default_factory=list)  # other results, for the profile check
     repairs_left: int = 1
     finished: bool = False
+    message_id: UUID | None = None  # the person's message this turn answers
 
     def text(self) -> str:
         return "".join(self.live) + "".join(self.buffered)
 
 
-async def run_turn(deps: TurnDeps, conversation_id: UUID, *, page: str) -> AsyncIterator[TurnEvent]:
+async def run_turn(
+    deps: TurnDeps, conversation_id: UUID, *, page: str, message_id: UUID | None = None
+) -> AsyncIterator[TurnEvent]:
     """Stream Mikasa's reply to the person's last message. Always ends with ``DoneEvent``."""
-    turn = _Turn()
+    turn = _Turn(message_id=message_id)
     deadline = deps.monotonic() + deps.turn_seconds
     try:
+        if deps.topic is not None:
+            typed = await deps.store.last_person_text(conversation_id)
+            if typed is not None and await deps.topic(typed) is False:
+                yield NoticeEvent("off_topic", OFF_TOPIC_TEXT)
+                stored_id = await _finish(deps, conversation_id, turn, OFF_TOPIC_TEXT, "complete")
+                yield DoneEvent(stored_id, "complete", OFF_TOPIC_TEXT)
+                return
         known = await deps.store.known_refs(conversation_id)
         messages = await _history(deps, conversation_id, page)
         rounds_used = 0
@@ -203,7 +263,9 @@ async def run_turn(deps: TurnDeps, conversation_id: UUID, *, page: str) -> Async
             async for event in _converse(deps, messages, deadline):
                 if isinstance(event, TextDelta):
                     round_text.append(event.text)
-                    if turn.profile_read:
+                    if not turn.acted:
+                        turn.held.append(event.text)  # kept only if an action runs (FR-031)
+                    elif turn.profile_read:
                         turn.buffered.append(event.text)
                     else:
                         turn.live.append(event.text)
@@ -218,11 +280,41 @@ async def run_turn(deps: TurnDeps, conversation_id: UUID, *, page: str) -> Async
                 was_reading_profile = turn.profile_read
                 outcome = await _call(deps, conversation_id, call, messages, turn)
                 if outcome is not None:
+                    turn.acted = True
+                    if turn.held:
+                        flushed = "".join(turn.held)
+                        turn.held.clear()
+                        if turn.profile_read:
+                            turn.buffered.append(flushed)
+                        else:
+                            turn.live.append(flushed)
+                            yield TextEvent(flushed)
                     known.update(outcome.refs)
+                    if outcome.change is not None:
+                        change = outcome.change
+                        yield ChangeEvent(
+                            change.change_id,
+                            change.action,
+                            change.summary,
+                            change.undo_until,
+                            change.invalidate,
+                        )
+                        if deps.publish is not None:
+                            await deps.publish(change.invalidate)
+                    if outcome.card is not None:
+                        card = outcome.card
+                        yield CardEvent(card.card_id, card.summary, card.items, card.expires_at)
                 if turn.profile_read and not was_reading_profile:
                     yield NoticeEvent("checking_profile", "Checking against your profile…")
         if turn.profile_read and turn.buffered:
             turn.buffered = [await _checked_against_profile(deps, messages, turn, deadline)]
+        if not turn.acted:
+            # FR-031: nothing from HireTitan was read or done, so whatever the model wrote is
+            # not an answer about the person's data; it is replaced by a fixed refusal.
+            yield NoticeEvent("off_topic", OFF_TOPIC_TEXT)
+            stored_id = await _finish(deps, conversation_id, turn, OFF_TOPIC_TEXT, "complete")
+            yield DoneEvent(stored_id, "complete", OFF_TOPIC_TEXT)
+            return
         checked = check_reply(turn.text(), known_refs=known, routes=APP_ROUTES)
         if checked.removed_refs or checked.removed_links:
             log.warning(
@@ -232,42 +324,42 @@ async def run_turn(deps: TurnDeps, conversation_id: UUID, *, page: str) -> Async
             )
         for ref in checked.refs:
             yield RefEvent(ref)
-        message_id = await _finish(deps, conversation_id, turn, checked.text, "complete")
-        yield DoneEvent(message_id, "complete", checked.text)
+        stored_id = await _finish(deps, conversation_id, turn, checked.text, "complete")
+        yield DoneEvent(stored_id, "complete", checked.text)
     except _RefusedError:
         log.warning("Mikasa: a tool call failed validation twice; the turn was refused")
         turn.trace.append({"outcome": "refused"})
         text = (turn.text() + "\n\n" + REFUSED_TEXT).strip()
-        message_id = await _finish(deps, conversation_id, turn, text, "complete")
-        yield DoneEvent(message_id, "complete", text)
+        stored_id = await _finish(deps, conversation_id, turn, text, "complete")
+        yield DoneEvent(stored_id, "complete", text)
     except AiUnavailable as error:
         error_info = {"reason": error.reason, "provider_message": error.provider_message}
-        message_id = await _finish(
+        stored_id = await _finish(
             deps, conversation_id, turn, turn.text(), "failed", error=error_info
         )
         yield ErrorEvent("ai_unavailable", _unavailable_text(error.reason), error.provider_message)
-        yield DoneEvent(message_id, "failed", turn.text())
+        yield DoneEvent(stored_id, "failed", turn.text())
     except RetryableLlmError:
-        message_id = await _finish(
+        stored_id = await _finish(
             deps, conversation_id, turn, turn.text(), "failed", error={"reason": "busy"}
         )
         yield ErrorEvent("busy", "The AI provider is busy right now. Try again in a moment.")
-        yield DoneEvent(message_id, "failed", turn.text())
+        yield DoneEvent(stored_id, "failed", turn.text())
     except _TimeoutError:
-        message_id = await _finish(
+        stored_id = await _finish(
             deps, conversation_id, turn, turn.text(), "failed", error={"reason": "timeout"}
         )
         yield ErrorEvent("timeout", "That took too long, so I stopped. Try a smaller question.")
-        yield DoneEvent(message_id, "failed", turn.text())
+        yield DoneEvent(stored_id, "failed", turn.text())
     except Exception:
         # Anything else (a database error in an action, a bug): the turn still ends with a
         # visible reason, keeps what was written and frees the conversation (SC-008).
         log.exception("Mikasa turn failed")
-        message_id = await _finish(
+        stored_id = await _finish(
             deps, conversation_id, turn, turn.text(), "failed", error={"reason": "internal"}
         )
         yield ErrorEvent("internal", "Something went wrong on my side. Try again.")
-        yield DoneEvent(message_id, "failed", turn.text())
+        yield DoneEvent(stored_id, "failed", turn.text())
     finally:
         if not turn.finished:
             # The person pressed Stop (the stream was closed) or something broke: keep what
@@ -342,7 +434,9 @@ async def _call(
         )
     )
     outcome = await deps.catalog.call(
-        call.name, call.arguments_json, CallContext(conversation_id, deps.now())
+        call.name,
+        call.arguments_json,
+        CallContext(conversation_id, deps.now(), message_id=turn.message_id),
     )
     turn.trace.append(
         {"tool": call.name, "kind": outcome.kind, "valid": outcome.valid, "refs": outcome.refs}

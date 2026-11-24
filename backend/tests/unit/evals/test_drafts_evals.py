@@ -50,6 +50,13 @@ class AnyAnswerLlm:
                 "sign_off": "Thanks, {my_name}",
                 "cited_fact_ids": [],
             },
+            "draft_email": {
+                "subject": "About the role",
+                "greeting": "Hi {recipient_first_name},",
+                "body": "I saw this role and would be glad to share more about my work.",
+                "closing": "Thank you for your time, and no worries if now is not a good moment.",
+                "cited_fact_ids": [],
+            },
             "tailor_resume": {
                 "summary": "Engineer who builds reliable software.",
                 "experience": [],
@@ -106,7 +113,8 @@ async def test_SC005_outreach_report_has_tier_columns_and_passes() -> None:
     fast = await evaluate_outreach(llm, tier="fast", model="m-fast", cases=build_cases()[:6])
     strong = await evaluate_outreach(llm, tier="strong", model="m-strong", cases=build_cases()[:6])
 
-    assert fast.drafts == 12
+    assert fast.drafts == 18  # three kinds: connection request, LinkedIn message, email
+    assert fast.first_try_ok == 18
     assert fast.fabrications == 0
     assert fast.length_ok == fast.length_total == 6
     assert fast.referral_first_try_rate == 1.0

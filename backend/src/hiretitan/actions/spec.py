@@ -12,10 +12,10 @@ An action's kind is part of its definition, never chosen by the model (FR-010):
 from __future__ import annotations
 
 import re
-from collections.abc import Awaitable, Callable, Mapping
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
-from typing import Any, Literal
+from typing import Any, Literal, Protocol
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -31,12 +31,43 @@ class InvalidActionSpecError(ValueError):
     pass
 
 
+class RunQueue(Protocol):
+    async def enqueue(self, run_id: UUID, resume: Any = None) -> None: ...
+
+
+@dataclass(frozen=True, slots=True)
+class ActionServices:
+    """What some actions need besides the database, built once by the wiring from the same
+    objects the routes use: the job queue, a job's clean-ups, starting a search or a mail check."""
+
+    queue: RunQueue | None = None
+    job_cleanups: Sequence[Callable[[AsyncSession, UUID], Awaitable[None]]] = ()
+    # (session, mode, now) -> the new search's id; raises the search use case's errors
+    start_search: Callable[[AsyncSession, str, datetime], Awaitable[UUID]] | None = None
+    # (now, read the last day again) -> the new check's search id; raises CheckNotReadyError
+    start_mail_check: Callable[[datetime, bool], Awaitable[UUID]] | None = None
+    # the careers-page reader the Companies page uses to confirm or reject a board
+    careers: Any = None
+    # session -> the RulesService the Search rules page uses (its synonyms and work areas)
+    rules_service: Callable[[AsyncSession], Any] | None = None
+
+
 @dataclass(frozen=True, slots=True)
 class ActionContext:
-    """What a handler gets besides its arguments: one session (one transaction) and the time."""
+    """What a handler gets besides its arguments: one session (one transaction), the time,
+    and the services a few actions need."""
 
     session: AsyncSession
     now: datetime
+    services: ActionServices = field(default_factory=ActionServices)
+
+
+class ActionRefusedError(Exception):
+    """Raised by targets when the change cannot even be proposed (a search already runs)."""
+
+    def __init__(self, reason: str, message: str) -> None:
+        super().__init__(message)
+        self.reason = reason
 
 
 @dataclass(frozen=True, slots=True)
@@ -71,6 +102,8 @@ class Applied:
     summary: str
     refs: list[str] = field(default_factory=list)
     created_rows: list[str] = field(default_factory=list)
+    # work that must wait for the commit, like queuing a search on the worker (R7)
+    after_commit: Callable[[], Awaitable[None]] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -110,6 +143,10 @@ class ActionSpec:
     current: CurrentFields | None = None
     targets: Targets | None = None
     invalidate: tuple[str, ...] = ()  # front-end query keys to refresh after it ran
+    # risky only: the card's first words ("Delete", "Start a search") and the arguments the
+    # person may change on the card before confirming (never a ref: the targets stay fixed)
+    card_title: str = ""
+    editable: tuple[str, ...] = ()
     mirrors: tuple[
         str, ...
     ] = ()  # endpoints it does the same work as, e.g. "POST /jobs/{job_id}/applied"

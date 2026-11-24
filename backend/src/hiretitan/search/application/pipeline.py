@@ -10,7 +10,12 @@ from datetime import date
 from typing import Protocol
 from uuid import UUID
 
-from hiretitan.search.domain.job_state import JobState, JobStatus, transition
+from hiretitan.search.domain.job_state import (
+    IllegalJobTransitionError,
+    JobState,
+    JobStatus,
+    transition,
+)
 
 MAX_AGE_YEARS = 2
 
@@ -21,6 +26,24 @@ class JobNotFoundError(LookupError):
 
 class PipelineDateError(ValueError):
     """The date is in the future or more than two years ago."""
+
+
+class PipelineRuleError(IllegalJobTransitionError):
+    """A mark or an undo the job's state does not allow; ``reason`` is the API's 409 reason.
+
+    These rules sat in the routers before 002m; they live here so the routes and Mikasa's
+    actions refuse the same things with the same words. It is an illegal transition, so code
+    that catches ``IllegalJobTransitionError`` still sees it."""
+
+    def __init__(
+        self,
+        reason: str,
+        message: str,
+        current: JobState = JobState.explore,
+        target: JobState = JobState.explore,
+    ) -> None:
+        super().__init__(current, target, message)
+        self.reason = reason
 
 
 def _two_years_before(today: date) -> date:
@@ -62,6 +85,8 @@ async def mark_applied(
 ) -> JobStatus:
     """From Explore, skipped (the person found it themselves) or inquired. Does not commit."""
     current = await _current(store, job_id)
+    if current is JobState.applied:
+        raise PipelineRuleError("already_applied", "You already marked this job as applied.")
     chosen = applied_on or today
     check_pipeline_date(chosen, today)
     status = transition(current, JobState.applied, applied_on=chosen)
@@ -71,7 +96,10 @@ async def mark_applied(
 
 async def undo_applied(store: JobStatusStore, job_id: UUID) -> JobStatus:
     """Back to Explore (an earlier inquiry is not restored). Does not commit."""
-    status = transition(await _current(store, job_id), JobState.explore)
+    current = await _current(store, job_id)
+    if current is not JobState.applied:
+        raise PipelineRuleError("not_applied", "This job is not marked as applied.")
+    status = transition(current, JobState.explore)
     await store.set_status(job_id, status.state, None)
     return status
 
@@ -81,6 +109,13 @@ async def mark_inquired(
 ) -> JobStatus:
     """From Explore or skipped. An applied job cannot be inquired. Does not commit."""
     current = await _current(store, job_id)
+    if current is JobState.inquired:
+        raise PipelineRuleError("already_inquired", "You already marked this job as inquired.")
+    if current is JobState.applied:
+        raise PipelineRuleError(
+            "already_applied",
+            "You already applied to this job, so it cannot be marked as inquired.",
+        )
     chosen = inquired_on or today
     check_pipeline_date(chosen, today)
     status = transition(current, JobState.inquired, inquired_on=chosen)
@@ -90,6 +125,9 @@ async def mark_inquired(
 
 async def undo_inquired(store: JobStatusStore, job_id: UUID) -> JobStatus:
     """Back to Explore. Does not commit."""
-    status = transition(await _current(store, job_id), JobState.explore)
+    current = await _current(store, job_id)
+    if current is not JobState.inquired:
+        raise PipelineRuleError("not_inquired", "This job is not marked as inquired.")
+    status = transition(current, JobState.explore)
     await store.set_status(job_id, status.state, None)
     return status

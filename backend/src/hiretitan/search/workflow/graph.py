@@ -390,7 +390,7 @@ async def dedup(deps: SearchDeps, state: State) -> State:
                 await session.scalars(
                     select(JobRow).where(
                         func.lower(JobRow.company_name) == item.company_name.lower(),
-                        JobRow.state != "deleted",
+                        JobRow.state.not_in(("deleted", "staged")),
                     )
                 )
             ).all()

@@ -30,7 +30,7 @@ from hiretitan.assistant.application.ports import AssistantStatus
 from hiretitan.assistant.application.turn import TurnDeps
 from hiretitan.assistant.infra.repos import ConversationsRepo
 from hiretitan.assistant.infra.turn_store import SqlTurnStore
-from hiretitan.assistant_wiring import CatalogAdapter
+from hiretitan.assistant_wiring import CatalogAdapter, card_units, paste_into, undo_units
 from hiretitan.platform.config.settings import Settings
 from hiretitan.platform.llm.fake import FakeLlm
 from hiretitan.platform.llm.port import TextDelta, ToolCall
@@ -80,6 +80,9 @@ async def api(sessions: async_sessionmaker[AsyncSession], tmp_path: Path) -> Asy
         status=current_status,
         now=lambda: NOW,
         describe=describe_ref,
+        cards=card_units(build_catalogue(), sessions, lambda: NOW),
+        undo=undo_units(build_catalogue(), sessions, lambda: NOW),
+        paste=paste_into(sessions, lambda: NOW),
     )
     app = create_app(
         Settings(),

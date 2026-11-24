@@ -333,3 +333,65 @@ async def test_FR013_a_run_that_fails_marks_the_draft_failed(env: DraftsEnv) -> 
     failed = await row(env, draft.id)
     assert failed.status == "failed"
     assert failed.failure_reason == WENT_WRONG
+
+
+GOOD_EMAIL = {
+    "subject": "Backend Engineer role at Acme",
+    "greeting": "Hi {recipient_first_name},",
+    "body": (
+        "I saw the Backend Engineer role at Acme. I build Python APIs and have worked with "
+        "PostgreSQL at Northwind Labs, which fits what the team needs. I'd be glad to share more "
+        "about my work if it helps."
+    ),
+    "closing": "Thank you for your time, and no worries if now is not a good moment.",
+    "cited_fact_ids": ["skill:python"],
+}
+
+
+async def test_002m_email_draft_has_subject_body_and_names(env: DraftsEnv) -> None:
+    env.llm.add(GOOD_EMAIL, task="draft_email")
+
+    draft_id = await start(env, "email")
+
+    found = await row(env, draft_id)
+    assert found.status == "ready"
+    assert found.source == "ai"
+    assert found.text is not None
+    assert found.text.startswith("Subject: Backend Engineer role at Acme\n\nHi Quillon,")
+    assert found.text.endswith(f"Best regards,\n{MY_NAME}")
+    assert "Northwind Labs" in found.text
+
+
+async def test_002m_email_with_invented_facts_falls_back(env: DraftsEnv) -> None:
+    invented = {**GOOD_EMAIL, "body": "I led 40 engineers at Globex for 15 years using Rust."}
+    env.llm.add(invented, invented, task="draft_email")
+
+    draft_id = await start(env, "email")
+
+    found = await row(env, draft_id)
+    assert found.source == "fallback"
+    assert found.text is not None
+    assert "Globex" not in found.text
+    assert found.text.startswith("Subject: ")
+    assert "Backend Engineer" in found.text
+
+
+async def test_002m_email_to_the_hiring_team_greets_there(env: DraftsEnv) -> None:
+    env.llm.add(GOOD_EMAIL, task="draft_email")
+
+    draft_id = await start(env, "email", name="Hiring team", role=None)
+
+    found = await row(env, draft_id)
+    assert found.text is not None
+    assert "Hi there," in found.text
+    assert "Hi Hiring," not in found.text
+
+
+async def test_002m_email_prompt_never_sees_names_or_contact_details(env: DraftsEnv) -> None:
+    env.llm.add(GOOD_EMAIL, task="draft_email")
+    await start(env, "email", name=CONTACT_NAME, role=CONTACT_ROLE)
+
+    call = next(c for c in env.llm.calls if c.task == "draft_email")
+    seen = call.prompt.system + "\n" + call.prompt.user
+    for secret in (CONTACT_NAME, "Quillon", CONTACT_ROLE, MY_NAME, MY_EMAIL, MY_PHONE, MY_LINK):
+        assert secret not in seen

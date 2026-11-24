@@ -20,6 +20,7 @@ class JobState(StrEnum):
     inquired = "inquired"
     applied = "applied"
     deleted = "deleted"
+    staged = "staged"  # a pasted post waiting in a chat; shown nowhere (002m)
 
 
 ALLOWED: Final[dict[JobState, frozenset[JobState]]] = {

@@ -14,6 +14,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from hiretitan.actions.refs import Ref
+from hiretitan.drafts.infra.models import OutreachDraftRow
 from hiretitan.profile.infra.repos import ResumeFilesRepo
 from hiretitan.search.infra.interviews_repo import InterviewsRepo
 from hiretitan.search.infra.models import (
@@ -49,6 +50,13 @@ def _day(value: date | datetime | None) -> str | None:
 async def _job(session: AsyncSession, job_id: UUID) -> JobRow | None:
     row = await session.get(JobRow, job_id)
     return None if row is None or row.state == "deleted" else row
+
+
+_DRAFT_TITLES = {
+    "connection_request": "LinkedIn connection message",
+    "referral_message": "LinkedIn message",
+    "email": "Email",
+}
 
 
 async def describe(session: AsyncSession, text: str) -> RefCard | None:
@@ -102,6 +110,24 @@ async def describe(session: AsyncSession, text: str) -> RefCard | None:
         if file is None:
             return None
         return RefCard(key, "resume_file", file.original_name, "Resume file", [], "/profile")
+    if ref.kind == "draft":
+        draft = await session.get(OutreachDraftRow, ref.id)
+        if draft is None:
+            return None
+        title = _DRAFT_TITLES.get(draft.kind, "Draft")
+        who = f"For {draft.recipient_name}"
+        if draft.status == "writing":
+            return RefCard(key, "draft", title, f"{who} · writing…", [], f"/jobs/{draft.job_id}")
+        if draft.status == "failed":
+            return RefCard(
+                key,
+                "draft",
+                title,
+                f"{who} · could not be written",
+                [draft.failure_reason or "You can write it again from the job's page."],
+                f"/jobs/{draft.job_id}",
+            )
+        return RefCard(key, "draft", title, who, [draft.text or ""], f"/jobs/{draft.job_id}")
     if ref.kind == "search_run":
         run = await session.get(SearchRunRow, ref.id)
         if run is None:

@@ -74,6 +74,7 @@ A change Mikasa applied, at once (small) or from a card (R6).
 | `message_id` | uuid FK null, `ON DELETE CASCADE` | for small changes |
 | `card_id` | uuid FK null, `ON DELETE CASCADE` | for changes from a card |
 | `action` | text not null | catalogue name |
+| `summary` | text null | what it did, in words, at most 2,000 characters (migration `0027`); the history shows it after a reload |
 | `target_kind` | text not null | `job`, `company`, `contact`, `round`, `question`, `interview`, `sender`, … |
 | `target_id` | uuid not null | |
 | `before` | jsonb not null | touched fields before (empty for an add) |

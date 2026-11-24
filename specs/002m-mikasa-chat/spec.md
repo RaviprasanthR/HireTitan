@@ -28,6 +28,8 @@ Three limits stay fixed, from the constitution:
 - Q: Which changes need a confirm click? → A: **Only risky ones.** A small change to one item that the UI can undo in one step happens at once and shows an Undo. Deletes, changes to more than one item, starting a search or mail check, AI generation, and changes to search rules, preferences or settings need a confirm card.
 - Planning (2026-11-24, Claude's call from the code, open to Ravi's correction): the UI has **no "hide this job"** action (jobs are hidden only by rules, and can be restored or deleted), so Mikasa can restore a hidden job but not hide one. **HireTitan does not fetch a job link** in this feature: a job is added from a link with the title and company the person gives (asked for if missing), and the paste dialog gains the same link-only option, so Mikasa does nothing the UI can't. **Draft text is edited only on its page**, not by Mikasa, so 002k's fact checks are never skipped. Mikasa's model tier is fixed in her prompt (`fast`), like every other AI task; there is no per-person model choice in the app.
 
+- Q (2026-11-24, after Ravi tried the read-only Mikasa: "it answers anything"): How is Mikasa kept to the person's own HireTitan data? → A: **Suggested questions first**: the panel opens with suggested questions that run HireTitan actions directly, with no AI call; **Ask something else** opens the text box. **Off-topic is blocked twice**: a small tool-less AI check of each typed message first (on topic or not), and a code rule that keeps a reply only when the turn read HireTitan data. The person's own message is screened for injection text before any AI call. **History: the last 10 messages** (was 30).
+
 The tool layer Mikasa uses is the one the later feature 007 (`mcp-access`) will expose to outside assistants; this feature builds it for Mikasa only and exposes nothing outside the app.
 
 ## User Scenarios & Testing *(mandatory)*
@@ -151,7 +153,7 @@ The conversation with Mikasa is kept, so the person can close the panel, move be
 
 **The chat**
 
-- **FR-001**: The person MUST be able to open Mikasa from every page of the app, in a panel that leaves the current page visible and usable, and close it without losing the conversation.
+- **FR-001**: The person MUST be able to open Mikasa from every page of the app with a round button at the bottom right, which opens a chat popup above it that leaves the current page visible and usable (Ctrl+/ toggles it, Escape closes it), and close it without losing the conversation. While Mikasa works, the popup MUST show a loading animation (typing dots) before the first words and a caret while the reply streams in. (Amended 2026-11-24: was a side panel; the main menu moved from the left edge to a top bar.)
 - **FR-002**: Mikasa's replies MUST be shown as they are written, and the person MUST be able to stop a reply.
 - **FR-003**: Links in Mikasa's replies to jobs, companies, drafts and pages MUST open that item in the app.
 - **FR-004**: After a confirmed change, the pages the person has open MUST show the new state without a manual reload.
@@ -204,6 +206,14 @@ The conversation with Mikasa is kept, so the person can close the panel, move be
 - **FR-027**: Delete all my data MUST remove every conversation, message, confirm card and change record (constitution VIII).
 - **FR-028**: Mikasa's actions MUST be defined once, in a form the later feature 007 (`mcp-access`) can expose to outside assistants, but this feature MUST NOT expose them outside the app (no endpoint lists or runs actions directly; only Mikasa's own endpoints use them).
 
+**Guardrails (amendment 2026-11-24)**
+
+- **FR-029** (amended 2026-11-24, twice): The panel MUST open with five quick actions: a LinkedIn connection message, a LinkedIn message, an email, update a job's status, and add a job. The three drafts follow one flow, in either order: the person picks a draft and then pastes a job post or a link to it, or pastes first and is then asked which draft they want. HireTitan reads the post's title and company (a small AI call on the pasted text as outside data; when it cannot, it asks the person for them), writes the draft through the drafts feature, and shows it in the chat with a Copy button. Only after the draft is ready does it ask whether to save the job: Yes makes it an Explore job; No discards the job and its draft, and says so before the choice. Until the yes the post is a hidden job that no list, count, search or duplicate offer shows. The post text is never put in the chat history and a bare link is never fetched. Update status applies at once with Undo; Add a job is the paste form (FR-021). **Ask something else** MUST open the text box; a link or a pasted job post typed there starts the same flow instead of going to the AI.
+- **FR-030**: Each typed message MUST first pass a tool-less AI topic check with a strict schema (on topic or not, and a short reason); an off-topic message MUST get a fixed refusal with the suggested questions and no main AI call. If the check itself fails, the message goes on and FR-031 still applies.
+- **FR-031**: A reply to a typed message MUST be kept only when the turn called at least one HireTitan action (a read, a change or a card); otherwise HireTitan MUST replace it with the fixed refusal and the suggested questions. This rule is in code, not in the prompt.
+- **FR-032**: A typed message with an injection signal of medium or high severity MUST be refused before any AI call, with a plain message; the signal is stored.
+- **FR-033**: At most the last 10 messages of a conversation MUST be sent to the AI with a typed message.
+
 ### Key Entities *(include if feature involves data)*
 
 - **Conversation**: one chat between the person and Mikasa: when it started and was last used, and its messages in order.
@@ -227,6 +237,7 @@ The conversation with Mikasa is kept, so the person can close the panel, move be
 - **SC-008**: When the AI is unavailable, out of credit, or returns an invalid action, 100% of turns end with a visible reason and no change to data.
 - **SC-009**: Delete all my data leaves no conversation, message, confirm card or change record.
 - **SC-010**: In tests of every action that touches contacts, notes, interview data or the resume picker, 0 model calls contain their stored contents (checked on the recorded calls), while the person sees the right details in the chat.
+- **SC-011**: Choosing a suggested question makes 0 AI calls. In an evaluation of at least 20 off-topic requests (general knowledge, writing, coding, chit-chat), 100% end with the fixed refusal and 0 contain an answer to the request.
 
 ## Assumptions
 

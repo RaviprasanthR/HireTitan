@@ -38,6 +38,7 @@ Turn = list[TurnStep] | BaseException
 
 
 KEY_STATUS_FILE = "key_status"
+TURNS_SUFFIX = ".turns.json"
 
 
 class FakeLlmScriptExhaustedError(AssertionError):
@@ -64,6 +65,10 @@ class FakeLlm:
         self._turns: deque[Turn] = deque()
         self._turns_by_task: dict[str, deque[Turn]] = defaultdict(deque)
         self.converse_calls: list[ConverseRequest] = []
+        # end-to-end runs: <task>.turns.json holds a list of turns (each a list of step dicts),
+        # read again on every call so a test can append turns it only learns later (an id)
+        self._turn_files: dict[str, Path] = {}
+        self._turn_cursor: dict[str, int] = defaultdict(int)
 
     def add(self, *steps: Step, task: str | None = None) -> None:
         """Queue more scripted steps (for ``task`` only, or for any task)."""
@@ -75,8 +80,14 @@ class FakeLlm:
         by_task = {
             path.stem: cast(list[Mapping[str, Any]], json.loads(path.read_text("utf-8")))
             for path in sorted(directory.glob("*.json"))
+            if not path.name.endswith(TURNS_SUFFIX)
         }
-        return cls(by_task=by_task, control_dir=directory)
+        fake = cls(by_task=by_task, control_dir=directory)
+        fake._turn_files = {
+            path.name.removesuffix(TURNS_SUFFIX): path
+            for path in sorted(directory.glob(f"*{TURNS_SUFFIX}"))
+        }
+        return fake
 
     def key_status(self) -> str:
         """``working`` unless the control file ``key_status`` in the script folder says
@@ -130,6 +141,14 @@ class FakeLlm:
             return self._turns_by_task[task].popleft()
         if self._turns:
             return self._turns.popleft()
+        if task in self._turn_files:
+            scripted = cast(
+                list[list[Mapping[str, Any]]], json.loads(self._turn_files[task].read_text("utf-8"))
+            )
+            at = self._turn_cursor[task]
+            if at < len(scripted):
+                self._turn_cursor[task] = at + 1
+                return list(scripted[at])
         raise FakeLlmScriptExhaustedError(f"No scripted turn left for task {task!r}")
 
     async def converse(self, req: ConverseRequest) -> AsyncIterator[ConverseEvent]:

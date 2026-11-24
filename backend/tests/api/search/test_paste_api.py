@@ -131,3 +131,31 @@ async def test_US4_paste_keeps_the_location_the_person_typed(env: Env) -> None:
 
     assert response.status_code == 201
     assert response.json()["location_text"] == "Berlin, Germany"
+
+
+async def test_R12_link_only_job_added(env: Env) -> None:
+    """002m T019: link, title and company are enough when the person has no description."""
+    response = await env.client.post(
+        "/api/v1/jobs/paste",
+        json={
+            "url": "https://jobs.example.com/acme/7",
+            "description": "",
+            "title": "Backend Engineer",
+            "company": "Acme",
+            "link_only": True,
+        },
+    )
+
+    assert response.status_code == 201
+    job = response.json()
+    assert (job["title"], job["company_name"], job["description"]) == (
+        "Backend Engineer",
+        "Acme",
+        "",
+    )
+    missing = await env.client.post(
+        "/api/v1/jobs/paste",
+        json={"url": "https://jobs.example.com/acme/8", "description": "", "link_only": True},
+    )
+    assert missing.status_code == 422
+    assert {e["field"] for e in missing.json()["errors"]} == {"title", "company"}

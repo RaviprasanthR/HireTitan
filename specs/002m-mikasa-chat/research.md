@@ -91,7 +91,7 @@ Findings from reading the code on `master` (after PR #19), and the decisions the
 
 ## R10 Conversation memory
 
-**Decision**: Each turn sends the system prompt, the tool specs, and the last 30 messages of the conversation (the person's messages, Mikasa's replies with ref tokens, and this turn's tool calls and results). Earlier turns' tool results are not resent; the model calls the action again if it needs fresh data, which also keeps answers current. Older messages are dropped from the model's copy, not summarised; the person still sees the whole conversation (EC-06).
+**Decision**: Each turn sends the system prompt, the tool specs, and the last **10** messages (was 30; Ravi, 2026-11-24) of the conversation (the person's messages, Mikasa's replies with ref tokens, and this turn's tool calls and results). Earlier turns' tool results are not resent; the model calls the action again if it needs fresh data, which also keeps answers current. Older messages are dropped from the model's copy, not summarised; the person still sees the whole conversation (EC-06).
 
 **Rationale**: Bounded tokens and no stale data. A summary would be one more model output to validate.
 
@@ -109,7 +109,7 @@ Findings from reading the code on `master` (after PR #19), and the decisions the
 
 ## R13 The panel
 
-**Decision**: A launcher button in the shell header (and the keyboard shortcut `Ctrl+/`) opens a right-hand panel, an `<aside>` fixed beside the page (not a modal), 420 px wide on desktop and full screen below 768 px. The reply is rendered as plain text plus our own token parsing for refs and in-app links; no HTML or Markdown renderer, so text from jobs can never run (EC-13). Confirm cards show each change with editable fields for its arguments, plus **Confirm** and **Cancel**. Change notices show **Undo**. A one-line note under the composer says "What you type here is sent to your AI provider. Contacts, notes and interview details stored in HireTitan are not" (FR-022b). No new dependency.
+**Decision** (amended 2026-11-24): A round launcher button fixed at the bottom right of every page (and the keyboard shortcut `Ctrl+/`; Escape closes) opens a chat popup, an `<aside>` fixed above it (not a modal), 420 px wide and up to 640 px tall on desktop and nearly full width on small screens. The main menu is a top bar. Motion: the popup rises in, bubbles fade up, three bouncing dots wait for the first words, a caret blinks while text streams, buttons spin while a confirm or undo runs; all of it stops under `prefers-reduced-motion`. The reply is rendered as plain text plus our own token parsing for refs and in-app links; no HTML or Markdown renderer, so text from jobs can never run (EC-13). Confirm cards show each change with editable fields for its arguments, plus **Confirm** and **Cancel**. Change notices show **Undo**. A one-line note under the composer says "What you type here is sent to your AI provider. Contacts, notes and interview details stored in HireTitan are not" (FR-022b). No new dependency.
 
 ## R14 What Mikasa cannot do
 
@@ -122,3 +122,15 @@ Findings from reading the code on `master` (after PR #19), and the decisions the
 ## R16 Module name
 
 **Decision**: The back-end module is `hiretitan.assistant` and the front-end folder `features/assistant`. "Mikasa" is the name shown in the panel and the persona in the prompt. Renaming her later then means changing text, not code.
+
+## R17 Guardrails (amendment 2026-11-24, FR-029 to FR-033)
+
+**Decision**: Three layers, cheapest first.
+
+1. **Suggested questions** (`assistant/domain/suggestions.py`): a fixed list, each a key, a label and a recipe of catalogue actions with fixed arguments (for example "applied this week" = `search_jobs(list=pipeline, state=applied, since=today-7)`). `POST /assistant/conversations/{id}/suggestions/{key}` stores the person's message (the label), runs the recipe through the catalogue adapter, and stores Mikasa's reply built by HireTitan from the results (a sentence and the refs); no model call. Changes (check mail, run a search) go through the adapter as usual, so a risky one makes a card.
+2. **Before the model**: the person's typed text is screened (FR-032); then a topic check with prompt `mikasa_topic/v1` (tier fast, tool-less, schema `{on_topic: bool, reason: str <= 120}`) through `LlmPort.generate`, logged like every call. Off topic: the fixed refusal and the suggestions, no main turn.
+3. **After the model** (FR-031): a turn that called no catalogue action has its reply replaced by the fixed refusal. Clarifying questions still work because the model reads first (for example `search_jobs` before asking "which of these two?").
+
+**Context**: per round about 8,400 fixed tokens (67 tool definitions ~7,300, system prompt ~1,100) plus up to 10 messages and this turn's results. Suggested questions cost nothing; off-topic messages cost one small check.
+
+**Alternatives**: topic rules by keywords only (brittle in every language); refusing every message without an action (would block "thanks" and follow-ups, which the fixed refusal handles anyway).

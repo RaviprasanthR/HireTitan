@@ -93,7 +93,7 @@ class SignalOut(BaseModel):
 
 class DraftOut(BaseModel):
     id: UUID
-    kind: Literal["connection_request", "referral_message"]
+    kind: Literal["connection_request", "referral_message", "email"]
     recipient: RecipientOut
     status: Literal["writing", "ready", "failed"]
     paused_reason: str | None
@@ -119,7 +119,7 @@ class RecipientIn(BaseModel):
 
 
 class DraftIn(BaseModel):
-    kind: Literal["connection_request", "referral_message"]
+    kind: Literal["connection_request", "referral_message", "email"]
     recipient: RecipientIn
     recipient_kind: RecipientKind | None = None
     regenerate: bool = False
@@ -170,6 +170,63 @@ async def require_ai(session: AsyncSession, provider: str) -> None:
     if stored is not None and stored.status in UNAVAILABLE:
         message = stored.message or MESSAGES.get(stored.status) or "The AI is not available."
         raise ProblemError(409, message, reason="ai_unavailable")
+
+
+async def start_draft(
+    deps: DraftsApiDeps, job_id: UUID, body: DraftIn
+) -> DraftStarted | OutreachDraftRow:
+    """Start writing a draft (or return the ready one when not asked to write it again).
+
+    Shared by the draft endpoint and Mikasa's quick actions (002m). Raises ``ProblemError``.
+    """
+    job = await deps.jobs.get(job_id)
+    if job is None:
+        raise _not_found()
+    contact_id: UUID | None = None
+    if body.recipient.contact_id is not None:
+        contact = await deps.contacts.get(body.recipient.contact_id)
+        if contact is None or job.company_id is None or contact.company_id != job.company_id:
+            raise _not_found("contact")
+        contact_id, name, role = contact.id, contact.name, contact.role
+    else:
+        try:
+            typed = clean_typed(body.recipient.name or "", body.recipient.role)
+        except ValueError as error:
+            raise ProblemError(422, str(error)) from error
+        name, role = typed.name, typed.role
+    kind: RecipientKind = body.recipient_kind or kind_from_role(role)
+    key = recipient_key(contact_id, name)
+    profile = await deps.profile.current()
+    async with deps.sessions() as session:
+        repo = DraftsRepo(session)
+        await lock_job_drafts(session, job_id)
+        existing = await repo.find(job_id, body.kind, key)
+        if existing is not None and existing.status == "writing":
+            raise ProblemError(
+                409, "This draft is still being written.", reason="draft_in_progress"
+            )
+        if existing is not None and existing.status == "ready" and not body.regenerate:
+            return existing
+        if profile is None:
+            raise ProblemError(
+                409, "Finish your profile first, then write a draft.", reason="no_confirmed_profile"
+            )
+        await require_ai(session, deps.provider)
+        row = await repo.start_writing(
+            job_id,
+            kind=body.kind,
+            recipient_contact_id=contact_id,
+            recipient_name=name,
+            recipient_role=role,
+            recipient_kind=kind,
+            recipient_key=key,
+        )
+        run = await RunsRepo(session).create(OUTREACH_WORKFLOW, subject_id=row.id)
+        await repo.set_run(row.id, run.id)
+        await session.commit()
+        draft_id = row.id
+    await deps.queue.enqueue(run.id)
+    return DraftStarted(id=draft_id, status="writing")
 
 
 def create_drafts_router(deps: DraftsApiDeps) -> APIRouter:
@@ -240,55 +297,20 @@ def create_drafts_router(deps: DraftsApiDeps) -> APIRouter:
 
     @router.post("/jobs/{job_id}/drafts", response_model=None, status_code=202)
     async def create_draft(job_id: UUID, body: DraftIn, response: Response) -> Any:
-        job = await load_job(job_id)
-        contact_id: UUID | None = None
-        if body.recipient.contact_id is not None:
-            contact = await deps.contacts.get(body.recipient.contact_id)
-            if contact is None or job.company_id is None or contact.company_id != job.company_id:
-                raise _not_found("contact")
-            contact_id, name, role = contact.id, contact.name, contact.role
-        else:
-            try:
-                typed = clean_typed(body.recipient.name or "", body.recipient.role)
-            except ValueError as error:
-                raise ProblemError(422, str(error)) from error
-            name, role = typed.name, typed.role
-        kind: RecipientKind = body.recipient_kind or kind_from_role(role)
-        key = recipient_key(contact_id, name)
+        started = await start_draft(deps, job_id, body)
+        if isinstance(started, DraftStarted):
+            return started
+        response.status_code = 200
         profile = await deps.profile.current()
         async with deps.sessions() as session:
-            repo = DraftsRepo(session)
-            await lock_job_drafts(session, job_id)
-            existing = await repo.find(job_id, body.kind, key)
-            if existing is not None and existing.status == "writing":
-                raise ProblemError(
-                    409, "This draft is still being written.", reason="draft_in_progress"
-                )
-            if existing is not None and existing.status == "ready" and not body.regenerate:
-                response.status_code = 200
-                return await to_out(session, existing, profile)
-            if profile is None:
-                raise ProblemError(
-                    409,
-                    "Finish your profile first, then write a draft.",
-                    reason="no_confirmed_profile",
-                )
-            await require_ai(session, deps.provider)
-            row = await repo.start_writing(
-                job_id,
-                kind=body.kind,
-                recipient_contact_id=contact_id,
-                recipient_name=name,
-                recipient_role=role,
-                recipient_kind=kind,
-                recipient_key=key,
-            )
-            run = await RunsRepo(session).create(OUTREACH_WORKFLOW, subject_id=row.id)
-            await repo.set_run(row.id, run.id)
-            await session.commit()
-            draft_id = row.id
-        await deps.queue.enqueue(run.id)
-        return DraftStarted(id=draft_id, status="writing")
+            return await to_out(session, started, profile)
+
+    @router.get("/drafts/{draft_id}", response_model=DraftOut)
+    async def get_draft(draft_id: UUID) -> DraftOut:
+        """One draft, for Mikasa's chat (002m quick actions) to show as it is written."""
+        profile = await deps.profile.current()
+        async with deps.sessions() as session:
+            return await to_out(session, await load_draft(session, draft_id), profile)
 
     async def load_draft(session: AsyncSession, draft_id: UUID) -> OutreachDraftRow:
         row = await DraftsRepo(session).get(draft_id)

@@ -19,15 +19,19 @@ from hiretitan.platform.clock import ClockPort
 from hiretitan.platform.web.problems import ProblemError
 from hiretitan.search.api.models import JobCardOut, job_cards, with_resumes
 from hiretitan.search.domain.job_state import JobState
-from hiretitan.search.infra.interviews_repo import InterviewsRepo
-from hiretitan.search.infra.models import JobRow, JobSourceRow, PossibleDuplicateRow
+from hiretitan.search.infra.job_ops import (
+    PairDecidedError,
+    PairNotFoundError,
+    dismiss_pair,
+    merge_pair,
+)
+from hiretitan.search.infra.models import JobRow, PossibleDuplicateRow
 
 DEFAULT_LIMIT = 25
 MAX_LIMIT = 100
 # the jobs a person has in front of them: Explore and the pipeline (not skipped, not deleted)
 OFFERED_STATES = (JobState.explore.value, JobState.inquired.value, JobState.applied.value)
 # The kept job takes the stronger pipeline state of the two (research R9): applied, then inquired.
-STRENGTH = {JobState.applied.value: 2, JobState.inquired.value: 1}
 
 
 @dataclass(frozen=True)
@@ -73,14 +77,6 @@ def create_duplicates_router(deps: SearchDuplicatesApiDeps) -> APIRouter:
             for p in pairs
         ]
 
-    async def open_pair(session: AsyncSession, pair_id: UUID) -> PossibleDuplicateRow:
-        pair = await session.get(PossibleDuplicateRow, pair_id)
-        if pair is None:
-            raise ProblemError(404, "That pair does not exist.")
-        if pair.status != "open":
-            raise ProblemError(409, "That pair was already decided.", reason="already_decided")
-        return pair
-
     @router.get("")
     async def list_pairs(
         status: Literal["open", "merged", "dismissed"] = "open",
@@ -116,49 +112,26 @@ def create_duplicates_router(deps: SearchDuplicatesApiDeps) -> APIRouter:
     @router.post("/{pair_id}/merge")
     async def merge(pair_id: UUID) -> DuplicatePairOut:
         """Keep the older job (A) and move the other's sources onto it; the other is deleted.
-
         The kept job takes the stronger of the two pipeline states, with that job's date."""
         async with deps.sessions() as session:
-            pair = await open_pair(session, pair_id)
-            keep, loser = pair.job_a_id, pair.job_b_id
-            # one lock order for both jobs, taken before anything is changed, so two merges that
-            # share a job cannot wait on each other
-            for job_id in sorted((keep, loser)):
-                await InterviewsRepo(session).lock_job(job_id)
-            have = set(
-                await session.scalars(select(JobSourceRow.url).where(JobSourceRow.job_id == keep))
-            )
-            sources = await session.scalars(
-                select(JobSourceRow).where(JobSourceRow.job_id == loser)
-            )
-            for source in list(sources):
-                if source.url not in have:
-                    source.job_id = keep
-                # a source the kept job already has goes away with the other job's row
-            loser_row = await session.get(JobRow, loser)
-            keep_row = await session.get(JobRow, keep)
-            assert loser_row is not None
-            assert keep_row is not None
-            if STRENGTH.get(loser_row.state, 0) > STRENGTH.get(keep_row.state, 0):
-                keep_row.state = loser_row.state
-                keep_row.applied_on = loser_row.applied_on
-                keep_row.inquired_on = loser_row.inquired_on
-            # a deleted job carries no date (the table allows one only on applied or inquired)
-            loser_row.state = JobState.deleted.value
-            loser_row.applied_on = None
-            loser_row.inquired_on = None
-            await InterviewsRepo(session).merge_details(keep, loser)
-            pair.status = "merged"
-            pair.decided_at = deps.clock.now()
+            try:
+                pair = await merge_pair(session, pair_id, deps.clock.now())
+            except PairNotFoundError as error:
+                raise ProblemError(404, "That pair does not exist.") from error
+            except PairDecidedError as error:
+                raise ProblemError(409, str(error), reason="already_decided") from error
             await session.commit()
             return (await render(session, [pair]))[0]
 
     @router.post("/{pair_id}/dismiss")
     async def dismiss(pair_id: UUID) -> DuplicatePairOut:
         async with deps.sessions() as session:
-            pair = await open_pair(session, pair_id)
-            pair.status = "dismissed"
-            pair.decided_at = deps.clock.now()
+            try:
+                pair = await dismiss_pair(session, pair_id, deps.clock.now())
+            except PairNotFoundError as error:
+                raise ProblemError(404, "That pair does not exist.") from error
+            except PairDecidedError as error:
+                raise ProblemError(409, str(error), reason="already_decided") from error
             await session.commit()
             return (await render(session, [pair]))[0]
 

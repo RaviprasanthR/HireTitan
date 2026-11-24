@@ -229,6 +229,7 @@ class NewChange:
     card_id: UUID | None = None
     created_rows: list[str] = field(default_factory=list)
     undoable_until: datetime | None = None
+    summary: str | None = None
 
 
 class ChangesRepo:
@@ -241,6 +242,7 @@ class ChangesRepo:
             message_id=change.message_id,
             card_id=change.card_id,
             action=change.action,
+            summary=change.summary[:2000] if change.summary else None,
             target_kind=change.target_kind,
             target_id=change.target_id,
             before=change.before,
@@ -256,10 +258,20 @@ class ChangesRepo:
     async def get(self, change_id: UUID) -> ChangeRow | None:
         return await self._session.get(ChangeRow, change_id, populate_existing=True)
 
+    async def get_for_update(self, change_id: UUID) -> ChangeRow | None:
+        """The change, locked until the transaction ends: two Undo presses apply once (EC-03)."""
+        return await self._session.scalar(
+            select(ChangeRow).where(ChangeRow.id == change_id).with_for_update()
+        )
+
     async def latest_for(self, target_kind: str, target_id: UUID) -> ChangeRow | None:
         return await self._session.scalar(
             select(ChangeRow)
-            .where(ChangeRow.target_kind == target_kind, ChangeRow.target_id == target_id)
+            .where(
+                ChangeRow.target_kind == target_kind,
+                ChangeRow.target_id == target_id,
+                ChangeRow.undone_at.is_(None),  # an undone change no longer counts as the latest
+            )
             .order_by(ChangeRow.created_at.desc(), ChangeRow.id.desc())
             .limit(1)
         )

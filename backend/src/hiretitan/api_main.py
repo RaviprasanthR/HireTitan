@@ -25,7 +25,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.types import ASGIApp, Lifespan, Message, Receive, Scope, Send
 
-from hiretitan.assistant_wiring import assistant_routers
+from hiretitan.assistant_wiring import action_services, assistant_routers
 from hiretitan.drafts.api.drafts import DraftsApiDeps, create_drafts_router
 from hiretitan.drafts.api.resumes import create_resumes_router as create_tailored_router
 from hiretitan.drafts_wiring import (
@@ -358,6 +358,14 @@ def build_app(settings: Settings | None = None) -> FastAPI:
             deps.sessions,
             EventPublisher(engine).publish,
             tech_terms(seed_tables.tech_names),
+            action_services(
+                deps.sessions,
+                queue=deps.queue,
+                clock=clock,
+                synonyms=synonyms,
+                work_areas=seed_tables.work_areas,
+                careers=build_career_ops(settings),
+            ),
         ),
         create_data_router(
             DataApiDeps(

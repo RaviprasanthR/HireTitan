@@ -22,6 +22,7 @@ from hiretitan.assistant.api.deps import AssistantApiDeps
 from hiretitan.assistant.application.turn import (
     ConversationNotFoundError,
     EmptyMessageError,
+    InjectionRefusedError,
     LooksLikePostingError,
     MessageTooLongError,
     TurnError,
@@ -37,6 +38,11 @@ _REFUSALS: dict[type[TurnError], tuple[int, str]] = {
     TurnRunningError: (409, "Mikasa is still answering your last message."),
     MessageTooLongError: (422, "A message can be at most 2,000 characters."),
     EmptyMessageError: (422, "Write a message first."),
+    InjectionRefusedError: (
+        422,
+        "That message looks like it is trying to give me orders, so I did not send it on. "
+        "Say what you want to know about your job search.",
+    ),
     LooksLikePostingError: (
         422,
         "That looks like a job posting. Use Paste a job description, so it is read as a "
@@ -50,9 +56,14 @@ class TurnIn(BaseModel):
     page: str = Field("/", max_length=500)
 
 
+def _plain(value: Any) -> str:
+    """Dates as ISO text ("2026-11-25T10:00:00+00:00"), which every browser reads."""
+    return value.isoformat() if hasattr(value, "isoformat") else str(value)
+
+
 def _event(event: TurnEvent) -> ServerSentEvent:
     data: dict[str, Any] = {k: v for k, v in asdict(event).items() if k != "name"}
-    return ServerSentEvent(event=event.name, data=json.dumps(data, default=str))
+    return ServerSentEvent(event=event.name, data=json.dumps(data, default=_plain))
 
 
 def create_turns_router(deps: AssistantApiDeps) -> APIRouter:
@@ -70,13 +81,15 @@ def create_turns_router(deps: AssistantApiDeps) -> APIRouter:
                 provider_message=status.provider_message,
             )
         try:
-            await begin(deps.turn, conversation_id, body.text)
+            message_id = await begin(deps.turn, conversation_id, body.text)
         except TurnError as error:
             code, detail = _REFUSALS[type(error)]
             raise ProblemError(code, detail, reason=error.reason) from error
 
         async def stream() -> AsyncIterator[ServerSentEvent]:
-            async for event in run_turn(deps.turn, conversation_id, page=body.page):
+            async for event in run_turn(
+                deps.turn, conversation_id, page=body.page, message_id=message_id
+            ):
                 yield _event(event)
 
         return EventSourceResponse(stream())

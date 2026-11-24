@@ -56,6 +56,32 @@ def connection_fallback(
     return _clip("Hi {recipient_first_name}, I'd be glad to connect.", room)
 
 
+@dataclass(frozen=True, slots=True)
+class EmailParts:
+    subject: str
+    greeting: str
+    body: str
+    closing: str
+
+
+def email_fallback(role: str, company: str, facts: tuple[Fact, ...] | list[Fact]) -> EmailParts:
+    skill = _top_skill(facts)
+    about = (
+        f" I work with {skill}, and I think my experience fits what the team needs."
+        if skill
+        else ""
+    )
+    return EmailParts(
+        subject=_clip(f"{role} role at {company}", 120),
+        greeting="Hi {recipient_first_name},",
+        body=(
+            f"I'm writing about the {_clip(role, 80)} role at {_clip(company, 60)}.{about} "
+            "I'd be glad to share more about my work or talk if that would help."
+        ),
+        closing="Thank you for your time, and no worries if now is not a good moment.",
+    )
+
+
 def referral_fallback(
     role: str, company: str, facts: tuple[Fact, ...] | list[Fact]
 ) -> ReferralParts:

@@ -112,8 +112,8 @@ async def conversation(sessions: async_sessionmaker[AsyncSession]) -> UUID:
 
 
 async def turn(d: TurnDeps, conv: UUID, text: str) -> list[TurnEvent]:
-    await begin(d, conv, text)
-    return [event async for event in run_turn(d, conv, page="/companies")]
+    message_id = await begin(d, conv, text)
+    return [event async for event in run_turn(d, conv, page="/companies", message_id=message_id)]
 
 
 async def messages(sessions: async_sessionmaker[AsyncSession], conv: UUID) -> list[MessageRow]:
@@ -297,6 +297,7 @@ async def test_FR021_long_and_posting_messages_refused(
 
 async def test_FR002_stop_saves_partial_reply(sessions: async_sessionmaker[AsyncSession]) -> None:
     llm = FakeLlm()
+    llm.add_turn(ToolCall("c1", "search_jobs", "{}"))
     llm.add_turn(TextDelta("Here is "), TextDelta("a long answer"), TextDelta(" never seen"))
     d = deps(sessions, llm)
     conv = await conversation(sessions)
@@ -371,10 +372,10 @@ async def test_FR018a_unbacked_claim_repaired_then_replaced(
     llm.add_turn(TextDelta("You know Python."))  # the rewrite passes
     events = await turn(deps(sessions, llm, catalog, claims), await conversation(sessions), "?")
 
-    assert done(events).text == "Let me look. You know Python."
+    assert done(events).text == "You know Python."
     assert NoticeEvent("checking_profile", "Checking against your profile…") in events
     # nothing held for the check was streamed
-    assert [e.delta for e in events if isinstance(e, TextEvent)] == ["Let me look. "]
+    assert [e.delta for e in events if isinstance(e, TextEvent)] == []
     assert llm.converse_calls[-1].tools == []  # the rewrite round gets no tools
     assert llm.converse_calls[-1].messages[-1].role == "note"
 
@@ -422,7 +423,8 @@ async def test_SC008_unexpected_failure_ends_with_reason(
     assert error.reason == "internal"
     assert done(events).status == "failed"
     stored = await messages(sessions, conv)
-    assert (stored[-1].status, stored[-1].text) == ("failed", "Looking. ")
+    # text held for a first action is not shown or kept (FR-031)
+    assert (stored[-1].status, stored[-1].text) == ("failed", "")
     async with sessions() as session:
         row = await session.get(ConversationRow, conv)
         assert row is not None

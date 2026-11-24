@@ -12,7 +12,7 @@ from typing import Any, Final
 
 from hiretitan.platform.untrusted.delimit import delimit
 
-WINDOW: Final = 30
+WINDOW: Final = 10  # was 30 (Ravi, 2026-11-24; FR-033)
 
 
 def window[T](messages: Sequence[T], size: int = WINDOW) -> list[T]:

@@ -59,6 +59,15 @@ def clean_typed(name: str, role: str | None) -> TypedRecipient:
     return TypedRecipient(clean_name, clean_role or None)
 
 
+# The recipient a quick action uses when the person gives no name (002m): greeted as "there".
+HIRING_TEAM: Final = "Hiring team"
+
+
+def greeting_name(name: str) -> str:
+    """The name the greeting uses: the first name, or "there" for the hiring team."""
+    return "there" if _clean(name).casefold() == HIRING_TEAM.casefold() else first_name(name)
+
+
 def first_name(name: str) -> str:
     """The first word of the name, nothing else: no surname is ever invented or added."""
     parts = _clean(name).split(" ")

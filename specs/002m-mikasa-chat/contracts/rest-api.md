@@ -12,11 +12,13 @@
 | `DELETE /assistant/conversations/{id}` | Remove one | `204` | `404 not_found` |
 | `DELETE /assistant/conversations` | Clear all | `204` | |
 | `GET /assistant/conversations/{id}/messages` | Full history with cards and changes | `200 [{id, seq, author, text, status, signals, cards: [...], changes: [...]}]` | `404` |
-| `POST /assistant/conversations/{id}/turns` | Send a message, stream the reply | `200 text/event-stream` (below) | `409 turn_running`, `422 too_long` (over 2,000), `422 looks_like_posting` (FR-021), `503 ai_unavailable` with the status reason |
+| `POST /assistant/conversations/{id}/turns` | Send a message, stream the reply | `200 text/event-stream` (below) | `409 turn_running`, `422 too_long` (over 2,000), `422 looks_like_posting` (FR-021), `422 injection_refused` (FR-032), `503 ai_unavailable` with the status reason |
 | `POST /assistant/conversations/{id}/paste` | The composer's **Paste a job description** (link, title, company, location, description; or `job` ref plus description) | `201 {change}` | the paste use case's `422` field errors; `409 deleted_before` |
 | `POST /assistant/cards/{id}/confirm` | Apply a card, optionally with edited values `{items: [{index, args}]}` | `200 {card, changes}` | `409 not_proposed` (already decided), `409 stale` (targets changed, card now expired), `409 expired`, `422` argument errors |
 | `POST /assistant/cards/{id}/cancel` | Cancel | `200 {card}` | `409 not_proposed` |
 | `POST /assistant/changes/{id}/undo` | Undo a change | `200 {change}` | `409 changed_since`, `409 not_latest`, `409 too_late`, `409 already_undone`, `409 not_undoable` |
+| `GET /assistant/suggestions` | The fixed suggested questions (FR-029): `[{key, label}]`. Added in T031c | `200` | |
+| `POST /assistant/conversations/{id}/suggestions/{key}` | Run a suggested question: its catalogue actions with fixed arguments, **no AI call**, works with no AI key; stores the person's message (the label) and HireTitan's own answer; a change gets its Undo, a risky one a card | `200 {message_id, text, refs, changes, cards}` | `404 not_found`, `409 turn_running` |
 | `GET /assistant/refs/{ref}` | The person's own view of an item Mikasa named (title, subtitle, lines, link); private details included, because it goes to the browser, never to the model (R5). Added in T016 | `200 {ref, kind, title, subtitle, lines, link}` | `404 not_found` (gone, or not a ref) |
 | `POST /jobs/paste` *(changed)* | Link-only mode: `description` may be empty when `url`, `title` and `company` are given (R12) | as today | as today |
 

@@ -7,10 +7,10 @@ import json
 from hiretitan.assistant.domain.context import WINDOW, window, wrap_result
 
 
-def test_R10_last_30_only() -> None:
+def test_FR033_last_10_only() -> None:
     messages = list(range(1, 46))
-    assert window(messages) == list(range(16, 46))
-    assert WINDOW == 30
+    assert window(messages) == list(range(36, 46))
+    assert WINDOW == 10
     assert window([1, 2]) == [1, 2]
 
 

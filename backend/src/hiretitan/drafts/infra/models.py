@@ -26,7 +26,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from hiretitan.platform.db import APP_SCHEMA, Base, IdTimestampMixin
 
-DRAFT_KINDS = ("connection_request", "referral_message")
+DRAFT_KINDS = ("connection_request", "referral_message", "email")
 RECIPIENT_KINDS = ("recruiter", "hiring_manager", "engineer", "other")
 DRAFT_STATUSES = ("writing", "ready", "failed")
 DRAFT_SOURCES = ("ai", "fallback")

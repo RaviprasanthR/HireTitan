@@ -1,0 +1,5 @@
+version: 1
+tier: fast
+max_output_tokens: 150
+changelog:
+  - "v1: first version (002m). Reads a pasted job post (outside text, in a data block) and returns only the job title and the hiring company as written in it, or an empty string when the post does not say."

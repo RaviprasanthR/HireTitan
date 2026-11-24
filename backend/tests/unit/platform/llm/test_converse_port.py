@@ -132,3 +132,34 @@ async def test_FR023_generate_and_converse_scripts_are_separate() -> None:
 
     assert events[0] == TextDelta("for converse")
     assert len(llm.calls) == 0  # generate was not touched
+
+
+async def test_FR023_turns_can_be_scripted_in_a_file_and_appended_later(tmp_path: object) -> None:
+    """End-to-end runs script chat turns in <task>.turns.json, read again on every call."""
+    import json
+    from pathlib import Path
+
+    folder = Path(str(tmp_path))
+    file = folder / "mikasa_turn.turns.json"
+    file.write_text(json.dumps([[{"text": "first"}]]), "utf-8")
+    (folder / "mikasa_topic.json").write_text(
+        json.dumps([{"on_topic": True, "reason": "x"}]), "utf-8"
+    )
+    llm = FakeLlm.from_directory(folder)
+
+    first = await collect(llm, request())
+    file.write_text(
+        json.dumps(
+            [
+                [{"text": "first"}],
+                [{"tool_call": {"id": "c1", "name": "search_jobs", "arguments": {}}}],
+            ]
+        ),
+        "utf-8",
+    )
+    second = await collect(llm, request())
+
+    assert first[0] == TextDelta("first")
+    assert second[0] == ToolCall(id="c1", name="search_jobs", arguments_json="{}")
+    with pytest.raises(FakeLlmScriptExhaustedError):
+        await collect(llm, request())  # the cursor moved on: nothing left

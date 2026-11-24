@@ -53,6 +53,22 @@ EXCLUDED: Final[Mapping[str, Excluded]] = {
     "PUT /jobs/{job_id}/tailored-resume": Excluded(
         "/", "A tailored resume is edited in its preview."
     ),
+    "PUT /jobs/{job_id}/description": Excluded(
+        "/", "A job's description is pasted on its page, so it is never sent to the AI."
+    ),
+    "DELETE /pipeline/resumes/{file_id}/uses": Excluded(
+        "/profile", "A removed resume file's name is cleared when the file is removed."
+    ),
+    "POST /runs/{run_id}/decision": Excluded(
+        "/review", "A resume import's questions are answered on the Review page."
+    ),
+    "POST /runs/{run_id}/retry": Excluded("/review", "A paused import is retried on Review."),
+    "PUT /search/rules/approved": Excluded(
+        "/profile/search-rules", "Mikasa changes rules only through a proposal you approve."
+    ),
+    "POST /search/rules/proposal": Excluded(
+        "/profile/search-rules", "Fresh rules from your profile are proposed on that page."
+    ),
 }
 
 # Names a model might reach for: refused outright, so nobody adds them by accident.

@@ -10,7 +10,12 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 
 from hiretitan.assistant.api.deps import AssistantApiDeps
-from hiretitan.assistant.infra.repos import ConversationsRepo, MessagesRepo
+from hiretitan.assistant.infra.repos import (
+    CardsRepo,
+    ChangesRepo,
+    ConversationsRepo,
+    MessagesRepo,
+)
 from hiretitan.platform.web.problems import ProblemError
 
 
@@ -34,6 +39,9 @@ class MessageOut(BaseModel):
     signals: list[dict[str, Any]]
     error: dict[str, Any] | None
     created_at: datetime
+    # what the person's message led to: cards to confirm and changes with their Undo (US5)
+    cards: list[dict[str, Any]] = []
+    changes: list[dict[str, Any]] = []
 
 
 def not_found() -> ProblemError:
@@ -64,6 +72,35 @@ def create_conversations_router(deps: AssistantApiDeps) -> APIRouter:
             if await ConversationsRepo(session).get(conversation_id) is None:
                 raise not_found()
             rows = await MessagesRepo(session).list_for(conversation_id)
+            now = deps.now()
+            cards: dict[UUID, list[dict[str, Any]]] = {}
+            for card in await CardsRepo(session).list_for(conversation_id):
+                open_ = card.state == "proposed" and now < card.expires_at
+                cards.setdefault(card.message_id, []).append(
+                    {
+                        "card_id": str(card.id),
+                        "summary": card.summary,
+                        "items": card.items,
+                        "state": card.state if open_ or card.state != "proposed" else "expired",
+                        "expires_at": card.expires_at.isoformat(),
+                        "result": card.result,
+                    }
+                )
+            changes: dict[UUID, list[dict[str, Any]]] = {}
+            for change in await ChangesRepo(session).list_for(conversation_id):
+                if change.message_id is None:
+                    continue  # a card's change shows under its card
+                changes.setdefault(change.message_id, []).append(
+                    {
+                        "change_id": str(change.id),
+                        "action": change.action,
+                        "summary": change.summary,
+                        "undo_until": change.undoable_until.isoformat()
+                        if change.undoable_until
+                        else None,
+                        "undone": change.undone_at is not None,
+                    }
+                )
             return [
                 MessageOut(
                     id=r.id,
@@ -75,6 +112,8 @@ def create_conversations_router(deps: AssistantApiDeps) -> APIRouter:
                     signals=list(r.signals),
                     error=r.error,
                     created_at=r.created_at,
+                    cards=cards.get(r.id, []),
+                    changes=changes.get(r.id, []),
                 )
                 for r in rows
             ]

@@ -39,7 +39,8 @@ class SqlPasteStore:
     async def jobs_of_company(self, name: str) -> list[DedupJob]:
         rows = await self._session.scalars(
             select(JobRow).where(
-                func.lower(JobRow.company_name) == name.lower(), JobRow.state != "deleted"
+                func.lower(JobRow.company_name) == name.lower(),
+                JobRow.state.not_in(("deleted", "staged")),
             )
         )
         return [

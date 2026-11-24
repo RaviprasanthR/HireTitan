@@ -65,6 +65,33 @@ class ConversationRow(Base):
     )
 
 
+class StagedRow(Base):
+    """A pasted job post a conversation is holding until the person says yes or no (002m).
+
+    ``job_id`` is a job in the hidden ``staged`` state; it is empty while the person has only
+    chosen what they want and not pasted yet. ``kind`` is empty while they have pasted first.
+    """
+
+    __tablename__ = "assistant_staged"
+    __table_args__ = (
+        CheckConstraint(
+            "kind IN ('connection_request', 'referral_message', 'email')", name="kind_values"
+        ),
+    )
+
+    conversation_id: Mapped[UUID] = mapped_column(
+        ForeignKey(f"{APP_SCHEMA}.assistant_conversations.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    kind: Mapped[str | None] = mapped_column(Text)
+    job_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey(f"{APP_SCHEMA}.jobs.id", ondelete="SET NULL")
+    )
+    # the post did not say its title or company: the person is asked for them
+    needs_details: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    created_at: Mapped[datetime] = _created_at()
+
+
 class MessageRow(Base):
     __tablename__ = "assistant_messages"
     __table_args__ = (
@@ -133,6 +160,7 @@ class ChangeRow(Base):
     __tablename__ = "assistant_changes"
     __table_args__ = (
         CheckConstraint("(message_id IS NULL) <> (card_id IS NULL)", name="one_source"),
+        CheckConstraint("char_length(summary) <= 2000", name="summary_length"),
         Index(
             "ix_assistant_changes_target",
             "target_kind",
@@ -155,6 +183,7 @@ class ChangeRow(Base):
         ForeignKey(f"{APP_SCHEMA}.assistant_cards.id", ondelete="CASCADE")
     )
     action: Mapped[str] = mapped_column(Text)
+    summary: Mapped[str | None] = mapped_column(Text)  # what it did, for the chat history
     target_kind: Mapped[str] = mapped_column(Text)
     target_id: Mapped[UUID] = mapped_column()
     before: Mapped[dict[str, Any]] = mapped_column(JSONB)
