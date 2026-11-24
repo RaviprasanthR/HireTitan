@@ -52,6 +52,7 @@ def _request() -> ConverseRequest:
                 arguments_json="{}",
             ),
             ChatMessage(role="tool_result", tool_call_id="call_0", text="<data>[]</data>"),
+            ChatMessage(role="note", text="HireTitan check: rewrite without the number 40%."),
         ],
         tools=[TOOL],
         tier="fast",
@@ -115,6 +116,7 @@ async def test_FR023_history_and_tools_sent_in_responses_format() -> None:
         {"role": "assistant", "content": "Looking."},
         {"type": "function_call", "call_id": "call_0", "name": "search_jobs", "arguments": "{}"},
         {"type": "function_call_output", "call_id": "call_0", "output": "<data>[]</data>"},
+        {"role": "developer", "content": "HireTitan check: rewrite without the number 40%."},
     ]
     assert sent["tools"] == [
         {

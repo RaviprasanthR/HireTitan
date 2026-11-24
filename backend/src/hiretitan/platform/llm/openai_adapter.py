@@ -60,6 +60,8 @@ def _input_item(message: ChatMessage) -> Mapping[str, Any]:
         return {"role": "user", "content": message.text}
     if message.role == "mikasa":
         return {"role": "assistant", "content": message.text}
+    if message.role == "note":
+        return {"role": "developer", "content": message.text}
     if message.role == "tool_call":
         return {
             "type": "function_call",

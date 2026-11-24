@@ -99,7 +99,7 @@ class LlmPort(Protocol):
 # so it has its own method. Tool arguments are validated by the caller against each action's
 # model; this port only carries them.
 
-ChatRole = Literal["person", "mikasa", "tool_call", "tool_result"]
+ChatRole = Literal["person", "mikasa", "tool_call", "tool_result", "note"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -117,7 +117,8 @@ class ChatMessage:
 
     ``person`` and ``mikasa`` carry ``text``; ``tool_call`` carries ``tool_call_id``,
     ``tool_name`` and ``arguments_json``; ``tool_result`` carries ``tool_call_id`` and the
-    result as ``text`` (already wrapped as a data block by the caller).
+    result as ``text`` (already wrapped as a data block by the caller); ``note`` is HireTitan's
+    own instruction to the model mid-turn (for example "rewrite without the unbacked claim").
     """
 
     role: ChatRole
