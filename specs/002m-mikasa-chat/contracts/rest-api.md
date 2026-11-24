@@ -17,6 +17,7 @@
 | `POST /assistant/cards/{id}/confirm` | Apply a card, optionally with edited values `{items: [{index, args}]}` | `200 {card, changes}` | `409 not_proposed` (already decided), `409 stale` (targets changed, card now expired), `409 expired`, `422` argument errors |
 | `POST /assistant/cards/{id}/cancel` | Cancel | `200 {card}` | `409 not_proposed` |
 | `POST /assistant/changes/{id}/undo` | Undo a change | `200 {change}` | `409 changed_since`, `409 not_latest`, `409 too_late`, `409 already_undone`, `409 not_undoable` |
+| `GET /assistant/refs/{ref}` | The person's own view of an item Mikasa named (title, subtitle, lines, link); private details included, because it goes to the browser, never to the model (R5). Added in T016 | `200 {ref, kind, title, subtitle, lines, link}` | `404 not_found` (gone, or not a ref) |
 | `POST /jobs/paste` *(changed)* | Link-only mode: `description` may be empty when `url`, `title` and `company` are given (R12) | as today | as today |
 
 Cross-site writes are refused by the existing middleware; the API stays on localhost.

@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { routes } from './routes'
@@ -112,9 +112,9 @@ describe('Shell', () => {
     expect(within(sidebar).getAllByText('HireTitan')).toHaveLength(1)
     expect(sidebar.firstElementChild).toHaveTextContent('HireTitan')
     expect(sidebar.firstElementChild?.querySelector('svg[data-logo]')).not.toBeNull()
-    // the other graphics in the sidebar are the menu icons
+    // the other graphics in the sidebar are the menu icons and Mikasa's launcher (002m)
     expect(sidebar.querySelectorAll('svg:not([data-logo], .ht-logo-edge, .ht-logo-back)')).toHaveLength(
-      within(nav).getAllByRole('link').length,
+      within(nav).getAllByRole('link').length + 1,
     )
     expect(sidebar.querySelector('img')).toBeNull()
   })
@@ -175,5 +175,21 @@ describe('Shell', () => {
       await screen.findByRole('heading', { level: 1, name: 'Page not found' }),
     ).toBeInTheDocument()
     expect(screen.getByRole('navigation', { name: 'Main' })).toBeInTheDocument()
+  })
+
+  it('002m US1_AS1 Mikasa opens beside the page from the menu and with Ctrl+/', async () => {
+    renderAt('/companies')
+    const launcher = await screen.findByRole('button', { name: 'Mikasa' })
+    expect(screen.queryByRole('complementary', { name: 'Mikasa' })).not.toBeInTheDocument()
+
+    fireEvent.click(launcher)
+    expect(screen.getByRole('complementary', { name: 'Mikasa' })).toBeInTheDocument()
+    expect(screen.getByRole('main')).toBeInTheDocument() // the page is still there
+    expect(launcher).toHaveAttribute('aria-expanded', 'true')
+
+    fireEvent.keyDown(window, { key: '/', ctrlKey: true })
+    expect(screen.queryByRole('complementary', { name: 'Mikasa' })).not.toBeInTheDocument()
+    fireEvent.keyDown(window, { key: '/', ctrlKey: true })
+    expect(screen.getByRole('complementary', { name: 'Mikasa' })).toBeInTheDocument()
   })
 })

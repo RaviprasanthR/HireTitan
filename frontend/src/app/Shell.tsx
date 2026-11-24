@@ -1,7 +1,9 @@
-import { Building2, House, Settings, User } from 'lucide-react'
+import { Building2, House, Settings, Sparkles, User } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router'
 import { AiBanner } from './AiBanner'
 import { UndoToast } from '@/features/jobs/UndoToast'
+import { MikasaPanel } from '@/features/assistant/MikasaPanel'
 import { AppName } from '@/components/AppName'
 import { cn } from '@/lib/utils'
 
@@ -14,6 +16,18 @@ const sections = [
 
 export function Shell() {
   const { pathname } = useLocation()
+  const [mikasaOpen, setMikasaOpen] = useState(false)
+  // Ctrl+/ (or Cmd+/) opens and closes Mikasa from any page (research R13)
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === '/' && (event.ctrlKey || event.metaKey)) {
+        event.preventDefault()
+        setMikasaOpen((open) => !open)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
   return (
     <div
       data-testid="app-root"
@@ -45,6 +59,20 @@ export function Shell() {
             )
           })}
         </nav>
+        <button
+          type="button"
+          aria-expanded={mikasaOpen}
+          aria-keyshortcuts="Control+/"
+          onClick={() => setMikasaOpen((open) => !open)}
+          className={cn(
+            'mt-auto flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium outline-none',
+            'focus-visible:ring-2 focus-visible:ring-ring',
+            mikasaOpen ? 'bg-primary text-primary-foreground' : 'hover:bg-divider',
+          )}
+        >
+          <Sparkles aria-hidden className="size-4" />
+          Mikasa
+        </button>
       </aside>
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <div data-testid="banner-slot">
@@ -54,6 +82,7 @@ export function Shell() {
           <Outlet />
         </main>
       </div>
+      {mikasaOpen && <MikasaPanel onClose={() => setMikasaOpen(false)} />}
       <UndoToast />
     </div>
   )
