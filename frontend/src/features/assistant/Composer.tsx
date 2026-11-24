@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { SendHorizontal, Square } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 export const MESSAGE_MAX = 2000
@@ -24,7 +25,7 @@ export function Composer({ disabled, streaming, draft, onDraftChange, onSend, on
   }
   return (
     <form
-      className="flex flex-col gap-2 border-t border-divider p-3"
+      className="flex flex-col gap-2 border-t border-white/[0.07] p-3"
       onSubmit={(event) => {
         event.preventDefault()
         send()
@@ -44,25 +45,27 @@ export function Composer({ disabled, streaming, draft, onDraftChange, onSend, on
           onDraftChange(event.target.value)
         }}
         onKeyDown={(event) => {
-          if (event.key === 'Enter' && !event.shiftKey) {
+          if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
             event.preventDefault()
             send()
           }
         }}
         aria-invalid={over || undefined}
-        className="w-full resize-none rounded-md border border-divider bg-background p-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="w-full resize-none rounded-xl border border-white/10 bg-background p-2.5 text-sm outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-primary/60"
       />
       <div className="flex items-center justify-between gap-2">
         <span className={over ? 'text-xs text-danger' : 'text-xs text-muted-small'}>
           {touched || draft ? `${draft.length} / ${MESSAGE_MAX}` : ''}
         </span>
         {streaming ? (
-          <Button type="button" variant="outline" size="sm" onClick={onStop}>
+          <Button type="button" variant="outline" size="sm" aria-label="Stop" onClick={onStop}>
+            <Square aria-hidden className="fill-current" />
             Stop
           </Button>
         ) : (
-          <Button type="submit" size="sm" disabled={!canSend}>
+          <Button type="submit" size="sm" aria-label="Send" disabled={!canSend}>
             Send
+            <SendHorizontal aria-hidden />
           </Button>
         )}
       </div>

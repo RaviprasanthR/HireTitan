@@ -9,12 +9,22 @@ import {
   useAssistantStatus,
   useConversations,
   useMessages,
+  useStaged,
   useStartConversation,
+  type QuickAction,
   type StoredMessage,
 } from './api'
+import { ChangeNotice } from './ChangeNotice'
+import { useAssistantChanges } from './changes'
 import { Composer } from './Composer'
+import { ConfirmCard } from './ConfirmCard'
+import { PasteForm } from './PasteForm'
+import { MikasaAvatar } from './MikasaAvatar'
+import { QuickActions, StatusForm } from './QuickActions'
+import { StagedFlow } from './StagedFlow'
+import { TypingDots } from './TypingDots'
 import { ReplyText } from './ReplyText'
-import { streamTurn, type TurnStreamEvent } from './stream'
+import { streamTurn, type CardData, type ChangeData, type TurnStreamEvent } from './stream'
 
 export const CONVERSATION_KEY = 'mikasa.conversation'
 
@@ -25,7 +35,48 @@ const UNAVAILABLE: Record<string, string> = {
   model_lacks_tools: 'Mikasa needs a model that can use tools.',
 }
 
-type Live = { person: string; text: string; notices: string[]; error: string | null }
+type Live = {
+  person: string
+  text: string
+  notices: string[]
+  error: string | null
+  changes: ChangeData[]
+  cards: CardData[]
+  done: boolean // the reply is complete: the caret stops
+}
+
+type Acts = ReturnType<typeof useAssistantChanges>
+
+function Outcomes({
+  cards,
+  changes,
+  acts,
+}: {
+  cards: CardData[]
+  changes: ChangeData[]
+  acts: Acts
+}) {
+  return (
+    <>
+      {changes.map((change) => (
+        <ChangeNotice key={change.change_id} change={change} onUndo={acts.undo} />
+      ))}
+      {cards.map((card) => (
+        <ConfirmCard
+          key={card.card_id}
+          card={card}
+          onConfirm={acts.confirm}
+          onCancel={acts.cancel}
+        />
+      ))}
+    </>
+  )
+}
+
+function problemText(error: unknown): string {
+  if (error instanceof ApiError) return error.detail
+  return error instanceof Error ? error.message : 'That did not work.'
+}
 
 function savedConversation(): string | null {
   try {
@@ -44,24 +95,34 @@ function saveConversation(id: string | null) {
   }
 }
 
-function Message({ message }: { message: StoredMessage }) {
+function Message({ message, acts }: { message: StoredMessage; acts: Acts }) {
   if (message.author === 'person') {
     return (
-      <div className="ml-8 self-end whitespace-pre-wrap rounded-lg bg-primary/15 px-3 py-2 text-sm">
-        {message.text}
-      </div>
+      <>
+        <div className="mikasa-rise ml-10 self-end whitespace-pre-wrap rounded-2xl rounded-br-md bg-primary px-3 py-2 text-sm text-primary-foreground shadow-sm">
+          {message.text}
+        </div>
+        <Outcomes
+          cards={(message.cards ?? []) as unknown as CardData[]}
+          changes={(message.changes ?? []) as unknown as ChangeData[]}
+          acts={acts}
+        />
+      </>
     )
   }
   return (
-    <div className="mr-4 rounded-lg bg-background px-3 py-2 text-sm">
-      {message.text && <ReplyText text={message.text} />}
-      {message.status === 'stopped' && <p className="text-xs text-muted-small">Stopped.</p>}
-      {message.status === 'failed' && (
-        <p className="text-xs text-danger">
-          {(message.error?.provider_message as string | undefined) ??
-            'This answer could not be finished.'}
-        </p>
-      )}
+    <div className="mikasa-rise flex items-end gap-2">
+      <MikasaAvatar />
+      <div className="min-w-0 max-w-[85%] rounded-2xl rounded-bl-md border border-white/[0.06] bg-background px-3 py-2 text-sm shadow-sm">
+        {message.text && <ReplyText text={message.text} />}
+        {message.status === 'stopped' && <p className="text-xs text-muted-small">Stopped.</p>}
+        {message.status === 'failed' && (
+          <p className="text-xs text-danger">
+            {(message.error?.provider_message as string | undefined) ??
+              'This answer could not be finished.'}
+          </p>
+        )}
+      </div>
     </div>
   )
 }
@@ -77,9 +138,15 @@ export function MikasaPanel({ onClose }: { onClose: () => void }) {
   // with no saved conversation, carry on with the most recent one
   const conversationId = chosenId ?? conversations.data?.[0]?.id ?? null
   const messages = useMessages(conversationId)
+  const acts = useAssistantChanges(conversationId)
+  const staged = useStaged(conversationId)
   const [draft, setDraft] = useState('')
   const [live, setLive] = useState<Live | null>(null)
   const [refusal, setRefusal] = useState<string | null>(null)
+  const [postingRefused, setPostingRefused] = useState<string | null>(null)
+  const [pasting, setPasting] = useState(false)
+  const [typing, setTyping] = useState(false) // the text box opens only when asked for (FR-029)
+  const [form, setForm] = useState<QuickAction | null>(null) // the status form, when it is open
   const abort = useRef<AbortController | null>(null)
   const bottom = useRef<HTMLDivElement | null>(null)
 
@@ -92,16 +159,24 @@ export function MikasaPanel({ onClose }: { onClose: () => void }) {
 
   async function send(text: string) {
     setRefusal(null)
-    let id = conversationId
-    if (id === null) {
-      id = (await start.mutateAsync()).id
-      setConversationId(id)
-      saveConversation(id)
+    if (/^\s*https?:\/\/\S+\s*$/.test(text)) {
+      setDraft('')
+      await holdPost(text).catch((error: unknown) => setRefusal(problemText(error)))
+      return
     }
+    const id = await ensureConversation()
     const controller = new AbortController()
     abort.current = controller
     setDraft('')
-    setLive({ person: text, text: '', notices: [], error: null })
+    setLive({
+      person: text,
+      text: '',
+      notices: [],
+      error: null,
+      changes: [],
+      cards: [],
+      done: false,
+    })
     const onEvent = (event: TurnStreamEvent) => {
       setLive((current) => {
         if (!current) return current
@@ -109,14 +184,24 @@ export function MikasaPanel({ onClose }: { onClose: () => void }) {
         if (event.event === 'notice')
           return { ...current, notices: [...current.notices, event.data.text] }
         if (event.event === 'error') return { ...current, error: event.data.message }
-        if (event.event === 'done') return { ...current, text: event.data.text }
+        if (event.event === 'done') return { ...current, text: event.data.text, done: true }
+        if (event.event === 'change')
+          return { ...current, changes: [...current.changes, event.data] }
+        if (event.event === 'card') return { ...current, cards: [...current.cards, event.data] }
         return current
       })
     }
     try {
       await streamTurn(id, text, pathname, onEvent, controller.signal)
     } catch (error) {
-      if (error instanceof ApiError) {
+      if (error instanceof ApiError && error.problem.reason === 'looks_like_posting') {
+        // a pasted job post: kept for a draft, never sent to the AI
+        setDraft('')
+        await holdPost(text).catch((held: unknown) => {
+          setRefusal(problemText(held))
+          setDraft(text)
+        })
+      } else if (error instanceof ApiError) {
         setRefusal(error.detail)
         setDraft(text) // nothing was sent: the person keeps what they wrote
       }
@@ -127,6 +212,39 @@ export function MikasaPanel({ onClose }: { onClose: () => void }) {
       await client.invalidateQueries({ queryKey: assistantKeys.messages(id) })
       await client.invalidateQueries({ queryKey: assistantKeys.conversations })
     }
+  }
+
+  /** The open conversation, started now if there is none or the remembered one is gone (a
+   * conversation can be deleted, or the database reset, while the browser still remembers it). */
+  async function ensureConversation(): Promise<string> {
+    const known = conversations.data
+    if (conversationId !== null && (!known || known.some((c) => c.id === conversationId))) {
+      return conversationId
+    }
+    const id = (await start.mutateAsync()).id
+    setConversationId(id)
+    saveConversation(id)
+    return id
+  }
+
+  /** A quick action (FR-029): a draft starts the post-to-draft flow; the others open a form. */
+  function pick(action: QuickAction) {
+    setRefusal(null)
+    if (action.form === 'paste') setPasting(true)
+    else if (action.form === 'status') setForm(action)
+    else if (action.draft_kind) {
+      const kind = action.draft_kind
+      void ensureConversation()
+        .then((id) => acts.staged.begin(id, kind))
+        .catch((error: unknown) =>
+          setRefusal(error instanceof Error ? error.message : 'That did not work.'),
+        )
+    }
+  }
+
+  /** A job post or link typed or pasted into the box: kept for a draft, never sent to the AI. */
+  async function holdPost(text: string) {
+    await acts.staged.post(await ensureConversation(), text)
   }
 
   function newConversation() {
@@ -146,10 +264,16 @@ export function MikasaPanel({ onClose }: { onClose: () => void }) {
   return (
     <aside
       aria-label="Mikasa"
-      className="fixed inset-0 z-40 flex flex-col bg-[var(--ht-surface)] md:static md:inset-auto md:z-auto md:w-[420px] md:shrink-0 md:border-l md:border-white/[0.07]"
+      className="mikasa-pop fixed bottom-24 right-5 z-40 flex h-[min(640px,calc(100vh-8rem))] w-[min(420px,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-2xl border border-white/10 bg-[var(--ht-surface)] shadow-2xl shadow-black/50 max-sm:inset-x-2 max-sm:bottom-24 max-sm:w-auto"
     >
-      <header className="flex items-center justify-between gap-2 border-b border-divider px-3 py-2">
-        <h2 className="text-base font-semibold">Mikasa</h2>
+      <header className="flex items-center justify-between gap-2 border-b border-white/[0.07] bg-gradient-to-r from-primary/25 to-transparent px-3 py-2.5">
+        <div className="flex items-center gap-2.5">
+          <MikasaAvatar className="size-9" />
+          <div>
+            <h2 className="text-sm font-semibold leading-tight">Mikasa</h2>
+            <p className="text-xs leading-tight text-muted-small">Your job-search assistant</p>
+          </div>
+        </div>
         <div className="flex items-center gap-1">
           <Button
             type="button"
@@ -185,51 +309,110 @@ export function MikasaPanel({ onClose }: { onClose: () => void }) {
           </div>
         )}
         {(messages.data ?? []).length === 0 && !live && available && (
-          <p className="text-sm text-muted-small">
-            Ask me about your jobs, companies, searches or interviews.
-          </p>
+          <div className="mikasa-rise flex flex-col items-center gap-2 px-4 py-6 text-center">
+            <MikasaAvatar className="size-14" />
+            <p className="text-sm font-medium">Hi, I'm Mikasa.</p>
+            <p className="text-sm text-muted-small">
+              Ask me about your jobs, companies, searches or interviews.
+            </p>
+          </div>
         )}
         {messages.data?.map((message) => (
-          <Message key={message.id} message={message} />
+          <Message key={message.id} message={message} acts={acts} />
         ))}
         {live && (
           <>
-            <div className="ml-8 self-end whitespace-pre-wrap rounded-lg bg-primary/15 px-3 py-2 text-sm">
+            <div className="mikasa-rise ml-10 self-end whitespace-pre-wrap rounded-2xl rounded-br-md bg-primary px-3 py-2 text-sm text-primary-foreground shadow-sm">
               {live.person}
             </div>
-            <div
-              className="mr-4 rounded-lg bg-background px-3 py-2 text-sm"
-              data-testid="live-reply"
-            >
-              {live.text ? (
-                <ReplyText text={live.text} />
-              ) : (
-                <span className="text-muted-small">…</span>
-              )}
-              {live.notices.map((notice, index) => (
-                <p key={index} className="text-xs text-muted-small">
-                  {notice}
-                </p>
-              ))}
-              {live.error && <p className="text-xs text-danger">{live.error}</p>}
+            <div className="mikasa-rise flex items-end gap-2">
+              <MikasaAvatar />
+              <div
+                className="min-w-0 max-w-[85%] rounded-2xl rounded-bl-md border border-white/[0.06] bg-background px-3 py-2 text-sm shadow-sm"
+                data-testid="live-reply"
+              >
+                {live.text ? (
+                  <div>
+                    <ReplyText text={live.text} />
+                    {!live.done && (
+                      <span
+                        aria-hidden
+                        className="mikasa-caret ml-0.5 inline-block h-4 w-0.5 translate-y-0.5 bg-current"
+                      />
+                    )}
+                  </div>
+                ) : (
+                  !live.error && <TypingDots />
+                )}
+                {live.notices.map((notice, index) => (
+                  <p key={index} className="text-xs text-muted-small">
+                    {notice}
+                  </p>
+                ))}
+                {live.error && <p className="text-xs text-danger">{live.error}</p>}
+              </div>
             </div>
+            <Outcomes cards={live.cards} changes={live.changes} acts={acts} />
           </>
         )}
         {refusal && (
-          <p role="alert" className="text-sm text-danger">
-            {refusal}
-          </p>
+          <div role="alert" className="text-sm text-danger">
+            <p>{refusal}</p>
+            {postingRefused !== null && (
+              <Button type="button" size="sm" variant="outline" onClick={() => setPasting(true)}>
+                Paste it as a job description
+              </Button>
+            )}
+          </div>
         )}
         <div ref={bottom} />
       </div>
-      <Composer
-        disabled={!available}
-        streaming={live !== null}
-        draft={draft}
-        onDraftChange={setDraft}
-        onSend={(text) => void send(text)}
-        onStop={() => abort.current?.abort()}
-      />
+      {pasting ? (
+        <PasteForm
+          initialDescription={postingRefused ?? ''}
+          onClose={() => {
+            setPasting(false)
+            setPostingRefused(null)
+            setRefusal(null)
+          }}
+          onPaste={async (fields) => {
+            const id = await ensureConversation()
+            setDraft('')
+            return acts.paste(id, fields)
+          }}
+        />
+      ) : form?.form === 'status' ? (
+        <StatusForm
+          onBack={() => setForm(null)}
+          onRun={async (job, status) => acts.status(await ensureConversation(), job, status)}
+        />
+      ) : staged.data && conversationId ? (
+        <StagedFlow
+          view={staged.data}
+          onPost={(text) => acts.staged.post(conversationId, text)}
+          onDetails={(title, company) => acts.staged.details(conversationId, title, company)}
+          onChoose={(kind) => acts.staged.choose(conversationId, kind)}
+          onSave={() => acts.staged.save(conversationId)}
+          onDiscard={() => acts.staged.discard(conversationId)}
+        />
+      ) : (
+        <QuickActions
+          disabled={live !== null}
+          onPick={pick}
+          onTypeInstead={() => setTyping(true)}
+          typing={typing}
+        />
+      )}
+      {typing && (
+        <Composer
+          disabled={!available}
+          streaming={live !== null}
+          draft={draft}
+          onDraftChange={setDraft}
+          onSend={(text) => void send(text)}
+          onStop={() => abort.current?.abort()}
+        />
+      )}
     </aside>
   )
 }

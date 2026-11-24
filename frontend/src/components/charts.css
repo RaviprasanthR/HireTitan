@@ -88,7 +88,7 @@
 @media (min-width: 64rem) {
   .ht-flow-link {
     flex: 1 1 0%;
-    min-width: 1.5rem;
+    min-width: 0.75rem;
     width: auto;
     height: 2px;
     margin-top: 1.75rem; /* the middle of a node */

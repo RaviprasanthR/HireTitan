@@ -10,8 +10,29 @@ export type TurnStreamEvent =
       data: { reason: string; message: string; provider_message: string | null }
     }
   | { event: 'done'; data: { message_id: string | null; status: string; text: string } }
+  | { event: 'change'; data: ChangeData }
+  | { event: 'card'; data: CardData }
 
-const KNOWN = new Set(['text', 'ref', 'notice', 'error', 'done'])
+/** A small change applied at once, with its Undo (FR-014). */
+export type ChangeData = {
+  change_id: string
+  action: string
+  summary?: string
+  undo_until: string | null
+  undone?: boolean
+  invalidate?: string[][]
+}
+
+/** A risky change waiting for the person's confirmation (FR-010). */
+export type CardData = {
+  card_id: string
+  summary: string
+  items: { action: string; args: Record<string, unknown>; editable: string[] }[]
+  expires_at: string
+  state?: string
+}
+
+const KNOWN = new Set(['text', 'ref', 'notice', 'error', 'done', 'change', 'card'])
 
 /** Server-sent event frames from text that may arrive in any size of piece. */
 export function frameParser(onFrame: (event: string, data: string) => void) {

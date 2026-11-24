@@ -19,7 +19,7 @@ const STAGGER_MS = 110
  */
 export function FlowChart({ label, steps }: { label: string; steps: FlowStep[] }) {
   return (
-    <div className="flex items-center justify-center overflow-x-auto rounded-lg bg-surface p-4">
+    <div className="flex min-w-0 items-center rounded-lg bg-surface p-4">
       <ol
         aria-label={label}
         className="flex w-full flex-col items-center gap-1 lg:flex-row lg:items-start lg:gap-0"
@@ -30,14 +30,14 @@ export function FlowChart({ label, steps }: { label: string; steps: FlowStep[] }
           return (
             <Fragment key={step.key}>
               <li
-                className="ht-flow-step flex w-36 flex-none flex-col items-center text-center"
+                className="ht-flow-step flex w-36 flex-none flex-col items-center text-center lg:w-auto lg:min-w-0 lg:max-w-36 lg:flex-[1_1_5rem]"
                 style={{ animationDelay: `${index * STAGGER_MS}ms` }}
               >
                 <span className={`ht-flow-node ${last ? 'ht-flow-node-last' : ''}`}>
                   <Icon aria-hidden className="ht-flow-icon size-6" />
                 </span>
                 <span className="mt-2 block text-lg font-semibold leading-tight">{step.value}</span>
-                <span className="block text-sm text-muted-small">{step.title}</span>
+                <span className="block text-sm leading-snug text-muted-small">{step.title}</span>
                 {step.note && <span className="block text-xs text-muted-small">{step.note}</span>}
               </li>
               {!last && (

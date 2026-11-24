@@ -3,15 +3,16 @@
    and `.ht-wordmark` may be styled here (a test checks it). The wordmark runs from ice white
    into the accent, so it stays readable on navy. */
 .ht-logo {
-  filter: drop-shadow(0 0 5px rgb(240 163 94 / 0.55)) drop-shadow(0 2px 8px rgb(217 83 47 / 0.35));
+  filter: drop-shadow(0 0 5px rgb(169 156 230 / 0.55)) drop-shadow(0 2px 8px rgb(111 127 196 / 0.35));
 }
 .ht-wordmark {
-  background-image: linear-gradient(100deg, #f4f6f5 0%, #ffdcb4 45%, #f0a35e 100%);
+  /* the same slate-blue, lavender and lilac gradient as the menu's highlight bar */
+  background-image: linear-gradient(100deg, #6f7fc4 0%, #a99ce6 50%, #e6e0ff 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
   color: #f4f6f5; /* shown if background-clip: text is not supported */
-  filter: drop-shadow(0 0 10px rgb(240 163 94 / 0.3));
+  filter: drop-shadow(0 0 10px rgb(169 156 230 / 0.4));
 }
 
 /* The logo has thickness: flat copies of the shape sit behind the front face in 3D, so a turn
@@ -26,7 +27,7 @@
   inset: 0;
   height: 100%;
   width: 100%;
-  fill: #b34724;
+  fill: #4f58a0;
 }
 
 /* Hovering the logo or the name turns the logo once around its vertical axis; while a progress ring

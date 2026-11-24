@@ -85,11 +85,11 @@ describe('Shell', () => {
     )
   })
 
-  it('the window does not scroll: the menu stays put and the page area scrolls on its own', async () => {
+  it('the window does not scroll: the top bar stays put and the page area scrolls on its own', async () => {
     renderAt('/')
     await screen.findByRole('navigation', { name: 'Main' })
 
-    expect(screen.getByTestId('app-root')).toHaveClass('h-screen', 'overflow-hidden')
+    expect(screen.getByTestId('app-root')).toHaveClass('h-screen', 'overflow-hidden', 'flex-col')
     expect(screen.getByRole('main')).toHaveClass('overflow-y-auto')
   })
 
@@ -104,26 +104,91 @@ describe('Shell', () => {
     }
   })
 
-  it('FR022 the logo and the app name are at the top of the sidebar', async () => {
+  it('FR022 the logo and the app name are at the left of the top bar, before the menu', async () => {
     renderAt('/')
     const nav = await screen.findByRole('navigation', { name: 'Main' })
-    const sidebar = nav.closest('aside') as HTMLElement
+    const bar = nav.closest('header') as HTMLElement
 
-    expect(within(sidebar).getAllByText('HireTitan')).toHaveLength(1)
-    expect(sidebar.firstElementChild).toHaveTextContent('HireTitan')
-    expect(sidebar.firstElementChild?.querySelector('svg[data-logo]')).not.toBeNull()
-    // the other graphics in the sidebar are the menu icons and Mikasa's launcher (002m)
-    expect(sidebar.querySelectorAll('svg:not([data-logo], .ht-logo-edge, .ht-logo-back)')).toHaveLength(
-      within(nav).getAllByRole('link').length + 1,
-    )
-    expect(sidebar.querySelector('img')).toBeNull()
+    expect(within(bar).getAllByText('HireTitan')).toHaveLength(1)
+    expect(bar.firstElementChild).toHaveTextContent('HireTitan')
+    expect(bar.firstElementChild?.querySelector('svg[data-logo]')).not.toBeNull()
+    expect(bar.querySelector('img')).toBeNull()
+    // the menu runs in a row beside the name, not down the left edge
+    expect(nav).toHaveClass('flex', 'items-center')
+    expect(nav.closest('aside')).toBeNull()
   })
 
-  it('FR022 the sidebar has a thin divider on its right edge', async () => {
+  it('FR022 the top bar has a thin divider on its bottom edge', async () => {
     renderAt('/')
     const nav = await screen.findByRole('navigation', { name: 'Main' })
 
-    expect(nav.closest('aside')).toHaveClass('border-r')
+    expect(nav.closest('header')).toHaveClass('border-b')
+  })
+
+  it('002m the chat button is at the bottom right of every page and opens a popup', async () => {
+    renderAt('/companies')
+    const launcher = await screen.findByRole('button', { name: 'Mikasa' })
+    expect(launcher).toHaveClass('fixed', 'bottom-5', 'right-5')
+    expect(launcher).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByRole('complementary', { name: 'Mikasa' })).not.toBeInTheDocument()
+
+    fireEvent.click(launcher)
+
+    const popup = screen.getByRole('complementary', { name: 'Mikasa' })
+    expect(popup).toHaveClass('fixed', 'bottom-24', 'right-5', 'mikasa-pop')
+    expect(launcher).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('main')).toBeInTheDocument() // the page stays under it
+    fireEvent.click(launcher)
+    expect(screen.queryByRole('complementary', { name: 'Mikasa' })).not.toBeInTheDocument()
+  })
+
+  it('002m Ctrl+/ toggles the popup and Escape closes it', async () => {
+    renderAt('/')
+    await screen.findByRole('button', { name: 'Mikasa' })
+
+    fireEvent.keyDown(window, { key: '/', ctrlKey: true })
+    expect(screen.getByRole('complementary', { name: 'Mikasa' })).toBeInTheDocument()
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(screen.queryByRole('complementary', { name: 'Mikasa' })).not.toBeInTheDocument()
+    fireEvent.keyDown(window, { key: '/', ctrlKey: true })
+    expect(screen.getByRole('complementary', { name: 'Mikasa' })).toBeInTheDocument()
+  })
+
+  it('the logo sits alone at the left of the top bar and the menu at the right', async () => {
+    renderAt('/')
+    const nav = await screen.findByRole('navigation', { name: 'Main' })
+    const bar = nav.closest('header') as HTMLElement
+
+    expect(bar).toHaveClass('justify-between')
+    expect(bar.firstElementChild).not.toContainElement(nav)
+    expect(bar.lastElementChild).toBe(nav)
+  })
+
+  it('the current section is marked by a glowing bar, not a filled button', async () => {
+    renderAt('/companies')
+    const nav = await screen.findByRole('navigation', { name: 'Main' })
+    const current = within(nav).getByRole('link', { name: 'Companies' })
+
+    expect(current).not.toHaveClass('bg-primary')
+    expect(current.querySelector('span[aria-hidden]')).toHaveClass('scale-x-100')
+    const other = within(nav).getByRole('link', { name: 'Profile' })
+    expect(other.querySelector('span[aria-hidden]')).toHaveClass('scale-x-0')
+  })
+
+  it('pages sit in a wide centred column with a little room on both sides', async () => {
+    renderAt('/')
+    const column = await screen.findByTestId('page-column')
+    expect(column).toHaveClass('mx-auto', 'max-w-[1800px]', 'px-4')
+  })
+
+  it('the chat floats over the page: opening it does not move the page', async () => {
+    renderAt('/')
+    const column = await screen.findByTestId('page-column')
+    const before = column.className
+
+    fireEvent.click(screen.getByRole('button', { name: 'Mikasa' }))
+
+    expect(column.className).toBe(before)
   })
 
   it('marks_the_current_section', async () => {
@@ -175,21 +240,5 @@ describe('Shell', () => {
       await screen.findByRole('heading', { level: 1, name: 'Page not found' }),
     ).toBeInTheDocument()
     expect(screen.getByRole('navigation', { name: 'Main' })).toBeInTheDocument()
-  })
-
-  it('002m US1_AS1 Mikasa opens beside the page from the menu and with Ctrl+/', async () => {
-    renderAt('/companies')
-    const launcher = await screen.findByRole('button', { name: 'Mikasa' })
-    expect(screen.queryByRole('complementary', { name: 'Mikasa' })).not.toBeInTheDocument()
-
-    fireEvent.click(launcher)
-    expect(screen.getByRole('complementary', { name: 'Mikasa' })).toBeInTheDocument()
-    expect(screen.getByRole('main')).toBeInTheDocument() // the page is still there
-    expect(launcher).toHaveAttribute('aria-expanded', 'true')
-
-    fireEvent.keyDown(window, { key: '/', ctrlKey: true })
-    expect(screen.queryByRole('complementary', { name: 'Mikasa' })).not.toBeInTheDocument()
-    fireEvent.keyDown(window, { key: '/', ctrlKey: true })
-    expect(screen.getByRole('complementary', { name: 'Mikasa' })).toBeInTheDocument()
   })
 })

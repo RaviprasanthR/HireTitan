@@ -11,6 +11,7 @@ export type PasteFields = {
   title?: string
   company?: string
   location?: string
+  link_only?: boolean // 002m: only the link, title and company; the description later
 }
 
 export function usePasteJob() {

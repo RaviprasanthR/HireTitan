@@ -1,8 +1,8 @@
 import { useId } from 'react'
 import { cn } from '@/lib/utils'
 
-/** The HireTitan logo: a map pin with a necktie cut out of it, filled with a gold to orange to
- *  rust gradient and a soft warm glow. The cut-outs show the page behind. Traced from Ravi's logo
+/** The HireTitan logo: a map pin with a necktie cut out of it, filled with a pale lilac to
+ *  lavender to slate-blue gradient and a soft lavender glow (Ravi, 2026-11-24). The cut-outs show the page behind. Traced from Ravi's logo
  *  image (2026-11-15); the same shape and colours are in `public/favicon.svg` and
  *  `docs/assets/logo.svg`. */
 const SHAPE =
@@ -49,9 +49,9 @@ export function Logo({ className }: { className?: string }) {
       >
         <defs>
           <linearGradient id={gradient} x1="0.15" y1="0" x2="0.85" y2="1">
-            <stop offset="0" stopColor="#ffe0a3" />
-            <stop offset="0.45" stopColor="#f0a35e" />
-            <stop offset="1" stopColor="#d9532f" />
+            <stop offset="0" stopColor="#e6e0ff" />
+            <stop offset="0.5" stopColor="#a99ce6" />
+            <stop offset="1" stopColor="#6f7fc4" />
           </linearGradient>
         </defs>
         <path fill={`url(#${gradient})`} d={SHAPE} />
