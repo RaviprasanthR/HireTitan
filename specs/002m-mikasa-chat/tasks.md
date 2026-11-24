@@ -30,7 +30,7 @@ description: "Task list for 002m-mikasa-chat"
 
 **Purpose**: a clean starting point.
 
-- [ ] T001 Record the baseline on this branch: backend suite (count, skips), `ruff`, `ruff format --check`, `mypy --strict`, `lint-imports`; frontend `tsc`, `eslint`, `npm test`, `npm run build`. Write the counts under a new 002m entry in `docs/CONTEXT.md`. No code change.
+- [x] T001 Record the baseline on this branch: backend suite (count, skips), `ruff`, `ruff format --check`, `mypy --strict`, `lint-imports`; frontend `tsc`, `eslint`, `npm test`, `npm run build`. Write the counts under a new 002m entry in `docs/CONTEXT.md`. No code change.
 
 **Checkpoint**: baseline known.
 
