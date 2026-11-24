@@ -3,21 +3,38 @@
 Each ``generate`` call consumes the next scripted step: a model instance, a dict (validated
 against the request's schema; an invalid one gives an ``error`` result, like a real model
 returning bad JSON), or an exception (raised). Every request is recorded in ``calls``.
+
+Each ``converse`` call plays the next scripted turn for its task: a list of ``TextDelta`` /
+``ToolCall`` / ``TurnEnd`` events (or dicts ``{"text": ...}`` and
+``{"tool_call": {"id", "name", "arguments"}}``), or an exception. A ``TurnEnd`` is added
+when the turn leaves it out. Requests are recorded in ``converse_calls``.
 """
 
 from __future__ import annotations
 
 import json
 from collections import defaultdict, deque
-from collections.abc import Iterable, Mapping
+from collections.abc import AsyncIterator, Iterable, Mapping
 from pathlib import Path
 from typing import Any, cast
 
 from pydantic import BaseModel, ValidationError
 
-from hiretitan.platform.llm.port import AiUnavailable, LlmRequest, LlmResult, Usage
+from hiretitan.platform.llm.port import (
+    AiUnavailable,
+    ConverseEvent,
+    ConverseRequest,
+    LlmRequest,
+    LlmResult,
+    TextDelta,
+    ToolCall,
+    TurnEnd,
+    Usage,
+)
 
 Step = BaseModel | Mapping[str, Any] | BaseException
+TurnStep = ConverseEvent | Mapping[str, Any]
+Turn = list[TurnStep] | BaseException
 
 
 KEY_STATUS_FILE = "key_status"
@@ -44,6 +61,9 @@ class FakeLlm:
         for task, steps in (by_task or {}).items():
             self._by_task[task].extend(steps)
         self.calls: list[LlmRequest[Any]] = []
+        self._turns: deque[Turn] = deque()
+        self._turns_by_task: dict[str, deque[Turn]] = defaultdict(deque)
+        self.converse_calls: list[ConverseRequest] = []
 
     def add(self, *steps: Step, task: str | None = None) -> None:
         """Queue more scripted steps (for ``task`` only, or for any task)."""
@@ -95,3 +115,48 @@ class FakeLlm:
         except ValidationError as exc:
             return LlmResult(None, "error", Usage(), self.provider, self.model, error=str(exc))
         return LlmResult(value, "ok", Usage(), self.provider, self.model)
+
+    def add_turn(self, *steps: TurnStep | BaseException, task: str | None = None) -> None:
+        """Queue one ``converse`` turn: its events in order, or a single exception to raise."""
+        turn: Turn
+        if len(steps) == 1 and isinstance(steps[0], BaseException):
+            turn = steps[0]
+        else:
+            turn = [cast(TurnStep, step) for step in steps]
+        (self._turns_by_task[task] if task else self._turns).append(turn)
+
+    def _next_turn(self, task: str) -> Turn:
+        if self._turns_by_task.get(task):
+            return self._turns_by_task[task].popleft()
+        if self._turns:
+            return self._turns.popleft()
+        raise FakeLlmScriptExhaustedError(f"No scripted turn left for task {task!r}")
+
+    async def converse(self, req: ConverseRequest) -> AsyncIterator[ConverseEvent]:
+        self.converse_calls.append(req)
+        blocked = self.key_status()
+        if blocked != "working":
+            raise AiUnavailable(f"key_{blocked}")  # before the script is touched
+        turn = self._next_turn(req.task)
+        if isinstance(turn, BaseException):
+            raise turn
+        ended = False
+        for step in turn:
+            event = _turn_event(step)
+            ended = ended or isinstance(event, TurnEnd)
+            yield event
+        if not ended:
+            yield TurnEnd(Usage(), self.provider, self.model, "ok")
+
+
+def _turn_event(step: TurnStep) -> ConverseEvent:
+    if isinstance(step, TextDelta | ToolCall | TurnEnd):
+        return step
+    if "text" in step:
+        return TextDelta(str(step["text"]))
+    call = step["tool_call"]
+    return ToolCall(
+        id=str(call["id"]),
+        name=str(call["name"]),
+        arguments_json=json.dumps(call.get("arguments", {})),
+    )
