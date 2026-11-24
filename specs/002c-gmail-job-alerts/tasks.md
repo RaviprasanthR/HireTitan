@@ -194,7 +194,7 @@
 - [x] T064 [P] Tests for FR-013e: API test in `backend/tests/api/mail/` (`reread_last_day` forgets only the last 24 hours' read records, 409 while a check runs, still one check at a time) and `frontend/src/features/settings/GmailSection.test.tsx` (button, note, starts a check)
 - [x] T065 Implement "Read the last day again": `POST /mail/checks` body in `backend/src/hiretitan/mail/api/`, the repo method, `contracts/rest-api.md`, and the button in `frontend/src/features/settings/` (makes T064 pass)
 - [x] T066 [P] `read_job_alert` eval: `backend/evals/read_job_alert/runner.py` scoring SC-011, task in `backend/evals/run.py` (cost estimate, `--yes`, stops on `AiUnavailable`), unit tests in `backend/tests/unit/evals/test_read_job_alert_eval.py` with a scripted AI
-- [ ] T067 Ravi runs the eval on his key (`PYTHONPATH=backend backend/.venv/Scripts/python.exe -m evals.run read_job_alert --models fast --yes`); commit the report; SC-011 must pass before the PR merges
+- [x] T067 Ravi runs the eval on his key (`PYTHONPATH=backend backend/.venv/Scripts/python.exe -m evals.run read_job_alert --models fast --yes`); commit the report; SC-011 must pass before the PR merges
 - [x] T068 E2E: scripted `read_job_alert` replies for the Gmail journey's alerts in `frontend/e2e/` so it runs the AI-first path; all 4 journeys pass
 - [x] T069 Docs: `docs/architecture.md` W10, `docs/user-guide/` Gmail page (the AI reads alert text when a key is set), Settings Gmail part says so too, `success-criteria-map.md` (SC-011), `docs/CONTEXT.md`
 - [ ] T070r Review (python, security, React) over Phase 10, fix findings, full gates (backend with coverage, frontend, ruff, mypy, lint-imports, licence), rebuild the dev stack, then Ravi re-reads his last day on :8000
