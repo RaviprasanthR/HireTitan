@@ -34,6 +34,7 @@ source_modules =
     hiretitan.setup.domain
     hiretitan.search.domain
     hiretitan.drafts.domain
+    hiretitan.mail.domain
 forbidden_modules =
     fastapi
     starlette
@@ -66,6 +67,10 @@ forbidden_modules =
     hiretitan.drafts.infra
     hiretitan.drafts.workflow
     hiretitan.drafts.api
+    hiretitan.mail.domain
+    hiretitan.mail.infra
+    hiretitan.mail.workflow
+    hiretitan.mail.api
 
 [importlinter:contract:preferences-boundary]
 name = preferences uses other modules only through their application layer
@@ -89,6 +94,10 @@ forbidden_modules =
     hiretitan.drafts.infra
     hiretitan.drafts.workflow
     hiretitan.drafts.api
+    hiretitan.mail.domain
+    hiretitan.mail.infra
+    hiretitan.mail.workflow
+    hiretitan.mail.api
 
 [importlinter:contract:setup-boundary]
 name = setup uses other modules only through their application layer
@@ -112,6 +121,10 @@ forbidden_modules =
     hiretitan.drafts.infra
     hiretitan.drafts.workflow
     hiretitan.drafts.api
+    hiretitan.mail.domain
+    hiretitan.mail.infra
+    hiretitan.mail.workflow
+    hiretitan.mail.api
 
 [importlinter:contract:search-boundary]
 name = search uses other modules only through their application layer
@@ -134,6 +147,10 @@ forbidden_modules =
     hiretitan.drafts.infra
     hiretitan.drafts.workflow
     hiretitan.drafts.api
+    hiretitan.mail.domain
+    hiretitan.mail.infra
+    hiretitan.mail.workflow
+    hiretitan.mail.api
 
 # 4. The shared platform never depends on a feature module.
 [importlinter:contract:platform-independent]
@@ -147,6 +164,7 @@ forbidden_modules =
     hiretitan.setup
     hiretitan.search
     hiretitan.drafts
+    hiretitan.mail
 
 # 5. Feature 002b (FR-022, research R9): contacts and notes are the person's own data and never
 #    reach an AI prompt. The search workflow, the prompts and the LLM platform may not import the
@@ -185,3 +203,34 @@ forbidden_modules =
     hiretitan.preferences
     hiretitan.setup
     hiretitan.search
+    hiretitan.mail
+
+# 7. Feature 002c: the mail module reads the person's own mail and is reusable by later mail
+#    features. It imports no other feature module; hiretitan/mail_wiring.py joins it to the rest at
+#    the composition root, through ports in mail.application.
+[importlinter:contract:mail-boundary]
+name = mail imports no other feature module (it uses ports wired at the composition root)
+type = forbidden
+allow_indirect_imports = True
+source_modules =
+    hiretitan.mail
+forbidden_modules =
+    hiretitan.profile
+    hiretitan.preferences
+    hiretitan.setup
+    hiretitan.search
+    hiretitan.drafts
+
+# 8. The mail module is layered like the others. Its application, workflow and api layers arrive
+#    task by task (002c), so every layer is optional until then.
+[importlinter:contract:mail-layers]
+name = mail is layered api > workflow > infra > application > domain
+type = layers
+containers =
+    hiretitan.mail
+layers =
+    (api)
+    (workflow)
+    (infra)
+    (application)
+    (domain)

@@ -13,6 +13,8 @@ Each check also runs on planted sources so a broken scanner can't pass silently.
 from __future__ import annotations
 
 import ast
+import re
+import sys
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -235,9 +237,15 @@ def test_the_description_reader_is_the_only_other_http_module_under_search() -> 
     assert builders == sorted(str(p) for p in HTTP_CLIENT_MODULES)
 
 
-def test_constitution_I_allowlist_holds_only_openai() -> None:
-    assert frozenset({"api.openai.com"}) == ALLOWED_HOSTS
+def test_constitution_I_allowlist_holds_only_the_ai_provider_and_google_for_mail() -> None:
+    # feature 002c adds the two Google hosts the read-only mail reader needs, and nothing else
+    assert frozenset({"api.openai.com", "gmail.googleapis.com", "oauth2.googleapis.com"}) == (
+        ALLOWED_HOSTS
+    )
     assert allowed_base_url("api.openai.com") == "https://api.openai.com/v1"
+    assert allowed_base_url("gmail.googleapis.com", "/gmail/v1") == (
+        "https://gmail.googleapis.com/gmail/v1"
+    )
     with pytest.raises(OutboundHostNotAllowedError):
         allowed_base_url("smtp.gmail.com")
 
@@ -413,3 +421,274 @@ def test_SC007_no_send_scans_drafts() -> None:
 )
 def test_SC007_planted_sender_or_client_in_drafts_is_caught(source: str) -> None:
     assert sending_violations(source) or contacts_client_violations(source)
+
+
+# Feature 002c (constitution I and VII): the mail reader is read-only. Exactly two modules may build
+# an HTTP client, each for its own Google host; the Gmail client only GETs, and the sign-in module
+# only POSTs (token exchange and revoke). No other call in the package may use a mutating verb, and
+# the job-site hosts are never allowlisted (the alert links are shown, never fetched: FR-015).
+MAIL_PACKAGE = Path("mail")
+GMAIL_CLIENT = Path("mail/infra/gmail_client.py")
+GOOGLE_OAUTH = Path("mail/infra/google_oauth.py")
+MAIL_VERBS = {GMAIL_CLIENT: frozenset[str](), GOOGLE_OAUTH: frozenset({"post"})}
+BANNED_MAIL_CALLS = MUTATING_VERBS | {"request", "send", "stream", "sendall"}
+JOB_SITE_HOSTS = (
+    "linkedin.com",
+    "naukri.com",
+    "indeed.com",
+    "foundit.in",
+    "instahyre.com",
+    "cutshort.io",
+)
+
+
+# What the mail package may import: the standard library except the network and process modules
+# below, plus these third-party roots. Adding a root is a deliberate review.
+# langgraph: the check workflow (mail/workflow) is a LangGraph graph like the other workflows
+MAIL_THIRD_PARTY = frozenset(
+    {
+        "hiretitan",
+        "sqlalchemy",
+        "pydantic",
+        "yaml",
+        "fastapi",
+        "starlette",
+        "procrastinate",
+        "langgraph",
+    }
+)
+MAIL_BANNED_IMPORTS = (
+    "smtplib",
+    "imaplib",
+    "poplib",
+    "ftplib",
+    "telnetlib",
+    "socket",
+    "ssl",
+    "http.client",
+    "urllib.request",
+    "xmlrpc",
+    "asyncio.streams",
+    "subprocess",
+    "ctypes",
+    "importlib",
+    "runpy",
+)
+MAIL_HTTP_LIBRARY = "httpx"  # only inside the two Google modules
+# Names that would hide a call from the checks (a dynamic attribute, a late import, a raw request).
+MAIL_BANNED_NAMES = frozenset(
+    {
+        "getattr",
+        "__import__",
+        "eval",
+        "exec",
+        "import_module",
+        "build_request",
+        "__getattribute__",
+        "__dict__",
+    }
+)
+# A Gmail path that changes or sends something. Reading is only messages and profile.
+MAIL_WRITE_PATH = re.compile(
+    # a Gmail address or a ``users/me/...`` path that reaches a write or admin endpoint ...
+    r"(?:users/me|googleapis\.com)\S*/(?:send|drafts?|modify|batchModify|batchDelete|trash|untrash"
+    r"|delete|insert|import|watch|stop|labels|settings|threads)\b"
+    # ... or a bare path that is nothing but such an endpoint
+    r"|^/(?:send|drafts?|modify|batchModify|batchDelete|trash|untrash|delete|insert|import|watch)\b",
+    re.IGNORECASE,
+)
+GMAIL_HOST = "gmail.googleapis.com"
+OAUTH_HOST = "oauth2.googleapis.com"
+GOOGLE_HOST_OWNERS = {GMAIL_HOST: GMAIL_CLIENT, OAUTH_HOST: GOOGLE_OAUTH}
+
+
+def _is_route_decorator(node: ast.expr, module: Path) -> bool:
+    """``@router.delete(...)`` on an API route is the app's own endpoint, not an outgoing call."""
+    return (
+        module.parts[:2] == ("mail", "api")
+        and isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and isinstance(node.func.value, ast.Name)
+        and node.func.value.id in {"router", "app"}
+    )
+
+
+def mail_http_violations(source: str, *, module: Path) -> list[str]:
+    tree = ast.parse(source)
+    allowed_verbs = MAIL_VERBS.get(module)
+    google_module = allowed_verbs is not None
+    route_decorators = {
+        id(decorator.func)
+        for node in ast.walk(tree)
+        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef)
+        for decorator in node.decorator_list
+        if isinstance(decorator, ast.Call) and _is_route_decorator(decorator, module)
+    }
+    problems: list[str] = []
+    for imported in _imported_modules(tree):
+        root = imported.split(".")[0]
+        if _matches(imported, MAIL_BANNED_IMPORTS):
+            problems.append(f"imports {imported}, which can reach the network or run code")
+        elif root == MAIL_HTTP_LIBRARY:
+            if not google_module:
+                problems.append("imports httpx outside the two Google modules")
+        elif root not in sys.stdlib_module_names and root not in MAIL_THIRD_PARTY:
+            problems.append(f"imports {root}, which the mail package does not allow")
+    for node in ast.walk(tree):
+        line = getattr(node, "lineno", 0)
+        if (
+            isinstance(node, ast.Call)
+            and _call_name(node.func) in CLIENT_CONSTRUCTORS
+            and not google_module
+        ):
+            problems.append(f"line {line}: an HTTP client outside the two Google modules")
+        if (
+            isinstance(node, ast.Attribute)
+            and id(node) not in route_decorators
+            and node.attr in BANNED_MAIL_CALLS
+            and node.attr not in (allowed_verbs or frozenset())
+        ):
+            # any use, not only a call: ``send = client.post`` would hide it from a call check
+            problems.append(f"line {line}: .{node.attr} is not allowed here")
+        if isinstance(node, ast.Name | ast.Attribute):
+            name = node.id if isinstance(node, ast.Name) else node.attr
+            if name in MAIL_BANNED_NAMES:
+                problems.append(f"line {line}: {name} can hide a call from this check")
+        if isinstance(node, ast.alias) and node.name.split(".")[-1] in MAIL_BANNED_NAMES:
+            problems.append(f"imports {node.name}")
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            if MAIL_WRITE_PATH.search(node.value):
+                problems.append(f"line {line}: {node.value!r} looks like a Gmail write path")
+            for host, owner in GOOGLE_HOST_OWNERS.items():
+                if host in node.value and module != owner:
+                    problems.append(f"line {line}: {host} is named outside {owner}")
+    return problems
+
+
+def _mail_sources() -> list[tuple[Path, str]]:
+    return [
+        (p, s) for p, s in _package_sources() if p.relative_to(PACKAGE).is_relative_to(MAIL_PACKAGE)
+    ]
+
+
+def test_SC007_mail_package_scanned() -> None:
+    sources = _mail_sources()
+    assert len(sources) > 5, "the scan must actually see the mail package"
+    bad: dict[str, list[str]] = {}
+    for path, source in sources:
+        relative = path.relative_to(PACKAGE)
+        found = sending_violations(source) + mail_http_violations(source, module=relative)
+        if found:
+            bad[str(relative)] = found
+    assert bad == {}
+
+
+def test_FR015_no_job_site_host_is_allowlisted() -> None:
+    for host in ALLOWED_HOSTS:
+        assert not any(host == site or host.endswith("." + site) for site in JOB_SITE_HOSTS), host
+
+
+def test_FR007_only_the_two_google_modules_build_a_client_in_mail() -> None:
+    builders = {
+        path.relative_to(PACKAGE)
+        for path, source in _mail_sources()
+        if any(
+            _call_name(node.func) in CLIENT_CONSTRUCTORS
+            for node in ast.walk(ast.parse(source))
+            if isinstance(node, ast.Call)
+        )
+    }
+    assert builders <= {GMAIL_CLIENT, GOOGLE_OAUTH}
+
+
+GMAIL_URL = "https://gmail.googleapis.com/x"
+OAUTH_URL = "https://oauth2.googleapis.com/x"
+
+
+@pytest.mark.parametrize(
+    ("source", "module"),
+    [
+        (f"async def f(c):\n    await c.post('{GMAIL_URL}')\n", GMAIL_CLIENT),
+        (f"async def f(c):\n    await c.put('{GMAIL_URL}')\n", GMAIL_CLIENT),
+        (f"async def f(c):\n    await c.delete('{GMAIL_URL}')\n", GMAIL_CLIENT),
+        ("async def f(c):\n    await c.request('DELETE', '/x')\n", GMAIL_CLIENT),
+        (f"async def f(c):\n    await c.put('{OAUTH_URL}')\n", GOOGLE_OAUTH),
+        (f"async def f(c):\n    await c.delete('{OAUTH_URL}')\n", GOOGLE_OAUTH),
+        ("import httpx\nhttpx.AsyncClient()\n", Path("mail/infra/repos.py")),
+        ("async def f(c):\n    await c.send(1)\n", Path("mail/workflow/check.py")),
+        ("async def f(c):\n    await c.post('x')\n", Path("mail/workflow/check.py")),
+    ],
+)
+def test_SC007_planted_mail_violation_is_caught(source: str, module: Path) -> None:
+    assert mail_http_violations(source, module=module)
+
+
+OTHER = Path("mail/infra/other.py")
+
+
+@pytest.mark.parametrize(
+    ("source", "module"),
+    [
+        ("async def f(c):\n    send = c.post\n    await send('x')\n", GMAIL_CLIENT),  # an alias
+        ("import httpx as h\nh.AsyncClient()\n", OTHER),
+        ("import requests\n", OTHER),
+        ("import aiohttp\n", OTHER),
+        ("import http.client\n", GMAIL_CLIENT),
+        ("from urllib.request import urlopen\n", GMAIL_CLIENT),
+        ("import socket\n", OTHER),
+        ("import smtplib\n", OTHER),
+        ("import importlib\n", OTHER),
+        ("from googleapiclient import discovery\n", OTHER),
+        ("import httpx\n", OTHER),  # httpx lives only in the two Google modules
+        ("def f(c):\n    return getattr(c, 'po' + 'st')\n", GMAIL_CLIENT),
+        ("def f():\n    return __import__('requests')\n", OTHER),
+        ("def f(c):\n    return c.build_request('POST', 'x')\n", GMAIL_CLIENT),
+        ("from importlib import import_module\n", OTHER),
+        ("@c.post('/x')\ndef f():\n    pass\n", OTHER),  # a decorator is not a free pass
+        ("@c.delete('/x')\ndef f():\n    pass\n", Path("mail/workflow/x.py")),
+        ("@other.delete('/x')\ndef f():\n    pass\n", Path("mail/api/x.py")),
+        # sign-in may POST, but never to Gmail; the Gmail client never names the sign-in host
+        (f"async def f(c):\n    await c.post('{GMAIL_URL}/gmail/v1/users/me/x')\n", GOOGLE_OAUTH),
+        (f"URL = '{OAUTH_URL}/token'\n", GMAIL_CLIENT),
+        (f"URL = '{GMAIL_URL}/gmail/v1/users/me/profile'\n", OTHER),
+        (f"URL = '{GMAIL_URL}/gmail/v1/users/me/messages/send'\n", GMAIL_CLIENT),
+        (f"URL = '{GMAIL_URL}/gmail/v1/users/me/drafts'\n", GMAIL_CLIENT),
+        (f"URL = '{GMAIL_URL}/gmail/v1/users/me/messages/abc/modify'\n", GMAIL_CLIENT),
+        (f"URL = '{GMAIL_URL}/gmail/v1/users/me/messages/abc/trash'\n", GMAIL_CLIENT),
+        ("PATH = 'users/me/messages/batchDelete'\n", GMAIL_CLIENT),
+        ("PATH = 'users/me/labels'\n", GMAIL_CLIENT),
+    ],
+)
+def test_SC007_planted_mail_bypass_is_caught(source: str, module: Path) -> None:
+    assert mail_http_violations(source, module=module)
+
+
+def test_FR015_only_the_two_google_modules_name_the_google_hosts() -> None:
+    allowed = {
+        Path("platform/security/outbound_allowlist.py"),
+        GMAIL_CLIENT,
+        GOOGLE_OAUTH,
+    }
+    named = {
+        path.relative_to(PACKAGE)
+        for path, source in _package_sources()
+        if GMAIL_HOST in source or OAUTH_HOST in source
+    }
+    assert named <= allowed, sorted(str(p) for p in named - allowed)
+
+
+@pytest.mark.parametrize(
+    ("source", "module"),
+    [
+        (f"async def f(c):\n    return await c.get('{GMAIL_URL}')\n", GMAIL_CLIENT),
+        (f"async def f(c):\n    return await c.post('{OAUTH_URL}')\n", GOOGLE_OAUTH),
+        ("import httpx\nhttpx.AsyncClient(timeout=10)\n", GMAIL_CLIENT),
+        ("def f(d):\n    return d.get('k')\n", Path("mail/domain/mime.py")),
+        (
+            "@router.delete('/mail/connection')\nasync def g():\n    return 1\n",
+            Path("mail/api/connection.py"),
+        ),
+    ],
+)
+def test_SC007_allowed_mail_usage_passes(source: str, module: Path) -> None:
+    assert mail_http_violations(source, module=module) == []

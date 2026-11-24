@@ -139,22 +139,57 @@ describe('CompaniesPage', () => {
     expect(within(nolink).queryByRole('link', { name: /website/i })).toBeNull()
   })
 
-  it('US3_AS4_hide_company', async () => {
+  it('there is no Hide button; a company hidden before can be searched again from Edit', async () => {
     const user = userEvent.setup()
+    const hidden = { ...ACME, hidden: true }
     const calls = renderPage((call) => {
-      if (call.method === 'PATCH') return { ...ACME, hidden: true }
-      return call.path.startsWith('/companies') ? { items: [ACME], next_cursor: null } : undefined
+      if (call.method === 'PATCH') return ACME
+      return call.path.startsWith('/companies') ? { items: [hidden], next_cursor: null } : undefined
     })
 
-    await user.click(await screen.findByRole('button', { name: 'Hide Acme' }))
+    await user.click(await screen.findByRole('button', { name: 'Edit Acme' }))
+    expect(screen.queryByRole('button', { name: /^Hide / })).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Search this company again' }))
 
     await waitFor(() =>
       expect(calls).toContainEqual({
         method: 'PATCH',
         path: '/companies/a',
-        body: { hidden: true },
+        body: { hidden: false },
       }),
     )
+  })
+
+  it('a click on the row opens its details and a second click closes them', async () => {
+    const user = userEvent.setup()
+    renderPage((call) =>
+      call.path.startsWith('/companies')
+        ? { items: [{ ...ACME, city: 'Pune' }], next_cursor: null }
+        : undefined,
+    )
+    const row = await screen.findByRole('listitem', { name: 'Acme' })
+
+    await user.click(within(row).getByText('Pune'))
+    expect(await screen.findByRole('region', { name: 'Details for Acme' })).toBeInTheDocument()
+    expect(within(row).getByRole('button', { name: 'Details for Acme' })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    )
+
+    await user.click(within(row).getAllByText('Pune').at(0) as HTMLElement)
+    expect(screen.queryByRole('region', { name: 'Details for Acme' })).toBeNull()
+  })
+
+  it("the edit form's own buttons do not open or close the row", async () => {
+    const user = userEvent.setup()
+    renderPage((call) =>
+      call.path.startsWith('/companies') ? { items: [ACME], next_cursor: null } : undefined,
+    )
+    const row = await screen.findByRole('listitem', { name: 'Acme' })
+
+    await user.click(within(row).getByRole('button', { name: 'Edit Acme' }))
+
+    expect(screen.queryByRole('region', { name: 'Details for Acme' })).toBeNull()
   })
 
   it('edits_a_company_and_shows_field_errors', async () => {
@@ -212,12 +247,7 @@ describe('CompaniesPage', () => {
     const row = await screen.findByRole('listitem', { name: 'Busy' })
 
     expect(within(row).getByTitle('Call back Friday')).toBeInTheDocument() // the note, in full
-    for (const [name, title] of [
-      ['Details for Busy', 'Details'],
-      ['Hide Busy', 'Hide'],
-      ['Edit Busy', 'Edit'],
-      ['Delete Busy', 'Delete'],
-    ]) {
+    for (const [name, title] of [['Edit Busy', 'Edit']]) {
       const button = within(row).getByRole('button', { name })
       expect(button).toHaveAttribute('title', title)
       expect(button.querySelector('svg')).not.toBeNull() // an icon, not a text button
@@ -267,7 +297,8 @@ describe('CompaniesPage', () => {
       call.path.startsWith('/companies') ? { items: [mine], next_cursor: null } : undefined,
     )
 
-    await user.click(await screen.findByRole('button', { name: 'Delete Mine' }))
+    await user.click(await screen.findByRole('button', { name: 'Edit Mine' }))
+    await user.click(screen.getByRole('button', { name: 'Delete Mine' }))
 
     expect(screen.getByText(/3 contacts and the note will be deleted too/)).toBeInTheDocument()
   })
@@ -279,7 +310,8 @@ describe('CompaniesPage', () => {
       call.path.startsWith('/companies') ? { items: [shipped], next_cursor: null } : undefined,
     )
 
-    await user.click(await screen.findByRole('button', { name: 'Delete Shipped' }))
+    await user.click(await screen.findByRole('button', { name: 'Edit Shipped' }))
+    await user.click(screen.getByRole('button', { name: 'Delete Shipped' }))
 
     expect(screen.queryByText(/contacts and the note will be deleted/)).toBeNull()
     expect(screen.getByText(/will not come back with the shipped list/)).toBeInTheDocument()
@@ -292,7 +324,8 @@ describe('CompaniesPage', () => {
       return call.path.startsWith('/companies') ? { items: [ACME], next_cursor: null } : undefined
     })
 
-    await user.click(await screen.findByRole('button', { name: 'Delete Acme' }))
+    await user.click(await screen.findByRole('button', { name: 'Edit Acme' }))
+    await user.click(screen.getByRole('button', { name: 'Delete Acme' }))
     expect(calls.some((c) => c.method === 'DELETE')).toBe(false)
     await user.click(screen.getByRole('button', { name: 'Yes, delete' }))
 
@@ -362,7 +395,11 @@ describe('CompaniesPage', () => {
       await screen.findByRole('list', { name: 'Companies' })
 
       await user.click(within(rowOf('Busy')).getByRole('button', { name: 'Details for Busy' }))
-      await user.click(within(rowOf('Asked')).getByRole('button', { name: 'Details for Asked' }))
+      await user.click(
+        within(rowOf('Asked')).getByRole('button', {
+          name: 'Details for Asked',
+        }),
+      )
       await user.click(
         within(rowOf('Quiet')).getByRole('button', {
           name: 'Details for Quiet',
@@ -419,30 +456,22 @@ describe('CompaniesPage', () => {
     const list = (call: Call) =>
       call.path.startsWith('/companies') ? { items: [acme, nosite, siteOnly] } : undefined
 
-    it('the company name opens the careers page in a new tab', async () => {
+    it('the company name opens the row; the careers page is linked in the details', async () => {
+      const user = userEvent.setup()
       renderPage(list)
       const row = await screen.findByRole('listitem', { name: 'Acme' })
 
-      const link = within(row).getByRole('link', { name: 'Acme' })
-
-      expect(link).toHaveAttribute('href', 'https://acme.example.com/careers')
-      expect(link).toHaveAttribute('target', '_blank')
-      expect(link).toHaveAttribute('rel', 'noreferrer noopener')
+      expect(within(row).queryByRole('link', { name: 'Acme' })).toBeNull()
       expect(within(row).getByRole('heading', { level: 2 })).toHaveTextContent('Acme')
+      await user.click(within(row).getByRole('button', { name: 'Details for Acme' }))
+      const details = screen.getByRole('region', { name: 'Details for Acme' })
+      const careers = within(details).getByRole('link', {
+        name: 'acme.example.com/careers',
+      })
+      expect(careers).toHaveAttribute('target', '_blank')
     })
 
-    it('a company with no careers page link is plain text, not a link', async () => {
-      renderPage(list)
-      const row = await screen.findByRole('listitem', { name: 'Nosite' })
-      const siteOnlyRow = await screen.findByRole('listitem', { name: 'Siteonly' })
-
-      expect(within(row).queryByRole('link')).toBeNull()
-      expect(within(row).getByRole('heading', { level: 2 })).toHaveTextContent('Nosite')
-      // a website alone does not make the name a link: the name opens the careers page only
-      expect(within(siteOnlyRow).queryByRole('link', { name: 'Siteonly' })).toBeNull()
-    })
-
-    it('the name opens the careers page, so only the company site has an icon', async () => {
+    it('only the company site has an icon on the row', async () => {
       renderPage(list)
       const row = await screen.findByRole('listitem', { name: 'Acme' })
 
@@ -499,11 +528,9 @@ describe('CompaniesPage', () => {
             name,
           }),
         ).toHaveClass(colour)
-      tone('Details for Acme', 'text-slate-300')
       tone('Open Acme website', 'text-violet-300')
-      tone('Hide Acme', 'text-yellow-300')
       tone('Edit Acme', 'text-emerald-300')
-      tone('Delete Acme', 'text-rose-300')
+      expect(within(row).queryByRole('button', { name: /^Hide / })).toBeNull()
     })
 
     it('an opened row has no orange tint, so the details are not highlighted', async () => {
@@ -529,6 +556,7 @@ describe('CompaniesPage', () => {
       await user.click(within(row).getByRole('button', { name: 'Cancel' }))
       expect(row).toHaveClass('hover:bg-[#9c4f37]/25')
 
+      await user.click(within(row).getByRole('button', { name: 'Edit Acme' }))
       await user.click(within(row).getByRole('button', { name: 'Delete Acme' }))
       expect(row).not.toHaveClass('hover:bg-[#9c4f37]/25')
     })
@@ -543,6 +571,7 @@ describe('CompaniesPage', () => {
       expect(within(row).getByRole('button', { name: 'Cancel' })).toHaveClass('ht-cancel-button')
       await user.click(within(row).getByRole('button', { name: 'Cancel' }))
 
+      await user.click(within(row).getByRole('button', { name: 'Edit Acme' }))
       await user.click(within(row).getByRole('button', { name: 'Delete Acme' }))
       expect(within(row).getByRole('button', { name: 'Yes, delete' })).toHaveClass('ht-danger-button')
       expect(within(row).getByRole('button', { name: 'Keep it' })).toHaveClass('ht-cancel-button')
@@ -555,7 +584,9 @@ describe('CompaniesPage', () => {
 
       await user.click(within(row).getByRole('button', { name: 'Details for Acme' }))
 
-      const details = await within(row).findByRole('region', { name: 'Details for Acme' })
+      const details = await within(row).findByRole('region', {
+        name: 'Details for Acme',
+      })
       for (const [title, shows] of [
         ['Company', 'Location'],
         ['Job source', 'Job board'],

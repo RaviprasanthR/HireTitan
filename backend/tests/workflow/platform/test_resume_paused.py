@@ -150,3 +150,39 @@ async def test_startup_resumes_key_pauses_only_when_the_key_works(
     await resume_on_startup(FakeStatus("working"), sessions, queue)
     assert queue.enqueued == [run.id]
     assert await status_of(sessions, run.id) is RunStatus.queued
+
+
+async def test_FR030_paused_runs_continue_after_a_saved_key_works(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    """002c US6: a key saved in Settings works, so every run the key had paused goes back on the
+    queue (missing, rejected and out of credit alike), without a restart."""
+    from hiretitan.platform.runtime.resume_paused import resume_after_key_works
+
+    paused: dict[PauseReason, UUID] = {}
+    async with sessions() as session:
+        repo = RunsRepo(session)
+        for reason in PauseReason:
+            run = await repo.create("toy")
+            await repo.transition(run.id, RunStatus.running)
+            await repo.transition(run.id, RunStatus.paused, pause_reason=reason)
+            paused[reason] = run.id
+        await session.commit()
+
+    class Queue:
+        def __init__(self) -> None:
+            self.ids: list[UUID] = []
+
+        async def enqueue(self, run_id: UUID, resume: Any = None) -> None:
+            self.ids.append(run_id)
+
+    queue = Queue()
+    resumed = await resume_after_key_works(sessions, queue)
+
+    assert resumed == len(PauseReason)
+    assert sorted(queue.ids) == sorted(paused.values())
+    async with sessions() as session:
+        for run_id in paused.values():
+            run = await RunsRepo(session).get(run_id)
+            assert run is not None
+            assert run.state.status is RunStatus.queued

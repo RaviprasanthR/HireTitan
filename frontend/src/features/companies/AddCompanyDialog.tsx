@@ -92,7 +92,8 @@ function Suggestion({ company, onClose }: { company: Company; onClose: () => voi
   )
 }
 
-/** Add a company by its careers link, then confirm the job board we suggest (FR-016, US3 AS2). */
+/** Add a company; with a careers link, then confirm the job board we suggest (FR-016, US3 AS2).
+ *  A company with no careers site is kept for its contacts and notes, and searches skip it. */
 export function AddCompanyDialog({ onClose }: { onClose: () => void }) {
   const [name, setName] = useState('')
   const [careersUrl, setCareersUrl] = useState('')
@@ -156,7 +157,12 @@ export function AddCompanyDialog({ onClose }: { onClose: () => void }) {
         <h2 id="add-company-title" className="text-lg font-semibold">
           Add a company
         </h2>
-        {add.isSuccess ? (
+        {add.isSuccess && !add.data.careers_url ? (
+          <Outcome
+            onClose={onClose}
+            text={`${add.data.name} was added. It has no careers page, so searches skip it; you can keep contacts and notes for it.`}
+          />
+        ) : add.isSuccess ? (
           <Suggestion company={add.data} onClose={onClose} />
         ) : (
           <form
@@ -165,7 +171,7 @@ export function AddCompanyDialog({ onClose }: { onClose: () => void }) {
               event.preventDefault()
               add.mutate({
                 name,
-                careers_url: careersUrl,
+                ...(careersUrl.trim() ? { careers_url: careersUrl } : {}),
                 ...(city.trim() ? { city } : {}),
                 ...(website.trim() ? { website } : {}),
               })
@@ -181,7 +187,7 @@ export function AddCompanyDialog({ onClose }: { onClose: () => void }) {
                 />
               )}
             </Field>
-            <Field label="Careers page link" error={error?.fieldError('careers_url')}>
+            <Field label="Careers page link (optional)" error={error?.fieldError('careers_url')}>
               {(props) => (
                 <input
                   {...props}
@@ -220,7 +226,7 @@ export function AddCompanyDialog({ onClose }: { onClose: () => void }) {
             )}
             <div className="flex gap-2">
               <Button type="submit" size="sm" disabled={add.isPending}>
-                Find job board
+                Add company
               </Button>
               <Button type="button" variant="cancel" size="sm" onClick={onClose}>
                 Cancel

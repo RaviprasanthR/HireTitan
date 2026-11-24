@@ -22,17 +22,31 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, Response
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.types import ASGIApp, Lifespan, Message, Receive, Scope, Send
 
 from hiretitan.drafts.api.drafts import DraftsApiDeps, create_drafts_router
 from hiretitan.drafts.api.resumes import create_resumes_router as create_tailored_router
 from hiretitan.drafts_wiring import SqlContacts, SqlJobs, SqlProfileFacts, clear_drafts_for_job
+from hiretitan.mail.api.checks import MailChecksApiDeps, create_checks_router
+from hiretitan.mail.api.connection import MailApiDeps, create_connection_router
+from hiretitan.mail.api.senders import MailSendersApiDeps, create_senders_router
+from hiretitan.mail_wiring import (
+    SqlCheckRuns,
+    build_connection_service,
+    mail_run_details,
+    seed_mail_senders,
+)
 from hiretitan.platform.clock import SystemClock
 from hiretitan.platform.config.settings import Settings, get_settings
 from hiretitan.platform.db import create_engine, session_factory
+from hiretitan.platform.llm.key_store import key_store_for
 from hiretitan.platform.runtime.api import create_events_router, create_runs_router
+from hiretitan.platform.runtime.events import EventPublisher
 from hiretitan.platform.runtime.procrastinate import CHECK_PROVIDER_KEY_TASK, create_runtime
+from hiretitan.platform.security.logging import configure_logging
 from hiretitan.platform.storage.local import LocalFileStorage
+from hiretitan.platform.web.cross_site import CrossSiteGuardMiddleware
 from hiretitan.platform.web.limits import BodyLimitMiddleware
 from hiretitan.platform.web.problems import ProblemError, problem
 from hiretitan.preferences.api.router import PreferencesApiDeps, create_preferences_router
@@ -61,11 +75,12 @@ from hiretitan.search_wiring import (
     seed_companies,
 )
 from hiretitan.seed_dir import resolve_seed_dir
+from hiretitan.setup.api.ai_key import AiKeyApiDeps, create_ai_key_router
 from hiretitan.setup.api.data import DataApiDeps, create_data_router
 from hiretitan.setup.api.onboarding import OnboardingApiDeps, create_onboarding_router
 from hiretitan.setup.api.review_items import ReviewItemsApiDeps, create_review_items_router
 from hiretitan.setup.api.status import StatusApiDeps, create_status_router
-from hiretitan.setup_wiring import RepoFacts, SqlDeleteAllStore
+from hiretitan.setup_wiring import RepoFacts, SqlDeleteAllStore, secrets_forgetter
 
 API_PREFIX: Final = "/api/v1"
 MULTIPART_OVERHEAD: Final = 64 * 1024  # boundaries and headers around the file
@@ -160,6 +175,13 @@ def create_app(
         BodyLimitMiddleware, path=f"{API_PREFIX}/resumes", limit=MAX_BYTES + MULTIPART_OVERHEAD
     )
     app.add_middleware(SecurityHeadersMiddleware)
+    # a change sent by another site's page is refused (002c final review, cross-site requests)
+    app.add_middleware(CrossSiteGuardMiddleware)
+    # outermost: a request for any other name never reaches a route (002c US6 review)
+    app.add_middleware(
+        TrustedHostMiddleware,
+        allowed_hosts=[h.strip() for h in settings.allowed_hosts.split(",") if h.strip()],
+    )
     app.add_exception_handler(RequestValidationError, _validation_handler)
     app.add_exception_handler(StarletteHTTPException, _http_handler)
     app.add_exception_handler(ProblemError, _problem_handler)
@@ -198,17 +220,27 @@ def build_app(settings: Settings | None = None) -> FastAPI:
     )
 
     provider = "fake" if settings.llm == "fake" else "openai"
+    # the AI key saved from Settings (002c US6); the fake AI has none to set
+    keys = (
+        None
+        if settings.llm == "fake"
+        else key_store_for(settings.data_dir, settings.openai_api_key)
+    )
     clock = SystemClock()
 
     async def enqueue_key_check() -> None:
         await runtime.app.configure_task(CHECK_PROVIDER_KEY_TASK).defer_async()
 
+    mail_connection = build_connection_service(
+        settings, deps.sessions, clock, EventPublisher(engine).publish
+    )
     synonyms = load_title_synonyms(SEED_DIR / "title_synonyms.yaml")
     seed_tables = load_seed_tables(SEED_DIR)  # area and technology tables; a bad file stops start
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         await seed_companies(deps.sessions, SEED_DIR / "companies.yaml")
+        await seed_mail_senders(deps.sessions, SEED_DIR / "mail_senders.yaml")
         # an install that finished setup before 002i, or whose approval failed, gets its rules
         await approve_first_rules_at_start(deps.sessions, synonyms, seed_tables.work_areas)
         async with runtime.app.open_async():  # the job queue connection, to defer jobs
@@ -240,8 +272,16 @@ def build_app(settings: Settings | None = None) -> FastAPI:
                 source=ProfileAndPreferencesSource,
                 synonyms=synonyms,
                 setup_gate=SetupFinishedGate,
+                mail_details=mail_run_details,
             )
         ),
+        create_checks_router(
+            MailChecksApiDeps(
+                runs=SqlCheckRuns(deps.sessions, lambda run_id: deps.queue.enqueue(run_id)),
+                clock=clock,
+            )
+        ),
+        create_senders_router(MailSendersApiDeps(sessions=deps.sessions)),
         create_duplicates_router(SearchDuplicatesApiDeps(sessions=deps.sessions, clock=clock)),
         create_companies_router(
             SearchCompaniesApiDeps(
@@ -290,8 +330,10 @@ def build_app(settings: Settings | None = None) -> FastAPI:
                 provider=provider,
                 facts=RepoFacts,
                 enqueue_key_check=enqueue_key_check,
+                key_source=(lambda: keys.current()[1]) if keys else (lambda: "env"),
             )
         ),
+        create_ai_key_router(AiKeyApiDeps(keys=keys, enqueue_key_check=enqueue_key_check)),
         create_onboarding_router(
             OnboardingApiDeps(
                 sessions=deps.sessions,
@@ -303,12 +345,21 @@ def build_app(settings: Settings | None = None) -> FastAPI:
             )
         ),
         create_review_items_router(ReviewItemsApiDeps(sessions=deps.sessions, facts=RepoFacts)),
+        create_connection_router(MailApiDeps(mail_connection)),
         create_data_router(
             DataApiDeps(
                 sessions=deps.sessions,
                 storage=deps.storage,
-                store=partial(SqlDeleteAllStore, company_seed=SEED_DIR / "companies.yaml"),
+                store=partial(
+                    SqlDeleteAllStore,
+                    company_seed=SEED_DIR / "companies.yaml",
+                    mail_seed=SEED_DIR / "mail_senders.yaml",
+                ),
                 enqueue_key_check=enqueue_key_check,
+                disconnect_mail=mail_connection.disconnect,
+                forget_secrets=secrets_forgetter(
+                    settings.data_dir, keys.forget if keys else (lambda: None)
+                ),
             )
         ),
     ]
@@ -317,8 +368,13 @@ def build_app(settings: Settings | None = None) -> FastAPI:
 
 def main() -> None:
     settings = get_settings()
+    configure_logging(settings.secrets())  # secrets and one-time codes never reach a log line
     config = uvicorn.Config(
-        build_app(settings), host=settings.host, port=settings.port, loop="none"
+        build_app(settings),
+        host=settings.host,
+        port=settings.port,
+        loop="none",
+        log_config=None,  # keep the redacting handler instead of uvicorn's own
     )
     asyncio.run(uvicorn.Server(config).serve(), loop_factory=server_loop_factory())
 

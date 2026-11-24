@@ -1,7 +1,7 @@
 import { execSync } from 'node:child_process'
 import { writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { expect, test, type APIRequestContext } from '@playwright/test'
+import { expect, test, type APIRequestContext, type Locator, type Page } from '@playwright/test'
 
 // Quickstart A of feature 002: approve rules, search, jobs appear, skipped list and restore,
 // I applied and undo, paste a duplicate, search again. Runs against the compose stack with the
@@ -19,7 +19,21 @@ const restartWorker = () =>
     { cwd: fileURLToPath(new URL('../..', import.meta.url)), stdio: 'inherit' },
   )
 
-type Job = { id: string; title: string; company: string; sources: unknown[]; status?: string }
+/** Escape closes an edit card only once the form it holds has settled (an edit still being saved
+ *  asks "Unsaved changes?" instead), so press it again until the card is gone. */
+const closeWithEscape = async (page: Page, card: Locator) =>
+  expect(async () => {
+    await page.keyboard.press('Escape')
+    await expect(card).toBeHidden({ timeout: 1_000 })
+  }).toPass({ timeout: 20_000 })
+
+type Job = {
+  id: string
+  title: string
+  company: string
+  sources: unknown[]
+  status?: string
+}
 const exploreJobs = async (request: APIRequestContext): Promise<Job[]> =>
   (await (await request.get('/api/v1/jobs?list=explore')).json()).items
 
@@ -30,7 +44,11 @@ test('SC002_job_search_journey', async ({ page, request }) => {
   // from the top.
   writeFileSync(keyStatusFile, 'working\n')
   expect(
-    (await request.post('/api/v1/data/delete-all', { data: { confirm: 'DELETE' } })).status(),
+    (
+      await request.post('/api/v1/data/delete-all', {
+        data: { confirm: 'DELETE' },
+      })
+    ).status(),
   ).toBe(204)
   restartWorker()
 
@@ -93,7 +111,9 @@ test('SC002_job_search_journey', async ({ page, request }) => {
     .click()
   // the opened details are the next row of the table
   await expect(table.getByText(/Mentor engineers and own reliability/)).toBeVisible()
-  const titleLink = withReadText.getByRole('link', { name: 'Senior Backend Engineer' })
+  const titleLink = withReadText.getByRole('link', {
+    name: 'Senior Backend Engineer',
+  })
   await expect(titleLink).toHaveAttribute('target', '_blank')
   await expect(titleLink).toHaveAttribute('href', /alpha\.example\.test\/jobs\/102/)
   await withReadText
@@ -195,8 +215,7 @@ test('SC002_job_search_journey', async ({ page, request }) => {
 
   expect(await details.innerText()).not.toMatch(/AI cost|cost so far|budget|\bspend\b|\bspent\b/i)
 
-  await page.keyboard.press('Escape')
-  await expect(card).toBeHidden()
+  await closeWithEscape(page, card)
   await expect(page.getByText('Round 2 scheduled', { exact: true }).first()).toBeVisible()
 
   // 7c. Resume picker (feature 002f): the setup resume is a stored file. Choose it while marking a
@@ -227,15 +246,15 @@ test('SC002_job_search_journey', async ({ page, request }) => {
   await resumeCard.getByRole('combobox', { name: 'Resume file' }).selectOption(stored[0].id)
   await resumeCard.getByRole('button', { name: 'Save resume' }).click()
   await expect(resumeCard.getByText(`${fileName} · added`, { exact: false }).first()).toBeVisible()
-  await page.keyboard.press('Escape')
-  await expect(resumeCard).toBeHidden()
+  await closeWithEscape(page, resumeCard)
 
   await page.goto('/profile')
   await page.getByRole('button', { name: `Delete ${fileName}` }).click()
   const removal = page.getByRole('alertdialog')
   await expect(removal).toContainText('Used on 1 job.')
   await removal.getByRole('button', { name: 'Delete file' }).click()
-  await expect(removal).toBeHidden()
+  // the dialog closes once the file is deleted and the lists are refreshed; slower in a full run
+  await expect(removal).toBeHidden({ timeout: 15_000 })
   await page.goto('/')
   const removedNote = page.getByRole('row').filter({ hasText: '(removed)' })
   await expect(removedNote).toHaveCount(1)

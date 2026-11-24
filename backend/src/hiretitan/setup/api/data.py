@@ -20,6 +20,10 @@ class DataApiDeps:
     storage: FileStoragePort
     store: Callable[[AsyncSession], DeleteAllStore]
     enqueue_key_check: Callable[[], Awaitable[None]]
+    # secrets kept in files, removed with everything else (the AI key saved in Settings, FR-033)
+    forget_secrets: Callable[[], None] = lambda: None
+    # Gmail handed back to Google before anything is removed (002c, FR-027)
+    disconnect_mail: Callable[[], Awaitable[object]] | None = None
 
 
 class DeleteAllIn(BaseModel):
@@ -36,6 +40,8 @@ def create_data_router(deps: DataApiDeps) -> APIRouter:
                 store=deps.store(session),
                 storage=deps.storage,
                 enqueue_key_check=deps.enqueue_key_check,
+                forget_secrets=deps.forget_secrets,
+                **({"disconnect_mail": deps.disconnect_mail} if deps.disconnect_mail else {}),
             )
         return Response(status_code=204)
 

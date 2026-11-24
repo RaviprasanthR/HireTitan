@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from datetime import date, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Literal
 from uuid import UUID
 
@@ -14,12 +14,23 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from hiretitan.search.domain.resume_choice import ResumeChoice
 from hiretitan.search.domain.role import short_role
 from hiretitan.search.infra.interviews_repo import InterviewsRepo
-from hiretitan.search.infra.models import JobRow, JobSourceRow, RelevanceDecisionRow
+from hiretitan.search.infra.models import (
+    AlertSightingRow,
+    JobRow,
+    JobSourceRow,
+    RelevanceDecisionRow,
+)
 
 
 class SourceOut(BaseModel):
     kind: str
     url: str
+    # an email alert source says which site sent it and when (feature 002c, FR-019)
+    site: str | None = None
+    alert_date: datetime | None = None
+
+
+STALE_AFTER = timedelta(days=30)  # FR-020
 
 
 class DecisionOut(BaseModel):
@@ -67,6 +78,7 @@ class JobCardOut(BaseModel):
     state: str
     restored: bool
     sources: list[SourceOut]
+    may_have_closed: bool = False  # an alert job whose posting date is over 30 days back (FR-020)
     decision: DecisionOut | None
     listed: bool
     applied_on: date | None
@@ -90,9 +102,22 @@ async def job_cards(session: AsyncSession, rows: Sequence[JobRow]) -> list[JobCa
         found = await session.scalars(
             select(JobSourceRow).where(JobSourceRow.job_id.in_(ids)).order_by(JobSourceRow.seen_at)
         )
+        latest_sighting: dict[UUID, AlertSightingRow] = {}
+        for sighting in await session.scalars(
+            select(AlertSightingRow)
+            .where(AlertSightingRow.job_id.in_(ids))
+            .order_by(AlertSightingRow.alert_date)
+        ):
+            latest_sighting[sighting.job_id] = sighting  # the newest alert wins
         for source in found:
+            seen = latest_sighting.get(source.job_id) if source.kind == "email_alert" else None
             sources.setdefault(source.job_id, []).append(
-                SourceOut(kind=source.kind, url=source.url)
+                SourceOut(
+                    kind=source.kind,
+                    url=source.url,
+                    site=seen.site if seen else None,
+                    alert_date=seen.alert_date if seen else None,
+                )
             )
         current = await session.scalars(
             select(RelevanceDecisionRow).where(
@@ -117,6 +142,7 @@ async def job_cards(session: AsyncSession, rows: Sequence[JobRow]) -> list[JobCa
             state=row.state,
             restored=row.restored,
             sources=sources.get(row.id, []),
+            may_have_closed=_may_have_closed(row, sources.get(row.id, [])),
             decision=decisions.get(row.id),
             listed=row.listed,
             applied_on=row.applied_on,
@@ -132,3 +158,12 @@ async def with_resumes(session: AsyncSession, cards: Sequence[JobCardOut]) -> No
     for card in cards:
         if card.id in found:
             card.resume = resume_out(found[card.id])
+
+
+def _may_have_closed(row: JobRow, sources: Sequence[SourceOut]) -> bool:
+    """An alert job whose posting date, as the alert gave it, is over 30 days old (FR-020)."""
+    return (
+        row.posted_at is not None
+        and any(source.kind == "email_alert" for source in sources)
+        and datetime.now(UTC) - row.posted_at > STALE_AFTER
+    )

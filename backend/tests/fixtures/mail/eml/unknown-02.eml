@@ -1,0 +1,30 @@
+From: Community Digest <weekly@digest2.example.invalid>
+To: jobseeker@example.invalid
+Subject: This week's roles
+Date: Mon, 16 Nov 2026 09:00:00 +0530
+Message-ID: <unknown-02@mail.example.invalid>
+MIME-Version: 1.0
+Content-Type: multipart/alternative;
+ boundary="===============7065155567096961463=="
+
+--===============7065155567096961463==
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+
+Marigold Labs is hiring a Senior Backend Engineer (Chennai). Apply: https://c=
+areers.marigold-labs.example.invalid/roles/backend-senior
+
+--===============7065155567096961463==
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+<html><body style=3D'font-family:Arial'><table width=3D'600'><tr><td><p>Hi, t=
+his week's roles from our community:</p><p>Marigold Labs is hiring a Senior B=
+ackend Engineer (Chennai). Apply here: <a href=3D'https://careers.marigold-la=
+bs.example.invalid/roles/backend-senior'>https://careers.marigold-labs.exampl=
+e.invalid/roles/backend-senior</a></p></td></tr><tr><td style=3D'font-size:11=
+px;color:#777'>You get this digest because you joined our list.</td></tr></ta=
+ble></body></html>
+
+--===============7065155567096961463==--

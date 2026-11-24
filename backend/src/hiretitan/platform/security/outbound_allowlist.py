@@ -9,7 +9,12 @@ from __future__ import annotations
 
 from typing import Final
 
-ALLOWED_HOSTS: Final[frozenset[str]] = frozenset({"api.openai.com"})
+# api.openai.com: the AI provider. The two Google hosts are for the read-only mail reader
+# (feature 002c): the sign-in token endpoint and the Gmail API. Only two modules under
+# ``hiretitan/mail/infra`` may call them, each held to its verbs by test_no_send.py.
+ALLOWED_HOSTS: Final[frozenset[str]] = frozenset(
+    {"api.openai.com", "gmail.googleapis.com", "oauth2.googleapis.com"}
+)
 
 
 class OutboundHostNotAllowedError(ValueError):

@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from hiretitan.platform.clock import ClockPort
 from hiretitan.platform.llm.infra.provider_status_repo import ProviderStatusRepo
+from hiretitan.platform.llm.key_store import KeySource
 from hiretitan.setup.application.status import SetupFacts, get_status
 
 
@@ -25,6 +26,8 @@ class StatusApiDeps:
     provider: str
     facts: Callable[[AsyncSession], SetupFacts]
     enqueue_key_check: Callable[[], Awaitable[None]]
+    # where the AI key comes from (002c US6): env, page or none; the key itself never leaves
+    key_source: Callable[[], KeySource] = lambda: "env"
 
 
 class AiOut(BaseModel):
@@ -32,6 +35,7 @@ class AiOut(BaseModel):
     status: str
     message: str | None
     checked_at: datetime | None
+    key_source: KeySource = "env"
 
 
 class ChecklistOut(BaseModel):
@@ -67,6 +71,7 @@ def create_status_router(deps: StatusApiDeps) -> APIRouter:
                 status=ai.status,
                 message=ai.message,
                 checked_at=ai.checked_at,
+                key_source=deps.key_source(),
             ),
             checklist=ChecklistOut(
                 key_ok=checklist.key_ok,

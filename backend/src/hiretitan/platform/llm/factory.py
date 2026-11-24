@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from hiretitan.platform.config.settings import Settings
 from hiretitan.platform.llm.fake import FakeLlm
+from hiretitan.platform.llm.key_store import KeyStore, key_store_for
 from hiretitan.platform.llm.models import ModelCatalog
 from hiretitan.platform.llm.openai_adapter import PROVIDER, KeyCheck, OpenAiAdapter
 from hiretitan.platform.llm.port import LlmPort
@@ -36,6 +37,7 @@ class _FakeKeyChecker:
 class BuiltLlm:
     llm: LlmPort
     provider_status: ProviderStatusService
+    keys: KeyStore | None = None  # the key saved from Settings; None for the fake
 
 
 def build_llm(
@@ -63,8 +65,9 @@ def build_llm(
         async def on_out_of_credit(message: str) -> None:
             await holder[0].mark_out_of_credit(message)
 
+        keys = key_store_for(settings.data_dir, settings.openai_api_key)
         adapter = OpenAiAdapter(
-            settings.openai_api_key,
+            lambda: keys.current()[0],  # asked on every request: a saved key needs no restart
             catalog,
             on_key_rejected=on_key_rejected,
             on_out_of_credit=on_out_of_credit,
@@ -72,10 +75,10 @@ def build_llm(
         status = ProviderStatusService(
             sessions,
             adapter,
-            has_key=settings.openai_api_key is not None,
+            has_key=keys.has_key,
             publish=publish,
             provider=PROVIDER,
         )
         holder.append(status)
-        inner = adapter
+        return BuiltLlm(adapter, status, keys)
     return BuiltLlm(inner, status)

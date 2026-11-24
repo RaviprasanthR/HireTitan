@@ -80,7 +80,11 @@ async def recheck(deps: SearchDeps, state: dict[str, Any]) -> dict[str, Any]:
             return {}  # someone already decided it
         job = _as_new_job(row)
         keywords = tuple(await _stack_keywords(session))
-    if deps.descriptions is not None and job.description_status != "read":
+        kinds = await JobsRepo(session).source_kinds(job_id)
+    # A job known only from an alert email is never fetched: the link is the email's, not a
+    # company's, and the person opens it and pastes the description (002c FR-015).
+    alert_only = kinds == {"email_alert"}
+    if deps.descriptions is not None and job.description_status != "read" and not alert_only:
         job = await describe_job(deps.descriptions, job, keywords)
         if job.description_status == "read":  # keep the text: the person sees it on the job
             async with deps.sessions() as session:

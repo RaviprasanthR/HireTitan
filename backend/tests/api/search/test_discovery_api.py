@@ -92,11 +92,22 @@ async def test_post_with_missing_or_bad_fields_is_422(env: Env) -> None:
     response = await env.client.post(BASE, json={"name": "", "careers_url": ""})
 
     assert response.status_code == 422
-    assert [e["field"] for e in response.json()["errors"]] == ["name", "careers_url"]
+    assert [e["field"] for e in response.json()["errors"]] == ["name"]
     assert (await env.client.get(BASE)).json()["items"] == []
 
     bad = await env.client.post(BASE, json={"name": "Acme", "careers_url": "nope"})
     assert [e["field"] for e in bad.json()["errors"]] == ["careers_url"]
+
+
+async def test_a_company_without_a_careers_site_can_be_added(env: Env) -> None:
+    # kept for its contacts and notes; a search has nothing to read for it and skips it
+    response = await env.client.post(BASE, json={"name": "Quiet Startup"})
+
+    assert response.status_code == 201
+    company = response.json()
+    assert (company["careers_url"], company["board_status"]) == (None, "unresolved")
+    discovery = await env.client.get(f"{BASE}/{company['id']}/discovery")
+    assert discovery.json() == {"status": "none", "suggestion": None}
 
 
 async def test_US3_AS2_match_used_only_after_confirm(env: Env) -> None:

@@ -488,4 +488,65 @@ describe('ExplorePage', () => {
     const links = screen.getAllByRole('link').map((a) => a.getAttribute('href') ?? '')
     expect(links.filter((href) => href.startsWith('/jobs/'))).toEqual([])
   })
+
+  it('FR019 Email alerts filter', async () => {
+    const user = userEvent.setup()
+    const calls = renderPage({
+      jobs: [
+        card('a1', 'Data Engineer', {
+          sources: [
+            {
+              kind: 'email_alert',
+              url: 'https://www.linkedin.com/jobs/view/3978721496/',
+              site: 'linkedin',
+              alert_date: '2026-11-17T05:00:00Z',
+            },
+          ],
+        }),
+      ],
+    })
+
+    await user.selectOptions(await screen.findByLabelText('Source'), 'email_alert')
+
+    await waitFor(() =>
+      expect(
+        calls.some((c) => c.path.startsWith('/jobs?') && c.path.includes('source=email_alert')),
+      ).toBe(true),
+    )
+    expect(screen.getByRole('option', { name: 'Email alerts' })).toBeInTheDocument()
+  })
+
+  it('FR019 an alert job says where it came from', async () => {
+    renderPage({
+      jobs: [
+        card('a1', 'Data Engineer', {
+          sources: [
+            {
+              kind: 'email_alert',
+              url: 'https://www.linkedin.com/jobs/view/3978721496/',
+              site: 'linkedin',
+              alert_date: '2026-11-17T05:00:00Z',
+            },
+          ],
+        }),
+      ],
+    })
+
+    const [row] = await jobRows()
+    expect(within(row as HTMLElement).getByText('Email alert')).toBeInTheDocument()
+    expect(within(row as HTMLElement).getByText(/LinkedIn/)).toBeInTheDocument()
+  })
+
+  it('FR020 may have closed tag', async () => {
+    renderPage({
+      jobs: [
+        card('a1', 'Old Job', { may_have_closed: true }),
+        card('a2', 'Fresh Job', { may_have_closed: false }),
+      ],
+    })
+
+    const rows = await jobRows()
+    expect(within(rows[0] as HTMLElement).getByText('May have closed')).toBeInTheDocument()
+    expect(within(rows[1] as HTMLElement).queryByText('May have closed')).not.toBeInTheDocument()
+  })
 })

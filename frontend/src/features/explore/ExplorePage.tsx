@@ -22,6 +22,7 @@ import {
   formatDate,
   isNotChecked,
   reasonOf,
+  siteLabel,
   sourceLabel,
   useJobs,
   useRecheck,
@@ -68,6 +69,11 @@ export function JobCardItem({ job, showCheck = true }: { job: JobCard; showCheck
               {job.title}
             </span>
           )}
+          {job.may_have_closed && (
+            <p className="mt-0.5">
+              <Pill tone="yellow">May have closed</Pill>
+            </p>
+          )}
           {reasonOf(job) && (
             <p className="mt-0.5 max-w-[22rem] text-xs text-muted-small">{reasonOf(job)}</p>
           )}
@@ -99,9 +105,14 @@ export function JobCardItem({ job, showCheck = true }: { job: JobCard; showCheck
         </td>
         <td className="px-3 py-2">
           {source ? (
-            <Pill tone={SOURCE_TONE[sourceLabel(source.kind).toLowerCase()] ?? 'grey'}>
-              {sourceLabel(source.kind)}
-            </Pill>
+            <>
+              <Pill tone={SOURCE_TONE[sourceLabel(source.kind).toLowerCase()] ?? 'grey'}>
+                {sourceLabel(source.kind)}
+              </Pill>
+              {source.kind === 'email_alert' && source.site && (
+                <span className="block text-xs text-muted-small">{siteLabel(source.site)}</span>
+              )}
+            </>
           ) : (
             '—'
           )}
@@ -173,6 +184,7 @@ function Filters({ value, onChange }: { value: JobFilters; onChange: (next: JobF
           <option value="company_board">Company job board</option>
           <option value="careers_page">Careers page</option>
           <option value="paste">Added by you</option>
+          <option value="email_alert">Email alerts</option>
         </select>
       </label>
       <label className="flex flex-col gap-1 text-sm">

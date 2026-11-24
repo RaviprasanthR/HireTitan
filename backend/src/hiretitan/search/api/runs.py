@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Literal
@@ -49,6 +49,8 @@ class SearchRunsApiDeps:
     source: Callable[[AsyncSession], ProposalSource]
     synonyms: Mapping[str, tuple[str, ...]]
     setup_gate: Callable[[AsyncSession], SetupGate]
+    # the mail module's numbers for a mail check, given at composition (search never imports mail)
+    mail_details: Callable[[AsyncSession, UUID], Awaitable[MailRunOut | None]] | None = None
 
 
 class StartIn(BaseModel):
@@ -67,6 +69,35 @@ class CompanyResultOut(BaseModel):
     result: str
     jobs_found: int
     error: str | None
+
+
+class MailUnreadableOut(BaseModel):
+    sender: str
+    received_at: datetime
+    why: str  # unreadable | needs_ai | no_jobs
+
+
+class MailPipelineOut(BaseModel):
+    """An alert posting that is already in the pipeline: not listed again (US3 AS4)."""
+
+    job_id: UUID
+    title: str
+    company: str
+
+
+class MailRunOut(BaseModel):
+    """What a mail check read (feature 002c): only for runs in the mode ``mail_alerts``."""
+
+    trigger: str
+    window_start: datetime
+    emails_listed: int
+    emails_skipped: int
+    emails_read: int
+    emails_unreadable: int
+    more_remaining: bool
+    ended: str | None
+    unreadable: list[MailUnreadableOut]
+    already_in_pipeline: list[MailPipelineOut] = []
 
 
 class SearchRunSummary(BaseModel):
@@ -89,6 +120,7 @@ class SearchRunSummary(BaseModel):
     ai_note: str | None
     started_at: datetime | None
     finished_at: datetime | None
+    mail: MailRunOut | None = None
 
 
 class SearchRunOut(SearchRunSummary):
@@ -141,6 +173,11 @@ def _not_found() -> ProblemError:
 
 def create_search_runs_router(deps: SearchRunsApiDeps) -> APIRouter:
     router = APIRouter(prefix="/search", tags=["search"])
+
+    async def mail_of(session: AsyncSession, row: SearchRunRow) -> MailRunOut | None:
+        if row.mode != "mail_alerts" or deps.mail_details is None:
+            return None
+        return await deps.mail_details(session, row.id)
 
     async def get_run(session: AsyncSession, search_run_id: UUID) -> SearchRunRow:
         row = await SearchRunsRepo(session).get(search_run_id)
@@ -206,7 +243,9 @@ def create_search_runs_router(deps: SearchRunsApiDeps) -> APIRouter:
                 )
                 for r, name in results.all()
             ]
-            return SearchRunOut(**summary(row).model_dump(), companies=companies)
+            data = summary(row).model_dump()
+            data["mail"] = await mail_of(session, row)
+            return SearchRunOut(**data, companies=companies)
 
     @router.get("/runs")
     async def history(limit: int = DEFAULT_LIMIT, cursor: str | None = None) -> SearchRunPage:
@@ -221,11 +260,11 @@ def create_search_runs_router(deps: SearchRunsApiDeps) -> APIRouter:
                     .limit(limit + 1)
                 )
             )
+            items = [summary(r) for r in rows[:limit]]
+            for item, row in zip(items, rows, strict=False):
+                item.mail = await mail_of(session, row)
         more = len(rows) > limit
-        return SearchRunPage(
-            items=[summary(r) for r in rows[:limit]],
-            next_cursor=str(offset + limit) if more else None,
-        )
+        return SearchRunPage(items=items, next_cursor=str(offset + limit) if more else None)
 
     @router.get("/runs/{search_run_id}/skipped")
     async def skipped(
@@ -260,6 +299,10 @@ def create_search_runs_router(deps: SearchRunsApiDeps) -> APIRouter:
     async def latest() -> SearchRunSummary | None:
         async with deps.sessions() as session:
             row = await SearchRunsRepo(session).latest()
-            return summary(row) if row is not None else None
+            if row is None:
+                return None
+            latest = summary(row)
+            latest.mail = await mail_of(session, row)
+            return latest
 
     return router

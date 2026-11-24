@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { stubApi } from '@/test/api'
@@ -113,5 +114,103 @@ describe('JobDetails', () => {
     expect(
       await screen.findByRole('group', { name: 'Details of Backend Engineer' }),
     ).toBeInTheDocument()
+  })
+
+  it('FR019 Email alert · LinkedIn, date', async () => {
+    renderDetails(true, {
+      sources: [
+        {
+          kind: 'email_alert',
+          url: 'https://www.linkedin.com/jobs/view/3978721496/',
+          site: 'linkedin',
+          alert_date: '2026-11-17T12:00:00Z',
+        },
+      ],
+    })
+
+    const sources = await screen.findByRole('list', { name: 'Sources' })
+    expect(sources).toHaveTextContent('Email alert · LinkedIn, 17 Nov 2026')
+  })
+
+  it('US2 AS5 description not known yet, add it', async () => {
+    const user = userEvent.setup()
+    renderDetails(true, {
+      description: '',
+      sources: [
+        {
+          kind: 'email_alert',
+          url: 'https://www.linkedin.com/jobs/view/3978721496/',
+          site: 'linkedin',
+          alert_date: '2026-11-17T12:00:00Z',
+        },
+      ],
+    })
+
+    expect(await screen.findByText(/description is not known yet/i)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Add the description' }))
+
+    expect(await screen.findByRole('form', { name: 'Add the job description' })).toBeInTheDocument()
+  })
+
+  it('a job from a board with no description is not asked for one here', async () => {
+    renderDetails(true, { description: '' })
+
+    await screen.findByRole('list', { name: 'Sources' })
+
+    expect(screen.queryByText(/description is not known yet/i)).not.toBeInTheDocument()
+  })
+
+  it('US2 AS6 email instruction notice', async () => {
+    renderDetails(true, {
+      injection_flags: [
+        {
+          rule_id: 'ignore_previous',
+          severity: 'high',
+          excerpt: 'ignore all previous instructions',
+          location: 'email',
+        },
+      ],
+    })
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent(
+      'This email contains text that looks like instructions to an AI. HireTitan ignored it.',
+    )
+    expect(alert).not.toHaveTextContent('This posting contains')
+  })
+
+  it('FR020 says an old alert job may have closed', async () => {
+    renderDetails(true, { may_have_closed: true })
+
+    expect(await screen.findByText(/may have closed/i)).toBeInTheDocument()
+  })
+
+  it('an alert link that is not a web address is shown as text, never a link', async () => {
+    renderDetails(true, {
+      sources: [
+        {
+          kind: 'email_alert',
+          url: 'javascript:alert(1)',
+          site: 'linkedin',
+          alert_date: '2026-11-17T12:00:00Z',
+        },
+      ],
+    })
+
+    const sources = await screen.findByRole('list', { name: 'Sources' })
+    expect(sources.querySelector('a[href^="javascript"]')).toBeNull()
+    expect(sources).toHaveTextContent('javascript:alert(1)')
+  })
+
+  it('an instruction flag with no kept text does not show empty quotes', async () => {
+    renderDetails(true, {
+      injection_flags: [
+        { rule_id: 'ignore_previous', severity: 'high', excerpt: '', location: 'email' },
+      ],
+    })
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('a rule matched (email)')
+    expect(alert).not.toHaveTextContent('“”')
   })
 })

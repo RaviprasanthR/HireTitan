@@ -664,6 +664,111 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mail/checks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start Check */
+        post: operations["start_check_api_v1_mail_checks_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mail/connect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Connect */
+        post: operations["connect_api_v1_mail_connect_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mail/connection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Connection */
+        get: operations["get_connection_api_v1_mail_connection_get"];
+        put?: never;
+        post?: never;
+        /** Disconnect */
+        delete: operations["disconnect_api_v1_mail_connection_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mail/credentials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Put Credentials */
+        put: operations["put_credentials_api_v1_mail_credentials_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mail/senders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Senders */
+        get: operations["list_senders_api_v1_mail_senders_get"];
+        put?: never;
+        /** Add Sender */
+        post: operations["add_sender_api_v1_mail_senders_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mail/senders/{sender_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove Sender */
+        delete: operations["remove_sender_api_v1_mail_senders__sender_id__delete"];
+        options?: never;
+        head?: never;
+        /** Switch Sender */
+        patch: operations["switch_sender_api_v1_mail_senders__sender_id__patch"];
+        trace?: never;
+    };
     "/api/v1/onboarding": {
         parameters: {
             query?: never;
@@ -1231,6 +1336,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/settings/ai-key": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Save Key */
+        put: operations["save_key_api_v1_settings_ai_key_put"];
+        post?: never;
+        /** Remove Key */
+        delete: operations["remove_key_api_v1_settings_ai_key_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/status": {
         parameters: {
             query?: never;
@@ -1303,6 +1426,12 @@ export interface components {
         AiOut: {
             /** Checked At */
             checked_at: string | null;
+            /**
+             * Key Source
+             * @default env
+             * @enum {string}
+             */
+            key_source: "env" | "page" | "none";
             /** Message */
             message: string | null;
             /** Provider */
@@ -1316,6 +1445,11 @@ export interface components {
             applied_on?: string | null;
             /** Resume File Id */
             resume_file_id?: string | null;
+        };
+        /** AuthorizeModel */
+        AuthorizeModel: {
+            /** Authorize Url */
+            authorize_url: string;
         };
         /** Body_upload_resume_api_v1_resumes_post */
         Body_upload_resume_api_v1_resumes_post: {
@@ -1476,6 +1610,28 @@ export interface components {
              */
             setup_completed_at: string;
         };
+        /** ConnectionModel */
+        ConnectionModel: {
+            /** Address */
+            address: string | null;
+            /** Credentials From Environment */
+            credentials_from_environment: boolean;
+            /** Credentials Set */
+            credentials_set: boolean;
+            /** Last Check Started At */
+            last_check_started_at: string | null;
+            /** Last Error */
+            last_error: string | null;
+            /** Redirect Uri */
+            redirect_uri: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "not_connected" | "connected" | "needs_reconnect";
+            /** Window Hours */
+            window_hours: number;
+        };
         /** ContactModel */
         ContactModel: {
             /** Email */
@@ -1555,6 +1711,13 @@ export interface components {
             items: components["schemas"]["ContactOut"][];
             note: components["schemas"]["NoteOut"] | null;
         };
+        /** CredentialsBody */
+        CredentialsBody: {
+            /** Client Id */
+            client_id: string;
+            /** Client Secret */
+            client_secret: string;
+        };
         /** DecisionHistoryOut */
         DecisionHistoryOut: {
             /**
@@ -1608,6 +1771,11 @@ export interface components {
         DescriptionIn: {
             /** Description */
             description: string;
+        };
+        /** DisconnectModel */
+        DisconnectModel: {
+            /** Revoked */
+            revoked: boolean;
         };
         /** DiscoveryOut */
         DiscoveryOut: {
@@ -1907,6 +2075,11 @@ export interface components {
             listed: boolean;
             /** Location Text */
             location_text: string | null;
+            /**
+             * May Have Closed
+             * @default false
+             */
+            may_have_closed: boolean;
             /** Posted At */
             posted_at: string | null;
             /** Restored */
@@ -1972,6 +2145,11 @@ export interface components {
             listed: boolean;
             /** Location Text */
             location_text: string | null;
+            /**
+             * May Have Closed
+             * @default false
+             */
+            may_have_closed: boolean;
             /** Posted At */
             posted_at: string | null;
             /** Restored */
@@ -1991,6 +2169,24 @@ export interface components {
             work_mode: string | null;
             /** Years Found */
             years_found: string | null;
+        };
+        /** KeyIn */
+        KeyIn: {
+            /** Key */
+            key: string;
+        };
+        /** KeySaved */
+        KeySaved: {
+            /**
+             * Key Source
+             * @constant
+             */
+            key_source: "page";
+            /**
+             * Status
+             * @constant
+             */
+            status: "unknown";
         };
         /** KeywordMatchOut */
         KeywordMatchOut: {
@@ -2033,6 +2229,65 @@ export interface components {
             /** Truncated */
             truncated: boolean;
         };
+        /**
+         * MailPipelineOut
+         * @description An alert posting that is already in the pipeline: not listed again (US3 AS4).
+         */
+        MailPipelineOut: {
+            /** Company */
+            company: string;
+            /**
+             * Job Id
+             * Format: uuid
+             */
+            job_id: string;
+            /** Title */
+            title: string;
+        };
+        /**
+         * MailRunOut
+         * @description What a mail check read (feature 002c): only for runs in the mode ``mail_alerts``.
+         */
+        MailRunOut: {
+            /**
+             * Already In Pipeline
+             * @default []
+             */
+            already_in_pipeline: components["schemas"]["MailPipelineOut"][];
+            /** Emails Listed */
+            emails_listed: number;
+            /** Emails Read */
+            emails_read: number;
+            /** Emails Skipped */
+            emails_skipped: number;
+            /** Emails Unreadable */
+            emails_unreadable: number;
+            /** Ended */
+            ended: string | null;
+            /** More Remaining */
+            more_remaining: boolean;
+            /** Trigger */
+            trigger: string;
+            /** Unreadable */
+            unreadable: components["schemas"]["MailUnreadableOut"][];
+            /**
+             * Window Start
+             * Format: date-time
+             */
+            window_start: string;
+        };
+        /** MailUnreadableOut */
+        MailUnreadableOut: {
+            /**
+             * Received At
+             * Format: date-time
+             */
+            received_at: string;
+            /** Sender */
+            sender: string;
+            /** Why */
+            why: string;
+        };
         /** MissingOut */
         MissingOut: {
             /** Keyword */
@@ -2052,6 +2307,11 @@ export interface components {
         NameOut: {
             /** Display Name */
             display_name: string;
+        };
+        /** NewSender */
+        NewSender: {
+            /** Address */
+            address: string;
         };
         /** NoteIn */
         NoteIn: {
@@ -2142,6 +2402,11 @@ export interface components {
             listed: boolean;
             /** Location Text */
             location_text: string | null;
+            /**
+             * May Have Closed
+             * @default false
+             */
+            may_have_closed: boolean;
             /** Merged Into */
             merged_into: string | null;
             /** Posted At */
@@ -2797,6 +3062,7 @@ export interface components {
             judged_by_ai: number;
             /** Kept */
             kept: number;
+            mail?: components["schemas"]["MailRunOut"] | null;
             /** Merged */
             merged: number;
             /** Mode */
@@ -2851,6 +3117,7 @@ export interface components {
             judged_by_ai: number;
             /** Kept */
             kept: number;
+            mail?: components["schemas"]["MailRunOut"] | null;
             /** Merged */
             merged: number;
             /** Mode */
@@ -2872,6 +3139,32 @@ export interface components {
             stop_message: string | null;
             /** Stop Requested */
             stop_requested: boolean;
+        };
+        /** SenderList */
+        SenderList: {
+            /** Items */
+            items: components["schemas"]["SenderOut"][];
+        };
+        /** SenderOut */
+        SenderOut: {
+            /** Address */
+            address: string;
+            /** Built In */
+            built_in: boolean;
+            /** Enabled */
+            enabled: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Site */
+            site: string;
+        };
+        /** SenderSwitch */
+        SenderSwitch: {
+            /** Enabled */
+            enabled: boolean;
         };
         /** SignalOut */
         SignalOut: {
@@ -2897,6 +3190,14 @@ export interface components {
              * @enum {string}
              */
             mode: "rules_and_ai" | "rules_only";
+        };
+        /** StartedCheckOut */
+        StartedCheckOut: {
+            /**
+             * Search Run Id
+             * Format: uuid
+             */
+            search_run_id: string;
         };
         /** StartedOut */
         StartedOut: {
@@ -3113,8 +3414,12 @@ export interface components {
         };
         /** SourceOut */
         hiretitan__search__api__models__SourceOut: {
+            /** Alert Date */
+            alert_date?: string | null;
             /** Kind */
             kind: string;
+            /** Site */
+            site?: string | null;
             /** Url */
             url: string;
         };
@@ -4831,6 +5136,236 @@ export interface operations {
             };
         };
     };
+    start_check_api_v1_mail_checks_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StartedCheckOut"];
+                };
+            };
+        };
+    };
+    connect_api_v1_mail_connect_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthorizeModel"];
+                };
+            };
+        };
+    };
+    get_connection_api_v1_mail_connection_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectionModel"];
+                };
+            };
+        };
+    };
+    disconnect_api_v1_mail_connection_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DisconnectModel"];
+                };
+            };
+        };
+    };
+    put_credentials_api_v1_mail_credentials_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CredentialsBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectionModel"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_senders_api_v1_mail_senders_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SenderList"];
+                };
+            };
+        };
+    };
+    add_sender_api_v1_mail_senders_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewSender"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SenderOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_sender_api_v1_mail_senders__sender_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sender_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    switch_sender_api_v1_mail_senders__sender_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sender_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SenderSwitch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SenderOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     read_onboarding_api_v1_onboarding_get: {
         parameters: {
             query?: never;
@@ -5862,6 +6397,57 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    save_key_api_v1_settings_ai_key_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KeyIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KeySaved"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_key_api_v1_settings_ai_key_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

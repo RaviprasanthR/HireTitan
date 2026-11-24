@@ -23,6 +23,8 @@ from pydantic import BaseModel
 
 import hiretitan.prompts as hiretitan_prompts
 from evals.extract_profile.cases import CASES_DIR, EXPECTED_DIR
+from evals.mail_alerts.runner import evaluate as evaluate_mail_alerts
+from evals.mail_alerts.runner import render_report as render_mail_alerts
 from hiretitan.platform.llm.infra.calls_repo import LlmCallRecord
 from hiretitan.platform.llm.models import ModelCatalog, UnknownModelError
 from hiretitan.platform.llm.port import AiUnavailable, LlmPort, LlmRequest
@@ -444,6 +446,50 @@ def _main_drafts(
     return 0 if all(r.passes for r in reports) else 3
 
 
+def _main_read_alert(
+    args: argparse.Namespace,
+    specs: list[tuple[str, str]],
+    catalog: ModelCatalog,
+    llm_for: Callable[[str], LlmPort] | None,
+    today: Callable[[], str],
+) -> int:
+    """SC-011: the AI reading the synthetic alert emails first (one call per email per model)."""
+    from evals.read_job_alert.runner import evaluate as evaluate_read_alert
+    from evals.read_job_alert.runner import load_emails
+    from evals.read_job_alert.runner import render_report as render_read_alert
+
+    emails = load_emails()
+    print(f"This run uses your AI credit ({len(emails)} alert emails per model, one call each).")
+    if not args.yes:
+        print("Nothing was sent. Re-run with --yes to run the eval.")
+        return 2
+    build = llm_for or _real_llm_for(catalog)
+    try:
+        reports = [
+            asyncio.run(evaluate_read_alert(build(model), tier=label, model=model, emails=emails))
+            for label, model in specs
+        ]
+    except AiUnavailable as exc:
+        print(f"Stopped: the AI is unavailable ({exc}). Check OPENAI_API_KEY in .env.")
+        print("No report was written.")
+        return 1
+    args.reports_dir.mkdir(parents=True, exist_ok=True)
+    out = args.reports_dir / f"read_job_alert-{today()}.md"
+    out.write_text(render_read_alert(reports, day=today()), encoding="utf-8")
+    print(f"Report written to {out}")
+    return 0 if all(r.passes for r in reports) else 3
+
+
+def _main_mail_alerts(args: argparse.Namespace, today: Callable[[], str]) -> int:
+    """No AI and no credit: the fixed readers over the synthetic alert emails (SC-002)."""
+    report = evaluate_mail_alerts()
+    args.reports_dir.mkdir(parents=True, exist_ok=True)
+    out = args.reports_dir / f"mail_alerts-{today()}.md"
+    out.write_text(render_mail_alerts(report, day=today()), encoding="utf-8")
+    print(f"Report written to {out}")
+    return 0 if report.passes else 3
+
+
 def main(
     argv: Sequence[str] | None = None,
     *,
@@ -459,6 +505,8 @@ def main(
             "extract_jobs_from_page",
             "outreach_drafts",
             "tailor_resume",
+            "mail_alerts",
+            "read_job_alert",
         ],
     )
     parser.add_argument("--models", default="fast", help="comma list of tiers or model names")
@@ -480,6 +528,8 @@ def main(
     )
     parser.add_argument("--reports-dir", type=Path, default=REPORTS_DIR)
     args = parser.parse_args(argv)
+    if args.eval == "mail_alerts":
+        return _main_mail_alerts(args, today)
 
     catalog = ModelCatalog.load()
     cases = load_cases() if args.eval == "extract_profile" else []
@@ -495,6 +545,8 @@ def main(
         return _main_pages(args, specs, catalog, llm_for, today)
     if args.eval in ("outreach_drafts", "tailor_resume"):
         return _main_drafts(args, specs, catalog, llm_for, today)
+    if args.eval == "read_job_alert":
+        return _main_read_alert(args, specs, catalog, llm_for, today)
 
     print(f"This run uses your AI credit ({len(cases)} resumes per model).")
     if not args.yes:

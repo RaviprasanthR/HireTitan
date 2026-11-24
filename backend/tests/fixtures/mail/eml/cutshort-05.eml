@@ -1,0 +1,48 @@
+From: Cutshort <hello@cutshort.io>
+To: jobseeker@example.invalid
+Subject: 3 jobs picked for you
+Date: Sat, 14 Nov 2026 14:00:00 +0530
+Message-ID: <cutshort-05@mail.example.invalid>
+MIME-Version: 1.0
+Content-Type: multipart/alternative;
+ boundary="===============3559840036549504097=="
+
+--===============3559840036549504097==
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+
+Platform Engineer
+Saffron Health Tech
+https://cutshort.io/job/Platform-Engineer-Bengaluru-Saffron-Health-Tech/m38Vx=
+hdU?ref=3Demail
+
+Platform Engineer
+Cobalt Mobility
+https://cutshort.io/job/Platform-Engineer-Gurugram-Cobalt-Mobility/TZdBm44U?r=
+ef=3Demail
+
+Machine Learning Engineer
+Ironleaf Security
+https://cutshort.io/job/Machine-Learning-Engineer-Chennai-Ironleaf-Security/F=
+9eUT64W?ref=3Demail
+
+--===============3559840036549504097==
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+<html><body style=3D'font-family:Arial'><table width=3D'600'><tr><td><h3>Jobs=
+ picked for you</h3><div><a href=3D'https://cutshort.io/job/Platform-Engineer=
+-Bengaluru-Saffron-Health-Tech/m38VxhdU?ref=3Demail'><b>Platform Engineer</b>=
+</a><div>Saffron Health Tech =C2=B7 Bengaluru</div><div>Node.js, TypeScript, =
+MongoDB</div></div><div><a href=3D'https://cutshort.io/job/Platform-Engineer-=
+Gurugram-Cobalt-Mobility/TZdBm44U?ref=3Demail'><b>Platform Engineer</b></a><d=
+iv>Cobalt Mobility =C2=B7 Gurugram</div><div>Go, gRPC, AWS</div></div><div><a=
+ href=3D'https://cutshort.io/job/Machine-Learning-Engineer-Chennai-Ironleaf-S=
+ecurity/F9eUT64W?ref=3Demail'><b>Machine Learning Engineer</b></a><div>Ironle=
+af Security =C2=B7 Chennai</div><div>Python, Django, PostgreSQL</div></div></=
+td></tr><tr><td style=3D'font-size:11px;color:#777'><a href=3D'https://cutsho=
+rt.io/jobs'>Browse jobs</a> =C2=B7 <a href=3D'https://cutshort.io/unsubscribe=
+?x=3D1'>Unsubscribe</a></td></tr></table></body></html>
+
+--===============3559840036549504097==--

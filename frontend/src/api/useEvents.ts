@@ -20,6 +20,7 @@ const POLL_KEYS: QueryKey[] = [
   ['search-run'],
   ['drafts'],
   ['tailored-resume'],
+  ['mail'],
 ]
 
 /**
@@ -71,7 +72,7 @@ export function useEvents(): { connected: boolean } {
     source.addEventListener('profile.updated', () => invalidate(['profile'], ['onboarding']))
     // A search batch is stored: the new jobs and the progress appear now (FR-008).
     const searchChanged = () =>
-      invalidate(['jobs'], ['search-latest'], ['search-run'], ['search-runs'], ['status'])
+      invalidate(['jobs'], ['search-latest'], ['search-run'], ['search-runs'], ['status'], ['mail'])
     // A draft or tailored resume was written, or could not be (feature 002k).
     const draftChanged = () => invalidate(['drafts'], ['tailored-resume'], ['tailored-resumes'])
     for (const name of [
@@ -81,6 +82,8 @@ export function useEvents(): { connected: boolean } {
       'tailored_resume.failed',
     ])
       source.addEventListener(name, draftChanged)
+    // The Gmail connection changed (connected, disconnected, access ended): Settings refreshes.
+    source.addEventListener('mail.connection_changed', () => invalidate(['mail']))
     source.addEventListener('search.batch_done', searchChanged)
     source.addEventListener('search.finished', searchChanged)
 

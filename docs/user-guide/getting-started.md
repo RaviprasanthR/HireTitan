@@ -22,11 +22,12 @@ Open <http://127.0.0.1:8000>. The app listens on your computer only.
 
 ## 2. The AI key
 
-HireTitan reads your OpenAI API key from `.env` only. It is never stored in the database, never shown in the browser and never written to logs.
+Create a key on the OpenAI platform, then give it to HireTitan in one of two ways:
 
-1. Create a key on the OpenAI platform and put it in `.env`: `OPENAI_API_KEY=sk-...`
-2. Restart the app: `docker compose restart api worker`.
-3. Settings shows "Found, working". If it says "Missing" or "Rejected by the provider", fix the key in `.env`, restart, and press **Check again**.
+- **In Settings (easiest):** open **Settings → AI**, paste the key into **OpenAI API key** and press **Save key**. HireTitan checks it straight away; no restart. The key is kept only on this computer (`<data folder>/secrets/llm.json`, readable by you) and is never shown again. **Replace** it by saving a new one, or **Remove key**.
+- **In `.env`:** set `OPENAI_API_KEY=sk-...` and restart with `docker compose restart api worker`. A key in `.env` wins over one saved in Settings, and Settings then says so instead of offering a field.
+
+Either way the key is never stored in the database, never shown in the browser and never written to logs. Settings shows only its status: "Working", "Missing", "Rejected by the provider" or "Out of credit". After fixing a problem, press **Check again**.
 
 Without a working key the app does not fail: AI tasks wait ("paused") and carry on by themselves once the key works. You can also use **Type it in myself** during setup to fill in your profile by hand, with no AI at all.
 

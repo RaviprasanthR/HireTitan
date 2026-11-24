@@ -1,4 +1,5 @@
 import { FileText, History, Link2 } from 'lucide-react'
+import { useState } from 'react'
 import { Link } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { CompanyPanel } from '@/features/companies/CompanyPanel'
@@ -7,10 +8,12 @@ import {
   formatDate,
   formatDay,
   isNotChecked,
+  alertLabel,
   sourceLabel,
   useJob,
   useRecheck,
 } from '@/features/explore/api'
+import { AddDescriptionDialog } from './AddDescriptionDialog'
 import { InjectionWarning, type InjectionFlag } from './InjectionWarning'
 import { InterviewPanel } from './interview/InterviewPanel'
 import { type UnsavedRegistry, useUnsavedRegistry } from './interview/unsaved'
@@ -159,17 +162,27 @@ export function JobDetails({
         </section>
       )}
 
+      {data.may_have_closed && (
+        <p className="text-sm text-warning">
+          This job may have closed: the alert said it was posted more than 30 days ago.
+        </p>
+      )}
+
       <Section as={Heading} title="Description" icon={FileText} tone="ht-section-description">
-        <p className="max-h-96 overflow-y-auto whitespace-pre-wrap pr-2">{data.description}</p>
+        {data.description.trim() === '' && data.sources.some((s) => s.kind === 'email_alert') ? (
+          <NoDescription jobId={data.id} />
+        ) : (
+          <p className="max-h-96 overflow-y-auto whitespace-pre-wrap pr-2">{data.description}</p>
+        )}
       </Section>
 
       <Section as={Heading} title="Sources" icon={Link2} tone="ht-section-sources">
         <ul aria-label="Sources" className="space-y-1 text-sm">
-          {data.sources.map((source) => {
+          {data.sources.map((source, index) => {
             const href = safeLink(source.url)
             return (
-              <li key={`${source.kind}:${source.url}`}>
-                {sourceLabel(source.kind)}:{' '}
+              <li key={`${source.kind}:${source.url}:${index}`}>
+                {source.kind === 'email_alert' ? alertLabel(source) : sourceLabel(source.kind)}:{' '}
                 {href ? (
                   <a
                     href={href}
@@ -209,6 +222,27 @@ export function JobDetails({
           </ul>
         </Section>
       )}
+    </div>
+  )
+}
+
+/** An alert email gives no description: say so, and let the person add one (US2 AS5). */
+function NoDescription({ jobId }: { jobId: string }) {
+  const [adding, setAdding] = useState(false)
+  if (adding)
+    return (
+      <AddDescriptionDialog
+        jobId={jobId}
+        onSaved={() => setAdding(false)}
+        onCancel={() => setAdding(false)}
+      />
+    )
+  return (
+    <div className="space-y-2">
+      <p>The description is not known yet: the alert email only gave the title and company.</p>
+      <Button type="button" variant="outline" size="sm" onClick={() => setAdding(true)}>
+        Add the description
+      </Button>
     </div>
   )
 }

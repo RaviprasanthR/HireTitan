@@ -40,6 +40,17 @@ async def resume_paused_runs(
     return len(runs)
 
 
+async def resume_after_key_works(
+    sessions: async_sessionmaker[AsyncSession], queue: RunQueue
+) -> int:
+    """The key works again (Check again, or a key saved in Settings): every run a key problem
+    paused goes back on the queue. A run still out of credit simply pauses again."""
+    total = 0
+    for reason in (*KEY_PAUSES, PauseReason.out_of_credit):
+        total += await resume_paused_runs(sessions, queue, reason)
+    return total
+
+
 async def resume_on_startup(
     status: KeyStatus, sessions: async_sessionmaker[AsyncSession], queue: RunQueue
 ) -> None:

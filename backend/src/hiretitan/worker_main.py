@@ -8,6 +8,7 @@ until stopped.
 from __future__ import annotations
 
 import asyncio
+import logging
 import sys
 from collections.abc import Mapping
 from pathlib import Path
@@ -17,6 +18,10 @@ from hiretitan.drafts.workflow.common import DraftDeps
 from hiretitan.drafts.workflow.outreach import OUTREACH_WORKFLOW, outreach_workflow
 from hiretitan.drafts.workflow.tailor import TAILOR_WORKFLOW, tailor_workflow
 from hiretitan.drafts_wiring import SqlJobs, SqlProfileFacts, tech_terms
+from hiretitan.mail.workflow.ai_read import MailAiDeps
+from hiretitan.mail.workflow.check import MAIL_CHECK_WORKFLOW, CheckDeps, mail_check_workflow
+from hiretitan.mail.workflow.schedule import ScheduleDeps, daily_tick
+from hiretitan.mail_wiring import build_check_deps, chain_mail_after_search
 from hiretitan.platform.clock import SystemClock
 from hiretitan.platform.config.settings import Settings, get_settings
 from hiretitan.platform.db import create_engine, session_factory
@@ -24,11 +29,11 @@ from hiretitan.platform.llm.factory import build_llm
 from hiretitan.platform.llm.models import ModelCatalog
 from hiretitan.platform.llm.prompts import PromptRegistry
 from hiretitan.platform.runtime.checkpointer import open_checkpointer
-from hiretitan.platform.runtime.domain.run_state import PauseReason
 from hiretitan.platform.runtime.events import EventPublisher, run_notifier
 from hiretitan.platform.runtime.procrastinate import Runtime, create_runtime
-from hiretitan.platform.runtime.resume_paused import resume_on_startup, resume_paused_runs
+from hiretitan.platform.runtime.resume_paused import resume_after_key_works, resume_on_startup
 from hiretitan.platform.runtime.runner import WorkflowDef, WorkflowRunner
+from hiretitan.platform.security.logging import configure_logging
 from hiretitan.platform.storage.local import LocalFileStorage
 from hiretitan.preferences.infra.repo import default_country_provider
 from hiretitan.profile.workflow.graph import WORKFLOW_NAME, IngestDeps, profile_ingest_workflow
@@ -46,7 +51,10 @@ SEED_DIR = resolve_seed_dir()
 
 
 def workflow_registry(
-    deps: IngestDeps, search: SearchDeps, drafts: DraftDeps | None = None
+    deps: IngestDeps,
+    search: SearchDeps,
+    drafts: DraftDeps | None = None,
+    mail: CheckDeps | None = None,
 ) -> Mapping[str, WorkflowDef]:
     """Every workflow this install can run, by name. Features add theirs here."""
     registry: dict[str, WorkflowDef] = {
@@ -54,10 +62,22 @@ def workflow_registry(
         SEARCH_WORKFLOW_NAME: job_search_workflow(search),
         RECHECK_WORKFLOW: recheck_workflow(search),
     }
+    if mail is not None:
+        registry[MAIL_CHECK_WORKFLOW] = mail_check_workflow(mail)
     if drafts is not None:
         registry[OUTREACH_WORKFLOW] = outreach_workflow(drafts)
         registry[TAILOR_WORKFLOW] = tailor_workflow(drafts)
     return registry
+
+
+async def _tick_at_start(runtime: Runtime) -> None:
+    """A check overdue after days off happens soon after starting (FR-021); never stops start-up."""
+    if runtime.mail_tick is None:
+        return
+    try:
+        await runtime.mail_tick()
+    except Exception:
+        logging.getLogger(__name__).warning("The mail tick at start-up failed.", exc_info=True)
 
 
 async def run_worker(settings: Settings, *, wait: bool = True) -> None:
@@ -68,10 +88,12 @@ async def run_worker(settings: Settings, *, wait: bool = True) -> None:
     built = build_llm(settings, sessions, publisher.publish)
     runtime.provider_status = built.provider_status
 
-    async def requeue_out_of_credit() -> int:
-        return await resume_paused_runs(sessions, runtime.queue, PauseReason.out_of_credit)
+    async def requeue_paused() -> int:
+        # every run a key problem paused: out of credit, and a missing or rejected key that was
+        # then saved in Settings (no restart, FR-030)
+        return await resume_after_key_works(sessions, runtime.queue)
 
-    runtime.after_key_works = requeue_out_of_credit
+    runtime.after_key_works = requeue_paused
     provider = "fake" if settings.llm == "fake" else "openai"
     ingest_deps = IngestDeps(
         sessions=sessions,
@@ -114,22 +136,44 @@ async def run_worker(settings: Settings, *, wait: bool = True) -> None:
         tech_terms=tech_terms(tables.tech_names),
         provider=provider,
     )
+    mail_deps = build_check_deps(
+        settings,
+        sessions,
+        SystemClock(),
+        publisher.publish,
+        search_deps.synonyms,
+        tables.tech_names,
+        lambda run_id: runtime.queue.enqueue(run_id),
+        # unknown alert layouts are read by the AI (FR-013a); no key: they wait for the next check
+        MailAiDeps(
+            sessions=sessions, llm=built.llm, prompts=ingest_deps.prompts, provider=provider
+        ),
+    )
+    schedule = ScheduleDeps(sessions=sessions, runs=mail_deps.runs, clock=SystemClock())
+
+    async def mail_tick() -> object:
+        return await daily_tick(schedule)
+
+    runtime.mail_tick = mail_tick
     try:
         async with open_checkpointer(settings.database_url) as checkpointer:
             runtime.holder.runner = WorkflowRunner(
                 sessions,
                 checkpointer,
-                workflow_registry(ingest_deps, search_deps, draft_deps),
-                run_notifier(publisher),
+                workflow_registry(ingest_deps, search_deps, draft_deps, mail_deps),
+                # a finished company search is followed by a mail check (Search now, FR-021)
+                chain_mail_after_search(run_notifier(publisher), sessions, schedule),
             )
             async with runtime.app.open_async():
                 await resume_on_startup(built.provider_status, sessions, runtime.queue)
+                await _tick_at_start(runtime)
                 await runtime.app.run_worker_async(wait=wait)
     finally:
         await engine.dispose()
 
 
 def main() -> None:
+    configure_logging(get_settings().secrets())
     if sys.platform == "win32":
         # psycopg's async mode can't run on Windows' default Proactor loop.
         asyncio.run(run_worker(get_settings()), loop_factory=asyncio.SelectorEventLoop)

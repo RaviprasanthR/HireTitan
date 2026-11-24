@@ -35,6 +35,16 @@
             ],
             "title": "Checked At"
           },
+          "key_source": {
+            "default": "env",
+            "enum": [
+              "env",
+              "page",
+              "none"
+            ],
+            "title": "Key Source",
+            "type": "string"
+          },
           "message": {
             "anyOf": [
               {
@@ -92,6 +102,19 @@
           }
         },
         "title": "AppliedIn",
+        "type": "object"
+      },
+      "AuthorizeModel": {
+        "properties": {
+          "authorize_url": {
+            "title": "Authorize Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "authorize_url"
+        ],
+        "title": "AuthorizeModel",
         "type": "object"
       },
       "Body_upload_resume_api_v1_resumes_post": {
@@ -582,6 +605,81 @@
         "title": "CompletedOut",
         "type": "object"
       },
+      "ConnectionModel": {
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "credentials_from_environment": {
+            "title": "Credentials From Environment",
+            "type": "boolean"
+          },
+          "credentials_set": {
+            "title": "Credentials Set",
+            "type": "boolean"
+          },
+          "last_check_started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Check Started At"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "redirect_uri": {
+            "title": "Redirect Uri",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "not_connected",
+              "connected",
+              "needs_reconnect"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "window_hours": {
+            "title": "Window Hours",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "state",
+          "address",
+          "credentials_set",
+          "credentials_from_environment",
+          "redirect_uri",
+          "last_check_started_at",
+          "last_error",
+          "window_hours"
+        ],
+        "title": "ConnectionModel",
+        "type": "object"
+      },
       "ContactModel": {
         "additionalProperties": false,
         "properties": {
@@ -867,6 +965,31 @@
         "title": "ContactsOut",
         "type": "object"
       },
+      "CredentialsBody": {
+        "additionalProperties": false,
+        "properties": {
+          "client_id": {
+            "maxLength": 300,
+            "minLength": 10,
+            "pattern": "^\\S+$",
+            "title": "Client Id",
+            "type": "string"
+          },
+          "client_secret": {
+            "maxLength": 300,
+            "minLength": 10,
+            "pattern": "^\\S+$",
+            "title": "Client Secret",
+            "type": "string"
+          }
+        },
+        "required": [
+          "client_id",
+          "client_secret"
+        ],
+        "title": "CredentialsBody",
+        "type": "object"
+      },
       "DecisionHistoryOut": {
         "properties": {
           "created_at": {
@@ -1015,6 +1138,19 @@
           "description"
         ],
         "title": "DescriptionIn",
+        "type": "object"
+      },
+      "DisconnectModel": {
+        "properties": {
+          "revoked": {
+            "title": "Revoked",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "revoked"
+        ],
+        "title": "DisconnectModel",
         "type": "object"
       },
       "DiscoveryOut": {
@@ -1958,6 +2094,11 @@
             ],
             "title": "Location Text"
           },
+          "may_have_closed": {
+            "default": false,
+            "title": "May Have Closed",
+            "type": "boolean"
+          },
           "posted_at": {
             "anyOf": [
               {
@@ -2206,6 +2347,11 @@
             ],
             "title": "Location Text"
           },
+          "may_have_closed": {
+            "default": false,
+            "title": "May Have Closed",
+            "type": "boolean"
+          },
           "posted_at": {
             "anyOf": [
               {
@@ -2301,6 +2447,41 @@
           "first_search_id"
         ],
         "title": "JobDetailOut",
+        "type": "object"
+      },
+      "KeyIn": {
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "maxLength": 1000,
+            "title": "Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key"
+        ],
+        "title": "KeyIn",
+        "type": "object"
+      },
+      "KeySaved": {
+        "properties": {
+          "key_source": {
+            "const": "page",
+            "title": "Key Source",
+            "type": "string"
+          },
+          "status": {
+            "const": "unknown",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key_source",
+          "status"
+        ],
+        "title": "KeySaved",
         "type": "object"
       },
       "KeywordMatchOut": {
@@ -2414,6 +2595,128 @@
         "title": "LinkedinImportOut",
         "type": "object"
       },
+      "MailPipelineOut": {
+        "description": "An alert posting that is already in the pipeline: not listed again (US3 AS4).",
+        "properties": {
+          "company": {
+            "title": "Company",
+            "type": "string"
+          },
+          "job_id": {
+            "format": "uuid",
+            "title": "Job Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id",
+          "title",
+          "company"
+        ],
+        "title": "MailPipelineOut",
+        "type": "object"
+      },
+      "MailRunOut": {
+        "description": "What a mail check read (feature 002c): only for runs in the mode ``mail_alerts``.",
+        "properties": {
+          "already_in_pipeline": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/MailPipelineOut"
+            },
+            "title": "Already In Pipeline",
+            "type": "array"
+          },
+          "emails_listed": {
+            "title": "Emails Listed",
+            "type": "integer"
+          },
+          "emails_read": {
+            "title": "Emails Read",
+            "type": "integer"
+          },
+          "emails_skipped": {
+            "title": "Emails Skipped",
+            "type": "integer"
+          },
+          "emails_unreadable": {
+            "title": "Emails Unreadable",
+            "type": "integer"
+          },
+          "ended": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended"
+          },
+          "more_remaining": {
+            "title": "More Remaining",
+            "type": "boolean"
+          },
+          "trigger": {
+            "title": "Trigger",
+            "type": "string"
+          },
+          "unreadable": {
+            "items": {
+              "$ref": "#/components/schemas/MailUnreadableOut"
+            },
+            "title": "Unreadable",
+            "type": "array"
+          },
+          "window_start": {
+            "format": "date-time",
+            "title": "Window Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "trigger",
+          "window_start",
+          "emails_listed",
+          "emails_skipped",
+          "emails_read",
+          "emails_unreadable",
+          "more_remaining",
+          "ended",
+          "unreadable"
+        ],
+        "title": "MailRunOut",
+        "type": "object"
+      },
+      "MailUnreadableOut": {
+        "properties": {
+          "received_at": {
+            "format": "date-time",
+            "title": "Received At",
+            "type": "string"
+          },
+          "sender": {
+            "title": "Sender",
+            "type": "string"
+          },
+          "why": {
+            "title": "Why",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sender",
+          "received_at",
+          "why"
+        ],
+        "title": "MailUnreadableOut",
+        "type": "object"
+      },
       "MissingOut": {
         "properties": {
           "keyword": {
@@ -2460,6 +2763,21 @@
           "display_name"
         ],
         "title": "NameOut",
+        "type": "object"
+      },
+      "NewSender": {
+        "additionalProperties": false,
+        "properties": {
+          "address": {
+            "maxLength": 1000,
+            "title": "Address",
+            "type": "string"
+          }
+        },
+        "required": [
+          "address"
+        ],
+        "title": "NewSender",
         "type": "object"
       },
       "NoteIn": {
@@ -2785,6 +3103,11 @@
               }
             ],
             "title": "Location Text"
+          },
+          "may_have_closed": {
+            "default": false,
+            "title": "May Have Closed",
+            "type": "boolean"
           },
           "merged_into": {
             "anyOf": [
@@ -4951,6 +5274,16 @@
             "title": "Kept",
             "type": "integer"
           },
+          "mail": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MailRunOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "merged": {
             "title": "Merged",
             "type": "integer"
@@ -5121,6 +5454,16 @@
             "title": "Kept",
             "type": "integer"
           },
+          "mail": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MailRunOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "merged": {
             "title": "Merged",
             "type": "integer"
@@ -5205,6 +5548,70 @@
         "title": "SearchRunSummary",
         "type": "object"
       },
+      "SenderList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SenderOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "SenderList",
+        "type": "object"
+      },
+      "SenderOut": {
+        "properties": {
+          "address": {
+            "title": "Address",
+            "type": "string"
+          },
+          "built_in": {
+            "title": "Built In",
+            "type": "boolean"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "site": {
+            "title": "Site",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "address",
+          "site",
+          "built_in",
+          "enabled"
+        ],
+        "title": "SenderOut",
+        "type": "object"
+      },
+      "SenderSwitch": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "SenderSwitch",
+        "type": "object"
+      },
       "SignalOut": {
         "properties": {
           "excerpt": {
@@ -5271,6 +5678,20 @@
           }
         },
         "title": "StartIn",
+        "type": "object"
+      },
+      "StartedCheckOut": {
+        "properties": {
+          "search_run_id": {
+            "format": "uuid",
+            "title": "Search Run Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "search_run_id"
+        ],
+        "title": "StartedCheckOut",
         "type": "object"
       },
       "StartedOut": {
@@ -5891,9 +6312,32 @@
       },
       "hiretitan__search__api__models__SourceOut": {
         "properties": {
+          "alert_date": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alert Date"
+          },
           "kind": {
             "title": "Kind",
             "type": "string"
+          },
+          "site": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site"
           },
           "url": {
             "title": "Url",
@@ -8424,6 +8868,276 @@
         ]
       }
     },
+    "/api/v1/mail/checks": {
+      "post": {
+        "operationId": "start_check_api_v1_mail_checks_post",
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StartedCheckOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Start Check",
+        "tags": [
+          "mail"
+        ]
+      }
+    },
+    "/api/v1/mail/connect": {
+      "post": {
+        "operationId": "connect_api_v1_mail_connect_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthorizeModel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Connect",
+        "tags": [
+          "mail"
+        ]
+      }
+    },
+    "/api/v1/mail/connection": {
+      "delete": {
+        "operationId": "disconnect_api_v1_mail_connection_delete",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DisconnectModel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Disconnect",
+        "tags": [
+          "mail"
+        ]
+      },
+      "get": {
+        "operationId": "get_connection_api_v1_mail_connection_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectionModel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Connection",
+        "tags": [
+          "mail"
+        ]
+      }
+    },
+    "/api/v1/mail/credentials": {
+      "put": {
+        "operationId": "put_credentials_api_v1_mail_credentials_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CredentialsBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectionModel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Credentials",
+        "tags": [
+          "mail"
+        ]
+      }
+    },
+    "/api/v1/mail/senders": {
+      "get": {
+        "operationId": "list_senders_api_v1_mail_senders_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SenderList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Senders",
+        "tags": [
+          "mail"
+        ]
+      },
+      "post": {
+        "operationId": "add_sender_api_v1_mail_senders_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewSender"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SenderOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Sender",
+        "tags": [
+          "mail"
+        ]
+      }
+    },
+    "/api/v1/mail/senders/{sender_id}": {
+      "delete": {
+        "operationId": "remove_sender_api_v1_mail_senders__sender_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sender_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Sender Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Remove Sender",
+        "tags": [
+          "mail"
+        ]
+      },
+      "patch": {
+        "operationId": "switch_sender_api_v1_mail_senders__sender_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sender_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Sender Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SenderSwitch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SenderOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Switch Sender",
+        "tags": [
+          "mail"
+        ]
+      }
+    },
     "/api/v1/onboarding": {
       "get": {
         "operationId": "read_onboarding_api_v1_onboarding_get",
@@ -9774,6 +10488,59 @@
         "summary": "Stop",
         "tags": [
           "search"
+        ]
+      }
+    },
+    "/api/v1/settings/ai-key": {
+      "delete": {
+        "operationId": "remove_key_api_v1_settings_ai_key_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Remove Key",
+        "tags": [
+          "settings"
+        ]
+      },
+      "put": {
+        "operationId": "save_key_api_v1_settings_ai_key_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KeyIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KeySaved"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Save Key",
+        "tags": [
+          "settings"
         ]
       }
     },

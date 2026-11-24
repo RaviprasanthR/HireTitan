@@ -17,6 +17,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 LlmMode = Literal["openai", "fake"]
 CareerOpsMode = Literal["real", "fake"]
+MailMode = Literal["gmail", "fake"]
 
 
 class Settings(BaseSettings):
@@ -31,6 +32,12 @@ class Settings(BaseSettings):
     openai_api_key: SecretStr | None = Field(default=None, validation_alias="OPENAI_API_KEY")
     data_dir: Path = Field(default=Path("./data"), validation_alias="HIRETITAN_DATA_DIR")
     host: str = Field(default="127.0.0.1", validation_alias="HIRETITAN_HOST")
+    # The names the API answers to (the Host header). There is no login and the port is published
+    # on localhost only; refusing any other name stops a web page that points its own name at
+    # 127.0.0.1 ("DNS rebinding") from reaching the API. "test" is the reserved name tests use.
+    allowed_hosts: str = Field(
+        default="127.0.0.1,localhost,[::1],::1,test", validation_alias="HIRETITAN_ALLOWED_HOSTS"
+    )
     port: int = Field(default=8000, ge=1, le=65535, validation_alias="HIRETITAN_PORT")
     llm: LlmMode = Field(default="openai", validation_alias="HIRETITAN_LLM")
     frontend_dist: Path | None = Field(default=None, validation_alias="HIRETITAN_FRONTEND_DIST")
@@ -41,6 +48,17 @@ class Settings(BaseSettings):
     )
     fake_career_ops_dir: Path | None = Field(
         default=None, validation_alias="HIRETITAN_FAKE_CAREER_OPS_DIR"
+    )
+    # feature 002c: the read-only mail reader. ``fake`` serves synthetic mail from a folder (the
+    # e2e stack). The Google client id and secret are the person's own and may come from the
+    # environment instead of the secrets file; nothing is shipped (FR-001).
+    mail: MailMode = Field(default="gmail", validation_alias="HIRETITAN_MAIL")
+    fake_gmail_dir: Path | None = Field(default=None, validation_alias="HIRETITAN_FAKE_GMAIL_DIR")
+    google_oauth_client_id: SecretStr | None = Field(
+        default=None, validation_alias="GOOGLE_OAUTH_CLIENT_ID"
+    )
+    google_oauth_client_secret: SecretStr | None = Field(
+        default=None, validation_alias="GOOGLE_OAUTH_CLIENT_SECRET"
     )
 
     explicit_database_url: SecretStr | None = Field(default=None, validation_alias="DATABASE_URL")
@@ -58,6 +76,9 @@ class Settings(BaseSettings):
         "fake_llm_dir",
         "fake_career_ops_dir",
         "frontend_dist",
+        "fake_gmail_dir",
+        "google_oauth_client_id",
+        "google_oauth_client_secret",
         mode="before",
     )
     @classmethod
@@ -68,6 +89,16 @@ class Settings(BaseSettings):
             value = value.strip()
             return value or None
         return value
+
+    def secrets(self) -> list[SecretStr | None]:
+        """Every configured secret, so the logger can scrub it wherever it shows up."""
+        return [
+            self.openai_api_key,
+            self.explicit_database_url,
+            self.postgres_password,
+            self.google_oauth_client_id,
+            self.google_oauth_client_secret,
+        ]
 
     @property
     def database_url(self) -> str:

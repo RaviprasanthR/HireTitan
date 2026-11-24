@@ -67,6 +67,7 @@ backend/
     outreach/        drafts                                             (004)
     resumes/         tailoring, content suggestions, rendering          (005)
     interviews/      (006, R2)
+    mail/            Gmail connection, alert senders, mail check, fixed alert readers (002c)
       └─ each module: domain/ · application/ · infra/ · api/ (+ adapters/ only where it owns a boundary)
     platform/        shared building blocks
       llm/           LlmPort, OpenAI adapter (others later), validation chain, prompt registry
@@ -87,7 +88,7 @@ Rules (enforced by import-linter, constitution VI):
 - Every module may use `platform`; `platform` never imports a feature module.
 - `api_main` and `worker_main` are the only composition roots.
 - Persistence: SQLAlchemy is used directly in each module's `infra/`, with no extra repository-interface layer (lean architecture). Application code receives repositories by dependency injection.
-- **No-send rule:** an architecture test fails the build if any module imports `smtplib`, an email-sending SDK or a messaging SDK, or if an outbound HTTP adapter uses a non-GET method against a host outside the allowlist (OpenAI and other LLM providers, aggregator APIs, Google OAuth).
+- **No-send rule:** an architecture test fails the build if any module imports `smtplib`, an email-sending SDK or a messaging SDK, or if an outbound HTTP adapter uses a non-GET method against a host outside the allowlist (OpenAI and other LLM providers, aggregator APIs, Google OAuth). Feature 002c adds two named exemptions in `mail/infra` (Gmail GETs only; Google token and revoke POSTs only); see W10.
 - **career-ops request allowlist:** career-ops is Node code, so the Python test above can't see it. Each enabled career-ops provider has an allowlist of hosts and HTTP methods (e.g. Workday search is a POST to `*.myworkdayjobs.com`). A contract test runs career-ops against recorded responses through a recording proxy and fails on any request outside the list. Before a provider is enabled, its request paths are checked against the target's robots.txt (see `docs/research/2026-11-03-company-source-feasibility.md`, Keka finding).
 
 ## 4. Task and workflow execution
@@ -234,7 +235,7 @@ flowchart LR
     plan[plan_run D] --> fan{{per enabled source}}
     fan --> s1[fetch_careerops S]
     fan --> s2["fetch_careers_pages S<br/>JSON-LD → generic parse → (opt) AI fallback"]
-    fan --> s3["fetch_gmail_alerts S<br/>per-sender parser → (opt) AI fallback"]
+    fan --> s3["fetch_gmail_alerts S<br/>AI first (with a key) → per-sender parser fallback"]
     fan --> s4[fetch_aggregators S]
     s1 & s2 & s3 & s4 --> norm[normalize D]
     norm --> dedup[dedup D]
@@ -248,7 +249,7 @@ flowchart LR
 | `plan_run` | D | approved search rules × enabled sources → fetch plan; pushes location/keyword filters into the source request where the board's search supports it |
 | `fetch_*` | S | one branch per source (LangGraph `Send`), **isolated**: a failure is recorded on that source's run and doesn't stop the others (constitution VII). career-ops: HireTitan writes its `portals.yml` from the company list and runs `node scan.mjs --json` in its own data folder |
 | careers-page parsing | D, then L fast (opt) | 1) schema.org `JobPosting` JSON-LD; 2) generic job-link/title heuristics; 3) only if enabled for that source: `extract_jobs_from_page` (quarantined). robots.txt + rate limit + cache first; failure → "check manually" list |
-| alert parsing | D, then L fast (opt) | per-sender template parsers (Naukri, LinkedIn, Indeed, …); `parse_alert_email` (quarantined) only as an opt-in fallback when a template changes |
+| alert parsing | D, then L fast (opt) | built as its own workflow, W10 `mail_check` (002c): fixed per-site readers, then `read_job_alert` (quarantined) when a reader finds nothing |
 | `normalize` | D | common `JobPosting` shape (title, company, location(s), url, posted_at, source, description, raw ref) |
 | `dedup` | D | exact (canonical URL, ATS requisition ID) → merge; fuzzy (company + title + city) → marked "possible duplicate" for the user to confirm |
 | `extract_facts_rules` | D | from title + description: seniority words, years of experience (regex), work mode, locations, stack keywords (matched against the user's stack + a synonym list), pay if stated |
@@ -260,6 +261,20 @@ No interrupt here: results go straight to the jobs list, where every rule decisi
 ### W3b `ai_relevance_check` (feature 002, optional, on demand)
 Trigger: the user clicks "Check with AI" on the **maybe** bucket or on selected jobs.
 `extract_job_facts` L fast (quarantined: raw JD → `JobFacts`, cached per JD hash) → `relevance_check` L fast (facts + profile summary + preferences → `relevant / not_relevant / unsure` + visible reason; batched ~10 jobs per call) → `store_decisions` D (moves jobs between buckets with an "AI:" reason; undoable).
+
+### W10 `mail_check` (built in feature 002c, 2026-11-23)
+Trigger: "Check job-alert mail" in Explore or the first-check step in Settings, after every "Search now" (`after_company_search`), and the hourly `mail_tick` (a check when the last one began 24 hours ago or more). A check that cannot start (not connected, access ended, another search or check running, rules not approved) is skipped, never an error.
+
+As built, one node (`mail/workflow/check.py::run_check`) on the existing runner, its progress shown like a search run (`search_runs.mode = mail_alerts`, one `mail_checks` row):
+
+1. **Query.** `build_query` makes `from:(<enabled senders> OR <switched-on sites' own domains>) after:<24 hours ago>` and nothing else (FR-009); every term is checked again, so no text with a meaning in Gmail's search language reaches the query. At most 200 messages; ids already in `mail_read_messages` are skipped.
+2. **Read** each email: `get_raw` (RFC 5322 bytes, at most 2 MB) → `flatten_message` (MIME to plain lines and links, hidden text dropped and flagged, bounded depth and size) → the sender's site → that site's **fixed reader** (`mail/domain/readers/`, one per built-in site). Mail from a site's domain but not a listed address is kept only when a reader finds jobs in it.
+3. **The AI reads first** (amended 2026-11-24, FR-013b): with a key set, every email from a listed sender, and site-domain mail in which a reader found jobs, goes to `read_job_alert` (tier `fast`, quarantined: the text and a numbered list of links in two untrusted blocks; the answer is title, company, place and a link *index*, at most 30 jobs, never an address; `accept` keeps only values that are words of the email and never a footer line, FR-013c). The AI's jobs are merged with the fixed reader's by link (the AI's values win, an empty one is filled from the reader, a job only the reader found is kept). The fixed readers alone are used with no key, an AI that cannot be asked, an empty or unusable answer, or past 50 emails a check. An email no reader can read waits as `needs_ai` while the AI is unavailable. A later reading fixes the company and place of a job known only from alerts (FR-013d); "Read the last day again" (`POST /mail/checks {"reread_last_day": true}`) forgets the last 24 hours' read records so that happens at once (FR-013e). Eval: `python -m evals.run read_job_alert --models fast --yes` (SC-011).
+4. **Store** in batches (`SqlAlertSink`, the one place the mail and search tables meet): the jobs go through the search module's rules and dedup as postings of source `email_alert` (no AI relevance check: an alert has no description, FR-018); the read-email records hold sender, time, outcome and counts, never the body (FR-016). Stop is honoured between batches.
+
+**The two no-send exemptions** (`tests/architecture/test_no_send.py`): `mail/infra/gmail_client.py` may only GET `gmail.googleapis.com/gmail/v1` (profile, list, get), and `mail/infra/google_oauth.py` may only POST to `oauth2.googleapis.com` (token and revoke). Contract tests pin each request; no other module in `mail` may hold an HTTP client. The refresh token and the Google client live in `<data_dir>/secrets/gmail.json` (owner-only, atomic, locked read-modify-write); access tokens are never stored. Disconnect revokes, deletes the token, the read-email and check records; Delete all removes the file too. `HIRETITAN_MAIL=fake` swaps in a scripted Google and a folder mailbox (`mail/infra/fake_google.py`, `fake_gmail.py`) for the e2e stack and demos.
+
+Tools for checking the readers against real mail without sharing it: `python -m hiretitan.mail_counts` (counts per sender and reader) and `python -m hiretitan.mail_shape` (masked layouts). The reader eval is `python -m evals.run mail_alerts` (no AI).
 
 ### W4 `score_job` (feature 002, optional, on demand)
 `load_facts` D (runs `extract_job_facts` from W3b first if the job has no AI facts yet) → `fit_score` L fast (dimension scores + evidence citing job facts and profile facts) → `apply_caps` D (pure domain rules, e.g. location/pay caps from the user's settings) → `store_score` D.
@@ -339,7 +354,7 @@ Cross-cutting rules: UUID primary keys; `created_at`/`updated_at`; AI-produced r
 ## 9. Security and privacy
 
 - **Local only** (Ravi, 2026-11-03: "we are not gonna host it anywhere. anyone wanna use should pull the repo and run locally"). `api` binds to `127.0.0.1` and there is no login. There's no hosted version and no network-exposure setting in R1; docker compose publishes ports on `127.0.0.1` only.
-- **API keys live only in `.env`** (`OPENAI_API_KEY`), never in the database (ADR-09). The setup wizard checks that the key is set and makes a test call; if it's missing or rejected, it explains how to set it and restart. The key is never logged and never sent to the browser; Settings shows only its status ("found, working" / "missing" / "rejected").
+- **API keys live in `.env` (`OPENAI_API_KEY`, which wins) or in `<data_dir>/secrets/llm.json` when typed in Settings**, never in the database (ADR-09, amended 2026-11-23). The setup wizard checks that the key is set and makes a test call; if it's missing or rejected, it explains how to set it and restart. The key is never logged and never sent to the browser; Settings shows only its status ("found, working" / "missing" / "rejected").
 - No telemetry. Logs are structured JSON with secrets and resume text redacted.
 - Careers-page fetching: honest User-Agent (`HireTitan/<version> (+repo URL)`), robots.txt, per-host rate limit, cache, timeouts, size caps. HTML is parsed, never executed.
 - Uploads: type sniffing (not just the extension), size limit, parsed in the worker.
@@ -413,7 +428,7 @@ Each ADR: decision · why · alternatives. **Approved by Ravi 2026-11-03.**
 
 **ADR-08 Realtime via SSE over LISTEN/NOTIFY.** One-way server → browser updates (run progress, "needs review"). *Alt:* WebSockets (two-way isn't needed); polling (kept as a fallback only).
 
-**ADR-09 API keys in `.env` only.** `OPENAI_API_KEY` (and later the other providers' keys) are read from the environment; nothing is stored in the database, so no encryption layer is needed. *Why:* simplest and standard for self-hosted, local-only apps; updating an expired key is "edit `.env`, restart". An invalid key pauses AI tasks with a banner instead of failing them (§4). *Alt:* encrypted keys in the database, set from the dashboard (no restart, but more code); decided against by Ravi.
+**ADR-09 API keys in `.env` or saved from Settings** *(amended 2026-11-23, feature 002c US6; originally "`.env` only")*. A key typed in Settings is kept in `<data_dir>/secrets/llm.json` (owner-only where supported, never in the database, never returned, shown or logged) and takes effect without a restart: the OpenAI adapter asks `KeyStore` for the current key on every request, and a key that works resumes the runs a key problem paused. `OPENAI_API_KEY` in the environment still wins and cannot be changed from the page. *Original decision:* `OPENAI_API_KEY` (and later the other providers' keys) are read from the environment; nothing is stored in the database, so no encryption layer is needed. *Why:* simplest and standard for self-hosted, local-only apps; updating an expired key is "edit `.env`, restart". An invalid key pauses AI tasks with a banner instead of failing them (§4). *Alt:* encrypted keys in the database, set from the dashboard (no restart, but more code); decided against by Ravi.
 
 **ADR-10 Frontend stack.** Current stable React + Vite + TS, TanStack Query, React Router, Tailwind + shadcn/ui, generated OpenAPI client; dark theme from Ravi's palette (§10). *Why:* common, well documented, fast to build, typed end to end.
 

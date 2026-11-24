@@ -223,3 +223,67 @@ async def test_R9_a_weaker_loser_does_not_change_the_kept_job(env: Env) -> None:
 
     kept = await _row(env, keep)
     assert (kept.state, kept.applied_on) == ("applied", date(2026, 11, 1))
+
+
+async def _set_state(env: Env, job_id: UUID, state: str) -> None:
+    async with env.sessions() as session:
+        await session.execute(
+            text("UPDATE app.jobs SET state = :s WHERE id = :j"), {"s": state, "j": job_id}
+        )
+        await session.commit()
+
+
+@pytest.mark.parametrize("state", ["skipped", "deleted"])
+async def test_FR021_a_pair_with_a_job_you_will_not_see_is_not_offered(
+    env: Env, state: str
+) -> None:
+    """A job your rules left out (or you deleted) is not in front of you, so neither is its pair."""
+    _, other = await add_pair(env)
+    await _set_state(env, other, state)
+
+    page = (await env.client.get(BASE)).json()
+
+    assert page["items"] == []
+
+
+async def test_FR021_a_pair_of_two_left_out_jobs_is_not_offered(env: Env) -> None:
+    keep, other = await add_pair(env)
+    await _set_state(env, keep, "skipped")
+    await _set_state(env, other, "skipped")
+
+    assert (await env.client.get(BASE)).json()["items"] == []
+
+
+async def test_FR021_restoring_a_left_out_job_brings_its_pair_back(env: Env) -> None:
+    _, other = await add_pair(env)
+    await _set_state(env, other, "skipped")
+    assert (await env.client.get(BASE)).json()["items"] == []
+
+    await _set_state(env, other, "explore")
+
+    assert len((await env.client.get(BASE)).json()["items"]) == 1
+
+
+@pytest.mark.parametrize("state", ["applied", "inquired"])
+async def test_FR021_a_pair_with_a_pipeline_job_is_still_offered(env: Env, state: str) -> None:
+    keep, _ = await add_pair(env)
+    async with env.sessions() as session:
+        await session.execute(
+            text(f"UPDATE app.jobs SET state = :s, {state}_on = :d WHERE id = :j"),
+            {"s": state, "d": date(2026, 11, 1), "j": keep},
+        )
+        await session.commit()
+
+    assert len((await env.client.get(BASE)).json()["items"]) == 1
+
+
+async def test_FR021_paging_counts_only_the_pairs_that_are_offered(env: Env) -> None:
+    for _ in range(3):
+        _, other = await add_pair(env)
+        await _set_state(env, other, "skipped")  # three hidden pairs first
+    await add_pair(env)  # then one that is offered
+
+    page = (await env.client.get(BASE, params={"limit": 1})).json()
+
+    assert len(page["items"]) == 1
+    assert page["next_cursor"] is None

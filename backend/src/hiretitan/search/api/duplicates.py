@@ -13,6 +13,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy.orm import aliased
 
 from hiretitan.platform.clock import ClockPort
 from hiretitan.platform.web.problems import ProblemError
@@ -23,6 +24,8 @@ from hiretitan.search.infra.models import JobRow, JobSourceRow, PossibleDuplicat
 
 DEFAULT_LIMIT = 25
 MAX_LIMIT = 100
+# the jobs a person has in front of them: Explore and the pipeline (not skipped, not deleted)
+OFFERED_STATES = (JobState.explore.value, JobState.inquired.value, JobState.applied.value)
 # The kept job takes the stronger pipeline state of the two (research R9): applied, then inquired.
 STRENGTH = {JobState.applied.value: 2, JobState.inquired.value: 1}
 
@@ -87,11 +90,20 @@ def create_duplicates_router(deps: SearchDuplicatesApiDeps) -> APIRouter:
         limit = max(1, min(limit, MAX_LIMIT))
         offset = int(cursor) if cursor and cursor.isdigit() else 0
         async with deps.sessions() as session:
+            query = select(PossibleDuplicateRow).where(PossibleDuplicateRow.status == status)
+            if status == "open":
+                # only pairs the person can see both jobs of: a job the rules left out, or one
+                # they deleted, is not in front of them, so neither is its pair (it comes back
+                # if the job is restored)
+                job_a, job_b = aliased(JobRow), aliased(JobRow)
+                query = (
+                    query.join(job_a, job_a.id == PossibleDuplicateRow.job_a_id)
+                    .join(job_b, job_b.id == PossibleDuplicateRow.job_b_id)
+                    .where(job_a.state.in_(OFFERED_STATES), job_b.state.in_(OFFERED_STATES))
+                )
             pairs = list(
                 await session.scalars(
-                    select(PossibleDuplicateRow)
-                    .where(PossibleDuplicateRow.status == status)
-                    .order_by(PossibleDuplicateRow.created_at, PossibleDuplicateRow.id)
+                    query.order_by(PossibleDuplicateRow.created_at, PossibleDuplicateRow.id)
                     .offset(offset)
                     .limit(limit + 1)
                 )

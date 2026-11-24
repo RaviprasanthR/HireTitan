@@ -1,65 +1,57 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { apiFetch } from '@/api/client'
-import { useStatus } from '@/api/useStatus'
-import { Button } from '@/components/ui/button'
+import { Navigate, useParams, useSearchParams } from 'react-router'
+import { PageTabs } from '@/components/PageTabs'
+import { AiSection } from './AiSection'
 import { DeleteAllData } from './DeleteAllData'
+import { GmailSection } from './GmailSection'
 
-const KEY_STATUS: Record<string, string> = {
-  working: 'Found, working',
-  missing: 'Missing',
-  rejected: 'Rejected by the provider',
-  unreachable: 'Provider could not be reached',
-  out_of_credit: 'Out of credit at the provider',
-  unknown: 'Not checked yet',
-}
+const TABS = [
+  { to: '/settings/ai', label: 'AI' },
+  { to: '/settings/gmail', label: 'Gmail job alerts' },
+  { to: '/settings/data', label: 'Your data' },
+] as const
+const TAB_IDS = ['ai', 'gmail', 'data']
 
-const KEY_HELP: Record<string, string> = {
-  missing: 'Add OPENAI_API_KEY to .env, then restart HireTitan.',
-  rejected: 'Replace OPENAI_API_KEY in .env, then restart HireTitan.',
-  out_of_credit: 'Add credit with your provider, then press Check again.',
-}
-
-function KeyStatus({ status }: { status: string }) {
-  const queryClient = useQueryClient()
-  const recheck = useMutation({
-    mutationFn: () => apiFetch('/status/ai/check', { method: 'POST' }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['status'] }),
-  })
-  const help = KEY_HELP[status]
+function DataSection() {
   return (
-    <section className="space-y-2" aria-labelledby="key-heading">
-      <h2 id="key-heading" className="text-lg font-medium">
-        AI key
-      </h2>
-      <p>{KEY_STATUS[status] ?? status}</p>
-      {help && <p className="text-sm text-muted-small">{help}</p>}
-      <p className="text-xs text-muted-small">The key itself is never shown here.</p>
-      <Button
-        type="button"
-        variant="outline"
-        disabled={recheck.isPending}
-        onClick={() => recheck.mutate()}
-      >
-        Check again
-      </Button>
+    <section id="data-settings" aria-labelledby="data-heading" className="space-y-3">
+      <header className="space-y-1">
+        <h2 id="data-heading" className="text-lg font-semibold">
+          Your data
+        </h2>
+        <p className="text-sm text-muted-small">
+          Remove everything HireTitan holds about you and start again.
+        </p>
+      </header>
+      <DeleteAllData />
     </section>
   )
 }
 
-/** The AI key status with Check again, and Delete all my data. Nothing else lives here. */
+/** Settings as tabs, like Home (002c US6, FR-028): AI, Gmail job alerts and Your data, each its
+ *  own address. Plain /settings opens AI, or Gmail when Google has just sent the person back. */
 export function SettingsPage() {
-  const status = useStatus()
+  const { tab } = useParams()
+  const [search] = useSearchParams()
+  if (!tab || !TAB_IDS.includes(tab)) {
+    const to = search.has('gmail') ? 'gmail' : 'ai'
+    const query = search.toString()
+    return <Navigate replace to={`/settings/${to}${query ? `?${query}` : ''}`} />
+  }
   return (
     <section className="space-y-6">
-      <h1 className="text-2xl font-semibold">Settings</h1>
-      {status.isPending && <p>Loading…</p>}
-      {status.isError && <p role="alert">Could not load settings.</p>}
-      {status.data && (
-        <div className="max-w-2xl space-y-8">
-          <KeyStatus status={status.data.ai.status} />
-          <DeleteAllData />
-        </div>
-      )}
+      <header className="space-y-1">
+        <h1 className="text-2xl font-semibold">Settings</h1>
+        <p className="text-sm text-muted-small">
+          Everything here stays on this computer. Nothing is sent anywhere except to the AI
+          provider and to Gmail, read-only.
+        </p>
+      </header>
+      <PageTabs label="Settings tabs" tabs={TABS} />
+      <div className="max-w-3xl">
+        {tab === 'ai' && <AiSection />}
+        {tab === 'gmail' && <GmailSection />}
+        {tab === 'data' && <DataSection />}
+      </div>
     </section>
   )
 }

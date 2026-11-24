@@ -17,10 +17,14 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from tests.fakes.resume_files import add_resume_file
 
 from hiretitan.api_main import create_app
+from hiretitan.mail.infra.models import MailCheckRow
+from hiretitan.mail.infra.repos import ConnectionRepo, ReadMessagesRepo, SendersRepo
+from hiretitan.mail.infra.secrets_file import SecretsFile
 from hiretitan.platform.clock import FakeClock
 from hiretitan.platform.config.settings import Settings
 from hiretitan.platform.llm.infra.calls_repo import CallsRepo, LlmCallRecord
 from hiretitan.platform.llm.infra.provider_status_repo import ProviderStatusRepo
+from hiretitan.platform.llm.key_store import KeyStore
 from hiretitan.platform.runtime.domain.run_state import RunStatus
 from hiretitan.platform.runtime.infra.runs_repo import RunsRepo
 from hiretitan.platform.storage.local import LocalFileStorage
@@ -44,7 +48,7 @@ from hiretitan.search.infra.repos import CompaniesRepo, JobsRepo, RuleSetsRepo
 from hiretitan.setup.api.data import DataApiDeps, create_data_router
 from hiretitan.setup.api.onboarding import OnboardingApiDeps, create_onboarding_router
 from hiretitan.setup.infra.settings_repo import SettingsRepo
-from hiretitan.setup_wiring import RepoFacts, SqlDeleteAllStore
+from hiretitan.setup_wiring import RepoFacts, SqlDeleteAllStore, secrets_forgetter
 
 URL = "/api/v1/data/delete-all"
 # Rows that exist on a fresh install and come back after a wipe.
@@ -90,6 +94,10 @@ async def env(
                     storage=storage,
                     store=partial(SqlDeleteAllStore, company_seed=seed),
                     enqueue_key_check=enqueue_key_check,
+                    forget_secrets=secrets_forgetter(
+                        tmp_path / "data",
+                        KeyStore(tmp_path / "data" / "secrets" / "llm.json", None).forget,
+                    ),
                 )
             ),
             create_onboarding_router(
@@ -417,3 +425,38 @@ async def test_SC005_delete_all_removes_resume_choices_and_last_choice(env: Env)
     async with env.sessions() as session:
         assert (await session.scalars(select(PipelineDetailsRow))).all() == []  # no name, no note
         assert (await session.scalars(select(PipelineSettingsRow))).all() == []  # no last choice
+
+
+async def test_FR033_delete_all_removes_saved_key(env: Env) -> None:
+    keys = KeyStore(env.data_dir / "secrets" / "llm.json", None)
+    keys.save("sk-test-0123456789abcdefghij")
+
+    response = await env.client.post("/api/v1/data/delete-all", json={"confirm": "DELETE"})
+
+    assert response.status_code == 204
+    assert keys.current() == (None, "none")
+
+
+async def test_FR027_removes_gmail_connection_secrets_and_mail_records(env: Env) -> None:
+    secrets = SecretsFile(env.data_dir / "secrets" / "gmail.json", {})
+    secrets.save_credentials("client-id.apps.example.test", "client-secret-0123456789")
+    secrets.save_refresh_token("refresh-token-0123456789")
+    now = datetime(2026, 11, 23, 9, 0, tzinfo=UTC)
+    async with env.sessions() as session:
+        await ConnectionRepo(session).connect("someone@example.test", now)
+        await SendersRepo(session).add_custom("alerts@jobs.example.test")
+        await ReadMessagesRepo(session).record(
+            "msg-1", "alerts@jobs.example.test", now, "read", "linkedin", 2, [], None, now
+        )
+        await session.commit()
+
+    response = await env.client.post(URL, json={"confirm": "DELETE"})
+
+    assert response.status_code == 204
+    assert not (env.data_dir / "secrets" / "gmail.json").exists()
+    async with env.sessions() as session:
+        assert await ConnectionRepo(session).get() is None
+        assert await ReadMessagesRepo(session).count() == 0
+        assert (await session.scalars(select(MailCheckRow))).all() == []
+        addresses = [row.address for row in await SendersRepo(session).list_all()]
+        assert "alerts@jobs.example.test" not in addresses

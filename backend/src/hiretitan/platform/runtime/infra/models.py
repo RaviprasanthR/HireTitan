@@ -44,6 +44,15 @@ class WorkflowRunRow(IdTimestampMixin, Base):
                 "workflow = 'job_search' AND status IN ('queued', 'running', 'paused')"
             ),
         ),
+        # and one mail check at a time (feature 002c)
+        Index(
+            "uq_workflow_runs_one_active_mail_check",
+            "workflow",
+            unique=True,
+            postgresql_where=text(
+                "workflow = 'mail_check' AND status IN ('queued', 'running', 'paused')"
+            ),
+        ),
     )
 
     # id doubles as the LangGraph thread_id

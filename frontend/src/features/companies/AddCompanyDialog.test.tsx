@@ -36,13 +36,36 @@ function renderDialog(handler: (call: Call) => unknown) {
 
 async function fillAndSubmit(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText('Company name'), 'Newco')
-  await user.type(screen.getByLabelText('Careers page link'), 'https://newco.example.com/careers')
-  await user.click(screen.getByRole('button', { name: 'Find job board' }))
+  await user.type(
+    screen.getByLabelText('Careers page link (optional)'),
+    'https://newco.example.com/careers',
+  )
+  await user.click(screen.getByRole('button', { name: 'Add company' }))
 }
 
 afterEach(() => vi.unstubAllGlobals())
 
 describe('AddCompanyDialog', () => {
+  it('adds a company with no careers site, for its contacts and notes, without a board search', async () => {
+    const user = userEvent.setup()
+    const { calls, onClose } = renderDialog((call) => {
+      if (call.method === 'POST' && call.path === '/companies')
+        return { ...CREATED, name: 'Quiet Startup', careers_url: null }
+      return undefined
+    })
+
+    await user.type(screen.getByLabelText('Company name'), 'Quiet Startup')
+    await user.click(screen.getByRole('button', { name: 'Add company' }))
+
+    expect(await screen.findByText(/Quiet Startup was added/)).toBeInTheDocument()
+    expect(screen.getByText(/searches skip it/)).toBeInTheDocument()
+    const post = calls.find((c) => c.method === 'POST' && c.path === '/companies')
+    expect(post?.body).toEqual({ name: 'Quiet Startup' })
+    expect(calls.some((c) => c.path.includes('/discovery'))).toBe(false)
+    await user.click(screen.getByRole('button', { name: 'Done' }))
+    expect(onClose).toHaveBeenCalled()
+  })
+
   it('US3_AS2_confirm_suggested_board', async () => {
     const user = userEvent.setup()
     const { calls, onClose } = renderDialog((call) => {
@@ -50,10 +73,20 @@ describe('AddCompanyDialog', () => {
       if (call.path === '/companies/n/discovery')
         return {
           status: 'found',
-          suggestion: { ats_vendor: 'lever', board_id: 'newco', supported: true, live_jobs: 12 },
+          suggestion: {
+            ats_vendor: 'lever',
+            board_id: 'newco',
+            supported: true,
+            live_jobs: 12,
+          },
         }
       if (call.path === '/companies/n/discovery/confirm')
-        return { ...CREATED, ats_vendor: 'lever', board_id: 'newco', board_status: 'board' }
+        return {
+          ...CREATED,
+          ats_vendor: 'lever',
+          board_id: 'newco',
+          board_status: 'board',
+        }
       return undefined
     })
 
@@ -77,10 +110,19 @@ describe('AddCompanyDialog', () => {
       if (call.path === '/companies/n/discovery')
         return {
           status: 'found',
-          suggestion: { ats_vendor: 'lever', board_id: 'other', supported: true, live_jobs: 3 },
+          suggestion: {
+            ats_vendor: 'lever',
+            board_id: 'other',
+            supported: true,
+            live_jobs: 3,
+          },
         }
       if (call.path === '/companies/n/discovery/reject')
-        return { ...CREATED, resolution: 'careers_page', board_status: 'careers_page' }
+        return {
+          ...CREATED,
+          resolution: 'careers_page',
+          board_status: 'careers_page',
+        }
       return undefined
     })
 
@@ -99,7 +141,11 @@ describe('AddCompanyDialog', () => {
       if (call.method === 'POST' && call.path === '/companies') return CREATED
       if (call.path === '/companies/n/discovery') return { status: 'none', suggestion: null }
       if (call.path === '/companies/n/discovery/reject')
-        return { ...CREATED, resolution: 'careers_page', board_status: 'careers_page' }
+        return {
+          ...CREATED,
+          resolution: 'careers_page',
+          board_status: 'careers_page',
+        }
       return undefined
     })
 
@@ -116,7 +162,10 @@ describe('AddCompanyDialog', () => {
       call.method === 'POST'
         ? problem(422, 'Invalid', {
             errors: [
-              { field: 'careers_url', message: 'The link must start with http:// or https://.' },
+              {
+                field: 'careers_url',
+                message: 'The link must start with http:// or https://.',
+              },
             ],
           })
         : undefined,

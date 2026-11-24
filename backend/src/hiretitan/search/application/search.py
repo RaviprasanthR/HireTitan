@@ -87,6 +87,8 @@ class NewJob:
     source_kind: str = "company_board"
     # whether the posting's own text is in ``description``: read, a read failed, or none was tried
     description_status: Literal["read", "unreadable", "none"] = "none"
+    # alert jobs only: who gave the company and place, "fixed" or "ai" (FR-013d)
+    alert_read_by: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

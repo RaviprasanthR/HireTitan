@@ -7,6 +7,8 @@ The setup module may not import other features directly, so this composition-lev
 from __future__ import annotations
 
 import asyncio
+import os
+from collections.abc import Callable
 from pathlib import Path
 from uuid import UUID
 
@@ -14,6 +16,9 @@ from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from hiretitan.mail.infra.repos import SendersRepo
+from hiretitan.mail.infra.secrets_file import SecretsFile
+from hiretitan.mail.infra.seed import load_seed as load_mail_seed
 from hiretitan.platform.runtime.domain.run_state import RunStatus, WaitingFor
 from hiretitan.platform.runtime.infra.runs_repo import RunsRepo
 from hiretitan.preferences.application.service import get_preferences
@@ -94,9 +99,15 @@ class SqlDeleteAllStore:
     """``DeleteAllStore`` over every module's tables (a composition-level adapter, because it
     spans features, the job queue and the checkpoint store)."""
 
-    def __init__(self, session: AsyncSession, company_seed: Path | None = None) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        company_seed: Path | None = None,
+        mail_seed: Path | None = None,
+    ) -> None:
         self._session = session
         self._company_seed = company_seed
+        self._mail_seed = mail_seed
 
     async def cancel_open_runs(self) -> None:
         runs = RunsRepo(self._session)
@@ -135,4 +146,20 @@ class SqlDeleteAllStore:
         # The shipped company list, as a fresh install has it (FR-041).
         if self._company_seed is not None and await asyncio.to_thread(self._company_seed.exists):
             await load_seed(CompaniesRepo(self._session), self._company_seed)
+        # The shipped alert senders too, or Gmail would have nobody to ask for (FR-010).
+        if self._mail_seed is not None and await asyncio.to_thread(self._mail_seed.exists):
+            await SendersRepo(self._session).merge_seed(
+                await asyncio.to_thread(load_mail_seed, self._mail_seed)
+            )
         await self._session.commit()
+
+
+def secrets_forgetter(data_dir: Path, forget_ai_key: Callable[[], None]) -> Callable[[], None]:
+    """Delete all my data: the AI key saved on the page and the Google client and token file
+    (FR-027). Values set in the environment stay where the person put them."""
+
+    def forget() -> None:
+        forget_ai_key()
+        SecretsFile(data_dir / "secrets" / "gmail.json", os.environ).clear_all()
+
+    return forget
