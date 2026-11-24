@@ -4,6 +4,92 @@
  */
 
 export interface paths {
+    "/api/v1/assistant/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Recent */
+        get: operations["recent_api_v1_assistant_conversations_get"];
+        put?: never;
+        /** Start */
+        post: operations["start_api_v1_assistant_conversations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assistant/conversations/{conversation_id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Messages */
+        get: operations["messages_api_v1_assistant_conversations__conversation_id__messages_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assistant/conversations/{conversation_id}/turns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send */
+        post: operations["send_api_v1_assistant_conversations__conversation_id__turns_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assistant/refs/{ref}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Card */
+        get: operations["card_api_v1_assistant_refs__ref__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assistant/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Status */
+        get: operations["status_api_v1_assistant_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/companies": {
         parameters: {
             query?: never;
@@ -1446,6 +1532,15 @@ export interface components {
             /** Resume File Id */
             resume_file_id?: string | null;
         };
+        /** AssistantStatusOut */
+        AssistantStatusOut: {
+            /** Available */
+            available: boolean;
+            /** Provider Message */
+            provider_message?: string | null;
+            /** Reason */
+            reason?: string | null;
+        };
         /** AuthorizeModel */
         AuthorizeModel: {
             /** Authorize Url */
@@ -1710,6 +1805,29 @@ export interface components {
             /** Items */
             items: components["schemas"]["ContactOut"][];
             note: components["schemas"]["NoteOut"] | null;
+        };
+        /** ConversationOut */
+        ConversationOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Last Used At
+             * Format: date-time
+             */
+            last_used_at: string;
+            /** Title */
+            title: string | null;
+        };
+        /** CreatedOut */
+        CreatedOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
         };
         /** CredentialsBody */
         CredentialsBody: {
@@ -2288,6 +2406,37 @@ export interface components {
             /** Why */
             why: string;
         };
+        /** MessageOut */
+        MessageOut: {
+            /** Author */
+            author: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Error */
+            error: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Refs */
+            refs: string[];
+            /** Seq */
+            seq: number;
+            /** Signals */
+            signals: {
+                [key: string]: unknown;
+            }[];
+            /** Status */
+            status: string;
+            /** Text */
+            text: string;
+        };
         /** MissingOut */
         MissingOut: {
             /** Keyword */
@@ -2707,6 +2856,24 @@ export interface components {
             contacts: components["schemas"]["RecipientContactOut"][];
             /** Kinds */
             kinds: ("recruiter" | "hiring_manager" | "engineer" | "other")[];
+        };
+        /** RefCardOut */
+        RefCardOut: {
+            /** Kind */
+            kind: string;
+            /**
+             * Lines
+             * @default []
+             */
+            lines: string[];
+            /** Link */
+            link?: string | null;
+            /** Ref */
+            ref: string;
+            /** Subtitle */
+            subtitle?: string | null;
+            /** Title */
+            title: string;
         };
         /**
          * ResumeChoiceOut
@@ -3182,6 +3349,14 @@ export interface components {
             /** Kind */
             kind?: string | null;
         };
+        /** StartCheckBody */
+        StartCheckBody: {
+            /**
+             * Reread Last Day
+             * @default false
+             */
+            reread_last_day: boolean;
+        };
         /** StartIn */
         StartIn: {
             /**
@@ -3296,6 +3471,16 @@ export interface components {
         };
         /** TextIn */
         TextIn: {
+            /** Text */
+            text: string;
+        };
+        /** TurnIn */
+        TurnIn: {
+            /**
+             * Page
+             * @default /
+             */
+            page: string;
             /** Text */
             text: string;
         };
@@ -3432,6 +3617,163 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    recent_api_v1_assistant_conversations_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationOut"][];
+                };
+            };
+        };
+    };
+    start_api_v1_assistant_conversations_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreatedOut"];
+                };
+            };
+        };
+    };
+    messages_api_v1_assistant_conversations__conversation_id__messages_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    send_api_v1_assistant_conversations__conversation_id__turns_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TurnIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    card_api_v1_assistant_refs__ref__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ref: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefCardOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    status_api_v1_assistant_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistantStatusOut"];
+                };
+            };
+        };
+    };
     companies_api_v1_companies_get: {
         parameters: {
             query?: {
@@ -5143,7 +5485,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["StartCheckBody"] | null;
+            };
+        };
         responses: {
             /** @description Successful Response */
             202: {
@@ -5152,6 +5498,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StartedCheckOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

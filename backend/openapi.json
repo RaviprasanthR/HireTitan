@@ -104,6 +104,41 @@
         "title": "AppliedIn",
         "type": "object"
       },
+      "AssistantStatusOut": {
+        "properties": {
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "provider_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Message"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "available"
+        ],
+        "title": "AssistantStatusOut",
+        "type": "object"
+      },
       "AuthorizeModel": {
         "properties": {
           "authorize_url": {
@@ -963,6 +998,52 @@
           "note"
         ],
         "title": "ContactsOut",
+        "type": "object"
+      },
+      "ConversationOut": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_used_at": {
+            "format": "date-time",
+            "title": "Last Used At",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "last_used_at"
+        ],
+        "title": "ConversationOut",
+        "type": "object"
+      },
+      "CreatedOut": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "CreatedOut",
         "type": "object"
       },
       "CredentialsBody": {
@@ -2717,6 +2798,76 @@
         "title": "MailUnreadableOut",
         "type": "object"
       },
+      "MessageOut": {
+        "properties": {
+          "author": {
+            "title": "Author",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "refs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Refs",
+            "type": "array"
+          },
+          "seq": {
+            "title": "Seq",
+            "type": "integer"
+          },
+          "signals": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Signals",
+            "type": "array"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "seq",
+          "author",
+          "text",
+          "status",
+          "refs",
+          "signals",
+          "error",
+          "created_at"
+        ],
+        "title": "MessageOut",
+        "type": "object"
+      },
       "MissingOut": {
         "properties": {
           "keyword": {
@@ -4232,6 +4383,59 @@
         "title": "RecipientsOut",
         "type": "object"
       },
+      "RefCardOut": {
+        "properties": {
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "lines": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Link"
+          },
+          "ref": {
+            "title": "Ref",
+            "type": "string"
+          },
+          "subtitle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subtitle"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ref",
+          "kind",
+          "title"
+        ],
+        "title": "RefCardOut",
+        "type": "object"
+      },
       "ResumeChoiceOut": {
         "description": "The resume used for a pipeline job (feature 002f): ``chosen`` (a stored file), ``removed``\n(the file is gone and its name stays as a note), or ``none``.",
         "properties": {
@@ -5665,6 +5869,17 @@
         "title": "SourceIn",
         "type": "object"
       },
+      "StartCheckBody": {
+        "properties": {
+          "reread_last_day": {
+            "default": false,
+            "title": "Reread Last Day",
+            "type": "boolean"
+          }
+        },
+        "title": "StartCheckBody",
+        "type": "object"
+      },
       "StartIn": {
         "properties": {
           "mode": {
@@ -5965,6 +6180,26 @@
           "text"
         ],
         "title": "TextIn",
+        "type": "object"
+      },
+      "TurnIn": {
+        "properties": {
+          "page": {
+            "default": "/",
+            "maxLength": 500,
+            "title": "Page",
+            "type": "string"
+          },
+          "text": {
+            "maxLength": 10000,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "TurnIn",
         "type": "object"
       },
       "ValidationError": {
@@ -6359,6 +6594,211 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/assistant/conversations": {
+      "get": {
+        "operationId": "recent_api_v1_assistant_conversations_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ConversationOut"
+                  },
+                  "title": "Response Recent Api V1 Assistant Conversations Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Recent",
+        "tags": [
+          "assistant"
+        ]
+      },
+      "post": {
+        "operationId": "start_api_v1_assistant_conversations_post",
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Start",
+        "tags": [
+          "assistant"
+        ]
+      }
+    },
+    "/api/v1/assistant/conversations/{conversation_id}/messages": {
+      "get": {
+        "operationId": "messages_api_v1_assistant_conversations__conversation_id__messages_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MessageOut"
+                  },
+                  "title": "Response Messages Api V1 Assistant Conversations  Conversation Id  Messages Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Messages",
+        "tags": [
+          "assistant"
+        ]
+      }
+    },
+    "/api/v1/assistant/conversations/{conversation_id}/turns": {
+      "post": {
+        "operationId": "send_api_v1_assistant_conversations__conversation_id__turns_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TurnIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Send",
+        "tags": [
+          "assistant"
+        ]
+      }
+    },
+    "/api/v1/assistant/refs/{ref}": {
+      "get": {
+        "operationId": "card_api_v1_assistant_refs__ref__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ref",
+            "required": true,
+            "schema": {
+              "title": "Ref",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefCardOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Card",
+        "tags": [
+          "assistant"
+        ]
+      }
+    },
+    "/api/v1/assistant/status": {
+      "get": {
+        "operationId": "status_api_v1_assistant_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistantStatusOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Status",
+        "tags": [
+          "assistant"
+        ]
+      }
+    },
     "/api/v1/companies": {
       "get": {
         "operationId": "companies_api_v1_companies_get",
@@ -8871,6 +9311,23 @@
     "/api/v1/mail/checks": {
       "post": {
         "operationId": "start_check_api_v1_mail_checks_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/StartCheckBody"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
           "202": {
             "content": {
@@ -8881,6 +9338,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "Start Check",
