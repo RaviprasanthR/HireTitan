@@ -1,0 +1,15 @@
+event: response.created
+data: {"type":"response.created","sequence_number":0,"response":{"id":"resp_1","object":"response","created_at":1764000000,"model":"gpt-5.4-mini","status":"in_progress","output":[],"tools":[],"tool_choice":"auto","parallel_tool_calls":true}}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","sequence_number":1,"item_id":"msg_1","output_index":0,"content_index":0,"delta":"Let me ","logprobs":[]}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","sequence_number":2,"item_id":"msg_1","output_index":0,"content_index":0,"delta":"check.","logprobs":[]}
+
+event: response.output_item.done
+data: {"type":"response.output_item.done","sequence_number":3,"output_index":1,"item":{"type":"function_call","id":"fc_1","call_id":"call_1","name":"search_jobs","arguments":"{\"title\":\"backend\"}","status":"completed"}}
+
+event: response.completed
+data: {"type":"response.completed","sequence_number":4,"response":{"id":"resp_1","object":"response","created_at":1764000000,"model":"gpt-5.4-mini","status":"completed","output":[],"tools":[],"tool_choice":"auto","parallel_tool_calls":true,"usage":{"input_tokens":120,"input_tokens_details":{"cached_tokens":20},"output_tokens":15,"output_tokens_details":{"reasoning_tokens":0},"total_tokens":135}}}
+

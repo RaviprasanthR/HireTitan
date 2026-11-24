@@ -4,8 +4,15 @@ providers:
     tiers:
       fast: gpt-5.4-mini
       strong: gpt-6-astra
+    # What each model can do. Mikasa (002m) needs tools and streaming; a model without them
+    # makes her panel say so instead of failing (research R11).
+    capabilities:
+      gpt-5.4-mini: [tools, streaming]
+      gpt-6-astra: [tools, streaming]
   # Used with HIRETITAN_LLM=fake: scripted replies, no network.
   fake:
     tiers:
       fast: fake-model
       strong: fake-model
+    capabilities:
+      fake-model: [tools, streaming]
