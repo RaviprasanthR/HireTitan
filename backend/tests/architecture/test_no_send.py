@@ -692,3 +692,50 @@ def test_FR015_only_the_two_google_modules_name_the_google_hosts() -> None:
 )
 def test_SC007_allowed_mail_usage_passes(source: str, module: Path) -> None:
     assert mail_http_violations(source, module=module) == []
+
+
+# Feature 002m (constitution I, FR-017, SC-007): Mikasa and her actions change data in the app and
+# nothing else. Neither package may import a sending module or build an HTTP client, and no call
+# there may use a mutating HTTP verb (router decorators register endpoints; they send nothing).
+MIKASA_PACKAGES = (Path("assistant"), Path("actions"))
+
+
+def _mikasa_sources() -> list[tuple[Path, str]]:
+    return [
+        (p, s)
+        for p, s in _package_sources()
+        if any(p.relative_to(PACKAGE).is_relative_to(package) for package in MIKASA_PACKAGES)
+    ]
+
+
+def test_SC007_new_packages_scanned() -> None:
+    sources = _mikasa_sources()
+    seen = {path.relative_to(PACKAGE).parts[0] for path, _ in sources}
+    assert seen == {"assistant", "actions"}, "the scan must actually see both packages"
+    bad: dict[str, list[str]] = {}
+    for path, source in sources:
+        found = (
+            sending_violations(source)
+            + contacts_client_violations(source)
+            + search_http_violations(source, is_fetcher=False)
+        )
+        if found:
+            bad[str(path.relative_to(PACKAGE))] = found
+    assert bad == {}
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "import smtplib\n",
+        "import httpx\n",
+        "async def f(client):\n    await client.post('https://example.invalid')\n",
+    ],
+)
+def test_SC007_planted_sender_in_mikasa_is_caught(source: str) -> None:
+    found = (
+        sending_violations(source)
+        + contacts_client_violations(source)
+        + search_http_violations(source, is_fetcher=False)
+    )
+    assert found
