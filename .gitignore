@@ -49,3 +49,6 @@ Thumbs.db
 
 # Brainstorm mockups (superpowers visual companion)
 .superpowers/
+
+# Design review tool records (Hallmark sloplint baseline and screenshots)
+.hallmark/
