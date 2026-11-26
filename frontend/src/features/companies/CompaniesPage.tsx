@@ -34,7 +34,7 @@ const CHIP = 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs wh
 function PipelineChip({ company }: { company: Company }) {
   if (company.pipeline === 'applied' || company.pipeline === 'inquired')
     return <StageChip stage={company.pipeline} />
-  return <span className="text-xs text-muted-small">—</span>
+  return <span className="text-xs text-muted-small">Not set</span>
 }
 
 /** A small round icon button; each action has its own colour and a tooltip. */
@@ -155,10 +155,10 @@ function Details({ company, checked }: { company: Company; checked: string | nul
     ? `Last checked ${checked}${company.last_check_result ? ` · ${company.last_check_result}` : ''}`
     : 'Not checked yet'
   const rows: [string, React.ReactNode][] = [
-    ['Location', company.city ?? '—'],
+    ['Location', company.city ?? 'Not set'],
     ['Pipeline', PIPELINE_TEXT[company.pipeline ?? 'none']],
-    ['Website', company.website ? <ExternalLink url={company.website} /> : '—'],
-    ['Careers page', company.careers_url ? <ExternalLink url={company.careers_url} /> : '—'],
+    ['Website', company.website ? <ExternalLink url={company.website} /> : 'Not set'],
+    ['Careers page', company.careers_url ? <ExternalLink url={company.careers_url} /> : 'Not set'],
     ['Job board', board],
     [
       'Source',
@@ -260,7 +260,7 @@ function CompanyRow({ company }: { company: Company }) {
               aria-expanded={showPanel}
               aria-label={`Details for ${company.name}`}
               onClick={() => setShowPanel(!showPanel)}
-              className="max-w-full rounded text-left hover:text-warning md:truncate focus-visible:ring-2 focus-visible:ring-ring"
+              className="max-w-full rounded text-left hover:text-link md:truncate focus-visible:ring-2 focus-visible:ring-ring"
             >
               {company.name}
             </button>
@@ -272,20 +272,20 @@ function CompanyRow({ company }: { company: Company }) {
         <span
           className={`${CHIP} w-fit ${
             company.contact_count > 0
-              ? 'bg-fuchsia-500/15 text-fuchsia-300'
-              : 'bg-white/5 text-muted-small opacity-70'
+              ? 'bg-raised text-subtle'
+              : 'text-muted-small'
           }`}
         >
           <Users aria-hidden className="size-3" />
           {contacts}
         </span>
         <span
-          className="flex min-w-0 flex-1 items-center gap-1.5 text-xs text-warning/80 md:min-w-0"
+          className="flex min-w-0 flex-1 items-center gap-1.5 text-xs text-subtle md:min-w-0"
           title={company.note_preview ?? undefined}
         >
           {company.note_preview && (
             <>
-              <StickyNote aria-hidden className="size-3 shrink-0 text-warning" />
+              <StickyNote aria-hidden className="size-3 shrink-0" />
               <span className="truncate">{company.note_preview}</span>
             </>
           )}
@@ -298,7 +298,7 @@ function CompanyRow({ company }: { company: Company }) {
                   asChild
                   variant="ghost"
                   size="icon-sm"
-                  className="text-link hover:bg-link/20 hover:text-link"
+                  className="text-subtle hover:bg-raised hover:text-foreground"
                 >
                   <a
                     href={company.website}
@@ -316,7 +316,7 @@ function CompanyRow({ company }: { company: Company }) {
               <IconButton
                 title="Edit"
                 label={`Edit ${company.name}`}
-                tone="text-success hover:bg-success/20 hover:text-success"
+                tone="text-subtle hover:bg-raised hover:text-foreground"
                 onClick={() => setEditing(true)}
               >
                 <Pencil aria-hidden />

@@ -35,8 +35,9 @@ export function MikasaDock() {
         onClick={toggle}
         className={cn(
           'fixed bottom-[calc(var(--ht-bottom-bar)+0.75rem)] right-4 z-50 md:bottom-5 md:right-5 grid size-14 place-items-center rounded-full outline-none',
-          'bg-primary text-primary-foreground shadow-[var(--ht-shadow-overlay)]',
-          'transition-transform duration-200 hover:scale-110 focus-visible:ring-2 focus-visible:ring-ring active:scale-95',
+          // flat (DESIGN.md, Mikasa button): the hover steps the colour, the press scales to 0.96
+          'bg-primary text-primary-foreground hover:bg-[var(--ht-accent-hover)]',
+          'transition-[background-color,transform] duration-[var(--ht-dur-fast)] ease-[var(--ht-ease)] focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.96]',
         )}
       >
         <span

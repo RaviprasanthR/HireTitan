@@ -81,7 +81,7 @@ Every page uses one visual system: a graphite background and surfaces, three tex
 1. **Given** any table, **When** it renders, **Then** its column heads are sentence case, not letter-spaced capitals.
 2. **Given** any meta line (location and work mode, file type and size and date), **When** it renders, **Then** facts are separated by layout or space, not by dot characters, and no fact repeats in the same line.
 3. **Given** any card or panel, **When** it renders, **Then** it has a hairline border on all sides, no coloured side stripe, and no card sits inside another card.
-4. **Given** the Pipeline tab with jobs in the pipeline, **When** the overview renders, **Then** the stage counts appear once in the flow, with one slim stacked stage bar, and no donut chart repeats the same numbers.
+4. **Given** the Pipeline tab with jobs in the pipeline, **When** the overview renders, **Then** the stage counts appear once in the flow, with "In pipeline" as its total and one donut of the stages beside it in place of a stage bar (clarification 2026-11-26), and no other chart repeats the numbers.
 5. **Given** the Explore page after a search or mail check, **When** the summary renders, **Then** the found / known / left out / new counts appear once.
 6. **Given** the header and the Mikasa button, **When** they render, **Then** the logo, wordmark, nav highlight, Mikasa button and Mikasa avatar use flat colours with no gradient, glow or scale-up on hover.
 7. **Given** any text on any page, **When** its contrast is measured against what it sits on, **Then** it is at least 4.5:1 (3:1 for icons and large text).

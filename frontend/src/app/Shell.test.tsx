@@ -135,6 +135,22 @@ describe('Shell', () => {
     expect(panel).toHaveClass('bottom-[calc(var(--ht-bottom-bar)+5rem)]', 'md:bottom-24')
   })
 
+  it('test_US3_AS6_dock_is_flat', async () => {
+    renderAt('/')
+    const dock = await screen.findByRole('button', { name: 'Mikasa' })
+    // a flat accent circle: no shadow, the hover steps the colour, the press scales to 0.96
+    expect(dock).toHaveClass('bg-primary', 'text-primary-foreground', 'active:scale-[0.96]')
+    expect(dock.className).toMatch(/hover:bg-\[var\(--ht-accent-hover\)\]/)
+    expect(dock.className).not.toMatch(/shadow|gradient/)
+  })
+
+  it('test_FR012_dock_does_not_scale_up_on_hover', async () => {
+    renderAt('/')
+    const dock = await screen.findByRole('button', { name: 'Mikasa' })
+    expect(dock.className).not.toMatch(/hover:scale/)
+    expect(dock.className).not.toMatch(/transition-all/)
+  })
+
   it('test_FR018_main_reserves_space_for_the_dock', async () => {
     renderAt('/')
     await screen.findByRole('navigation', { name: 'Main' })

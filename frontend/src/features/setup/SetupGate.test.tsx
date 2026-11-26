@@ -3,6 +3,7 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { readFileSync } from 'node:fs'
 import { routes } from '@/app/routes'
 
 const json = (body: unknown) =>
@@ -171,6 +172,18 @@ describe('SetupGate', () => {
       'href',
       '/settings',
     )
+  })
+
+  it('test_US3_setup_uses_accent_links', async () => {
+    renderAt('/', 2)
+    const link = await screen.findByRole('link', { name: 'AI key settings' })
+    const page = link.closest('.ht-setup-page') as HTMLElement
+    for (const a of within(page).getAllByRole('link')) expect(a).toHaveClass('text-link')
+    const card = page.querySelector('.ht-setup-card') as HTMLElement
+    // one recipe: a hairline, no border-plus-shadow
+    expect(card.className).not.toMatch(/shadow/)
+    const css = readFileSync('src/index.css', 'utf-8')
+    expect(css).not.toMatch(/\.ht-setup-card\s*\{[^}]*box-shadow/)
   })
 
   it('FR030_banner_on_setup_cards', async () => {

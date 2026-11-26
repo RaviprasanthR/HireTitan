@@ -60,7 +60,7 @@ export function JobDetails({
       {/* Inside an Explore row the details are the description and the people: why it is listed is
           the row's own line, the buttons are on the row, and the posting is the title's link. */}
       {actions && data.decision && (
-        <div className="space-y-2 rounded-lg bg-surface p-4">
+        <div className="ht-detail-card space-y-2">
           <p className="font-medium">Why it is listed</p>
           <p>{data.decision.reason}</p>
           {isNotChecked(data) && (
@@ -89,11 +89,13 @@ export function JobDetails({
 
       {data.state === 'applied' || data.state === 'inquired' ? (
         <div className="flex flex-wrap items-center gap-3 text-sm">
-          <StageChip stage={data.state} />
+          {/* on the job page the chip is in the page header (FR-004) */}
+          {!actions && <StageChip stage={data.state} />}
           <span>
-            {data.state === 'applied'
-              ? `Applied on ${formatDay(data.applied_on)}`
-              : `Inquired on ${formatDay(data.inquired_on)}`}
+            {data.state === 'applied' ? 'Applied on ' : 'Inquired on '}
+            <span className="ht-figure">
+              {formatDay(data.state === 'applied' ? data.applied_on : data.inquired_on)}
+            </span>
           </span>
           {actions && (
             <Button
@@ -164,7 +166,7 @@ export function JobDetails({
         </p>
       )}
 
-      <Section as={Heading} title="Description" icon={FileText} tone="ht-section-description">
+      <Section as={Heading} title="Description" icon={FileText}>
         {data.description.trim() === '' && data.sources.some((s) => s.kind === 'email_alert') ? (
           <NoDescription jobId={data.id} />
         ) : (
@@ -172,7 +174,7 @@ export function JobDetails({
         )}
       </Section>
 
-      <Section as={Heading} title="Sources" icon={Link2} tone="ht-section-sources">
+      <Section as={Heading} title="Sources" icon={Link2}>
         <ul aria-label="Sources" className="space-y-1 text-sm">
           {data.sources.map((source, index) => {
             const href = safeLink(source.url)
@@ -198,21 +200,28 @@ export function JobDetails({
       </Section>
 
       {actions && (
-        <Section as={Heading} title="Decision history" icon={History} tone="ht-section-history">
+        <Section as={Heading} title="Decision history" icon={History}>
           <ul aria-label="Decision history" className="space-y-1 text-sm">
             {data.decision_history.map((decision) => (
-              <li key={`${decision.created_at}:${decision.decided_by}`}>
-                {formatDate(decision.created_at)} ·{' '}
-                {decision.outcome === 'shown' ? 'Kept' : 'Left out'} by{' '}
-                {decision.decided_by === 'ai'
-                  ? 'the AI'
-                  : decision.decided_by === 'rule'
-                    ? 'your rules'
-                    : decision.decided_by === 'person'
-                      ? 'you'
-                      : 'rules only (not checked by AI)'}
-                : {decision.reason}
-                {decision.is_current && ' (current)'}
+              <li
+                key={`${decision.created_at}:${decision.decided_by}`}
+                className="flex flex-wrap gap-x-4"
+              >
+                <span className="ht-figure text-muted-small">
+                  {formatDate(decision.created_at)}
+                </span>
+                <span>
+                  {decision.outcome === 'shown' ? 'Kept' : 'Left out'} by{' '}
+                  {decision.decided_by === 'ai'
+                    ? 'the AI'
+                    : decision.decided_by === 'rule'
+                      ? 'your rules'
+                      : decision.decided_by === 'person'
+                        ? 'you'
+                        : 'rules only (not checked by AI)'}
+                  : {decision.reason}
+                  {decision.is_current && ' (current)'}
+                </span>
               </li>
             ))}
           </ul>

@@ -156,6 +156,28 @@ describe('RunSummaryPage', () => {
     expect(screen.getByRole('button', { name: 'Hide details' })).toBeInTheDocument()
   })
 
+  it('test_US3_AS5_summary_counts_once', async () => {
+    renderPage()
+    await screen.findByRole('list', { name: 'How the search went' })
+    // the funnel once and one donut, nothing else repeating the counts
+    expect(screen.getAllByRole('list', { name: 'How the search went' })).toHaveLength(1)
+    expect(screen.getAllByRole('img')).toHaveLength(1)
+    expect(screen.getByRole('heading', { level: 1 }).parentElement?.textContent).not.toMatch(/[·•]/)
+  })
+
+  it('test_US3_AS3_no_nested_card', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await user.click(await screen.findByRole('button', { name: 'Show details' }))
+    await user.click(screen.getByText('Jobs left out (29)'))
+    const skipped = await screen.findByRole('list', { name: 'Skipped jobs' })
+    // rows inside the left-out card are divided by lines, not drawn as cards of their own
+    for (const item of within(skipped).getAllByRole('listitem')) {
+      expect(item).not.toHaveClass('bg-surface')
+      expect(item.textContent).not.toMatch(/[·•]/)
+    }
+  })
+
   it('has_back_and_search_history_at_the_top', async () => {
     renderPage()
     expect(await screen.findByRole('button', { name: 'Back' })).toBeInTheDocument()

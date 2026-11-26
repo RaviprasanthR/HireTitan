@@ -300,7 +300,7 @@ export function PasteJobDialog({ onClose }: { onClose: () => void }) {
             )}
           </Field>
         </div>
-        <fieldset className="ht-detail-card ht-section-record space-y-3">
+        <fieldset className="ht-detail-card space-y-3">
           <legend className="sr-only">Already applied or inquired</legend>
           <p className="ht-detail-heading !mb-0">Already applied or inquired?</p>
           <div className="flex flex-wrap gap-4 text-sm">

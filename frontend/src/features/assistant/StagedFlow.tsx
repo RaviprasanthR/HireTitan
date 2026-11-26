@@ -7,7 +7,7 @@ import { MikasaAvatar } from './MikasaAvatar'
 import { RefCard } from './RefCard'
 
 const field =
-  'w-full rounded-lg border border-white/10 bg-background px-2 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary/60'
+  'w-full rounded-lg border border-slate bg-background px-2 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary/60'
 
 const KINDS: { kind: DraftKindName; label: string }[] = [
   { kind: 'connection_request', label: 'LinkedIn connection message' },
@@ -24,7 +24,7 @@ function Ask({ children }: { children: React.ReactNode }) {
   return (
     <div className="mikasa-rise flex items-end gap-2">
       <MikasaAvatar />
-      <div className="min-w-0 max-w-[85%] rounded-2xl rounded-bl-md border border-white/[0.06] bg-background px-3 py-2 text-sm shadow-sm">
+      <div className="min-w-0 max-w-[85%] rounded-2xl rounded-bl-md border border-hairline bg-background px-3 py-2 text-sm">
         {children}
       </div>
     </div>
@@ -74,7 +74,7 @@ export function StagedFlow({
   return (
     <section
       aria-label="Job post"
-      className="flex flex-col gap-2 border-t border-white/[0.07] p-3 text-sm"
+      className="flex flex-col gap-2 border-t border-hairline p-3 text-sm"
     >
       {view.step === 'need_post' && (
         <form

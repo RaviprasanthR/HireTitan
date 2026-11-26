@@ -176,7 +176,7 @@ function ContactItem({ contact, companyId }: { contact: Contact; companyId: stri
             <IconButton
               title="Edit"
               label={`Edit ${contact.name}`}
-              tone="text-success hover:bg-success/20 hover:text-success"
+              tone="text-subtle hover:bg-raised hover:text-foreground"
               onClick={() => setEditing(true)}
             >
               <Pencil aria-hidden />
@@ -184,7 +184,7 @@ function ContactItem({ contact, companyId }: { contact: Contact; companyId: stri
             <IconButton
               title="Delete"
               label={`Delete ${contact.name}`}
-              tone="text-danger hover:bg-danger/20 hover:text-danger"
+              tone="text-subtle hover:bg-raised hover:text-danger"
               onClick={() => setConfirming(true)}
             >
               <Trash2 aria-hidden />
@@ -283,7 +283,7 @@ function NoteEditor({
           {apiError.message}
         </p>
       )}
-      <Button type="button" size="sm" disabled={save.isPending} onClick={() => save.mutate(body)} variant="success">
+      <Button type="button" size="sm" disabled={save.isPending} onClick={() => save.mutate(body)} variant="outline">
         Save note
       </Button>
       {save.isSuccess && (

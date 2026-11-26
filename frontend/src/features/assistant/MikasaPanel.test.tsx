@@ -162,6 +162,19 @@ describe('MikasaPanel', () => {
     expect(await screen.findByText(/Ask me about your jobs/)).toBeInTheDocument()
   })
 
+  it('test_US3_AS6_avatar_is_flat', async () => {
+    show()
+    const panel = screen.getByRole('complementary', { name: 'Mikasa' })
+    const avatar = panel.querySelector('header [aria-hidden].rounded-full') as HTMLElement
+    expect(avatar).toHaveClass('bg-primary')
+    expect(avatar.className).not.toMatch(/gradient|shadow/)
+    // the panel: one neutral shadow from the tokens, not a border plus a soft shadow
+    expect(panel).toHaveClass('shadow-[var(--ht-shadow-overlay)]')
+    expect(panel.className).not.toMatch(/(^|\s)border(\s|$)|shadow-2xl|shadow-black/)
+    // nothing in the panel uses raw white borders instead of the hairline tokens
+    expect(panel.querySelector('[class*="border-white"]')).toBeNull()
+  })
+
   it('FR022b_privacy_note_shown', async () => {
     show()
     await openTextBox(userEvent.setup())

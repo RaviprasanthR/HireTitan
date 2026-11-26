@@ -5,10 +5,12 @@ function Side({ job }: { job: JobCard }) {
   return (
     <div className="min-w-0 flex-1 space-y-1">
       <p className="font-medium">{job.title}</p>
-      <p className="text-sm text-muted-small">
-        {[job.company_name, job.location_text, job.posted_at ? formatDate(job.posted_at) : null]
+      <p className="flex flex-wrap gap-x-4 text-sm text-muted-small">
+        {[job.company_name, job.location_text, job.posted_at ? `Posted ${formatDate(job.posted_at)}` : null]
           .filter(Boolean)
-          .join(' · ')}
+          .map((fact, i) => (
+            <span key={`${i}:${fact}`}>{fact}</span>
+          ))}
       </p>
       {job.sources.map((source) => (
         <a
@@ -45,6 +47,7 @@ export function DuplicatesPanel() {
             <div className="flex gap-2">
               <Button
                 type="button"
+                variant="outline"
                 size="sm"
                 disabled={decide.isPending}
                 onClick={() => decide.mutate({ id: pair.id, action: 'merge' })}
@@ -53,7 +56,7 @@ export function DuplicatesPanel() {
               </Button>
               <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 disabled={decide.isPending}
                 onClick={() => decide.mutate({ id: pair.id, action: 'dismiss' })}

@@ -53,7 +53,7 @@ export function VersionView() {
               <p className="font-medium">{e.employer}</p>
               <p>{e.title}</p>
               <p className="text-sm text-muted-small">
-                {ym(e.start)} – {e.current ? 'Present' : ym(e.end)}
+                {ym(e.start)} to {e.current ? 'Present' : ym(e.end)}
               </p>
               <ul className="list-disc pl-5">
                 {e.bullets?.map((b, j) => (

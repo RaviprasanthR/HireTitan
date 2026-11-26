@@ -57,7 +57,7 @@ export function ConfirmCard({ card, onConfirm, onCancel }: Props) {
     <div
       role="group"
       aria-label="Confirm this change"
-      className="mikasa-rise my-2 ml-9 rounded-xl border border-warning/50 bg-background p-3 text-sm shadow-sm"
+      className="mikasa-rise my-2 ml-9 rounded-xl border border-warning/50 bg-background p-3 text-sm"
     >
       <p className="font-medium">{card.summary}</p>
       {open &&

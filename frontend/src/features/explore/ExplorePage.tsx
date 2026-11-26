@@ -135,7 +135,12 @@ export function JobCardItem({ job }: { job: JobCard }) {
   const panelId = useId()
   const source = job.sources[0]
   const href = postingLink(source?.url)
-  const where = [job.location_text, job.work_mode].filter(Boolean).join(' · ')
+  const location = job.location_text ?? ''
+  // the work mode only when the location does not already say it (FR-007)
+  const mode =
+    job.work_mode && !location.toLowerCase().includes(job.work_mode.toLowerCase())
+      ? job.work_mode
+      : ''
 
   return (
     <Fragment>
@@ -164,10 +169,17 @@ export function JobCardItem({ job }: { job: JobCard }) {
           )}
         </td>
         <td role="cell" data-label="Location" className="px-3 py-2">
-          {where || '—'}
+          {location || mode ? (
+            <>
+              {location && <span className="block">{location}</span>}
+              {mode && <span className="block text-muted-small">{mode}</span>}
+            </>
+          ) : (
+            <span className="text-muted-small">Not set</span>
+          )}
         </td>
         <td role="cell" data-label="Posted" className="px-3 py-2 whitespace-nowrap">
-          {job.posted_at ? formatDate(job.posted_at) : '—'}
+          {job.posted_at ? formatDate(job.posted_at) : <span className="text-muted-small">Not set</span>}
         </td>
         <td role="cell" data-label="Source" className="px-3 py-2">
           {source ? (
@@ -178,7 +190,7 @@ export function JobCardItem({ job }: { job: JobCard }) {
               )}
             </>
           ) : (
-            '—'
+            <span className="text-muted-small">Not set</span>
           )}
         </td>
         <td role="cell" className="px-3 py-2">
@@ -220,7 +232,6 @@ export function JobCardItem({ job }: { job: JobCard }) {
               <Section
                 title="Record it"
                 icon={CircleCheck}
-                tone="ht-section-record"
                 hint="Choose the resume you used or pick another date."
               >
                 <PipelineControl id={job.id} state={job.state} title={job.title} />

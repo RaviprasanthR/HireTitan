@@ -155,6 +155,36 @@ describe('PipelinePage', () => {
     expect(screen.queryByRole('list', { name: 'Your pipeline' })).not.toBeInTheDocument()
   })
 
+  it('test_US3_AS4_counts_shown_once', async () => {
+    renderPage()
+    const overview = await screen.findByRole('complementary', { name: 'Pipeline overview' })
+    // each stage count once in the flow; the one donut (Ravi, 2026-11-26) replaces the stage bar
+    expect(await within(overview).findAllByRole('list', { name: 'Your pipeline' })).toHaveLength(1)
+    expect(within(overview).getAllByRole('img')).toHaveLength(1)
+    expect(overview.querySelector('[data-segment]')).toBeNull()
+  })
+
+  it('test_FR024_in_pipeline_is_a_total', async () => {
+    renderPage()
+    const overview = await screen.findByRole('complementary', { name: 'Pipeline overview' })
+    const flow = await within(overview).findByRole('list', { name: 'Your pipeline' })
+    // a total beside the flow, not one of its steps
+    expect(within(flow).queryByText('In pipeline')).toBeNull()
+    const total = within(overview).getByText('In pipeline').parentElement as HTMLElement
+    expect(within(total).getByText('9')).toHaveClass('ht-figure')
+  })
+
+  it('test_FR008_empty_cell_says_not_set', async () => {
+    renderPage([{ ...applied('a', 'Bare', '2026-11-05'), sources: [] }])
+    const table = await screen.findByRole('table', { name: 'Pipeline jobs' })
+    const cells = within(within(table).getAllByRole('row')[1] as HTMLElement).getAllByRole('cell')
+    expect(cells[4]).toHaveTextContent('Not set')
+    expect(cells[5]).toHaveTextContent('Not set')
+    expect(table).not.toHaveTextContent('—')
+    // dates are figures
+    expect(within(cells[2] as HTMLElement).getByText('5 Nov 2026')).toHaveClass('ht-figure')
+  })
+
   it('US1 AS2 pipeline lists applied and inquired', async () => {
     const calls = renderPage()
 
@@ -691,11 +721,11 @@ describe('PipelinePage unsaved edits', () => {
       expect(resumeCell(row as HTMLElement)).toHaveTextContent('Backend_2025.pdf')
     })
 
-    it('US2 AS2 shows a dash without a resume', async () => {
+    it('US2 AS2 shows Not set without a resume (003 FR-008)', async () => {
       const [withNone, withoutField] = await rowsFor(none, undefined)
 
-      expect(resumeCell(withNone as HTMLElement)).toHaveTextContent('—')
-      expect(resumeCell(withoutField as HTMLElement)).toHaveTextContent('—')
+      expect(resumeCell(withNone as HTMLElement)).toHaveTextContent('Not set')
+      expect(resumeCell(withoutField as HTMLElement)).toHaveTextContent('Not set')
     })
 
     it('US2 AS4 shortens a long name and keeps the full name in a title', async () => {

@@ -12,7 +12,7 @@ function CopyDraft({ text }: { text: string }) {
   return (
     <button
       type="button"
-      className="mt-1 inline-flex items-center gap-1 rounded-md border border-white/10 px-2 py-0.5 text-xs hover:border-primary"
+      className="mt-1 inline-flex items-center gap-1 rounded-md border border-slate px-2 py-0.5 text-xs hover:border-primary"
       onClick={() => {
         void navigator.clipboard?.writeText(text).then(() => {
           setCopied(true)
@@ -49,7 +49,7 @@ export function RefCard({ refText }: { refText: string }) {
     return (
       <div
         data-testid="ref-card"
-        className="mikasa-rise my-1 rounded-xl border border-white/10 bg-background px-3 py-2 text-sm"
+        className="mikasa-rise my-1 rounded-xl border border-slate bg-background px-3 py-2 text-sm"
       >
         <span className="block font-medium">{title}</span>
         {subtitle && (

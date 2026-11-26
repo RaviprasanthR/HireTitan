@@ -113,7 +113,8 @@ export function PipelineControl({
       )}
       <Button
         type="button"
-        variant="success"
+        // in a list every row repeats it, so it is not the view's one primary (FR-010)
+        variant={compact ? 'outline' : 'success'}
         size="sm"
         disabled={blocked}
         aria-describedby={forId}

@@ -115,11 +115,11 @@ function Details({ id, colSpan }: { id: string; colSpan: number }) {
   )
 }
 
-/** The resume used: its name, cut to fit with the whole name on hover, or a dash. A removed
+/** The resume used: its name, cut to fit with the whole name on hover, or "Not set". A removed
  *  file's name is followed by a "(removed)" marker that is never cut off. */
 function ResumeCell({ resume }: { resume: JobCard['resume'] }) {
   const name = resumeName(resume)
-  if (name === '') return <>—</>
+  if (name === '') return <span className="text-muted-small">Not set</span>
   if (resume?.state !== 'removed')
     return (
       <span title={name} className="block max-w-[12rem] truncate">
@@ -160,7 +160,7 @@ function Row({ job, registry }: { job: JobCard; registry: UnsavedRegistry }) {
           </Link>
         </td>
         <td role="cell" data-label="Date" className="px-3 py-2">
-          {formatDay(job.applied_on ?? job.inquired_on)}
+          <span className="ht-figure">{formatDay(job.applied_on ?? job.inquired_on)}</span>
         </td>
         <td role="cell" data-label="Status" className="px-3 py-2">
           <StageChip stage={status.stage}>{status.label}</StageChip>
@@ -169,7 +169,11 @@ function Row({ job, registry }: { job: JobCard; registry: UnsavedRegistry }) {
           <ResumeCell resume={job.resume} />
         </td>
         <td role="cell" data-label="Source" className="px-3 py-2">
-          {source ? <Pill tone="grey">{sourceLabel(source.kind)}</Pill> : '—'}
+          {source ? (
+            <Pill tone="grey">{sourceLabel(source.kind)}</Pill>
+          ) : (
+            <span className="text-muted-small">Not set</span>
+          )}
         </td>
         <td role="cell" className="px-3 py-2">
           <div className="flex gap-1">

@@ -20,7 +20,7 @@ export function ChangeNotice({
   return (
     <div
       role="status"
-      className="mikasa-rise my-2 ml-9 flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-background/60 p-2 text-xs"
+      className="mikasa-rise my-2 ml-9 flex flex-wrap items-center gap-2 rounded-xl border border-slate bg-background/60 p-2 text-xs"
     >
       <span className="flex-1">{undone ? 'Undone.' : (change.summary ?? 'Done.')}</span>
       {canUndo && (

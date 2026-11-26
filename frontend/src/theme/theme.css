@@ -96,6 +96,11 @@ h1 {
   font-weight: 600;
   text-wrap: balance;
 }
+/* placeholders in the muted text role, never the browser's fainter default (SC-002) */
+::placeholder {
+  color: var(--ht-text-muted);
+  opacity: 1;
+}
 /* Figures (dates, counts, sizes): the mono face with aligned digits (FR-005). */
 .ht-figure {
   font-family: var(--font-mono);

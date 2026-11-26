@@ -190,7 +190,7 @@ export function AiSection() {
     <section
       id="ai-settings"
       aria-labelledby="ai-heading"
-      className="ht-detail-card ht-settings-ai space-y-4 scroll-mt-6"
+      className="ht-detail-card space-y-4 scroll-mt-6"
     >
       <header className="space-y-1">
         <h2 id="ai-heading" className="text-lg font-semibold">

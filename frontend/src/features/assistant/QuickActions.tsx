@@ -7,7 +7,7 @@ import { useJobChoices, useQuickActions, type QuickAction } from './api'
 import type { QuickStatus } from './changes'
 
 const field =
-  'w-full rounded-lg border border-white/10 bg-background px-2 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary/60'
+  'w-full rounded-lg border border-slate bg-background px-2 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary/60'
 
 const ICONS: Record<string, LucideIcon> = {
   linkedin_request: Link2,
@@ -46,7 +46,7 @@ export function QuickActions({
 }) {
   const actions = useQuickActions()
   return (
-    <div className="border-t border-white/[0.07] px-3 pb-3 pt-2" aria-label="Quick actions">
+    <div className="border-t border-hairline px-3 pb-3 pt-2" aria-label="Quick actions">
       <p className="mb-1.5 text-xs text-muted-small">What would you like to do?</p>
       <ul className="flex flex-wrap gap-1.5">
         {actions.data?.map((action, index) => {
@@ -131,7 +131,7 @@ function FormFrame({
   return (
     <form
       aria-label={title}
-      className="mikasa-rise flex flex-col gap-2 border-t border-white/[0.07] p-3 text-sm"
+      className="mikasa-rise flex flex-col gap-2 border-t border-hairline p-3 text-sm"
       onSubmit={(event) => {
         event.preventDefault()
         onSubmit()

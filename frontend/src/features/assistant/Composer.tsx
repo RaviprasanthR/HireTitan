@@ -25,7 +25,7 @@ export function Composer({ disabled, streaming, draft, onDraftChange, onSend, on
   }
   return (
     <form
-      className="flex flex-col gap-2 border-t border-white/[0.07] p-3"
+      className="flex flex-col gap-2 border-t border-hairline p-3"
       onSubmit={(event) => {
         event.preventDefault()
         send()
@@ -51,7 +51,7 @@ export function Composer({ disabled, streaming, draft, onDraftChange, onSend, on
           }
         }}
         aria-invalid={over || undefined}
-        className="w-full resize-none rounded-xl border border-white/10 bg-background p-2.5 text-sm outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-primary/60"
+        className="w-full resize-none rounded-xl border border-slate bg-background p-2.5 text-sm outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-primary/60"
       />
       <div className="flex items-center justify-between gap-2">
         <span className={over ? 'text-xs text-danger' : 'text-xs text-muted-small'}>

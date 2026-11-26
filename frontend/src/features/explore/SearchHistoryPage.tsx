@@ -18,13 +18,17 @@ export function SearchHistoryPage() {
         <ul aria-label="Searches" className="space-y-3">
           {items.map((run) => (
             <li key={run.id} className="space-y-1 rounded-lg bg-surface p-4">
-              <p className="font-medium">
-                {formatDate(run.started_at)} ·{' '}
-                {run.outcome ? (OUTCOME_LABELS[run.outcome] ?? run.outcome) : 'Running'}
+              {/* facts set apart by space, not dots (FR-007) */}
+              <p className="flex flex-wrap gap-x-4 font-medium">
+                <span>{formatDate(run.started_at)}</span>
+                <span>{run.outcome ? (OUTCOME_LABELS[run.outcome] ?? run.outcome) : 'Running'}</span>
               </p>
-              <p className="text-sm text-muted-small">
-                {run.jobs_found} jobs found · {run.added} jobs added · {run.companies_read} of{' '}
-                {run.companies_total} companies read
+              <p className="flex flex-wrap gap-x-4 text-sm text-muted-small">
+                <span>{run.jobs_found} jobs found</span>
+                <span>{run.added} jobs added</span>
+                <span>
+                  {run.companies_read} of {run.companies_total} companies read
+                </span>
               </p>
               {run.ai_note && <p className="text-sm text-warning">{run.ai_note}</p>}
               <Link to={`/search/runs/${run.id}`} className="text-sm text-link underline">

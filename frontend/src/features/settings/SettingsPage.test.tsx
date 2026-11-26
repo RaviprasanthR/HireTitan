@@ -49,6 +49,15 @@ describe('SettingsPage (US6)', () => {
     ])
   })
 
+  it('test_FR017_settings_uses_full_width', async () => {
+    renderPage()
+    const tabs = await screen.findByRole('navigation', { name: 'Settings tabs' })
+    const page = tabs.closest('section') as HTMLElement
+    // no narrow column inside the page, and the AI card has no stripe of its own
+    expect(page.querySelector('[class*="max-w-3xl"], [class*="max-w-2xl"]')).toBeNull()
+    expect(page.querySelector('.ht-settings-ai')).toBeNull()
+  })
+
   it('US6 AS1 plain Settings opens the AI tab', async () => {
     renderPage()
 

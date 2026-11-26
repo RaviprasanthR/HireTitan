@@ -99,7 +99,7 @@ function Message({ message, acts }: { message: StoredMessage; acts: Acts }) {
   if (message.author === 'person') {
     return (
       <>
-        <div className="mikasa-rise ml-10 self-end whitespace-pre-wrap rounded-2xl rounded-br-md bg-primary px-3 py-2 text-sm text-primary-foreground shadow-sm">
+        <div className="mikasa-rise ml-10 self-end whitespace-pre-wrap rounded-2xl rounded-br-md bg-primary px-3 py-2 text-sm text-primary-foreground">
           {message.text}
         </div>
         <Outcomes
@@ -113,7 +113,7 @@ function Message({ message, acts }: { message: StoredMessage; acts: Acts }) {
   return (
     <div className="mikasa-rise flex items-end gap-2">
       <MikasaAvatar />
-      <div className="min-w-0 max-w-[85%] rounded-2xl rounded-bl-md border border-white/[0.06] bg-background px-3 py-2 text-sm shadow-sm">
+      <div className="min-w-0 max-w-[85%] rounded-2xl rounded-bl-md border border-hairline bg-background px-3 py-2 text-sm">
         {message.text && <ReplyText text={message.text} />}
         {message.status === 'stopped' && <p className="text-xs text-muted-small">Stopped.</p>}
         {message.status === 'failed' && (
@@ -264,9 +264,9 @@ export function MikasaPanel({ onClose }: { onClose: () => void }) {
   return (
     <aside
       aria-label="Mikasa"
-      className="mikasa-pop fixed bottom-[calc(var(--ht-bottom-bar)+5rem)] right-5 z-40 flex h-[min(640px,calc(100dvh-var(--ht-bottom-bar)-9rem))] md:bottom-24 md:h-[min(640px,calc(100dvh-8rem))] w-[min(420px,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-2xl border border-white/10 bg-[var(--ht-surface)] shadow-2xl shadow-black/50 max-sm:inset-x-2 max-sm:w-auto"
+      className="mikasa-pop fixed bottom-[calc(var(--ht-bottom-bar)+5rem)] right-5 z-40 flex h-[min(640px,calc(100dvh-var(--ht-bottom-bar)-9rem))] md:bottom-24 md:h-[min(640px,calc(100dvh-8rem))] w-[min(420px,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-2xl bg-surface shadow-[var(--ht-shadow-overlay)] max-sm:inset-x-2 max-sm:w-auto"
     >
-      <header className="flex items-center justify-between gap-2 border-b border-white/[0.07] px-3 py-2.5">
+      <header className="flex items-center justify-between gap-2 border-b border-hairline px-3 py-2.5">
         <div className="flex items-center gap-2.5">
           <MikasaAvatar className="size-9" />
           <div>
@@ -322,13 +322,13 @@ export function MikasaPanel({ onClose }: { onClose: () => void }) {
         ))}
         {live && (
           <>
-            <div className="mikasa-rise ml-10 self-end whitespace-pre-wrap rounded-2xl rounded-br-md bg-primary px-3 py-2 text-sm text-primary-foreground shadow-sm">
+            <div className="mikasa-rise ml-10 self-end whitespace-pre-wrap rounded-2xl rounded-br-md bg-primary px-3 py-2 text-sm text-primary-foreground">
               {live.person}
             </div>
             <div className="mikasa-rise flex items-end gap-2">
               <MikasaAvatar />
               <div
-                className="min-w-0 max-w-[85%] rounded-2xl rounded-bl-md border border-white/[0.06] bg-background px-3 py-2 text-sm shadow-sm"
+                className="min-w-0 max-w-[85%] rounded-2xl rounded-bl-md border border-hairline bg-background px-3 py-2 text-sm"
                 data-testid="live-reply"
               >
                 {live.text ? (

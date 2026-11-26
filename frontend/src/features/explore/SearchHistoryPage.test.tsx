@@ -60,6 +60,8 @@ describe('SearchHistoryPage', () => {
     expect(items[0]).toHaveTextContent('3 jobs added')
     expect(items[1]).toHaveTextContent('Finished')
     expect(items[1]).not.toHaveTextContent(/cost|\$/i)
+    // test_FR007_search_history_meta_without_dots
+    for (const item of items) expect(item.textContent).not.toMatch(/[·•]/)
     expect(within(items[0] as HTMLElement).getByRole('link', { name: /summary/i })).toHaveAttribute(
       'href',
       '/search/runs/new',

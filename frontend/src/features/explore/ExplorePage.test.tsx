@@ -281,6 +281,35 @@ describe('ExplorePage', () => {
     )
   })
 
+  it('test_US3_AS2_meta_without_dots_or_repeats', async () => {
+    renderPage({
+      jobs: [
+        card('1', 'Backend Engineer', { location_text: 'Remote, India', work_mode: 'remote' }),
+        card('2', 'Data Engineer', { location_text: null, work_mode: null, posted_at: null, sources: [] }),
+      ],
+    })
+    const [first, second] = await jobRows()
+    const where = within(first as HTMLElement).getAllByRole('cell')[2] as HTMLElement
+    expect(where).toHaveTextContent('Remote, India')
+    expect(where.textContent).not.toMatch(/[·•]/)
+    expect(where.textContent?.match(/remote/gi)).toHaveLength(1)
+    // an empty value reads "Not set" (FR-008)
+    const empty = within(second as HTMLElement).getAllByRole('cell')
+    expect(empty[2]).toHaveTextContent('Not set')
+    expect(empty[3]).toHaveTextContent('Not set')
+    expect(empty[4]).toHaveTextContent('Not set')
+  })
+
+  it('test_FR010_one_primary_per_view', async () => {
+    renderPage({ jobs: [card('1', 'Backend Engineer'), card('2', 'Data Engineer')] })
+    await jobRows()
+    await screen.findByRole('button', { name: 'Search now' })
+    const primaries = document.querySelectorAll(
+      '[data-variant="default"], [data-variant="success"]',
+    )
+    expect([...primaries].map((b) => b.textContent)).toEqual(['Search now'])
+  })
+
   it('US1_AS1_shows_search_now_once_rules_are_approved', async () => {
     renderPage({ jobs: [] })
     expect(await screen.findByRole('button', { name: 'Search now' })).toBeInTheDocument()
