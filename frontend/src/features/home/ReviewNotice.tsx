@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router'
 import { apiFetch } from '@/api/client'
 
-/** "N items need your review" above the Home tabs; nothing when nothing waits. */
+/** "N items need your review" above the Jobs tabs; nothing when nothing waits. */
 export function ReviewNotice() {
   const query = useQuery({
     queryKey: ['review-items'],

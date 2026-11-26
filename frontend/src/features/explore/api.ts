@@ -192,13 +192,13 @@ export function useStopSearch() {
   })
 }
 
+/** Ask the AI to check one job's fit again (runs in the background). */
+export const recheckJob = (id: string) =>
+  apiFetch<{ run_id: string }>(`/jobs/${id}/recheck`, { method: 'POST' })
+
 export function useRecheck() {
   const refresh = useRefreshing()
-  return useMutation({
-    mutationFn: (id: string) =>
-      apiFetch<{ run_id: string }>(`/jobs/${id}/recheck`, { method: 'POST' }),
-    onSuccess: refresh,
-  })
+  return useMutation({ mutationFn: recheckJob, onSuccess: refresh })
 }
 
 export function useRestore() {

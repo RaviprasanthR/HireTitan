@@ -145,9 +145,10 @@ describe('JobDetailPage', () => {
     ).toBeInTheDocument()
     expect(screen.getByText(/Build APIs\./)).toBeInTheDocument()
     expect(screen.getByText('Matches your Python skills')).toBeInTheDocument()
-    const original = screen.getByRole('link', { name: 'Open original posting' })
+    const original = screen.getByRole('link', { name: 'Open posting (opens in a new tab)' })
     expect(original).toHaveAttribute('href', 'https://jobs.example.com/acme/1')
     expect(original).toHaveAttribute('rel', expect.stringContaining('noopener'))
+    expect(original).toHaveAttribute('target', '_blank')
     const sources = screen.getByRole('list', { name: 'Sources' })
     expect(within(sources).getAllByRole('link')).toHaveLength(2)
     expect(screen.getByRole('link', { name: /first found/i })).toHaveAttribute(
@@ -212,15 +213,15 @@ describe('JobDetailPage', () => {
       }),
     )
 
-    await user.click(await screen.findByRole('button', { name: /check again/i }))
+    await user.click(await screen.findByRole('button', { name: /re-check fit/i }))
 
     await waitFor(() => expect(calls.some((c) => c.path === '/jobs/j1/recheck')).toBe(true))
   })
 
-  it('does_not_unwrap_the_original_link_when_there_is_none', async () => {
+  it('test_FR020_no_open_posting_without_url', async () => {
     renderPage(detail({ canonical_url: null, sources: [] }))
     await screen.findByRole('heading', { level: 1, name: 'Backend Engineer' })
-    expect(screen.queryByRole('link', { name: 'Open original posting' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Open posting/ })).not.toBeInTheDocument()
   })
 
   it('US5_AS1_i_applied_marks_the_job_with_today', async () => {

@@ -18,18 +18,13 @@ import { ReviewNotice } from '@/features/home/ReviewNotice'
 import { InterviewPanel } from '@/features/jobs/interview/InterviewPanel'
 import { LeaveGuard } from '@/features/jobs/interview/LeaveGuard'
 import { roundStatus } from '@/features/jobs/interview/roundStatus'
+import { StageChip } from '@/components/StageChip'
 import { useUnsavedRegistry, type UnsavedRegistry } from '@/features/jobs/interview/unsaved'
 import { EditJobDialog } from '@/features/jobs/EditJobDialog'
 import { resumeName } from '@/features/jobs/resume/resumeApi'
 import { HomeTabs } from './HomeTabs'
 import { Pill } from './Pill'
-import { SOURCE_TONE, type Tone } from './pillTones'
 import { formatDay, sourceLabel, usePipelineJobs, useJob, type JobCard } from './api'
-
-const STATUS_TONE: Record<string, Tone> = {
-  Applied: 'green',
-  Inquired: 'blue',
-}
 
 const COLUMNS = ['Company', 'Role', 'Date', 'Status', 'Resume', 'Source'] as const
 
@@ -81,9 +76,7 @@ function Details({ id, colSpan }: { id: string; colSpan: number }) {
                 key={`${source.kind}-${source.url}`}
                 className="flex flex-wrap items-center gap-2"
               >
-                <Pill tone={SOURCE_TONE[sourceLabel(source.kind).toLowerCase()] ?? 'grey'}>
-                  {sourceLabel(source.kind)}
-                </Pill>
+                <Pill tone="grey">{sourceLabel(source.kind)}</Pill>
                 <a
                   href={source.url}
                   target="_blank"
@@ -149,8 +142,8 @@ function Row({ job, registry }: { job: JobCard; registry: UnsavedRegistry }) {
   const status = job.interview
     ? roundStatus(job.interview.state as 'scheduled' | 'cleared' | 'failed', job.interview.round)
     : job.state === 'inquired'
-      ? { label: 'Inquired', tone: STATUS_TONE.Inquired }
-      : { label: 'Applied', tone: STATUS_TONE.Applied }
+      ? { label: 'Inquired', stage: 'inquired' as const }
+      : { label: 'Applied', stage: 'applied' as const }
   return (
     <Fragment>
       <tr role="row" className="ht-row border-t border-divider align-top">
@@ -170,19 +163,13 @@ function Row({ job, registry }: { job: JobCard; registry: UnsavedRegistry }) {
           {formatDay(job.applied_on ?? job.inquired_on)}
         </td>
         <td role="cell" data-label="Status" className="px-3 py-2">
-          <Pill tone={status.tone ?? 'grey'}>{status.label}</Pill>
+          <StageChip stage={status.stage}>{status.label}</StageChip>
         </td>
         <td role="cell" data-label="Resume" className="px-3 py-2">
           <ResumeCell resume={job.resume} />
         </td>
         <td role="cell" data-label="Source" className="px-3 py-2">
-          {source ? (
-            <Pill tone={SOURCE_TONE[sourceLabel(source.kind).toLowerCase()] ?? 'grey'}>
-              {sourceLabel(source.kind)}
-            </Pill>
-          ) : (
-            '—'
-          )}
+          {source ? <Pill tone="grey">{sourceLabel(source.kind)}</Pill> : '—'}
         </td>
         <td role="cell" className="px-3 py-2">
           <div className="flex gap-1">

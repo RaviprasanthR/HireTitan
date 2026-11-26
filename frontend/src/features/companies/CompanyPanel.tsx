@@ -160,7 +160,7 @@ function ContactItem({ contact, companyId }: { contact: Contact; companyId: stri
           <p className="font-semibold text-heading">{contact.name}</p>
           {(contact.role || contact.confidence) && (
             <p className="flex flex-wrap gap-1.5">
-              {contact.role && <span className="ht-pill ht-pill-blue">{contact.role}</span>}
+              {contact.role && <span className="ht-pill ht-pill-grey">{contact.role}</span>}
               {contact.confidence && (
                 <span
                   className={`ht-pill ht-pill-${CONFIDENCE_TONE[contact.confidence] ?? 'grey'}`}

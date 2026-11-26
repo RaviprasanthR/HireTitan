@@ -27,7 +27,7 @@ const PAUSE_MESSAGES: Record<string, string> = {
   key_rejected:
     'The AI provider rejected your key. Fix OPENAI_API_KEY in your .env file and restart; this will continue by itself.',
   out_of_credit:
-    'Your AI account is out of credit. Add credit with your provider, then press Check again in the banner at the top; this will continue.',
+    'Your AI account is out of credit. Add credit with your provider, then press Test key in the banner at the top; this will continue.',
 }
 
 const FINAL = new Set(['done', 'failed', 'cancelled'])

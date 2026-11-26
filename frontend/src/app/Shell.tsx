@@ -1,4 +1,4 @@
-import { Building2, House, Settings, User } from 'lucide-react'
+import { Briefcase, Building2, Settings, User } from 'lucide-react'
 import { Link, Outlet, useLocation } from 'react-router'
 import { AiBanner } from './AiBanner'
 import { UndoToast } from '@/features/jobs/UndoToast'
@@ -7,7 +7,7 @@ import { AppName } from '@/components/AppName'
 import { cn } from '@/lib/utils'
 
 const sections = [
-  { to: '/', label: 'Home', end: true, Icon: House, also: ['/explore'] },
+  { to: '/', label: 'Jobs', end: true, Icon: Briefcase, also: ['/explore'] },
   { to: '/companies', label: 'Companies', end: false, Icon: Building2 },
   { to: '/profile', label: 'Profile', end: false, Icon: User },
   { to: '/settings', label: 'Settings', end: false, Icon: Settings },
@@ -25,7 +25,7 @@ export function Shell() {
           className="ht-bottom-bar fixed inset-x-0 bottom-0 z-40 flex items-center border-t border-[var(--ht-hairline)] bg-[var(--ht-surface)] md:static md:z-auto md:gap-1 md:border-0 md:bg-transparent"
         >
           {sections.map(({ to, label, end, Icon, ...rest }) => {
-            // Home also covers the Explore tab, which is not under "/" as far as a path goes
+            // Jobs also covers the Explore tab, which is not under "/" as far as a path goes
             const also: readonly string[] = 'also' in rest ? rest.also : []
             const active = end
               ? pathname === to || also.includes(pathname)

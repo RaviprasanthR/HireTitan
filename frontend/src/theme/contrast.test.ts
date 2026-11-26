@@ -118,7 +118,7 @@ describe('theme', () => {
       expect(contrastRatio(fg, background), `pill ${tone}`).toBeGreaterThanOrEqual(4.5)
       seen.push(tone as string)
     }
-    for (const tone of ['green', 'blue', 'yellow', 'teal', 'red']) expect(seen).toContain(tone)
+    for (const tone of ['green', 'yellow', 'red', 'purple', 'grey']) expect(seen).toContain(tone)
   })
 
   it('contrast_ratio_matches_known_values', () => {

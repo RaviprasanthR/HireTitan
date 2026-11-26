@@ -364,7 +364,7 @@ describe('CompaniesPage', () => {
       renderPage(all)
       await screen.findByRole('list', { name: 'Companies' })
 
-      expect(within(rowOf('Busy')).getByText('Applied')).toBeInTheDocument()
+      expect(within(rowOf('Busy')).getByText('Applied')).toHaveAttribute('data-stage', 'applied')
       expect(within(rowOf('Quiet')).queryByText('Applied')).toBeNull()
     })
 
@@ -377,7 +377,8 @@ describe('CompaniesPage', () => {
       expect(chip).toBeInTheDocument()
       expect(within(rowOf('Asked')).queryByText('Applied')).toBeNull()
       const applied = within(rowOf('Busy')).getByText('Applied')
-      expect(chip.className).not.toEqual(applied.className) // distinct colours
+      expect(chip).toHaveAttribute('data-stage', 'inquired') // each in its own stage colour
+      expect(applied).toHaveAttribute('data-stage', 'applied')
     })
 
     it('FR009 applied wins over inquired', async () => {

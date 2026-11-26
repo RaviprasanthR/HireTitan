@@ -15,6 +15,7 @@ import {
 import { CharCounter } from './CharCounter'
 import { QuestionList } from './QuestionList'
 import { roundStatus } from './roundStatus'
+import { StageChip } from '@/components/StageChip'
 import { useReportUnsaved } from './unsaved'
 import { fromLocalInput, toLocalInput } from './time'
 
@@ -95,7 +96,7 @@ export function RoundCard({
       >
         <div className="flex flex-wrap items-center gap-3">
           <h3 className="text-sm font-semibold">Round {round.number}</h3>
-          <span className={`ht-pill ht-pill-${status.tone}`}>{status.label}</span>
+          <StageChip stage={status.stage}>{status.label}</StageChip>
           {!round.scheduled_at && <span className="text-sm text-muted-small">Date not set</span>}
         </div>
         <div className="grid gap-2 sm:grid-cols-2">

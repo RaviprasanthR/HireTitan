@@ -52,6 +52,8 @@ type Setup = {
   next?: string | null
   url?: string
   files?: unknown[]
+  /** ids whose re-check the server refuses */
+  recheckFails?: string[]
 }
 
 function renderPage({
@@ -60,6 +62,7 @@ function renderPage({
   next = null,
   url = '/',
   files = [],
+  recheckFails = [],
 }: Setup = {}) {
   const calls = stubApi((call: Call) => {
     if (call.path === '/status') return status
@@ -76,7 +79,7 @@ function renderPage({
     if (call.path.endsWith('/interview')) return undefined
     if (call.path.endsWith('/recheck'))
       return new Response('{"run_id":"r1"}', {
-        status: 202,
+        status: recheckFails.some((id) => call.path === `/jobs/${id}/recheck`) ? 500 : 202,
         headers: { 'Content-Type': 'application/json' },
       })
     return undefined
@@ -142,6 +145,46 @@ describe('ExplorePage', () => {
     expect(table.parentElement).toHaveClass('ht-table-scroll')
   })
 
+  it('test_US2_AS3_title_opens_job_page', async () => {
+    renderPage({ jobs: [card('1', 'Backend Engineer')] })
+    const table = await screen.findByRole('table', { name: 'Jobs' })
+    const title = within(table).getByRole('link', { name: 'Backend Engineer' })
+    expect(title).toHaveAttribute('href', '/jobs/1')
+    expect(title).not.toHaveAttribute('target')
+  })
+
+  it('a click on the title opens the job page, not the row', async () => {
+    const user = userEvent.setup()
+    renderPage({ jobs: [card('1', 'Backend Engineer')] })
+    const table = await screen.findByRole('table', { name: 'Jobs' })
+    await user.click(within(table).getByRole('link', { name: 'Backend Engineer' }))
+    expect(screen.queryByText(/About Backend Engineer/)).toBeNull()
+    expect(
+      within(table).getByRole('button', { name: /show details of backend engineer/i }),
+    ).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  it('test_US2_AS4_open_posting_new_tab_and_announced', async () => {
+    renderPage({ jobs: [card('1', 'Backend Engineer')] })
+    const table = await screen.findByRole('table', { name: 'Jobs' })
+    const posting = within(table).getByRole('link', {
+      name: 'Open posting for Backend Engineer (opens in a new tab)',
+    })
+    expect(posting).toHaveAttribute('href', 'https://jobs.example.com/1')
+    expect(posting).toHaveAttribute('target', '_blank')
+    expect(posting).toHaveAttribute('rel', 'noreferrer noopener')
+    expect(posting.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
+  })
+
+  it('test_FR020_no_open_posting_without_url', async () => {
+    renderPage({
+      jobs: [card('1', 'Backend Engineer', { sources: [{ kind: 'paste', url: null }] })],
+    })
+    const table = await screen.findByRole('table', { name: 'Jobs' })
+    expect(within(table).getByRole('link', { name: 'Backend Engineer' })).toBeInTheDocument()
+    expect(within(table).queryByRole('link', { name: /Open posting/ })).toBeNull()
+  })
+
   it('test_FR016_detail_row_follows_its_card', async () => {
     const user = userEvent.setup()
     renderPage({ jobs: [card('1', 'Backend Engineer')] })
@@ -160,7 +203,7 @@ describe('ExplorePage', () => {
   it('US1 AS1 the Explore tab is lit on its own page', async () => {
     renderPage({ url: '/explore' })
 
-    const tabs = await screen.findByRole('navigation', { name: 'Home tabs' })
+    const tabs = await screen.findByRole('navigation', { name: 'Jobs tabs' })
 
     expect(within(tabs).getByRole('link', { name: 'Explore' })).toHaveAttribute(
       'aria-current',
@@ -184,10 +227,8 @@ describe('ExplorePage', () => {
     expect(items[0]).toHaveTextContent('remote')
     expect(items[0]).toHaveTextContent('Matches your Python skills')
     expect(
-      within(items[0] as HTMLElement).getByRole('link', {
-        name: /backend engineer/i,
-      }),
-    ).toHaveAttribute('href', 'https://jobs.example.com/1')
+      within(items[0] as HTMLElement).getByRole('link', { name: 'Backend Engineer' }),
+    ).toHaveAttribute('href', '/jobs/1')
   })
 
   it('US1_AS10_empty_state_offers_search', async () => {
@@ -257,37 +298,74 @@ describe('ExplorePage', () => {
     expect(screen.queryByRole('list', { name: 'Setup checklist' })).not.toBeInTheDocument()
   })
 
-  it('FR028_not_checked_job_offers_check_again', async () => {
-    const user = userEvent.setup()
-    const calls = renderPage({
-      jobs: [
-        card('1', 'Unchecked Role', {
-          decision: {
-            outcome: 'shown',
-            decided_by: 'rules_only_fallback',
-            reason: 'not checked by AI',
-          },
-        }),
-        card('2', 'Judged Role'),
-      ],
+  const unchecked = (id: string, title: string) =>
+    card(id, title, {
+      decision: {
+        outcome: 'shown',
+        decided_by: 'rules_only_fallback',
+        reason: 'not checked by AI: no description yet',
+      },
     })
-    const items = await jobRows()
 
-    expect(items[0]).toHaveTextContent('not checked by AI')
-    await user.click(
-      within(items[0] as HTMLElement).getByRole('button', {
-        name: /check again/i,
-      }),
-    )
+  it('test_FR022_one_notice_with_count', async () => {
+    renderPage({ jobs: [unchecked('1', 'One'), unchecked('2', 'Two'), card('3', 'Judged')] })
+    const notice = await screen.findByRole('region', { name: 'Jobs not checked for fit' })
+    expect(notice).toHaveTextContent('2 jobs could not be checked for fit: no description yet')
+    expect(within(notice).getAllByRole('button', { name: 'Re-check fit' })).toHaveLength(1)
+  })
 
-    await waitFor(() =>
-      expect(calls.some((c) => c.method === 'POST' && c.path === '/jobs/1/recheck')).toBe(true),
-    )
+  it('test_FR022_recheck_runs_each_job_in_turn', async () => {
+    const user = userEvent.setup()
+    const calls = renderPage({ jobs: [unchecked('1', 'One'), unchecked('2', 'Two')] })
+    const notice = await screen.findByRole('region', { name: 'Jobs not checked for fit' })
+    await user.click(within(notice).getByRole('button', { name: 'Re-check fit' }))
+
+    // wait for the finished message, not the one shown while it runs
+    expect(await within(notice).findByText(/^Asked the AI to check 2 jobs/)).toBeInTheDocument()
+    const posts = calls.filter((c) => c.method === 'POST' && c.path.endsWith('/recheck'))
+    expect(posts.map((c) => c.path)).toEqual(['/jobs/1/recheck', '/jobs/2/recheck'])
+  })
+
+  it('the notice keeps its live lines in the page and the button keeps focus while it runs', async () => {
+    const user = userEvent.setup()
+    renderPage({ jobs: [unchecked('1', 'One'), unchecked('2', 'Two')] })
+    const notice = await screen.findByRole('region', { name: 'Jobs not checked for fit' })
+    // a live region must exist before its text changes, or screen readers miss it (4.1.3)
+    expect(within(notice).getByRole('status')).toBeEmptyDOMElement()
+    expect(within(notice).getByRole('alert')).toBeEmptyDOMElement()
+
+    const button = within(notice).getByRole('button', { name: 'Re-check fit' })
+    await user.click(button)
+    expect(button).not.toBeDisabled() // aria-disabled, so focus is not dropped
+    expect(button).toHaveFocus()
+    await within(notice).findByText(/^Asked the AI to check 2 jobs/)
+  })
+
+  it('test_FR022_rows_have_no_recheck_button', async () => {
+    renderPage({ jobs: [unchecked('1', 'One')] })
+    const [row] = await jobRows()
+    // the reason stays as quiet text; the one action is in the notice
+    expect(row).toHaveTextContent('not checked by AI: no description yet')
+    expect(within(row as HTMLElement).queryByRole('button', { name: /re-check/i })).toBeNull()
+  })
+
+  it('test_FR022_partial_failure_reported', async () => {
+    const user = userEvent.setup()
+    renderPage({ jobs: [unchecked('1', 'One'), unchecked('2', 'Two')], recheckFails: ['2'] })
+    const notice = await screen.findByRole('region', { name: 'Jobs not checked for fit' })
+    await user.click(within(notice).getByRole('button', { name: 'Re-check fit' }))
+
     expect(
-      within(items[1] as HTMLElement).queryByRole('button', {
-        name: /check again/i,
-      }),
-    ).not.toBeInTheDocument()
+      await within(notice).findByText(
+        '1 of 2 jobs could not be sent for a check. Try again later.',
+      ),
+    ).toHaveAttribute('role', 'alert')
+  })
+
+  it('without unchecked jobs there is no notice', async () => {
+    renderPage({ jobs: [card('1', 'Judged')] })
+    await jobRows()
+    expect(screen.queryByRole('region', { name: 'Jobs not checked for fit' })).toBeNull()
   })
 
   it('FR030_filters_and_sort', async () => {
@@ -447,19 +525,7 @@ describe('ExplorePage', () => {
     expect(screen.getByText(/About Backend Engineer: build services/)).toBeInTheDocument()
   })
 
-  it('US5_AS2_the_title_opens_the_posting_in_a_new_tab_and_leaves_the_row_closed', async () => {
-    const user = userEvent.setup()
-    renderPage({ jobs: [card('1', 'Backend Engineer')] })
-
-    const title = await screen.findByRole('link', { name: 'Backend Engineer' })
-    expect(title).toHaveAttribute('href', 'https://jobs.example.com/1')
-    expect(title).toHaveAttribute('target', '_blank')
-    expect(title).toHaveAttribute('rel', expect.stringContaining('noopener'))
-    await user.click(title)
-    expect(screen.queryByText(/About Backend Engineer/)).not.toBeInTheDocument()
-  })
-
-  it('US5_AS3_the_first_found_source_is_the_title_link', async () => {
+  it('US5_AS3_the_first_found_source_is_the_posting_link', async () => {
     renderPage({
       jobs: [
         card('1', 'Backend Engineer', {
@@ -470,13 +536,12 @@ describe('ExplorePage', () => {
         }),
       ],
     })
-    expect(await screen.findByRole('link', { name: 'Backend Engineer' })).toHaveAttribute(
-      'href',
-      'https://acme.example.com/first',
-    )
+    expect(
+      await screen.findByRole('link', { name: /^Open posting for Backend Engineer/ }),
+    ).toHaveAttribute('href', 'https://acme.example.com/first')
   })
 
-  it('US5_AS4_a_job_with_no_link_has_a_plain_title', async () => {
+  it('US5_AS4_a_job_with_no_safe_link_has_no_posting_link', async () => {
     renderPage({
       jobs: [
         card('1', 'Backend Engineer', { sources: [] }),
@@ -484,9 +549,10 @@ describe('ExplorePage', () => {
       ],
     })
     expect(await screen.findByText('Backend Engineer')).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Backend Engineer' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Open posting for Backend/ })).toBeNull()
     // a link that is not http(s) is never made into a link
-    expect(screen.queryByRole('link', { name: 'Data Engineer' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Open posting for Data/ })).toBeNull()
+    expect(screen.queryByRole('link', { name: /javascript/ })).toBeNull()
   })
 
   it('US5_AS5_the_keyboard_opens_and_closes_a_row_and_it_is_announced', async () => {
@@ -520,13 +586,6 @@ describe('ExplorePage', () => {
     await waitFor(() =>
       expect(calls.some((c) => c.method === 'POST' && c.path === '/jobs/1/applied')).toBe(true),
     )
-  })
-
-  it('FR028_explore_no_longer_links_to_the_job_page', async () => {
-    renderPage({ jobs: [card('1', 'Backend Engineer'), card('2', 'Data Engineer')] })
-    await screen.findByText('Data Engineer')
-    const links = screen.getAllByRole('link').map((a) => a.getAttribute('href') ?? '')
-    expect(links.filter((href) => href.startsWith('/jobs/'))).toEqual([])
   })
 
   it('FR019 Email alerts filter', async () => {

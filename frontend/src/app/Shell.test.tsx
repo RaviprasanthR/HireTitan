@@ -46,16 +46,16 @@ describe('Shell', () => {
     const nav = await screen.findByRole('navigation', { name: 'Main' })
     const links = within(nav).getAllByRole('link')
     expect(links.map((link) => link.textContent)).toEqual([
-      'Home',
+      'Jobs',
       'Companies',
       'Profile',
       'Settings',
     ])
   })
 
-  it('Home opens on the In pipeline tab, and Explore lives at /explore with Home still lit', async () => {
+  it('Jobs opens on the In pipeline tab, and Explore lives at /explore with Jobs still lit', async () => {
     renderAt('/')
-    const tabs = await screen.findByRole('navigation', { name: 'Home tabs' })
+    const tabs = await screen.findByRole('navigation', { name: 'Jobs tabs' })
     expect(within(tabs).getByRole('link', { name: 'In pipeline' })).toHaveAttribute(
       'aria-current',
       'page',
@@ -63,21 +63,21 @@ describe('Shell', () => {
     expect(within(tabs).getByRole('link', { name: 'Explore' })).toHaveAttribute('href', '/explore')
   })
 
-  it('the Explore tab keeps Home active in the menu', async () => {
+  it('the Explore tab keeps Jobs active in the menu', async () => {
     renderAt('/explore')
-    const tabs = await screen.findByRole('navigation', { name: 'Home tabs' })
+    const tabs = await screen.findByRole('navigation', { name: 'Jobs tabs' })
     expect(within(tabs).getByRole('link', { name: 'Explore' })).toHaveAttribute(
       'aria-current',
       'page',
     )
     const main = screen.getByRole('navigation', { name: 'Main' })
-    expect(within(main).getByRole('link', { name: 'Home' })).toHaveAttribute('aria-current', 'page')
+    expect(within(main).getByRole('link', { name: 'Jobs' })).toHaveAttribute('aria-current', 'page')
   })
 
   it('US1 AS4 an old applied link opens the pipeline tab', async () => {
     renderAt('/applied')
 
-    const tabs = await screen.findByRole('navigation', { name: 'Home tabs' })
+    const tabs = await screen.findByRole('navigation', { name: 'Jobs tabs' })
 
     expect(within(tabs).getByRole('link', { name: 'In pipeline' })).toHaveAttribute(
       'aria-current',
@@ -95,6 +95,24 @@ describe('Shell', () => {
     expect(screen.getByRole('main')).toHaveClass('overflow-y-auto')
   })
 
+  it('test_FR021a_nav_says_jobs', async () => {
+    renderAt('/explore')
+    const nav = await screen.findByRole('navigation', { name: 'Main' })
+    expect(within(nav).getByRole('link', { name: 'Jobs' })).toHaveAttribute('aria-current', 'page')
+    expect(await screen.findByRole('heading', { name: 'Jobs', level: 1 })).toBeInTheDocument()
+    expect(screen.getByRole('navigation', { name: 'Jobs tabs' })).toBeInTheDocument()
+  })
+
+  it('test_FR021a_no_home_label', async () => {
+    for (const path of ['/', '/explore']) {
+      const { unmount } = renderAt(path)
+      await screen.findByRole('navigation', { name: 'Main' })
+      expect(screen.queryByRole('link', { name: 'Home' })).toBeNull()
+      expect(screen.queryByRole('heading', { name: 'Home' })).toBeNull()
+      unmount()
+    }
+  })
+
   it('test_US1_AS1_one_main_nav_with_four_links', async () => {
     renderAt('/')
     const nav = await screen.findByRole('navigation', { name: 'Main' })
@@ -104,7 +122,7 @@ describe('Shell', () => {
       within(nav)
         .getAllByRole('link')
         .map((a) => a.textContent),
-    ).toEqual(['Home', 'Companies', 'Profile', 'Settings'])
+    ).toEqual(['Jobs', 'Companies', 'Profile', 'Settings'])
   })
 
   it('test_US1_AS5_dock_uses_bottom_bar_offset', async () => {
@@ -248,7 +266,7 @@ describe('Shell', () => {
       'aria-current',
       'page',
     )
-    expect(within(nav).getByRole('link', { name: 'Home' })).not.toHaveAttribute('aria-current')
+    expect(within(nav).getByRole('link', { name: 'Jobs' })).not.toHaveAttribute('aria-current')
   })
 
   it.each([

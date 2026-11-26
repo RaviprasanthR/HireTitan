@@ -418,7 +418,9 @@ describe('PipelinePage', () => {
     const table = await screen.findByRole('table', { name: 'Pipeline jobs' })
     const [, newest] = within(table).getAllByRole('row')
     if (!newest) throw new Error('expected a first row')
-    expect(within(newest).getByText('Applied')).toHaveClass('ht-pill-green')
+    expect(within(newest).getByText('Applied')).toHaveAttribute('data-stage', 'applied')
+    // a source is a neutral tag: colour on this app means a stage (FR-004)
+    expect(within(newest).getByText('Company job board')).toHaveClass('ht-pill-grey')
   })
 
   it('an inquired job shows an Inquired tag in its own colour', async () => {
@@ -437,7 +439,8 @@ describe('PipelinePage', () => {
 
     const tag = await screen.findByText('Inquired')
 
-    expect(tag).toHaveClass('ht-pill-blue')
+    expect(tag).toHaveClass('ht-stage-chip')
+    expect(tag).toHaveAttribute('data-stage', 'inquired')
   })
 
   it('US1 AS3 the tab is in the address, and AS1 In pipeline is the default tab', async () => {
@@ -452,7 +455,7 @@ describe('PipelinePage', () => {
       </QueryClientProvider>,
     )
 
-    const tabs = await screen.findByRole('navigation', { name: 'Home tabs' })
+    const tabs = await screen.findByRole('navigation', { name: 'Jobs tabs' })
 
     expect(within(tabs).getByRole('link', { name: 'Explore' })).toHaveAttribute('href', '/explore')
     const pipeline = within(tabs).getByRole('link', { name: 'In pipeline' })
@@ -463,7 +466,7 @@ describe('PipelinePage', () => {
   it('the tabs read In pipeline first, then Explore', async () => {
     renderPage()
 
-    const tabs = await screen.findByRole('navigation', { name: 'Home tabs' })
+    const tabs = await screen.findByRole('navigation', { name: 'Jobs tabs' })
 
     expect(
       within(tabs)
@@ -566,13 +569,12 @@ describe('PipelinePage status column', () => {
       },
     ])
 
-    const tones = await Promise.all(
-      ['One', 'Two', 'Three'].map(async (title) => {
-        const pill = (await statusOf(title))?.querySelector('.ht-pill')
-        return pill?.className
-      }),
+    const stages = await Promise.all(
+      ['One', 'Two', 'Three'].map(async (title) =>
+        (await statusOf(title))?.querySelector('.ht-stage-chip')?.getAttribute('data-stage'),
+      ),
     )
-    expect(new Set(tones).size).toBe(3)
+    expect(stages).toEqual(['scheduled', 'cleared', 'failed'])
   })
 })
 

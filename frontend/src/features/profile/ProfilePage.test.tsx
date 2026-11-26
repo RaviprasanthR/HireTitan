@@ -367,7 +367,7 @@ describe('ProfilePage', () => {
     await upload(pdf())
 
     expect(await screen.findByText(/out of credit/i)).toBeInTheDocument()
-    expect(screen.getByText(/check again/i)).toBeInTheDocument()
+    expect(screen.getByText(/test key/i)).toBeInTheDocument()
   })
 
   it('a_failed_decision_shows_a_message_and_keeps_the_dialog', async () => {

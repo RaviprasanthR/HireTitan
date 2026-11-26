@@ -314,9 +314,7 @@ button[data-variant="secondary"]:hover:not(:disabled) {
 .ht-pill-yellow { color: var(--ht-warning); background: color-mix(in srgb, var(--ht-warning) 18%, transparent); border-color: color-mix(in srgb, var(--ht-warning) 60%, transparent); }
 .ht-pill-orange { color: var(--ht-warning); background: color-mix(in srgb, var(--ht-warning) 18%, transparent); border-color: color-mix(in srgb, var(--ht-warning) 60%, transparent); }
 .ht-pill-red { color: var(--ht-danger); background: color-mix(in srgb, var(--ht-danger) 18%, transparent); border-color: color-mix(in srgb, var(--ht-danger) 60%, transparent); }
-.ht-pill-blue { color: var(--ht-stage-inquired); background: color-mix(in srgb, var(--ht-stage-inquired) 18%, transparent); border-color: color-mix(in srgb, var(--ht-stage-inquired) 60%, transparent); }
 .ht-pill-purple { color: var(--ht-accent); background: color-mix(in srgb, var(--ht-accent) 18%, transparent); border-color: color-mix(in srgb, var(--ht-accent) 60%, transparent); }
-.ht-pill-teal { color: var(--ht-stage-cleared); background: color-mix(in srgb, var(--ht-stage-cleared) 18%, transparent); border-color: color-mix(in srgb, var(--ht-stage-cleared) 60%, transparent); }
 .ht-pill-grey { color: var(--ht-text-secondary); background: color-mix(in srgb, var(--ht-text-muted) 18%, transparent); border-color: color-mix(in srgb, var(--ht-text-muted) 50%, transparent); }
 .ht-icon-button {
   display: inline-flex;

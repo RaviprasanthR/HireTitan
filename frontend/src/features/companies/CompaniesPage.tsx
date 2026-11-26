@@ -1,10 +1,8 @@
 import {
   ArrowDown,
   ArrowUp,
-  BadgeCheck,
   Building2,
   Globe,
-  MessageCircleQuestion,
   Pencil,
   Plus,
   Radar,
@@ -14,6 +12,7 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import { ApiError } from '@/api/client'
+import { StageChip } from '@/components/StageChip'
 import { Button } from '@/components/ui/button'
 import { formatDay } from '@/features/explore/api'
 import { AddCompanyDialog } from './AddCompanyDialog'
@@ -33,20 +32,8 @@ const CHIP = 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs wh
 
 /** How far the person's jobs at this company have got: Applied, Inquired, or nothing. */
 function PipelineChip({ company }: { company: Company }) {
-  if (company.pipeline === 'applied')
-    return (
-      <span className={`${CHIP} w-fit bg-success/15 text-success`}>
-        <BadgeCheck aria-hidden className="size-3" />
-        Applied
-      </span>
-    )
-  if (company.pipeline === 'inquired')
-    return (
-      <span className={`${CHIP} w-fit bg-stage-inquired/15 text-stage-inquired`}>
-        <MessageCircleQuestion aria-hidden className="size-3" />
-        Inquired
-      </span>
-    )
+  if (company.pipeline === 'applied' || company.pipeline === 'inquired')
+    return <StageChip stage={company.pipeline} />
   return <span className="text-xs text-muted-small">—</span>
 }
 

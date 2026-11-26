@@ -1,6 +1,8 @@
 import { FileText, History, Link2 } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
+import { OpenPosting } from '@/components/OpenPosting'
+import { StageChip } from '@/components/StageChip'
 import { Button } from '@/components/ui/button'
 import { CompanyPanel } from '@/features/companies/CompanyPanel'
 import { ActOnJob } from '@/features/drafts/ActOnJob'
@@ -70,7 +72,7 @@ export function JobDetails({
                 disabled={recheck.isPending || recheck.isSuccess}
                 onClick={() => recheck.mutate(data.id)}
               >
-                Check again
+                Re-check fit
               </Button>
               {recheck.isSuccess && (
                 <span className="text-sm text-muted-small">Checking with the AI…</span>
@@ -87,6 +89,7 @@ export function JobDetails({
 
       {data.state === 'applied' || data.state === 'inquired' ? (
         <div className="flex flex-wrap items-center gap-3 text-sm">
+          <StageChip stage={data.state} />
           <span>
             {data.state === 'applied'
               ? `Applied on ${formatDay(data.applied_on)}`
@@ -138,14 +141,7 @@ export function JobDetails({
       {actions && (
         <div className="flex flex-wrap items-center gap-4 text-sm">
           {original && (
-            <a
-              href={original}
-              target="_blank"
-              rel="noreferrer noopener"
-              className="text-link underline"
-            >
-              Open original posting
-            </a>
+            <OpenPosting href={original} />
           )}
           {data.first_search_id && (
             <Link to={`/search/runs/${data.first_search_id}`} className="text-link underline">

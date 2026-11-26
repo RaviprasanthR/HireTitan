@@ -1,6 +1,6 @@
 /** Plain names for the pages Mikasa links to. */
 const PAGE_NAMES: Record<string, string> = {
-  '/': 'Home',
+  '/': 'Jobs',
   '/explore': 'Explore',
   '/companies': 'Companies',
   '/profile': 'Profile',

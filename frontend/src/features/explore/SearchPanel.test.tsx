@@ -365,6 +365,16 @@ describe('SearchPanel', () => {
     expect(screen.queryByText(/batch/i)).not.toBeInTheDocument()
   })
 
+  it('test_US2_AS2_search_summary_uses_no_stage_colour', async () => {
+    renderPanel(run({ outcome: 'finished', companies_read: 20, added: 6 }))
+    const donut = await screen.findByRole('img', { name: /6 new/ })
+    for (const slice of donut.querySelectorAll('[data-part]')) {
+      expect(slice.getAttribute('stroke')).not.toMatch(/stage/)
+    }
+    const flow = screen.getByRole('list', { name: 'How the search went' })
+    expect(flow.querySelector('[data-stage]')).toBeNull()
+  })
+
   it('US2_AS5_a_stopped_search_says_jobs_so_far_are_kept', async () => {
     renderPanel(run({ outcome: 'stopped_by_user' }))
     expect(

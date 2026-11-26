@@ -1,12 +1,3 @@
-export type Tone = 'green' | 'yellow' | 'orange' | 'red' | 'blue' | 'purple' | 'teal' | 'grey'
-
-export const SOURCE_TONE: Record<string, Tone> = {
-  naukri: 'blue',
-  linkedin: 'teal',
-  indeed: 'purple',
-  'company job board': 'green',
-  'careers page': 'orange',
-  'added by you': 'yellow',
-  'email alert': 'purple',
-  'job site': 'blue',
-}
+/** Tag tones. None of them is a stage colour (FR-004): sources and other labels are neutral, and a
+ * job's stage is shown with `StageChip`. */
+export type Tone = 'green' | 'yellow' | 'orange' | 'red' | 'purple' | 'grey'
