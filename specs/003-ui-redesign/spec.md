@@ -23,6 +23,12 @@ This feature fixes the system and the P0/P1 problems without changing what the a
 - Q: On Explore, should jobs that could not be checked for fit be gathered into one notice with a single "Re-check fit" action for all of them? → A: Yes. One notice above the list with one "Re-check fit" that runs the existing check for each job; Explore rows show a quiet status and no button of their own. The job page keeps its own "Re-check fit".
 - Q: What should the first destination be called everywhere, given the nav says "Home" but the page title says "Jobs"? → A: "Jobs" in the top nav, the bottom bar and the page title; the route stays the same.
 
+### Session 2026-11-26
+
+- Q (Ravi): the charts above the Jobs tables push the table below the fold; can the analytics sit in a left section with the table on the right? → A: Yes. From 1280px wide the overview is a left column (about 320px) and the table fills the rest; below 1280px the table comes first and the overview follows it. The table is first in reading order at every width; the overview holds no focusable controls. Explore's actions (Search now, Check job-alert mail, history, summary) stay in a full-width bar above both columns.
+- Q (Ravi): "I need a circular graph in the left pane too." → A: The overview shows the flow plus a donut (stages on In pipeline, what happened to the jobs found on Explore), in place of the stage bar. Legend entries are not tab stops.
+- Q (Ravi): "In Home the entire page is scrolling, just the table needs to scroll"; "the left pane should not have scroll, size it accordingly." → A: From 1280px the Jobs page fits the window: title, tabs, Explore's action bar and the overview stay put and only the table scrolls, its head row kept in view. The overview is sized to fit (a 112px donut with its legend beside it, a 22rem column) and never scrolls on its own.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Use every part of the app on a phone (Priority: P1)
@@ -152,6 +158,7 @@ The person opens Profile and sees their confirmed profile (headline, skills, exp
 - **FR-021a**: The first destination MUST be called "Jobs" in the top nav, the bottom bar and its page title; "Home" MUST NOT be used as its label. Its address does not change.
 - **FR-022**: On Explore, jobs that could not be checked for fit MUST be summarised in one notice above the list, stating how many, with one "Re-check fit" action that runs the existing check for each of them. Explore rows MUST show the not-checked state as quiet text without a button of their own. The job page keeps its own "Re-check fit" action.
 - **FR-023**: The Pipeline tab's overview MUST show stage counts once (the flow plus one stacked stage bar); the Explore summary MUST show its counts once. Chart legends MUST NOT be keyboard tab stops.
+- **FR-023a**: On the Jobs page (In pipeline and Explore), the table MUST be visible without scrolling past charts: from 1280px wide the overview (counts, flow, stage bar or funnel) MUST sit in a left column beside the table; below 1280px it MUST follow the table. The table MUST come first in the reading order, and the overview MUST contain no keyboard tab stops. From 1280px the page MUST NOT scroll on these tabs; only the table scrolls, with its head row in view, and the overview MUST fit without scrolling of its own. The overview shows the flow and a donut.
 - **FR-024**: In the pipeline flow, the stage with the largest count MUST be emphasised and a stage with a zero count MUST be shown muted; "In pipeline" MUST be shown as a total beside the flow, not as a stage in it.
 
 **Profile (P1/P2)**

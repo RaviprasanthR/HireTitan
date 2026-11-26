@@ -72,6 +72,8 @@
   --sidebar-accent-foreground: var(--ht-text);
   --sidebar-border: var(--ht-hairline);
   --sidebar-ring: var(--ht-accent);
+  /* the phone nav bar's height, safe area included (FR-014) */
+  --ht-bottom-bar: calc(3.5rem + env(safe-area-inset-bottom));
 }
 
 /* The colour utilities (text-success, text-danger, text-link, bg-divider, ...) are declared in
@@ -754,6 +756,17 @@ body {
     border: 0;
     overflow-wrap: anywhere;
   }
+  /* the same card for a list row (Companies) */
+  .ht-list-card {
+    margin-bottom: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: var(--ht-surface);
+    border: 1px solid var(--ht-hairline);
+    border-radius: var(--ht-radius-card);
+  }
+  .ht-list-card::after {
+    display: none;
+  }
   .ht-table-cards td[data-label]::before {
     content: attr(data-label);
     display: block;
@@ -762,5 +775,76 @@ body {
   }
   .ht-table-cards td:empty {
     display: none;
+  }
+}
+
+/* Phone nav (FR-014): the bar keeps clear of the home indicator. */
+@media (max-width: 767.98px) {
+  .ht-bottom-bar {
+    height: var(--ht-bottom-bar);
+    padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+}
+
+/* Jobs overview beside the list (FR-023a): two columns from 1280px, and only while the overview
+   has something in it; the list keeps the first place in the DOM. */
+.ht-overview:empty {
+  display: none;
+}
+@media (min-width: 80rem) {
+  .ht-overview-layout:has(> .ht-overview:not(:empty)) {
+    grid-template-columns: 22rem minmax(0, 1fr);
+    align-items: start;
+  }
+  .ht-overview-layout:has(> .ht-overview:not(:empty)) > .ht-overview-main {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  /* not sticky: a tall overview (zoomed text, short window) would be cut off */
+  .ht-overview {
+    grid-column: 1;
+    grid-row: 1;
+  }
+}
+
+/* Jobs tabs from 1280px (FR-023a): the page fits the window and only the table scrolls, its head
+   row kept in view; the overview scrolls on its own if it is ever taller. Below 1280px the overview
+   follows the table, so the page scrolls as usual. */
+@media (min-width: 80rem) {
+  .ht-page-column:has(.ht-fit-page) {
+    min-height: 0;
+  }
+  /* the room kept for the chat button moves inside the table's scroll area (below) */
+  main:has(.ht-fit-page) {
+    padding-bottom: 0;
+  }
+  .ht-fit-page {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .ht-fit-page > .ht-overview-layout {
+    flex: 1;
+    min-height: 0;
+    grid-template-rows: minmax(0, 1fr);
+  }
+  .ht-fit-page .ht-overview-main {
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    /* the table's box ends above the chat button */
+    padding-bottom: 3.5rem;
+  }
+  .ht-fit-page .ht-table-scroll {
+    flex: 0 1 auto;
+    min-height: 0;
+    overflow: auto;
+  }
+  .ht-fit-page .ht-table-scroll thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
   }
 }

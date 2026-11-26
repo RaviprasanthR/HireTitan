@@ -20,7 +20,11 @@ describe('FlowChart', () => {
 
   it('test_FR024_total_beside_not_a_step', () => {
     render(
-      <FlowChart label="Your pipeline" steps={steps} total={{ label: 'In pipeline', value: '2' }} />,
+      <FlowChart
+        label="Your pipeline"
+        steps={steps}
+        total={{ label: 'In pipeline', value: '2' }}
+      />,
     )
     const list = screen.getByRole('list', { name: 'Your pipeline' })
     expect(within(list).queryByText('In pipeline')).toBeNull()
@@ -36,5 +40,14 @@ describe('FlowChart', () => {
   it('test_FR024_no_icon_rings', () => {
     const { container } = render(<FlowChart label="Your pipeline" steps={steps} />)
     expect(container.querySelector('.ht-flow-node')).toBeNull()
+  })
+
+  it('test_FR023a_flow_lays_out_by_its_container', () => {
+    render(<FlowChart label="Your pipeline" steps={steps} />)
+    const list = screen.getByRole('list', { name: 'Your pipeline' })
+    // a row only when its own box is wide, so it stays a column in the overview
+    expect(list).toHaveClass('@3xl:flex-row')
+    expect(list).not.toHaveClass('lg:flex-row')
+    expect(list.closest('[class~="@container"]')).not.toBeNull()
   })
 })

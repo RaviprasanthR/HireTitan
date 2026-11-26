@@ -264,7 +264,7 @@ export function MikasaPanel({ onClose }: { onClose: () => void }) {
   return (
     <aside
       aria-label="Mikasa"
-      className="mikasa-pop fixed bottom-24 right-5 z-40 flex h-[min(640px,calc(100vh-8rem))] w-[min(420px,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-2xl border border-white/10 bg-[var(--ht-surface)] shadow-2xl shadow-black/50 max-sm:inset-x-2 max-sm:bottom-24 max-sm:w-auto"
+      className="mikasa-pop fixed bottom-[calc(var(--ht-bottom-bar)+5rem)] right-5 z-40 flex h-[min(640px,calc(100dvh-var(--ht-bottom-bar)-9rem))] md:bottom-24 md:h-[min(640px,calc(100dvh-8rem))] w-[min(420px,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-2xl border border-white/10 bg-[var(--ht-surface)] shadow-2xl shadow-black/50 max-sm:inset-x-2 max-sm:w-auto"
     >
       <header className="flex items-center justify-between gap-2 border-b border-white/[0.07] px-3 py-2.5">
         <div className="flex items-center gap-2.5">

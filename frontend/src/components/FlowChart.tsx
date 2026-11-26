@@ -29,44 +29,49 @@ export function FlowChart({
   emphasis?: string
   total?: { label: string; value: string }
 }) {
+  // laid out by its own width, not the window's: a column in the overview, a row when wide
   return (
-    <div className="flex min-w-0 flex-col gap-4 rounded-[var(--ht-radius-card)] bg-surface p-5 lg:flex-row lg:items-center">
-      {total && (
-        <div className="flex-none lg:border-r lg:border-hairline lg:pr-6">
-          <span className="ht-figure block text-3xl font-medium">{total.value}</span>
-          <span className="block text-sm text-subtle">{total.label}</span>
-        </div>
-      )}
-      <ol
-        aria-label={label}
-        className="flex w-full flex-col gap-2 lg:flex-row lg:items-start lg:gap-0"
-      >
-        {steps.map((step, index) => {
-          const Icon = step.icon
-          const last = index === steps.length - 1
-          const muted = step.value === '0'
-          return (
-            <Fragment key={step.key}>
-              <li
-                className="ht-flow-step min-w-0 lg:flex-[1_1_6rem]"
-                data-stage={step.stage}
-                data-muted={muted || undefined}
-                data-emphasis={step.key === emphasis || undefined}
-              >
-                <span className="flex items-center gap-2 text-sm text-subtle">
-                  <Icon aria-hidden className="ht-flow-icon size-4 flex-none" />
-                  {step.title}
-                </span>
-                <span className="ht-figure ht-flow-value mt-1 block text-2xl leading-tight">
-                  {step.value}
-                </span>
-                {step.note && <span className="block text-xs text-muted-small">{step.note}</span>}
-              </li>
-              {!last && <li aria-hidden className="ht-flow-link" />}
-            </Fragment>
-          )
-        })}
-      </ol>
+    <div className="@container min-w-0">
+      <div className="flex min-w-0 flex-col gap-4 rounded-[var(--ht-radius-card)] bg-surface p-5 @3xl:flex-row @3xl:items-center">
+        {total && (
+          <div className="flex-none @3xl:border-r @3xl:border-hairline @3xl:pr-6">
+            <span className="ht-figure block text-3xl font-medium">{total.value}</span>
+            <span className="block text-sm text-subtle">{total.label}</span>
+          </div>
+        )}
+        <ol
+          aria-label={label}
+          className="flex w-full flex-col gap-2 @3xl:flex-row @3xl:items-start @3xl:gap-0"
+        >
+          {steps.map((step, index) => {
+            const Icon = step.icon
+            const last = index === steps.length - 1
+            const muted = step.value === '0'
+            return (
+              <Fragment key={step.key}>
+                <li
+                  className="ht-flow-step flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 @3xl:block @3xl:flex-[1_1_6rem]"
+                  data-stage={step.stage}
+                  data-muted={muted || undefined}
+                  data-emphasis={step.key === emphasis || undefined}
+                >
+                  <span className="flex items-center gap-2 text-sm text-subtle">
+                    <Icon aria-hidden className="ht-flow-icon size-4 flex-none" />
+                    {step.title}
+                  </span>
+                  <span className="ht-figure ht-flow-value text-xl leading-tight @3xl:mt-1 @3xl:block @3xl:text-2xl">
+                    {step.value}
+                  </span>
+                  {step.note && (
+                  <span className="block basis-full text-xs text-muted-small">{step.note}</span>
+                )}
+                </li>
+                {!last && <li aria-hidden className="ht-flow-link" />}
+              </Fragment>
+            )
+          })}
+        </ol>
+      </div>
     </div>
   )
 }

@@ -5,7 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { type Call, problem, stubApi } from '@/test/api'
 import { RunSummaryPage } from './RunSummaryPage'
-import { SearchPanel } from './SearchPanel'
+import { SearchOverview, SearchPanel } from './SearchPanel'
 
 function mailRun(over: Record<string, unknown> = {}, mail: Record<string, unknown> = {}) {
   return {
@@ -84,6 +84,7 @@ function renderPanel(
     >
       <MemoryRouter>
         <SearchPanel />
+        <SearchOverview />
       </MemoryRouter>
     </QueryClientProvider>,
   )
@@ -399,7 +400,12 @@ describe('RunSummaryPage: mail run', () => {
   it('US5 no note while the check is still running or when it ended early', async () => {
     renderSummary(
       mailRun(
-        { outcome: 'failed', stop_message: 'Gmail did not answer.', finished_at: '2026-11-18T09:02:00Z', jobs_found: 0 },
+        {
+          outcome: 'failed',
+          stop_message: 'Gmail did not answer.',
+          finished_at: '2026-11-18T09:02:00Z',
+          jobs_found: 0,
+        },
         { ended: 'gmail_unavailable', emails_listed: 0 },
       ),
     )
@@ -432,7 +438,10 @@ describe('RunSummaryPage: mail run', () => {
     )
 
     expect(await screen.findByText('Gmail access has ended.')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /settings/i })).toHaveAttribute('href', '/settings/gmail')
+    expect(screen.getByRole('link', { name: /settings/i })).toHaveAttribute(
+      'href',
+      '/settings/gmail',
+    )
   })
 
   it('a company search keeps its own summary', async () => {

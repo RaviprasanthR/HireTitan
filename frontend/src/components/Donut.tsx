@@ -12,20 +12,24 @@ const GAP = 3 // the surface shows between slices
 /**
  * Parts of a whole as a donut, with the total in the middle and a legend that names each slice,
  * its count and share (so colour is never the only cue). The slices draw themselves in; pointing
- * at a slice or its legend entry (or focusing the entry) widens it, dims the others and puts its
- * numbers in the middle. Colours come from the caller and must pass the dataviz palette check.
+ * at a slice or its legend entry widens it, dims the others and puts its numbers in the middle.
+ * The legend entries are not tab stops (FR-023): their text already says everything. Colours come from the caller and must pass the dataviz palette check.
  */
 export function Donut({
   parts,
   caption,
   totalLabel,
   ariaLabel,
+  compact = false,
 }: {
   parts: DonutPart[]
   caption: string
   totalLabel: string
   ariaLabel: string
+  /** A smaller ring with its legend beside it, for the narrow overview column (FR-023a). */
+  compact?: boolean
 }) {
+  const size = compact ? 112 : SIZE
   const [grown, setGrown] = useState(false)
   const [active, setActive] = useState<string | null>(null)
   useEffect(() => {
@@ -57,14 +61,16 @@ export function Donut({
   }))
 
   return (
-    <figure className="flex flex-wrap items-center gap-5 rounded-lg bg-surface p-4">
-      <div className="relative shrink-0" style={{ width: SIZE, height: SIZE }}>
+    <figure
+      className={`flex items-center rounded-lg bg-surface p-4 ${compact ? 'flex-nowrap gap-4' : 'flex-wrap gap-5'}`}
+    >
+      <div className="relative shrink-0" style={{ width: size, height: size }}>
         <svg
           role="img"
           aria-label={ariaLabel}
           viewBox={`0 0 ${SIZE} ${SIZE}`}
-          width={SIZE}
-          height={SIZE}
+          width={size}
+          height={size}
           className="-rotate-90"
         >
           <circle
@@ -99,8 +105,12 @@ export function Donut({
           className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center"
         >
           <span key={shown?.key ?? 'total'} className="ht-donut-readout block">
-            <span className="block text-2xl font-semibold">{shown ? shown.value : total}</span>
-            <span className="block max-w-24 text-xs leading-tight text-muted-small">
+            <span className={`block font-semibold ${compact ? 'text-lg' : 'text-2xl'}`}>
+              {shown ? shown.value : total}
+            </span>
+            <span
+              className={`block leading-tight text-muted-small ${compact ? 'max-w-16 text-[0.6875rem]' : 'max-w-24 text-xs'}`}
+            >
               {shown ? shown.label : totalLabel}
             </span>
             {shown && (
@@ -111,15 +121,12 @@ export function Donut({
       </div>
       <div className="min-w-0 space-y-2">
         <figcaption className="text-sm text-muted-small">{caption}</figcaption>
-        <ul aria-label="Legend" className="space-y-1 text-sm">
+        <ul aria-label="Legend" className={compact ? 'text-[0.8125rem] whitespace-nowrap' : 'space-y-1 text-sm'}>
           {parts.map((part) => (
             <li
               key={part.key}
-              tabIndex={0}
               data-state={state(part.key)}
-              className="ht-donut-legend flex items-center gap-2 rounded-md px-2 py-1"
-              onFocus={() => setActive(part.key)}
-              onBlur={() => setActive(null)}
+              className={`ht-donut-legend flex items-center rounded-md ${compact ? 'gap-1.5 px-1 py-0.5' : 'gap-2 px-2 py-1'}`}
               {...pointer(part.key)}
             >
               <span

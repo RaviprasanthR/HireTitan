@@ -72,23 +72,81 @@ function renderPage(initial?: unknown[], summary: unknown = SUMMARY) {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('PipelinePage', () => {
-  it('shows the pipeline by status as a flow chart and a donut', async () => {
+  it('test_FR023a_pipeline_overview_beside_the_table', async () => {
     renderPage()
 
-    const flow = await screen.findByRole('list', { name: 'Your pipeline' })
-    const steps = within(flow).getAllByRole('listitem')
-    expect(steps.map((step) => step.textContent)).toEqual([
-      expect.stringMatching(/^In pipeline9/),
+    const overview = await screen.findByRole('complementary', { name: 'Pipeline overview' })
+    const flow = await within(overview).findByRole('list', { name: 'Your pipeline' })
+    expect(
+      within(flow)
+        .getAllByRole('listitem')
+        .map((step) => step.textContent),
+    ).toEqual([
       expect.stringMatching(/^Inquired3/),
       expect.stringMatching(/^Applied2/),
       expect.stringMatching(/^Interview scheduled2/),
       expect.stringMatching(/^Round cleared11 failed/),
     ])
-    const donut = screen.getByRole('img', {
-      name: '3 inquired, 2 applied, 2 interview scheduled, 1 round cleared, 1 failed',
-    })
+    // "In pipeline" is a total beside the flow and the largest stage carries the accent (FR-024)
+    expect(within(overview).getByText('In pipeline')).toBeInTheDocument()
+    expect(within(flow).getAllByRole('listitem')[0]).toHaveAttribute('data-emphasis', 'true')
+    // the stages as a donut in their own colours (clarification 2026-11-26), no stage bar
+    const donut = within(overview).getByRole('img', { name: /3 inquired, 2 applied/ })
     expect(donut.querySelectorAll('[data-part]')).toHaveLength(5)
-    expect(screen.getByTestId('donut-centre')).toHaveTextContent('9jobs in pipeline')
+    expect(within(overview).getByTestId('donut-centre')).toHaveTextContent('9jobs in pipeline')
+    expect(overview.querySelector('[data-segment]')).toBeNull()
+    // sized to fit the column without scrolling: a small ring with its legend beside it
+    expect(donut).toHaveAttribute('width', '112')
+    expect(donut.closest('figure')).toHaveClass('flex-nowrap')
+    // the real overview holds nothing that takes keyboard focus, so the focus order never jumps
+    expect(overview.querySelector('a, button, input, select, textarea, [tabindex]')).toBeNull()
+    const table = screen.getByRole('table', { name: 'Pipeline jobs' })
+    expect(table.compareDocumentPosition(overview) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('test_FR023a_only_the_table_scrolls_on_a_wide_screen', async () => {
+    renderPage()
+    const table = await screen.findByRole('table', { name: 'Pipeline jobs' })
+    // from 1280px the page fits the window and the table's own box scrolls (theme.css)
+    expect(table.closest('section')).toHaveClass('ht-fit-page')
+    expect(table.parentElement).toHaveClass('ht-table-scroll')
+    const css = (await import('node:fs')).readFileSync('src/theme/theme.css', 'utf8')
+    const wide = css.slice(css.indexOf('@media (min-width: 80rem)'))
+    expect(wide).toMatch(/\.ht-page-column:has\(\.ht-fit-page\)\s*\{\s*min-height: 0/)
+    expect(wide).toMatch(/\.ht-fit-page \.ht-table-scroll\s*\{[^}]*overflow: auto/)
+    expect(wide).toMatch(/\.ht-fit-page \.ht-table-scroll thead th\s*\{[^}]*position: sticky/)
+    // the overview never scrolls on its own; it is sized to fit
+    expect(css).not.toMatch(/\.ht-overview\s*\{[^}]*overflow-y: auto/)
+  })
+
+  it('test_FR016_pipeline_table_uses_card_pattern', async () => {
+    renderPage()
+    const table = await screen.findByRole('table', { name: 'Pipeline jobs' })
+    // below 768px each row is a card (theme.css `ht-table-cards`); the same DOM at every width
+    expect(table).toHaveClass('ht-table-cards')
+    // display:block drops table semantics in some screen readers; explicit roles keep them
+    expect(table).toHaveAttribute('role', 'table')
+    for (const tr of table.querySelectorAll('tr')) expect(tr).toHaveAttribute('role', 'row')
+    for (const td of table.querySelectorAll('td')) expect(td).toHaveAttribute('role', 'cell')
+    for (const th of table.querySelectorAll('th'))
+      expect(th).toHaveAttribute('role', 'columnheader')
+    const role = within(table).getAllByRole('link')[0]
+    expect(role).toHaveClass('md:truncate')
+    expect(role).not.toHaveClass('truncate')
+  })
+
+  it('test_FR016_cells_carry_labels', async () => {
+    renderPage()
+    const table = await screen.findByRole('table', { name: 'Pipeline jobs' })
+    const cells = (within(table).getAllByRole('row')[1] as HTMLElement).querySelectorAll(
+      'td[data-label]',
+    )
+    expect([...cells].map((td) => td.getAttribute('data-label'))).toEqual([
+      'Date',
+      'Status',
+      'Resume',
+      'Source',
+    ])
   })
 
   it('shows no chart while the pipeline is empty', async () => {

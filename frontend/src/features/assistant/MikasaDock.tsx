@@ -34,7 +34,7 @@ export function MikasaDock() {
         title="Ask Mikasa (Ctrl+/)"
         onClick={toggle}
         className={cn(
-          'fixed bottom-5 right-5 z-50 grid size-14 place-items-center rounded-full outline-none',
+          'fixed bottom-[calc(var(--ht-bottom-bar)+0.75rem)] right-4 z-50 md:bottom-5 md:right-5 grid size-14 place-items-center rounded-full outline-none',
           'bg-primary text-primary-foreground shadow-[var(--ht-shadow-overlay)]',
           'transition-transform duration-200 hover:scale-110 focus-visible:ring-2 focus-visible:ring-ring active:scale-95',
         )}

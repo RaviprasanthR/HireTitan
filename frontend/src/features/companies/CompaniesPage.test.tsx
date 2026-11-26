@@ -70,6 +70,21 @@ describe('CompaniesPage', () => {
     expect(keka).not.toHaveTextContent('Check manually')
   })
 
+  it('test_FR016_companies_rows_are_cards', async () => {
+    renderPage((call) =>
+      call.path.startsWith('/companies') ? { items: [ACME, KEKA], next_cursor: null } : undefined,
+    )
+    const list = await screen.findByRole('list', { name: 'Companies' })
+    for (const row of within(list).getAllByRole('listitem')) {
+      // below 768px each company is a card (theme.css `ht-list-card`); names wrap there
+      expect(row).toHaveClass('ht-list-card')
+      expect(row.querySelector('h2')).toHaveClass('md:truncate')
+      expect(row.querySelector('h2')).not.toHaveClass('truncate')
+    }
+    const css = (await import('node:fs')).readFileSync('src/theme/theme.css', 'utf8')
+    expect(css.slice(css.indexOf('@media (max-width: 767.98px)'))).toContain('.ht-list-card')
+  })
+
   it('the board status and every other detail show when a row is expanded', async () => {
     const user = userEvent.setup()
     renderPage((call) =>
@@ -573,7 +588,9 @@ describe('CompaniesPage', () => {
 
       await user.click(within(row).getByRole('button', { name: 'Edit Acme' }))
       await user.click(within(row).getByRole('button', { name: 'Delete Acme' }))
-      expect(within(row).getByRole('button', { name: 'Yes, delete' })).toHaveClass('ht-danger-button')
+      expect(within(row).getByRole('button', { name: 'Yes, delete' })).toHaveClass(
+        'ht-danger-button',
+      )
       expect(within(row).getByRole('button', { name: 'Keep it' })).toHaveClass('ht-cancel-button')
     })
 

@@ -117,6 +117,46 @@ describe('ExplorePage', () => {
     expect(screen.queryByLabelText('Link to the job')).not.toBeInTheDocument()
   })
 
+  it('test_US1_AS3_explore_rows_are_cards', async () => {
+    renderPage({ jobs: [card('1', 'Backend Engineer')] })
+    const table = await screen.findByRole('table', { name: 'Jobs' })
+    expect(table).toHaveClass('ht-table-cards')
+    const cells = (within(table).getAllByRole('row')[1] as HTMLElement).querySelectorAll(
+      'td[data-label]',
+    )
+    expect([...cells].map((td) => td.getAttribute('data-label'))).toEqual([
+      'Location',
+      'Posted',
+      'Source',
+    ])
+    // titles wrap on a phone and are cut short only from 768px
+    expect(within(table).getByTitle('Backend Engineer')).toHaveClass('md:truncate')
+    expect(within(table).getByTitle('Backend Engineer')).not.toHaveClass('truncate')
+    expect(screen.getByRole('form', { name: 'Filters' })).toHaveClass('grid-cols-1', 'md:flex')
+  })
+
+  it('test_FR023a_only_the_explore_table_scrolls_on_a_wide_screen', async () => {
+    renderPage({ jobs: [card('1', 'Backend Engineer')] })
+    const table = await screen.findByRole('table', { name: 'Jobs' })
+    expect(table.closest('section')).toHaveClass('ht-fit-page')
+    expect(table.parentElement).toHaveClass('ht-table-scroll')
+  })
+
+  it('test_FR016_detail_row_follows_its_card', async () => {
+    const user = userEvent.setup()
+    renderPage({ jobs: [card('1', 'Backend Engineer')] })
+    const table = await screen.findByRole('table', { name: 'Jobs' })
+    await user.click(within(table).getByRole('button', { name: /Show details of/ }))
+
+    const rows = within(table).getAllByRole('row')
+    expect(rows).toHaveLength(3)
+    const [, row, detail] = rows as [HTMLElement, HTMLElement, HTMLElement]
+    for (const td of table.querySelectorAll('td')) expect(td).toHaveAttribute('role', 'cell')
+    expect(table.querySelector('tbody')).toHaveAttribute('role', 'rowgroup')
+    expect(row.nextElementSibling).toBe(detail)
+    expect(detail.querySelector('td[colspan]')).not.toBeNull()
+  })
+
   it('US1 AS1 the Explore tab is lit on its own page', async () => {
     renderPage({ url: '/explore' })
 

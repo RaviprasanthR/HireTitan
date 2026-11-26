@@ -251,7 +251,7 @@ function CompanyRow({ company }: { company: Company }) {
   return (
     <li
       aria-label={company.name}
-      className={`relative space-y-2 px-3 py-1.5 transition-colors duration-200 after:absolute after:inset-x-3 after:bottom-0 after:h-px after:bg-border motion-reduce:transition-none ${
+      className={`ht-list-card relative space-y-2 px-3 py-1.5 transition-colors duration-200 after:absolute after:inset-x-3 after:bottom-0 after:h-px after:bg-border motion-reduce:transition-none ${
         // the tint is for a resting row: an open, edited or about-to-go row stays as it is
         showPanel || editing || confirming ? '' : 'hover:bg-raised'
       }`}
@@ -267,13 +267,13 @@ function CompanyRow({ company }: { company: Company }) {
         }}
       >
         <div className="min-w-0">
-          <h2 className="min-w-0 truncate font-semibold">
+          <h2 className="min-w-0 font-semibold md:truncate">
             <button
               type="button"
               aria-expanded={showPanel}
               aria-label={`Details for ${company.name}`}
               onClick={() => setShowPanel(!showPanel)}
-              className="max-w-full truncate rounded text-left hover:text-warning focus-visible:ring-2 focus-visible:ring-ring"
+              className="max-w-full rounded text-left hover:text-warning md:truncate focus-visible:ring-2 focus-visible:ring-ring"
             >
               {company.name}
             </button>

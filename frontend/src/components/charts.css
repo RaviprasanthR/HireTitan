@@ -36,16 +36,14 @@
   color: var(--ht-accent);
 }
 
-/* the connector: a still hairline toward the next step */
+/* the connector: a still hairline toward the next step, only when the steps run in a row */
 .ht-flow-link {
-  flex: none;
-  width: 1px;
-  height: 0.75rem;
-  margin-left: 0.5rem;
+  display: none;
   background: var(--ht-hairline-strong);
 }
-@media (min-width: 64rem) {
+@container (min-width: 48rem) {
   .ht-flow-link {
+    display: block;
     flex: 0 1 2rem;
     min-width: 0.75rem;
     width: auto;

@@ -16,13 +16,14 @@ const sections = [
 export function Shell() {
   const { pathname } = useLocation()
   return (
-    <div
-      data-testid="app-root"
-      className="flex h-screen flex-col overflow-hidden bg-background text-foreground"
-    >
-      <header className="flex shrink-0 items-center justify-between gap-6 border-b border-[var(--ht-hairline)] bg-[var(--ht-surface)]/80 px-6 py-2 backdrop-blur">
+    <div data-testid="app-root" className="flex h-dvh flex-col bg-background text-foreground">
+      <header className="flex shrink-0 items-center justify-between gap-6 border-b border-[var(--ht-hairline)] bg-[var(--ht-surface)] px-4 py-2 md:px-6">
         <AppName />
-        <nav aria-label="Main" className="flex items-center gap-1">
+        {/* one nav: a bar fixed at the bottom below 768px, in the top bar from there up (FR-014) */}
+        <nav
+          aria-label="Main"
+          className="ht-bottom-bar fixed inset-x-0 bottom-0 z-40 flex items-center border-t border-[var(--ht-hairline)] bg-[var(--ht-surface)] md:static md:z-auto md:gap-1 md:border-0 md:bg-transparent"
+        >
           {sections.map(({ to, label, end, Icon, ...rest }) => {
             // Home also covers the Explore tab, which is not under "/" as far as a path goes
             const also: readonly string[] = 'also' in rest ? rest.also : []
@@ -35,9 +36,11 @@ export function Shell() {
                 to={to}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
-                  'ht-nav-link group relative flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium outline-none transition-colors duration-200',
-                  'focus-visible:ring-2 focus-visible:ring-ring',
-                  active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
+                  'ht-nav-link group relative flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 rounded-md px-1 py-1 text-xs font-medium transition-colors duration-[var(--ht-dur-fast)]',
+                  'md:flex-none md:flex-row md:gap-2 md:px-3 md:py-2 md:text-sm',
+                  active
+                    ? 'text-link md:text-foreground'
+                    : 'text-muted-foreground hover:text-foreground',
                 )}
               >
                 <Icon
@@ -52,7 +55,7 @@ export function Shell() {
                 <span
                   aria-hidden
                   className={cn(
-                    'absolute inset-x-3 -bottom-2 h-0.5 origin-center rounded-full bg-link transition-transform duration-[var(--ht-dur-enter)]',
+                    'absolute inset-x-3 -bottom-2 hidden h-0.5 md:block origin-center rounded-full bg-link transition-transform duration-[var(--ht-dur-enter)]',
                     active ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-60',
                   )}
                 />
@@ -64,11 +67,11 @@ export function Shell() {
       <div data-testid="banner-slot">
         <AiBanner />
       </div>
-      <main className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+      <main className="flex min-h-0 flex-1 flex-col overflow-y-auto pb-[calc(var(--ht-bottom-bar)+5rem)] md:pb-20 scroll-pb-[calc(var(--ht-bottom-bar)+5rem)] md:scroll-pb-20">
         {/* a wide centred column; the chat floats over the page and may cover a little of it */}
         <div
           data-testid="page-column"
-          className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col px-4 py-6 md:px-6"
+          className="ht-page-column mx-auto flex w-full max-w-[1440px] flex-1 flex-col px-4 py-6 md:px-6"
         >
           <Outlet />
         </div>

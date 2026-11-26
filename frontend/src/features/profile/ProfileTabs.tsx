@@ -10,7 +10,7 @@ const TABS = [
 /** Profile, Preferences, Search rules and Connections: what describes you to a search. */
 export function ProfileTabs() {
   return (
-    <nav aria-label="Profile tabs" className="flex gap-2 border-b border-divider">
+    <nav aria-label="Profile tabs" className="flex flex-wrap gap-2 border-b border-divider">
       {TABS.map((tab) => (
         <NavLink
           key={tab.to}

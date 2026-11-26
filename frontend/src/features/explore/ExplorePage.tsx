@@ -14,7 +14,8 @@ import { ReviewNotice } from '@/features/home/ReviewNotice'
 import { HomeTabs } from './HomeTabs'
 import { Pill } from './Pill'
 import { SOURCE_TONE } from './pillTones'
-import { SearchPanel } from './SearchPanel'
+import { SearchOverview, SearchPanel } from './SearchPanel'
+import { OverviewLayout } from '@/components/OverviewLayout'
 import {
   type JobCard,
   type JobFilters,
@@ -51,21 +52,26 @@ export function JobCardItem({ job, showCheck = true }: { job: JobCard; showCheck
 
   return (
     <Fragment>
-      <tr className="ht-row border-t border-divider align-top">
-        <td className="px-3 py-2">{job.company_name}</td>
-        <td className="px-3 py-2">
+      <tr role="row" className="ht-row border-t border-divider align-top">
+        <td role="cell" className="px-3 py-2">
+          {job.company_name}
+        </td>
+        <td role="cell" className="px-3 py-2">
           {href ? (
             <a
               href={href}
               target="_blank"
               rel="noreferrer noopener"
               title={job.title}
-              className="block max-w-[22rem] truncate font-semibold text-link underline"
+              className="block font-semibold text-link underline md:max-w-[22rem] xl:max-w-[13rem] min-[85rem]:max-w-[18rem] md:truncate"
             >
               {job.title}
             </a>
           ) : (
-            <span title={job.title} className="block max-w-[22rem] truncate font-semibold">
+            <span
+              title={job.title}
+              className="block font-semibold md:max-w-[22rem] xl:max-w-[13rem] min-[85rem]:max-w-[18rem] md:truncate"
+            >
               {job.title}
             </span>
           )}
@@ -75,7 +81,9 @@ export function JobCardItem({ job, showCheck = true }: { job: JobCard; showCheck
             </p>
           )}
           {reasonOf(job) && (
-            <p className="mt-0.5 max-w-[22rem] text-xs text-muted-small">{reasonOf(job)}</p>
+            <p className="mt-0.5 max-w-[22rem] xl:max-w-[13rem] min-[85rem]:max-w-[18rem] text-xs text-muted-small">
+              {reasonOf(job)}
+            </p>
           )}
           {showCheck && isNotChecked(job) && (
             <div className="mt-1 flex items-center gap-3">
@@ -99,11 +107,13 @@ export function JobCardItem({ job, showCheck = true }: { job: JobCard; showCheck
             </div>
           )}
         </td>
-        <td className="px-3 py-2">{where || '—'}</td>
-        <td className="px-3 py-2 whitespace-nowrap">
+        <td role="cell" data-label="Location" className="px-3 py-2">
+          {where || '—'}
+        </td>
+        <td role="cell" data-label="Posted" className="px-3 py-2 whitespace-nowrap">
           {job.posted_at ? formatDate(job.posted_at) : '—'}
         </td>
-        <td className="px-3 py-2">
+        <td role="cell" data-label="Source" className="px-3 py-2">
           {source ? (
             <>
               <Pill tone={SOURCE_TONE[sourceLabel(source.kind).toLowerCase()] ?? 'grey'}>
@@ -117,7 +127,7 @@ export function JobCardItem({ job, showCheck = true }: { job: JobCard; showCheck
             '—'
           )}
         </td>
-        <td className="px-3 py-2">
+        <td role="cell" className="px-3 py-2">
           <div className="flex items-start justify-end gap-2">
             <PipelineControl
               id={job.id}
@@ -144,8 +154,13 @@ export function JobCardItem({ job, showCheck = true }: { job: JobCard; showCheck
         </td>
       </tr>
       {open && (
-        <tr>
-          <td id={panelId} colSpan={COLUMNS.length + 1} className="space-y-4 bg-surface px-4 py-3">
+        <tr role="row">
+          <td
+            role="cell"
+            id={panelId}
+            colSpan={COLUMNS.length + 1}
+            className="space-y-4 bg-surface px-4 py-3"
+          >
             {(job.state === 'explore' || job.state === 'inquired') && (
               <Section
                 title="Record it"
@@ -170,7 +185,7 @@ function Filters({ value, onChange }: { value: JobFilters; onChange: (next: JobF
   return (
     <form
       aria-label="Filters"
-      className="flex flex-wrap items-end gap-3"
+      className="grid grid-cols-1 gap-3 md:flex md:flex-wrap md:items-end"
       onSubmit={(e) => e.preventDefault()}
     >
       <label className="flex flex-col gap-1 text-sm">
@@ -268,19 +283,19 @@ export function ExplorePage() {
   } else {
     list = (
       <>
-        <div className="overflow-x-auto rounded-lg bg-surface">
-          <table aria-label="Jobs" className="w-full text-left text-sm">
-            <thead className="ht-thead">
-              <tr>
+        <div className="ht-table-scroll overflow-x-auto md:rounded-lg md:bg-surface">
+          <table role="table" aria-label="Jobs" className="ht-table-cards w-full text-left text-sm">
+            <thead role="rowgroup" className="ht-thead">
+              <tr role="row">
                 {COLUMNS.map((name) => (
-                  <th key={name} scope="col" className="px-3 py-3">
+                  <th role="columnheader" key={name} scope="col" className="px-3 py-3">
                     {name}
                   </th>
                 ))}
-                <th scope="col" aria-label="Actions" className="px-3 py-2" />
+                <th role="columnheader" scope="col" aria-label="Actions" className="px-3 py-2" />
               </tr>
             </thead>
-            <tbody>
+            <tbody role="rowgroup">
               {items.map((job) => (
                 <JobCardItem key={job.id} job={job} />
               ))}
@@ -302,7 +317,7 @@ export function ExplorePage() {
   }
 
   return (
-    <section className="space-y-4">
+    <section className="ht-fit-page space-y-4">
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold">Jobs</h1>
         {!adding && (
@@ -332,8 +347,10 @@ export function ExplorePage() {
           </Button>
         </p>
       )}
-      <Filters value={filters} onChange={setFilters} />
-      {list}
+      <OverviewLayout label="Search overview" overview={setupDone ? <SearchOverview /> : null}>
+        <Filters value={filters} onChange={setFilters} />
+        {list}
+      </OverviewLayout>
     </section>
   )
 }

@@ -85,12 +85,62 @@ describe('Shell', () => {
     )
   })
 
-  it('the window does not scroll: the top bar stays put and the page area scrolls on its own', async () => {
+  it('test_FR015_shell_root_not_overflow_hidden', async () => {
     renderAt('/')
     await screen.findByRole('navigation', { name: 'Main' })
 
-    expect(screen.getByTestId('app-root')).toHaveClass('h-screen', 'overflow-hidden', 'flex-col')
+    // the page area scrolls on its own; the root clips nothing (overflow is clipped on html/body)
+    expect(screen.getByTestId('app-root')).not.toHaveClass('overflow-hidden')
+    expect(screen.getByTestId('app-root')).toHaveClass('h-dvh', 'flex-col')
     expect(screen.getByRole('main')).toHaveClass('overflow-y-auto')
+  })
+
+  it('test_US1_AS1_one_main_nav_with_four_links', async () => {
+    renderAt('/')
+    const nav = await screen.findByRole('navigation', { name: 'Main' })
+
+    expect(screen.getAllByRole('navigation', { name: 'Main' })).toHaveLength(1)
+    expect(
+      within(nav)
+        .getAllByRole('link')
+        .map((a) => a.textContent),
+    ).toEqual(['Home', 'Companies', 'Profile', 'Settings'])
+  })
+
+  it('test_US1_AS5_dock_uses_bottom_bar_offset', async () => {
+    renderAt('/')
+    const dock = await screen.findByRole('button', { name: 'Mikasa' })
+    expect(dock).toHaveClass('bottom-[calc(var(--ht-bottom-bar)+0.75rem)]', 'md:bottom-5')
+
+    fireEvent.click(dock)
+    const panel = await screen.findByRole('complementary', { name: 'Mikasa' })
+    expect(panel).toHaveClass('bottom-[calc(var(--ht-bottom-bar)+5rem)]', 'md:bottom-24')
+  })
+
+  it('test_FR018_main_reserves_space_for_the_dock', async () => {
+    renderAt('/')
+    await screen.findByRole('navigation', { name: 'Main' })
+    // the round button (56px and its margin) never covers the end of a page
+    expect(screen.getByRole('main')).toHaveClass(
+      'pb-[calc(var(--ht-bottom-bar)+5rem)]',
+      'md:pb-20',
+      // a focused control is scrolled clear of the bar and the button, not just to the edge (2.4.11)
+      'scroll-pb-[calc(var(--ht-bottom-bar)+5rem)]',
+      'md:scroll-pb-20',
+    )
+  })
+
+  it('test_FR014_nav_has_bottom_bar_class_below_md', async () => {
+    renderAt('/')
+    const nav = await screen.findByRole('navigation', { name: 'Main' })
+
+    // below 768px the nav is a bar fixed at the bottom; from md up it sits in the top bar
+    expect(nav).toHaveClass('ht-bottom-bar', 'fixed', 'bottom-0', 'md:static')
+    // a backdrop filter would make the header the containing block of the fixed bar
+    expect(nav.closest('header')).not.toHaveClass('backdrop-blur')
+    for (const link of within(nav).getAllByRole('link')) {
+      expect(link).toHaveClass('flex-col', 'md:flex-row')
+    }
   })
 
   it('FR022 every menu item has an outline icon', async () => {
@@ -128,14 +178,14 @@ describe('Shell', () => {
   it('002m the chat button is at the bottom right of every page and opens a popup', async () => {
     renderAt('/companies')
     const launcher = await screen.findByRole('button', { name: 'Mikasa' })
-    expect(launcher).toHaveClass('fixed', 'bottom-5', 'right-5')
+    expect(launcher).toHaveClass('fixed', 'md:bottom-5', 'md:right-5')
     expect(launcher).toHaveAttribute('aria-expanded', 'false')
     expect(screen.queryByRole('complementary', { name: 'Mikasa' })).not.toBeInTheDocument()
 
     fireEvent.click(launcher)
 
     const popup = screen.getByRole('complementary', { name: 'Mikasa' })
-    expect(popup).toHaveClass('fixed', 'bottom-24', 'right-5', 'mikasa-pop')
+    expect(popup).toHaveClass('fixed', 'md:bottom-24', 'right-5', 'mikasa-pop')
     expect(launcher).toHaveAttribute('aria-expanded', 'true')
     expect(screen.getByRole('main')).toBeInTheDocument() // the page stays under it
     fireEvent.click(launcher)
@@ -178,7 +228,7 @@ describe('Shell', () => {
   it('pages sit in a wide centred column with a little room on both sides', async () => {
     renderAt('/')
     const column = await screen.findByTestId('page-column')
-    expect(column).toHaveClass('mx-auto', 'max-w-[1440px]', 'px-4', 'md:px-6')
+    expect(column).toHaveClass('ht-page-column', 'mx-auto', 'max-w-[1440px]', 'px-4', 'md:px-6')
   })
 
   it('the chat floats over the page: opening it does not move the page', async () => {

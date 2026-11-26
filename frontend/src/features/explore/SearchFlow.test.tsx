@@ -46,12 +46,15 @@ describe('OutcomeDonut', () => {
     expect(centre).toHaveTextContent('42jobs found')
   })
 
-  it('the legend highlights its slice from the keyboard too', async () => {
+  it('test_FR023_legend_not_tab_stops', async () => {
     render(<OutcomeDonut added={10} merged={3} leftOut={29} />)
     const legend = screen.getByRole('list', { name: 'Legend' })
+    // the counts are already in the legend's text; the entries are not controls
+    for (const item of within(legend).getAllByRole('listitem')) {
+      expect(item).not.toHaveAttribute('tabindex')
+    }
     await userEvent.tab()
-    expect(within(legend).getAllByRole('listitem')[0]).toHaveFocus()
-    expect(screen.getByTestId('donut-centre')).toHaveTextContent('10New jobs24%')
+    expect(document.body).toHaveFocus()
   })
 
   it('a tiny slice reads below one percent, not zero', () => {

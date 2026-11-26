@@ -1,76 +1,48 @@
-import { BadgeCheck, CalendarClock, Layers, MessageCircleQuestion, Send } from 'lucide-react'
+import { BadgeCheck, CalendarClock, MessageCircleQuestion, Send } from 'lucide-react'
+import { FlowChart } from '@/components/FlowChart'
 import { Donut } from '@/components/Donut'
-import { ChartRow, FlowChart } from '@/components/FlowChart'
-import { STAGES, type StageKey } from '@/theme/stages'
+import { STAGES } from '@/theme/stages'
 import { usePipelineSummary } from './api'
 
-/** One colour per stage, from the stage table (FR-004). */
-const STATUS_COLOURS = Object.fromEntries(STAGES.map((s) => [s.key, s.cssVar])) as Record<
-  StageKey,
-  string
->
-
-/** The pipeline at a glance: a flow from inquired to a cleared round, and a donut of every job by
- * its status. Shown above the In pipeline list once something is in it. */
+/** The pipeline at a glance, beside the In pipeline list (FR-023a): the flow from inquired to a
+ * cleared round with "In pipeline" as its total and the largest stage marked (FR-024), then every
+ * job by its stage as a donut (clarification 2026-11-26). Nothing until something is in the pipeline. */
 export function PipelineChart() {
   const summary = usePipelineSummary()
   const s = summary.data
   if (!s || s.total === 0) return null
+  const steps = [
+    { key: 'inquired', icon: MessageCircleQuestion, title: 'Inquired', value: s.inquired },
+    { key: 'applied', icon: Send, title: 'Applied', value: s.applied },
+    { key: 'scheduled', icon: CalendarClock, title: 'Interview scheduled', value: s.scheduled },
+    { key: 'cleared', icon: BadgeCheck, title: 'Round cleared', value: s.cleared },
+  ] as const
+  const largest = steps.reduce((best, step) => (step.value > best.value ? step : best))
   return (
-    <ChartRow>
+    <>
       <FlowChart
         label="Your pipeline"
-        steps={[
-          { key: 'total', icon: Layers, title: 'In pipeline', value: String(s.total) },
-          {
-            key: 'inquired',
-            icon: MessageCircleQuestion,
-            title: 'Inquired',
-            value: String(s.inquired),
-          },
-          { key: 'applied', icon: Send, title: 'Applied', value: String(s.applied) },
-          {
-            key: 'scheduled',
-            icon: CalendarClock,
-            title: 'Interview scheduled',
-            value: String(s.scheduled),
-          },
-          {
-            key: 'cleared',
-            icon: BadgeCheck,
-            title: 'Round cleared',
-            value: String(s.cleared),
-            note: s.failed > 0 ? `${s.failed} failed` : undefined,
-          },
-        ]}
+        total={{ label: 'In pipeline', value: String(s.total) }}
+        emphasis={largest.value > 0 ? largest.key : undefined}
+        steps={steps.map((step) => ({
+          ...step,
+          stage: step.key,
+          value: String(step.value),
+          note: step.key === 'cleared' && s.failed > 0 ? `${s.failed} failed` : undefined,
+        }))}
       />
       <Donut
+        compact
         caption="Your jobs by status"
         totalLabel="jobs in pipeline"
-        ariaLabel={`${s.inquired} inquired, ${s.applied} applied, ${s.scheduled} interview scheduled, ${s.cleared} round cleared, ${s.failed} failed`}
-        parts={[
-          {
-            key: 'inquired',
-            label: 'Inquired',
-            value: s.inquired,
-            colour: STATUS_COLOURS.inquired,
-          },
-          { key: 'applied', label: 'Applied', value: s.applied, colour: STATUS_COLOURS.applied },
-          {
-            key: 'scheduled',
-            label: 'Interview scheduled',
-            value: s.scheduled,
-            colour: STATUS_COLOURS.scheduled,
-          },
-          {
-            key: 'cleared',
-            label: 'Round cleared',
-            value: s.cleared,
-            colour: STATUS_COLOURS.cleared,
-          },
-          { key: 'failed', label: 'Failed', value: s.failed, colour: STATUS_COLOURS.failed },
-        ]}
+        ariaLabel={STAGES.map((stage) => `${s[stage.key]} ${stage.label.toLowerCase()}`).join(', ')}
+        parts={STAGES.map((stage) => ({
+          key: stage.key,
+          label: stage.label,
+          value: s[stage.key],
+          colour: stage.cssVar,
+        }))}
       />
-    </ChartRow>
+    </>
   )
 }

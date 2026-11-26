@@ -1,5 +1,6 @@
 import { Fragment, useState } from 'react'
 import { PipelineChart } from './PipelineChart'
+import { OverviewLayout } from '@/components/OverviewLayout'
 import { Link } from 'react-router'
 import {
   ArrowUpRight,
@@ -113,8 +114,8 @@ function Details({ id, colSpan }: { id: string; colSpan: number }) {
     )
   }
   return (
-    <tr>
-      <td colSpan={colSpan} className="bg-surface px-4 py-3">
+    <tr role="row">
+      <td role="cell" colSpan={colSpan} className="bg-surface px-4 py-3">
         {content}
       </td>
     </tr>
@@ -152,25 +153,29 @@ function Row({ job, registry }: { job: JobCard; registry: UnsavedRegistry }) {
       : { label: 'Applied', tone: STATUS_TONE.Applied }
   return (
     <Fragment>
-      <tr className="ht-row border-t border-divider align-top">
-        <td className="px-3 py-2">{job.company_name}</td>
-        <td className="px-3 py-2">
+      <tr role="row" className="ht-row border-t border-divider align-top">
+        <td role="cell" className="px-3 py-2">
+          {job.company_name}
+        </td>
+        <td role="cell" className="px-3 py-2">
           <Link
             to={`/jobs/${job.id}`}
             title={job.title}
-            className="block max-w-[18rem] truncate font-semibold text-link underline"
+            className="block font-semibold text-link underline md:max-w-[18rem] md:truncate"
           >
             {job.role}
           </Link>
         </td>
-        <td className="px-3 py-2">{formatDay(job.applied_on ?? job.inquired_on)}</td>
-        <td className="px-3 py-2">
+        <td role="cell" data-label="Date" className="px-3 py-2">
+          {formatDay(job.applied_on ?? job.inquired_on)}
+        </td>
+        <td role="cell" data-label="Status" className="px-3 py-2">
           <Pill tone={status.tone ?? 'grey'}>{status.label}</Pill>
         </td>
-        <td className="px-3 py-2">
+        <td role="cell" data-label="Resume" className="px-3 py-2">
           <ResumeCell resume={job.resume} />
         </td>
-        <td className="px-3 py-2">
+        <td role="cell" data-label="Source" className="px-3 py-2">
           {source ? (
             <Pill tone={SOURCE_TONE[sourceLabel(source.kind).toLowerCase()] ?? 'grey'}>
               {sourceLabel(source.kind)}
@@ -179,7 +184,7 @@ function Row({ job, registry }: { job: JobCard; registry: UnsavedRegistry }) {
             '—'
           )}
         </td>
-        <td className="px-3 py-2">
+        <td role="cell" className="px-3 py-2">
           <div className="flex gap-1">
             <button
               type="button"
@@ -234,19 +239,23 @@ export function PipelinePage() {
   else
     body = (
       <>
-        <div className="overflow-x-auto rounded-lg bg-surface">
-          <table aria-label="Pipeline jobs" className="w-full text-left text-sm">
-            <thead className="ht-thead">
-              <tr>
+        <div className="ht-table-scroll overflow-x-auto md:rounded-lg md:bg-surface">
+          <table
+            role="table"
+            aria-label="Pipeline jobs"
+            className="ht-table-cards w-full text-left text-sm"
+          >
+            <thead role="rowgroup" className="ht-thead">
+              <tr role="row">
                 {COLUMNS.map((name) => (
-                  <th key={name} scope="col" className="px-3 py-3">
+                  <th role="columnheader" key={name} scope="col" className="px-3 py-3">
                     {name}
                   </th>
                 ))}
-                <th scope="col" aria-label="Actions" className="px-3 py-2" />
+                <th role="columnheader" scope="col" aria-label="Actions" className="px-3 py-2" />
               </tr>
             </thead>
-            <tbody>
+            <tbody role="rowgroup">
               {items.map((job) => (
                 <Row key={job.id} job={job} registry={registry} />
               ))}
@@ -267,13 +276,14 @@ export function PipelinePage() {
     )
 
   return (
-    <section className="space-y-4">
+    <section className="ht-fit-page space-y-4">
       <h1 className="text-2xl font-semibold">Jobs</h1>
       <ReviewNotice />
       <LeaveGuard when={registry.any} />
       <HomeTabs />
-      <PipelineChart />
-      {body}
+      <OverviewLayout label="Pipeline overview" overview={<PipelineChart />}>
+        {body}
+      </OverviewLayout>
     </section>
   )
 }

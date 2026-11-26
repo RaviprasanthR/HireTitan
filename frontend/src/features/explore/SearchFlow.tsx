@@ -104,13 +104,16 @@ export function OutcomeDonut({
   added,
   merged,
   leftOut,
+  compact = false,
 }: {
   added: number
   merged: number
   leftOut: number
+  compact?: boolean
 }) {
   return (
     <Donut
+      compact={compact}
       caption="What happened to the jobs found"
       totalLabel="jobs found"
       ariaLabel={`${added} new, ${merged} already known, ${leftOut} left out`}

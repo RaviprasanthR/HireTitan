@@ -1,10 +1,10 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { type Call, problem, stubApi } from '@/test/api'
-import { SearchPanel } from './SearchPanel'
+import { SearchOverview, SearchPanel } from './SearchPanel'
 
 function run(over: Record<string, unknown> = {}) {
   return {
@@ -58,6 +58,7 @@ function renderPanel(latest: unknown, extra?: (call: Call) => unknown) {
     <QueryClientProvider client={client}>
       <MemoryRouter>
         <SearchPanel />
+        <SearchOverview />
       </MemoryRouter>
     </QueryClientProvider>,
   )
@@ -354,11 +355,13 @@ describe('SearchPanel', () => {
       }),
     )
     expect(await screen.findByText(/Search finished/)).toBeInTheDocument()
-    // the last search is shown as the summary's flow chart and donut, at the top of Explore
+    // test_FR023a: the last search's flow sits in the overview beside the list, outside the
+    // action bar, with no donut (FR-023: the counts once)
     const flow = screen.getByRole('list', { name: 'How the search went' })
     expect(flow).toHaveTextContent(/Companies read\s*20 of 20/)
     expect(flow).toHaveTextContent(/New jobs\s*6/)
-    expect(screen.getByRole('img', { name: /6 new/ })).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: /6 new/ })).toHaveAttribute('width', '112')
+    expect(within(screen.getByRole('region', { name: 'Search' })).queryByRole('list')).toBeNull()
     expect(screen.queryByText(/batch/i)).not.toBeInTheDocument()
   })
 
