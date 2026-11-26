@@ -9,7 +9,6 @@ import { MikasaPanel } from './MikasaPanel'
  */
 export function MikasaDock() {
   const [open, setOpen] = useState(false)
-  const [everOpened, setEverOpened] = useState(false) // the attention ring stops after the first open
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === '/' && (event.ctrlKey || event.metaKey)) {
@@ -22,10 +21,7 @@ export function MikasaDock() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
-  const toggle = () => {
-    setOpen((was) => !was)
-    setEverOpened(true)
-  }
+  const toggle = () => setOpen((was) => !was)
   return (
     <>
       {open && <MikasaPanel onClose={() => setOpen(false)} />}
@@ -39,15 +35,14 @@ export function MikasaDock() {
         onClick={toggle}
         className={cn(
           'fixed bottom-5 right-5 z-50 grid size-14 place-items-center rounded-full outline-none',
-          'bg-gradient-to-br from-primary to-[#a99ce6] text-primary-foreground shadow-lg shadow-black/40',
+          'bg-primary text-primary-foreground shadow-[var(--ht-shadow-overlay)]',
           'transition-transform duration-200 hover:scale-110 focus-visible:ring-2 focus-visible:ring-ring active:scale-95',
-          !open && !everOpened && 'mikasa-ring',
         )}
       >
         <span
           aria-hidden
           className={cn(
-            'absolute transition-all duration-200',
+            'absolute transition-[transform,opacity] duration-[var(--ht-dur-enter)]',
             open ? 'rotate-90 scale-0 opacity-0' : 'rotate-0 scale-100 opacity-100',
           )}
         >
@@ -56,7 +51,7 @@ export function MikasaDock() {
         <span
           aria-hidden
           className={cn(
-            'absolute transition-all duration-200',
+            'absolute transition-[transform,opacity] duration-[var(--ht-dur-enter)]',
             open ? 'rotate-0 scale-100 opacity-100' : '-rotate-90 scale-0 opacity-0',
           )}
         >

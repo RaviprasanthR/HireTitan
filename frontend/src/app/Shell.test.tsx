@@ -178,7 +178,7 @@ describe('Shell', () => {
   it('pages sit in a wide centred column with a little room on both sides', async () => {
     renderAt('/')
     const column = await screen.findByTestId('page-column')
-    expect(column).toHaveClass('mx-auto', 'max-w-[1800px]', 'px-4')
+    expect(column).toHaveClass('mx-auto', 'max-w-[1440px]', 'px-4', 'md:px-6')
   })
 
   it('the chat floats over the page: opening it does not move the page', async () => {

@@ -78,11 +78,11 @@ describe('PipelinePage', () => {
     const flow = await screen.findByRole('list', { name: 'Your pipeline' })
     const steps = within(flow).getAllByRole('listitem')
     expect(steps.map((step) => step.textContent)).toEqual([
-      expect.stringMatching(/^9In pipeline/),
-      expect.stringMatching(/^3Inquired/),
-      expect.stringMatching(/^2Applied/),
-      expect.stringMatching(/^2Interview scheduled/),
-      expect.stringMatching(/^1Round cleared1 failed/),
+      expect.stringMatching(/^In pipeline9/),
+      expect.stringMatching(/^Inquired3/),
+      expect.stringMatching(/^Applied2/),
+      expect.stringMatching(/^Interview scheduled2/),
+      expect.stringMatching(/^Round cleared11 failed/),
     ])
     const donut = screen.getByRole('img', {
       name: '3 inquired, 2 applied, 2 interview scheduled, 1 round cleared, 1 failed',

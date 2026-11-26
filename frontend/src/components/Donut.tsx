@@ -72,7 +72,7 @@ export function Donut({
             cy={SIZE / 2}
             r={RADIUS}
             fill="none"
-            stroke="var(--ht-divider)"
+            stroke="var(--ht-hairline)"
             strokeWidth={STROKE}
           />
           {slices.map((slice) => (

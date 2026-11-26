@@ -176,7 +176,7 @@ function ContactItem({ contact, companyId }: { contact: Contact; companyId: stri
             <IconButton
               title="Edit"
               label={`Edit ${contact.name}`}
-              tone="text-emerald-300 hover:bg-emerald-500/20 hover:text-emerald-200"
+              tone="text-success hover:bg-success/20 hover:text-success"
               onClick={() => setEditing(true)}
             >
               <Pencil aria-hidden />
@@ -184,7 +184,7 @@ function ContactItem({ contact, companyId }: { contact: Contact; companyId: stri
             <IconButton
               title="Delete"
               label={`Delete ${contact.name}`}
-              tone="text-rose-300 hover:bg-rose-500/20 hover:text-rose-200"
+              tone="text-danger hover:bg-danger/20 hover:text-danger"
               onClick={() => setConfirming(true)}
             >
               <Trash2 aria-hidden />
@@ -196,7 +196,7 @@ function ContactItem({ contact, companyId }: { contact: Contact; companyId: stri
         <div className="flex flex-wrap gap-2 text-sm">
           {contact.linkedin_url && (
             <span className="ht-fact">
-              <Link2 aria-hidden className="size-4 text-sky-300" />
+              <Link2 aria-hidden className="size-4 text-stage-inquired" />
               <a
                 href={contact.linkedin_url}
                 target="_blank"
@@ -210,25 +210,25 @@ function ContactItem({ contact, companyId }: { contact: Contact; companyId: stri
           )}
           {contact.email && (
             <span className="ht-fact">
-              <Mail aria-hidden className="size-4 text-amber-300" />
+              <Mail aria-hidden className="size-4 text-warning" />
               {contact.email}
             </span>
           )}
           {contact.phone && (
             <span className="ht-fact">
-              <Phone aria-hidden className="size-4 text-emerald-300" />
+              <Phone aria-hidden className="size-4 text-success" />
               {contact.phone}
             </span>
           )}
         </div>
       )}
       {contact.note && (
-        <blockquote className="border-l-2 border-amber-300/60 pl-3 text-sm whitespace-pre-line text-amber-100/90">
+        <blockquote className="border-l-2 border-warning/60 pl-3 text-sm whitespace-pre-line text-foreground/90">
           {contact.note}
         </blockquote>
       )}
       {confirming && (
-        <div className="space-y-2 rounded-md border border-rose-400/40 bg-rose-500/10 p-2">
+        <div className="space-y-2 rounded-md border border-danger/40 bg-danger/10 p-2">
           <p className="text-sm">Delete {contact.name}? This cannot be undone.</p>
           <div className="flex gap-2">
             <Button

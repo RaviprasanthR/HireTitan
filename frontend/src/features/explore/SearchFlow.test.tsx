@@ -16,14 +16,14 @@ const COUNTS = {
 }
 
 describe('SearchFlow', () => {
-  it('draws the search as round steps joined by connectors', () => {
+  it('draws the search as steps joined by connectors', () => {
     render(<SearchFlow counts={COUNTS} />)
     const flow = screen.getByRole('list', { name: 'How the search went' })
     const steps = within(flow).getAllByRole('listitem')
     expect(steps).toHaveLength(5) // the connectors are hidden from assistive technology
-    expect(steps[0]).toHaveTextContent(/3 of 3.*Companies read.*1 to check by hand/)
-    expect(steps[4]).toHaveTextContent(/10.*New jobs.*3 already known/)
-    expect(flow.querySelectorAll('.ht-flow-node')).toHaveLength(5)
+    expect(steps[0]).toHaveTextContent(/Companies read.*3 of 3.*1 to check by hand/)
+    expect(steps[4]).toHaveTextContent(/New jobs.*10.*3 already known/)
+    expect(flow.querySelectorAll('.ht-flow-icon')).toHaveLength(5)
     expect(flow.querySelectorAll('.ht-flow-link')).toHaveLength(4)
   })
 })

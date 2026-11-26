@@ -1,18 +1,14 @@
 import { BadgeCheck, CalendarClock, Layers, MessageCircleQuestion, Send } from 'lucide-react'
 import { Donut } from '@/components/Donut'
 import { ChartRow, FlowChart } from '@/components/FlowChart'
+import { STAGES, type StageKey } from '@/theme/stages'
 import { usePipelineSummary } from './api'
 
-/** One colour per status, in pipeline order: blue, aqua, yellow, violet, red from the dataviz
- * reference palette (dark steps), validated on the dark surface, including the ring's wrap-around
- * pair (failed next to inquired). The hues follow the Status pills where the check allows. */
-const STATUS_COLOURS = {
-  inquired: '#3987e5',
-  applied: '#199e70',
-  scheduled: '#c98500',
-  cleared: '#9085e9',
-  failed: '#e66767',
-} as const
+/** One colour per stage, from the stage table (FR-004). */
+const STATUS_COLOURS = Object.fromEntries(STAGES.map((s) => [s.key, s.cssVar])) as Record<
+  StageKey,
+  string
+>
 
 /** The pipeline at a glance: a flow from inquired to a cleared round, and a donut of every job by
  * its status. Shown above the In pipeline list once something is in it. */

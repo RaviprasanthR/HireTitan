@@ -185,7 +185,7 @@ export function StagedFlow({
                   type="button"
                   disabled={busy !== null}
                   onClick={() => void run(kind, () => onChoose(kind))}
-                  className="flex items-center gap-1.5 rounded-full border border-white/10 bg-background/60 px-3 py-1.5 text-xs transition-all hover:-translate-y-px hover:border-primary hover:bg-primary/15 disabled:pointer-events-none disabled:opacity-50"
+                  className="flex items-center gap-1.5 rounded-full border border-slate bg-transparent px-3 py-1.5 text-xs transition-colors duration-[var(--ht-dur-fast)] hover:border-primary hover:bg-accent-tint disabled:pointer-events-none disabled:opacity-50"
                 >
                   {spinner(kind)}
                   {label}

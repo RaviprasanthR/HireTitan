@@ -33,7 +33,7 @@ export function ProgressBar({ label, value, tone = 'success', animated = false, 
         data-indeterminate={known ? undefined : 'true'}
         data-animated={known && animated ? 'true' : undefined}
         className="ht-progress-fill"
-        style={known ? { width: `${percent}%` } : undefined}
+        style={known ? { transform: `scaleX(${percent / 100})` } : undefined}
       />
     </div>
   )

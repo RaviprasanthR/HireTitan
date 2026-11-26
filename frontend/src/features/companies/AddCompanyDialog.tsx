@@ -152,7 +152,7 @@ export function AddCompanyDialog({ onClose }: { onClose: () => void }) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="add-company-title"
-        className="aspect-square w-[min(32rem,100%)] space-y-3 overflow-y-auto rounded-xl bg-surface p-6 shadow-[var(--ht-border-panel)]"
+        className="aspect-square w-[min(32rem,100%)] space-y-3 overflow-y-auto rounded-xl bg-surface p-6 shadow-[0_0_0_1px_var(--ht-hairline)]"
       >
         <h2 id="add-company-title" className="text-lg font-semibold">
           Add a company

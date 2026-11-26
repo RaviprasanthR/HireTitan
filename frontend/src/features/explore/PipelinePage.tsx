@@ -46,13 +46,13 @@ function Details({ id, colSpan }: { id: string; colSpan: number }) {
           <div className="flex flex-wrap gap-2">
             {location && (
               <span aria-label="Location" className="ht-fact">
-                <MapPin aria-hidden className="size-4 text-[#f0a35e]" />
+                <MapPin aria-hidden className="size-4 text-subtle" />
                 {location}
               </span>
             )}
             {mode && (
               <span aria-label="Work mode" className="ht-fact">
-                <Laptop aria-hidden className="size-4 text-[#4cc9f0]" />
+                <Laptop aria-hidden className="size-4 text-subtle" />
                 {mode}
               </span>
             )}

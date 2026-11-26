@@ -1,5 +1,6 @@
 import type { LucideIcon } from 'lucide-react'
 import { Fragment } from 'react'
+import type { StageKey } from '@/theme/stages'
 import './charts.css'
 
 export type FlowStep = {
@@ -8,45 +9,60 @@ export type FlowStep = {
   title: string
   value: string
   note?: string
+  /** Colours the step's icon with its stage colour (DESIGN.md, Data display). */
+  stage?: StageKey
 }
 
-const STAGGER_MS = 110
-
 /**
- * Steps drawn as a flow chart: round nodes joined by connectors along which dashes run, left to
- * right (top to bottom on a narrow screen). The last node is the outcome and wears the accent.
- * Nodes pop in one after another and lift when pointed at; reduced motion turns the movement off.
+ * Steps drawn as a flow: each step is an icon and its name, with the count below in the figure face,
+ * joined by a hairline, left to right (top to bottom on a narrow screen). A step with a zero count
+ * is muted; the step named by `emphasis` carries the accent; `total` sits beside the flow, not in it.
  */
-export function FlowChart({ label, steps }: { label: string; steps: FlowStep[] }) {
+export function FlowChart({
+  label,
+  steps,
+  emphasis,
+  total,
+}: {
+  label: string
+  steps: FlowStep[]
+  emphasis?: string
+  total?: { label: string; value: string }
+}) {
   return (
-    <div className="flex min-w-0 items-center rounded-lg bg-surface p-4">
+    <div className="flex min-w-0 flex-col gap-4 rounded-[var(--ht-radius-card)] bg-surface p-5 lg:flex-row lg:items-center">
+      {total && (
+        <div className="flex-none lg:border-r lg:border-hairline lg:pr-6">
+          <span className="ht-figure block text-3xl font-medium">{total.value}</span>
+          <span className="block text-sm text-subtle">{total.label}</span>
+        </div>
+      )}
       <ol
         aria-label={label}
-        className="flex w-full flex-col items-center gap-1 lg:flex-row lg:items-start lg:gap-0"
+        className="flex w-full flex-col gap-2 lg:flex-row lg:items-start lg:gap-0"
       >
         {steps.map((step, index) => {
           const Icon = step.icon
           const last = index === steps.length - 1
+          const muted = step.value === '0'
           return (
             <Fragment key={step.key}>
               <li
-                className="ht-flow-step flex w-36 flex-none flex-col items-center text-center lg:w-auto lg:min-w-0 lg:max-w-36 lg:flex-[1_1_5rem]"
-                style={{ animationDelay: `${index * STAGGER_MS}ms` }}
+                className="ht-flow-step min-w-0 lg:flex-[1_1_6rem]"
+                data-stage={step.stage}
+                data-muted={muted || undefined}
+                data-emphasis={step.key === emphasis || undefined}
               >
-                <span className={`ht-flow-node ${last ? 'ht-flow-node-last' : ''}`}>
-                  <Icon aria-hidden className="ht-flow-icon size-6" />
+                <span className="flex items-center gap-2 text-sm text-subtle">
+                  <Icon aria-hidden className="ht-flow-icon size-4 flex-none" />
+                  {step.title}
                 </span>
-                <span className="mt-2 block text-lg font-semibold leading-tight">{step.value}</span>
-                <span className="block text-sm leading-snug text-muted-small">{step.title}</span>
+                <span className="ht-figure ht-flow-value mt-1 block text-2xl leading-tight">
+                  {step.value}
+                </span>
                 {step.note && <span className="block text-xs text-muted-small">{step.note}</span>}
               </li>
-              {!last && (
-                <li
-                  aria-hidden
-                  className="ht-flow-link"
-                  style={{ animationDelay: `${index * STAGGER_MS + STAGGER_MS / 2}ms` }}
-                />
-              )}
+              {!last && <li aria-hidden className="ht-flow-link" />}
             </Fragment>
           )
         })}
@@ -55,9 +71,7 @@ export function FlowChart({ label, steps }: { label: string; steps: FlowStep[] }
   )
 }
 
-/** A flow chart and a donut side by side on a wide screen, one above the other otherwise. */
+/** A flow chart and what goes with it, side by side on a wide screen, stacked otherwise. */
 export function ChartRow({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="grid items-stretch gap-4 xl:grid-cols-[minmax(0,1fr)_auto]">{children}</div>
-  )
+  return <div className="grid items-stretch gap-4">{children}</div>
 }

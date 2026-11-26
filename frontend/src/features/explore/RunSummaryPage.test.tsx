@@ -115,11 +115,11 @@ describe('RunSummaryPage', () => {
     const flow = await screen.findByRole('list', { name: 'How the search went' })
     const steps = within(flow).getAllByRole('listitem')
     expect(steps.map((step) => step.textContent)).toEqual([
-      expect.stringMatching(/3 of 3.*Companies read.*3 to check by hand/),
-      expect.stringMatching(/40.*Jobs found/),
-      expect.stringMatching(/25 left out.*Your rules/),
-      expect.stringMatching(/12 checked.*AI check.*4 left out/),
-      expect.stringMatching(/10.*New jobs.*3 already known/),
+      expect.stringMatching(/Companies read.*3 of 3.*3 to check by hand/),
+      expect.stringMatching(/Jobs found.*40/),
+      expect.stringMatching(/Your rules.*25 left out/),
+      expect.stringMatching(/AI check.*12 checked.*4 left out/),
+      expect.stringMatching(/New jobs.*10.*3 already known/),
     ])
     expect(screen.queryByText(/cost/i)).not.toBeInTheDocument() // SC003
     expect(screen.queryByText(/batch/i)).not.toBeInTheDocument()

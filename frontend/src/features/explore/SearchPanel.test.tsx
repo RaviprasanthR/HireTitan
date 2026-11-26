@@ -356,8 +356,8 @@ describe('SearchPanel', () => {
     expect(await screen.findByText(/Search finished/)).toBeInTheDocument()
     // the last search is shown as the summary's flow chart and donut, at the top of Explore
     const flow = screen.getByRole('list', { name: 'How the search went' })
-    expect(flow).toHaveTextContent(/20 of 20\s*Companies read/)
-    expect(flow).toHaveTextContent(/6\s*New jobs/)
+    expect(flow).toHaveTextContent(/Companies read\s*20 of 20/)
+    expect(flow).toHaveTextContent(/New jobs\s*6/)
     expect(screen.getByRole('img', { name: /6 new/ })).toBeInTheDocument()
     expect(screen.queryByText(/batch/i)).not.toBeInTheDocument()
   })

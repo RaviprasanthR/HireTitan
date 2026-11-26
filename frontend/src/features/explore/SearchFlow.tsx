@@ -2,12 +2,12 @@ import { Building2, CircleCheck, ListFilter, Mail, Search, Sparkles } from 'luci
 import { Donut } from '@/components/Donut'
 import { FlowChart } from '@/components/FlowChart'
 
-/** Colours for the three outcomes: the reference palette's first three dark slots, validated
- * on the dark surface (lightness band, chroma, colour-blind and normal-vision separation, 3:1). */
+/** Colours for the three outcomes: new jobs carry the accent, the rest are neutral steps. They are
+ * not pipeline stages, so no stage colour is used here (FR-004). */
 const OUTCOME_COLOURS = {
-  added: '#d95926',
-  merged: '#3987e5',
-  leftOut: '#199e70',
+  added: 'var(--ht-accent)',
+  merged: 'var(--ht-text-secondary)',
+  leftOut: 'var(--ht-text-muted)',
 } as const
 
 export type FlowCounts = {

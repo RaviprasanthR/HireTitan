@@ -528,8 +528,8 @@ describe('CompaniesPage', () => {
             name,
           }),
         ).toHaveClass(colour)
-      tone('Open Acme website', 'text-violet-300')
-      tone('Edit Acme', 'text-emerald-300')
+      tone('Open Acme website', 'text-link')
+      tone('Edit Acme', 'text-success')
       expect(within(row).queryByRole('button', { name: /^Hide / })).toBeNull()
     })
 
@@ -537,13 +537,13 @@ describe('CompaniesPage', () => {
       const user = userEvent.setup()
       renderPage(list)
       const row = await screen.findByRole('listitem', { name: 'Acme' })
-      expect(row).toHaveClass('hover:bg-[#9c4f37]/25') // closed: the tint under the pointer
+      expect(row).toHaveClass('hover:bg-raised') // closed: the tint under the pointer
 
       await user.click(within(row).getByRole('button', { name: 'Details for Acme' }))
 
-      expect(row).not.toHaveClass('hover:bg-[#9c4f37]/25')
+      expect(row).not.toHaveClass('hover:bg-raised')
       await user.click(within(row).getByRole('button', { name: 'Details for Acme' }))
-      expect(row).toHaveClass('hover:bg-[#9c4f37]/25') // closed again: the tint is back
+      expect(row).toHaveClass('hover:bg-raised') // closed again: the tint is back
     })
 
     it('a row being edited or asked about deleting has no orange tint', async () => {
@@ -552,13 +552,13 @@ describe('CompaniesPage', () => {
       const row = await screen.findByRole('listitem', { name: 'Acme' })
 
       await user.click(within(row).getByRole('button', { name: 'Edit Acme' }))
-      expect(row).not.toHaveClass('hover:bg-[#9c4f37]/25')
+      expect(row).not.toHaveClass('hover:bg-raised')
       await user.click(within(row).getByRole('button', { name: 'Cancel' }))
-      expect(row).toHaveClass('hover:bg-[#9c4f37]/25')
+      expect(row).toHaveClass('hover:bg-raised')
 
       await user.click(within(row).getByRole('button', { name: 'Edit Acme' }))
       await user.click(within(row).getByRole('button', { name: 'Delete Acme' }))
-      expect(row).not.toHaveClass('hover:bg-[#9c4f37]/25')
+      expect(row).not.toHaveClass('hover:bg-raised')
     })
 
     it('the edit form saves in green, cancels in orange; the delete question is red', async () => {
@@ -602,7 +602,7 @@ describe('CompaniesPage', () => {
       renderPage(list)
       const row = await screen.findByRole('listitem', { name: 'Acme' })
 
-      expect(row).toHaveClass('hover:bg-[#9c4f37]/25')
+      expect(row).toHaveClass('hover:bg-raised')
     })
 
     it('the header has the same look as the pipeline table header', async () => {
@@ -735,8 +735,8 @@ describe('CompaniesPage', () => {
       const button = screen.getByRole('button', { name: 'Add a company' })
 
       expect(button.querySelector('svg')).not.toBeNull()
-      expect(button).toHaveClass('bg-[#243044]')
-      expect(button).toHaveClass('text-[#f0a35e]')
+      expect(button).toHaveClass('bg-raised')
+      expect(button).toHaveClass('text-foreground')
     })
 
     it('FR026 Add a company opens a dialog over the list, and Cancel closes it', async () => {

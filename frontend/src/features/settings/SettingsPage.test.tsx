@@ -55,7 +55,7 @@ describe('SettingsPage (US6)', () => {
     expect(await screen.findByRole('heading', { level: 2, name: 'AI' })).toBeInTheDocument()
     expect(screen.getByText(/reads resumes, checks jobs/)).toBeInTheDocument()
     expect(screen.queryByRole('heading', { level: 2, name: 'Gmail job alerts' })).not.toBeInTheDocument()
-    expect(within(screen.getByRole('navigation', { name: 'Settings tabs' })).getByRole('link', { name: 'AI' })).toHaveClass('border-[#f0a35e]')
+    expect(within(screen.getByRole('navigation', { name: 'Settings tabs' })).getByRole('link', { name: 'AI' })).toHaveClass('border-link')
   })
 
   it('a tab is its own address', async () => {

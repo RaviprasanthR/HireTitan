@@ -7,7 +7,7 @@ export function MikasaAvatar({ className }: { className?: string }) {
     <span
       aria-hidden
       className={cn(
-        'grid shrink-0 place-items-center rounded-full bg-gradient-to-br from-primary to-[#a99ce6] text-primary-foreground shadow-sm',
+        'grid shrink-0 place-items-center rounded-full bg-primary text-primary-foreground',
         className ?? 'size-7',
       )}
     >

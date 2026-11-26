@@ -25,9 +25,9 @@ import { Field, inputClass } from './Field'
 type SortKey = 'name' | 'city' | 'pipeline' | 'contacts' | 'note'
 type Sort = { key: SortKey; dir: 'asc' | 'desc' }
 
-/** The filled slate chip used by the toolbar buttons. */
+/** The quiet raised chip used by the toolbar buttons. */
 const TOOL_CHIP =
-  'border-transparent bg-[#243044] text-[#f0a35e] hover:bg-[#2d3b52] hover:text-[#f0a35e] aria-selected:ring-1 aria-selected:ring-[#f0a35e]/60'
+  'border-transparent bg-raised text-foreground hover:bg-raised hover:text-link aria-selected:ring-1 aria-selected:ring-link/60'
 
 const CHIP = 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs whitespace-nowrap'
 
@@ -35,14 +35,14 @@ const CHIP = 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs wh
 function PipelineChip({ company }: { company: Company }) {
   if (company.pipeline === 'applied')
     return (
-      <span className={`${CHIP} w-fit bg-emerald-500/15 text-emerald-300`}>
+      <span className={`${CHIP} w-fit bg-success/15 text-success`}>
         <BadgeCheck aria-hidden className="size-3" />
         Applied
       </span>
     )
   if (company.pipeline === 'inquired')
     return (
-      <span className={`${CHIP} w-fit bg-sky-500/15 text-sky-300`}>
+      <span className={`${CHIP} w-fit bg-stage-inquired/15 text-stage-inquired`}>
         <MessageCircleQuestion aria-hidden className="size-3" />
         Inquired
       </span>
@@ -252,8 +252,8 @@ function CompanyRow({ company }: { company: Company }) {
     <li
       aria-label={company.name}
       className={`relative space-y-2 px-3 py-1.5 transition-colors duration-200 after:absolute after:inset-x-3 after:bottom-0 after:h-px after:bg-border motion-reduce:transition-none ${
-        // the tint is for a resting row: an open, edited or about-to-go row is not an orange block
-        showPanel || editing || confirming ? '' : 'hover:bg-[#9c4f37]/25'
+        // the tint is for a resting row: an open, edited or about-to-go row stays as it is
+        showPanel || editing || confirming ? '' : 'hover:bg-raised'
       }`}
     >
       {/* A click anywhere on the row opens or closes it; the name is the same switch for the
@@ -273,7 +273,7 @@ function CompanyRow({ company }: { company: Company }) {
               aria-expanded={showPanel}
               aria-label={`Details for ${company.name}`}
               onClick={() => setShowPanel(!showPanel)}
-              className="max-w-full truncate rounded text-left hover:text-orange-300 focus-visible:ring-2 focus-visible:ring-ring"
+              className="max-w-full truncate rounded text-left hover:text-warning focus-visible:ring-2 focus-visible:ring-ring"
             >
               {company.name}
             </button>
@@ -293,12 +293,12 @@ function CompanyRow({ company }: { company: Company }) {
           {contacts}
         </span>
         <span
-          className="flex min-w-0 flex-1 items-center gap-1.5 text-xs text-amber-200/80 md:min-w-0"
+          className="flex min-w-0 flex-1 items-center gap-1.5 text-xs text-warning/80 md:min-w-0"
           title={company.note_preview ?? undefined}
         >
           {company.note_preview && (
             <>
-              <StickyNote aria-hidden className="size-3 shrink-0 text-amber-300" />
+              <StickyNote aria-hidden className="size-3 shrink-0 text-warning" />
               <span className="truncate">{company.note_preview}</span>
             </>
           )}
@@ -311,7 +311,7 @@ function CompanyRow({ company }: { company: Company }) {
                   asChild
                   variant="ghost"
                   size="icon-sm"
-                  className="text-violet-300 hover:bg-violet-500/20 hover:text-violet-200"
+                  className="text-link hover:bg-link/20 hover:text-link"
                 >
                   <a
                     href={company.website}
@@ -329,7 +329,7 @@ function CompanyRow({ company }: { company: Company }) {
               <IconButton
                 title="Edit"
                 label={`Edit ${company.name}`}
-                tone="text-emerald-300 hover:bg-emerald-500/20 hover:text-emerald-200"
+                tone="text-success hover:bg-success/20 hover:text-success"
                 onClick={() => setEditing(true)}
               >
                 <Pencil aria-hidden />
@@ -452,9 +452,9 @@ function HeaderRow({ sort, onSort }: { sort: Sort; onSort: (key: SortKey) => voi
         {text}
         {active &&
           (sort.dir === 'asc' ? (
-            <ArrowUp aria-hidden className="size-3 text-amber-300" />
+            <ArrowUp aria-hidden className="size-3 text-warning" />
           ) : (
-            <ArrowDown aria-hidden className="size-3 text-amber-300" />
+            <ArrowDown aria-hidden className="size-3 text-warning" />
           ))}
       </button>
     )

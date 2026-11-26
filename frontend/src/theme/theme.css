@@ -1,56 +1,76 @@
-/* HireTitan theme: dark only (architecture §10), flat colours only. Every colour is
-   a variable, so a light theme can be added later without touching components. Keep in step
-   with tokens.ts. Flat dark navy with one warm accent, orange (Ravi's mockup, 2026-11-12). */
+/* HireTitan theme: dark only. Every value is a token from DESIGN.md, declared once in :root and
+   mirrored in tokens.ts (a test keeps them in step). Graphite surfaces, one flat lavender accent,
+   five stage colours (2026-11-25, replacing the orange-on-navy theme). */
 :root {
   color-scheme: dark;
 
-  --ht-background: #131a24;
-  --ht-surface: #18202b;
-  --ht-divider: #2a3444;
-  --ht-slate: #3a465a;
-  --ht-muted: #8c97a9;
-  --ht-muted-small: #8c97a9;
-  --ht-primary: #243044;
-  --ht-on-primary: #f0a35e;
-  --ht-accent: #f0a35e;
-  --ht-heading: #f1f3f7;
-  --ht-text: #e3e7ee;
-  --ht-success: #3fb950;
-  --ht-warning: #d29922;
-  --ht-danger: #f85149;
-  /* A soft, see-through rust: the tint under the pointer on a list row. */
-  --ht-hover-tint: rgb(156 79 55 / 0.25);
+  /* Neutral ramp (graphite, very slightly cool) */
+  --ht-background: #12151b;
+  --ht-surface: #181c23;
+  --ht-raised: #1f242c;
+  --ht-hairline: rgb(230 232 236 / 0.08);
+  --ht-hairline-strong: rgb(230 232 236 / 0.14);
 
-  /* Panels get a hairline border instead of a shadow. */
-  --ht-border-panel: 0 0 0 1px rgb(255 255 255 / 0.07);
-  --ht-shadow-dialog: 0 0 0 1px rgb(255 255 255 / 0.1);
+  /* Text roles */
+  --ht-text: #e6e8ec;
+  --ht-text-secondary: #a8aeb8;
+  --ht-text-muted: #8b929d;
+
+  /* The one accent */
+  --ht-accent: #a99ce6;
+  --ht-accent-hover: #bbb0ef;
+  --ht-accent-ink: #16121f;
+  --ht-accent-tint: rgb(169 156 230 / 0.12);
+
+  /* Stage colours (the signature; theme/stages.ts names them) */
+  --ht-stage-inquired: #7fa8d8;
+  --ht-stage-applied: #6fc08d;
+  --ht-stage-interview: #d6b25e;
+  --ht-stage-cleared: #5ec4b6;
+  --ht-stage-failed: #e2837a;
+
+  /* States */
+  --ht-success: #6fc08d;
+  --ht-warning: #d6b25e;
+  --ht-danger: #e2837a;
+
+  /* Shape and motion */
+  --ht-radius-control: 8px;
+  --ht-radius-card: 12px;
+  --ht-radius-dialog: 16px;
+  --ht-radius-chip: 6px;
+  --ht-ease: cubic-bezier(0.2, 0, 0, 1);
+  --ht-dur-fast: 120ms;
+  --ht-dur-enter: 200ms;
+  /* the one neutral shadow: dialogs, popovers, the Mikasa button and panel */
+  --ht-shadow-overlay: 0 8px 24px rgb(0 0 0 / 0.45);
 
   /* shadcn variables */
   --background: var(--ht-background);
   --foreground: var(--ht-text);
   --card: var(--ht-surface);
   --card-foreground: var(--ht-text);
-  --popover: var(--ht-surface);
+  --popover: var(--ht-raised);
   --popover-foreground: var(--ht-text);
-  --primary: var(--ht-primary);
-  --primary-foreground: var(--ht-on-primary);
-  --secondary: var(--ht-surface);
+  --primary: var(--ht-accent);
+  --primary-foreground: var(--ht-accent-ink);
+  --secondary: var(--ht-raised);
   --secondary-foreground: var(--ht-text);
-  --muted: var(--ht-divider);
-  --muted-foreground: var(--ht-muted-small);
-  --accent: var(--ht-divider);
+  --muted: var(--ht-raised);
+  --muted-foreground: var(--ht-text-muted);
+  --accent: var(--ht-raised);
   --accent-foreground: var(--ht-text);
   --destructive: var(--ht-danger);
-  --border: var(--ht-divider);
-  --input: var(--ht-muted);
+  --border: var(--ht-hairline);
+  --input: var(--ht-text-muted);
   --ring: var(--ht-accent);
   --sidebar: var(--ht-surface);
   --sidebar-foreground: var(--ht-text);
-  --sidebar-primary: var(--ht-primary);
-  --sidebar-primary-foreground: var(--ht-on-primary);
-  --sidebar-accent: var(--ht-divider);
+  --sidebar-primary: var(--ht-accent);
+  --sidebar-primary-foreground: var(--ht-accent-ink);
+  --sidebar-accent: var(--ht-raised);
   --sidebar-accent-foreground: var(--ht-text);
-  --sidebar-border: var(--ht-divider);
+  --sidebar-border: var(--ht-hairline);
   --sidebar-ring: var(--ht-accent);
 }
 
@@ -67,53 +87,65 @@ body {
 h1,
 h2,
 h3 {
-  color: var(--ht-heading);
+  color: var(--ht-text);
+}
+/* Page titles: the one place weight 600 is used; balanced lines (DESIGN.md, Type). */
+h1 {
+  font-weight: 600;
+  text-wrap: balance;
+}
+/* Figures (dates, counts, sizes): the mono face with aligned digits (FR-005). */
+.ht-figure {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 .bg-surface {
   background-color: var(--ht-surface);
-  box-shadow: var(--ht-border-panel);
+  box-shadow: 0 0 0 1px var(--ht-hairline);
 }
 .bg-primary {
-  background-color: var(--ht-primary);
-  color: var(--ht-on-primary);
+  background-color: var(--ht-accent);
+  color: var(--ht-accent-ink);
 }
 .bg-primary:hover {
-  filter: brightness(1.25);
+  background-color: var(--ht-accent-hover);
 }
 [role="dialog"] {
-  box-shadow: var(--ht-shadow-dialog);
+  box-shadow: 0 0 0 1px var(--ht-hairline-strong);
 }
 
 /* Progress bar: a slate track with a flat green fill (amber when paused, red when failed).
    Moving stripes mean work is happening, and stop under reduced motion. */
 .ht-progress {
-  --ht-progress-fill: #3fb950;
+  --ht-progress-fill: var(--ht-success);
   position: relative;
   height: 0.625rem;
   width: 100%;
   overflow: hidden;
   border-radius: 9999px;
-  background: var(--ht-divider);
+  background: var(--ht-raised);
 }
 .ht-progress[data-tone="accent"] {
   --ht-progress-fill: var(--ht-accent);
 }
 .ht-progress[data-tone="warning"] {
-  --ht-progress-fill: #d29922;
+  --ht-progress-fill: var(--ht-warning);
 }
 .ht-progress[data-tone="danger"] {
-  --ht-progress-fill: #f85149;
+  --ht-progress-fill: var(--ht-danger);
 }
 .ht-progress-fill {
   height: 100%;
+  width: 100%;
   border-radius: 9999px;
   background-color: var(--ht-progress-fill);
-  transition: width 600ms cubic-bezier(0.22, 1, 0.36, 1);
+  transform-origin: left center;
+  transition: transform 600ms var(--ht-ease);
 }
 .ht-progress-fill[data-animated="true"] {
   background-image: repeating-linear-gradient(
     115deg,
-    rgb(255 255 255 / 0.28) 0 10px,
+    color-mix(in srgb, var(--ht-text) 28%, transparent) 0 10px,
     transparent 10px 20px
   );
   background-size: 28px 100%;
@@ -179,23 +211,23 @@ h3 {
 }
 .ht-danger-button:hover:not(:disabled),
 .ht-danger-solid:not(:disabled) {
-  background-color: #f85149;
+  background-color: var(--ht-danger);
   color: var(--ht-background);
-  border-color: #f85149;
+  border-color: var(--ht-danger);
 }
-/* Cancel: orange, the colour of the brand accent. */
+/* Cancel: a secondary button (DESIGN.md, Buttons). */
 .ht-cancel-button {
   background: transparent;
-  color: #f0a35e;
-  border: 1px solid #f0a35e;
+  color: var(--ht-text);
+  border: 1px solid var(--ht-hairline-strong);
   transition:
     background-color 160ms ease,
     color 160ms ease;
 }
 .ht-cancel-button:hover:not(:disabled) {
-  background-color: #f0a35e;
-  color: var(--ht-background);
-  border-color: #f0a35e;
+  background-color: var(--ht-raised);
+  color: var(--ht-text);
+  border-color: var(--ht-text-muted);
 }
 @media (prefers-reduced-motion: reduce) {
   .ht-danger-button,
@@ -211,7 +243,7 @@ h3 {
 button[data-variant="outline"],
 button[data-variant="secondary"] {
   background-color: transparent;
-  border: 1px solid var(--ht-slate);
+  border: 1px solid var(--ht-hairline-strong);
   color: var(--ht-text);
   transition:
     background-color 160ms ease,
@@ -220,21 +252,20 @@ button[data-variant="secondary"] {
 }
 button[data-variant="outline"]:hover:not(:disabled),
 button[data-variant="secondary"]:hover:not(:disabled) {
-  background-color: var(--ht-divider);
+  background-color: var(--ht-raised);
   border-color: var(--ht-accent);
-  color: var(--ht-heading);
+  color: var(--ht-text);
 }
 .ht-success-button {
-  background-color: var(--ht-primary);
-  color: var(--ht-on-primary);
+  background-color: var(--ht-accent);
+  color: var(--ht-accent-ink);
   transition:
     background-color 160ms ease,
     color 160ms ease;
 }
 .ht-success-button:hover:not(:disabled) {
-  background-color: #3fb950;
-  color: var(--ht-background);
-  border-color: #3fb950;
+  background-color: var(--ht-accent-hover);
+  color: var(--ht-accent-ink);
 }
 @media (prefers-reduced-motion: reduce) {
   button[data-variant="outline"],
@@ -247,13 +278,11 @@ button[data-variant="secondary"]:hover:not(:disabled) {
 /* Applied table: a header that stands apart from the rows, coloured tags, icon buttons. */
 .ht-thead th,
 .ht-thead-row {
-  background: rgb(255 255 255 / 0.06);
-  color: var(--ht-muted);
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  border-bottom: 1px solid var(--ht-divider);
+  background: var(--ht-raised);
+  color: var(--ht-text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  border-bottom: 1px solid var(--ht-hairline);
 }
 .ht-thead-row {
   border-radius: 0.5rem 0.5rem 0 0;
@@ -265,10 +294,10 @@ button[data-variant="secondary"]:hover:not(:disabled) {
   text-transform: inherit;
 }
 .ht-row {
-  transition: background-color 140ms ease;
+  transition: background-color var(--ht-dur-fast) var(--ht-ease);
 }
 .ht-row:hover {
-  background: var(--ht-hover-tint);
+  background: var(--ht-raised);
 }
 .ht-pill {
   display: inline-block;
@@ -279,14 +308,14 @@ button[data-variant="secondary"]:hover:not(:disabled) {
   font-weight: 600;
   white-space: nowrap;
 }
-.ht-pill-green { color: #7ee787; background: rgb(46 160 67 / 0.18); border-color: rgb(46 160 67 / 0.6); }
-.ht-pill-yellow { color: #f2cc60; background: rgb(210 153 34 / 0.18); border-color: rgb(210 153 34 / 0.6); }
-.ht-pill-orange { color: #ffa657; background: rgb(219 109 40 / 0.18); border-color: rgb(219 109 40 / 0.6); }
-.ht-pill-red { color: #ff7b72; background: rgb(248 81 73 / 0.18); border-color: rgb(248 81 73 / 0.6); }
-.ht-pill-blue { color: #79c0ff; background: rgb(56 139 253 / 0.18); border-color: rgb(56 139 253 / 0.6); }
-.ht-pill-purple { color: #d2a8ff; background: rgb(163 113 247 / 0.18); border-color: rgb(163 113 247 / 0.6); }
-.ht-pill-teal { color: #56d4dd; background: rgb(31 183 195 / 0.18); border-color: rgb(31 183 195 / 0.6); }
-.ht-pill-grey { color: #c9d1d9; background: rgb(139 148 158 / 0.18); border-color: rgb(139 148 158 / 0.5); }
+.ht-pill-green { color: var(--ht-success); background: color-mix(in srgb, var(--ht-success) 18%, transparent); border-color: color-mix(in srgb, var(--ht-success) 60%, transparent); }
+.ht-pill-yellow { color: var(--ht-warning); background: color-mix(in srgb, var(--ht-warning) 18%, transparent); border-color: color-mix(in srgb, var(--ht-warning) 60%, transparent); }
+.ht-pill-orange { color: var(--ht-warning); background: color-mix(in srgb, var(--ht-warning) 18%, transparent); border-color: color-mix(in srgb, var(--ht-warning) 60%, transparent); }
+.ht-pill-red { color: var(--ht-danger); background: color-mix(in srgb, var(--ht-danger) 18%, transparent); border-color: color-mix(in srgb, var(--ht-danger) 60%, transparent); }
+.ht-pill-blue { color: var(--ht-stage-inquired); background: color-mix(in srgb, var(--ht-stage-inquired) 18%, transparent); border-color: color-mix(in srgb, var(--ht-stage-inquired) 60%, transparent); }
+.ht-pill-purple { color: var(--ht-accent); background: color-mix(in srgb, var(--ht-accent) 18%, transparent); border-color: color-mix(in srgb, var(--ht-accent) 60%, transparent); }
+.ht-pill-teal { color: var(--ht-stage-cleared); background: color-mix(in srgb, var(--ht-stage-cleared) 18%, transparent); border-color: color-mix(in srgb, var(--ht-stage-cleared) 60%, transparent); }
+.ht-pill-grey { color: var(--ht-text-secondary); background: color-mix(in srgb, var(--ht-text-muted) 18%, transparent); border-color: color-mix(in srgb, var(--ht-text-muted) 50%, transparent); }
 .ht-icon-button {
   display: inline-flex;
   align-items: center;
@@ -295,7 +324,7 @@ button[data-variant="secondary"]:hover:not(:disabled) {
   height: 2rem;
   border-radius: 0.5rem;
   border: 1px solid transparent;
-  color: var(--ht-muted);
+  color: var(--ht-text-secondary);
   transition:
     background-color 140ms ease,
     color 140ms ease,
@@ -305,12 +334,12 @@ button[data-variant="secondary"]:hover:not(:disabled) {
 .ht-icon-button:hover,
 .ht-icon-button:focus-visible {
   color: var(--ht-accent);
-  background: rgb(240 163 94 / 0.14);
-  border-color: rgb(240 163 94 / 0.55);
+  background: var(--ht-accent-tint);
+  border-color: var(--ht-accent);
 }
 /* Close crosses (X): muted at rest, red under the pointer. */
 .ht-close-button {
-  color: var(--ht-muted);
+  color: var(--ht-text-secondary);
   transition:
     background-color 140ms ease,
     color 140ms ease,
@@ -319,8 +348,8 @@ button[data-variant="secondary"]:hover:not(:disabled) {
 .ht-close-button:hover,
 .ht-close-button:focus-visible {
   color: var(--ht-danger);
-  background: rgb(248 81 73 / 0.15);
-  border-color: rgb(248 81 73 / 0.55);
+  background: color-mix(in srgb, var(--ht-danger) 15%, transparent);
+  border-color: color-mix(in srgb, var(--ht-danger) 55%, transparent);
 }
 @media (prefers-reduced-motion: reduce) {
   .ht-close-button {
@@ -334,24 +363,20 @@ button[data-variant="secondary"]:hover:not(:disabled) {
   gap: 0.4rem;
   padding: 0.3rem 0.7rem;
   border-radius: 999px;
-  border: 1px solid var(--ht-divider);
-  background: rgb(255 255 255 / 0.04);
+  border: 1px solid var(--ht-hairline);
+  background: color-mix(in srgb, var(--ht-text) 4%, transparent);
   font-weight: 500;
 }
-.ht-detail-card {
-  --accent: var(--ht-accent);
-  padding: 0.75rem 1rem 0.9rem;
-  border-radius: 0.6rem;
-  border: 1px solid var(--ht-divider);
-  border-left: 4px solid var(--accent);
-  background: rgb(255 255 255 / 0.035);
-  box-shadow: 0 1px 0 rgb(255 255 255 / 0.04) inset;
+/* One card recipe (DESIGN.md, Card): the surface, a hairline all round, radius 12, no side stripe
+   and no shadow on dark. Detail cards and the search panel use it. */
+.ht-card,
+.ht-detail-card,
+.ht-search-panel {
+  background: var(--ht-surface);
+  border: 1px solid var(--ht-hairline);
+  border-radius: var(--ht-radius-card);
+  padding: 1.25rem;
 }
-.ht-detail-description { --accent: #4cc9f0; }
-.ht-detail-sources { --accent: #56d4dd; }
-.ht-detail-interview { --accent: #a371f7; }
-.ht-settings-ai { --accent: #a371f7; }
-.ht-settings-gmail { --accent: #4cc9f0; }
 
 /* Settings index: one tile per part (002c US6) */
 .ht-settings-index-link {
@@ -360,14 +385,14 @@ button[data-variant="secondary"]:hover:not(:disabled) {
   gap: 0.1rem;
   padding: 0.55rem 0.9rem;
   border-radius: 0.6rem;
-  border: 1px solid var(--ht-divider);
-  background: rgb(255 255 255 / 0.03);
+  border: 1px solid var(--ht-hairline);
+  background: color-mix(in srgb, var(--ht-text) 3%, transparent);
   transition: border-color 120ms ease, background-color 120ms ease;
 }
 .ht-settings-index-link:hover,
 .ht-settings-index-link:focus-visible {
-  border-color: #4cc9f0;
-  background: rgb(76 201 240 / 0.08);
+  border-color: var(--ht-stage-inquired);
+  background: color-mix(in srgb, var(--ht-stage-inquired) 8%, transparent);
 }
 
 /* Set-up steps: a numbered marker per step on a line that joins them */
@@ -392,10 +417,10 @@ button[data-variant="secondary"]:hover:not(:disabled) {
   top: 1.9rem;
   bottom: 0.15rem;
   width: 2px;
-  background: #5b6b80; /* 3:1 against the card, unlike the divider */
+  background: var(--ht-hairline-strong); /* 3:1 against the card, unlike the divider */
 }
 .ht-step-done:not(:last-child)::before {
-  background: #3fb950;
+  background: var(--ht-success);
 }
 .ht-step-marker {
   flex: none;
@@ -407,23 +432,23 @@ button[data-variant="secondary"]:hover:not(:disabled) {
   border-radius: 999px;
   font-size: 0.85rem;
   font-weight: 600;
-  border: 2px solid #5b6b80;
-  color: var(--ht-muted, #9ba8ab);
-  background: var(--ht-surface, #11212d);
+  border: 2px solid var(--ht-hairline-strong);
+  color: var(--ht-text-secondary);
+  background: var(--ht-surface);
 }
 .ht-step-marker-done {
-  border-color: #3fb950;
-  background: rgb(63 185 80 / 0.18);
-  color: #7ee787;
+  border-color: var(--ht-success);
+  background: color-mix(in srgb, var(--ht-success) 18%, transparent);
+  color: var(--ht-success);
 }
 .ht-step-marker-current {
-  border-color: #4cc9f0;
-  background: rgb(76 201 240 / 0.15);
-  color: #e8fbff;
-  box-shadow: 0 0 0 4px rgb(76 201 240 / 0.12);
+  border-color: var(--ht-stage-inquired);
+  background: color-mix(in srgb, var(--ht-stage-inquired) 15%, transparent);
+  color: var(--ht-text);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--ht-stage-inquired) 12%, transparent);
 }
 .ht-step-waiting h3 {
-  color: var(--ht-muted, #9ba8ab);
+  color: var(--ht-text-secondary);
 }
 /* AI key heartbeat: a moving ECG trace while the key works, a flat line when it does not */
 .ht-ecg {
@@ -444,7 +469,6 @@ button[data-variant="secondary"]:hover:not(:disabled) {
 .ht-ecg-live .ht-ecg-trace {
   stroke-dasharray: 46 194;
   animation: ht-ecg-run 1.8s linear infinite;
-  filter: drop-shadow(0 0 3px currentColor);
 }
 .ht-ecg-blue.ht-ecg-live .ht-ecg-trace {
   animation-duration: 2.8s;
@@ -453,12 +477,12 @@ button[data-variant="secondary"]:hover:not(:disabled) {
   from { stroke-dashoffset: 240; }
   to { stroke-dashoffset: 0; }
 }
-.ht-ecg-green { color: #3fb950; }
-.ht-ecg-blue { color: #79c0ff; }
-.ht-ecg-grey { color: #8c97a9; }
-.ht-ecg-red { color: #ff7b72; }
-.ht-ecg-yellow { color: #f2cc60; }
-.ht-ecg-orange { color: #ffa657; }
+.ht-ecg-green { color: var(--ht-success); }
+.ht-ecg-blue { color: var(--ht-stage-inquired); }
+.ht-ecg-grey { color: var(--ht-text-secondary); }
+.ht-ecg-red { color: var(--ht-danger); }
+.ht-ecg-yellow { color: var(--ht-warning); }
+.ht-ecg-orange { color: var(--ht-warning); }
 
 @media (prefers-reduced-motion: reduce) {
   .ht-settings-index-link { transition: none; }
@@ -467,32 +491,14 @@ button[data-variant="secondary"]:hover:not(:disabled) {
     stroke-dasharray: none;
   }
 }
-.ht-pref-looking { --accent: #f0a35e; }
-.ht-pref-where { --accent: #4cc9f0; }
-.ht-pref-pay { --accent: #3fb950; }
-.ht-pref-companies { --accent: #a371f7; }
-.ht-rules-titles { --accent: #f0a35e; }
-.ht-rules-avoid { --accent: #f85149; }
-.ht-rules-skip { --accent: #d29922; }
-.ht-rules-age { --accent: #56d4dd; }
-.ht-rules-skills { --accent: #3fb950; }
-.ht-rules-places { --accent: #a371f7; }
-.ht-edit-contact { --accent: #4cc9f0; }
-.ht-edit-source { --accent: #a371f7; }
-.ht-edit-resume { --accent: #3fb950; }
-.ht-edit-rounds { --accent: #f0a35e; }
-.ht-company-where { --accent: #4cc9f0; }
-.ht-company-source { --accent: #a371f7; }
-.ht-company-contacts { --accent: #f0a35e; }
-.ht-company-note { --accent: #d29922; }
 /* Buttons: the base .bg-background rule above is unlayered and would beat Tailwind's hover
    utilities, so hover is spelled out here for outline and ghost buttons. */
 [data-slot="button"][data-variant="outline"]:not(:disabled):hover,
 [data-slot="button"][data-variant="ghost"]:not(:disabled):hover,
 [data-slot="button"][data-variant="outline"][aria-pressed="false"]:not(:disabled):hover {
   color: var(--ht-accent);
-  background: rgb(240 163 94 / 0.14);
-  border-color: rgb(240 163 94 / 0.55);
+  background: var(--ht-accent-tint);
+  border-color: var(--ht-accent);
 }
 [data-slot="button"] {
   cursor: pointer;
@@ -500,22 +506,14 @@ button[data-variant="secondary"]:hover:not(:disabled) {
 [data-slot="button"]:disabled {
   cursor: not-allowed;
 }
-.ht-section-record { --accent: #3fb950; }
-.ht-section-act { --accent: #f0a35e; }
-.ht-section-people { --accent: #4cc9f0; }
-.ht-section-description { --accent: #4cc9f0; }
-.ht-section-sources { --accent: #56d4dd; }
-.ht-section-history { --accent: #a371f7; }
 .ht-detail-heading {
   display: flex;
   align-items: center;
   gap: 0.45rem;
   margin-bottom: 0.5rem;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--accent);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--ht-text);
 }
 .ht-detail-open {
   display: inline-flex;
@@ -523,8 +521,8 @@ button[data-variant="secondary"]:hover:not(:disabled) {
   gap: 0.4rem;
   padding: 0.4rem 0.85rem;
   border-radius: 0.5rem;
-  border: 1px solid rgb(240 163 94 / 0.55);
-  background: rgb(240 163 94 / 0.12);
+  border: 1px solid var(--ht-accent);
+  background: var(--ht-accent-tint);
   color: var(--ht-accent);
   font-weight: 600;
   transition:
@@ -533,8 +531,7 @@ button[data-variant="secondary"]:hover:not(:disabled) {
 }
 .ht-detail-open:hover,
 .ht-detail-open:focus-visible {
-  background: rgb(240 163 94 / 0.26);
-  transform: translateY(-1px);
+  background: var(--ht-raised);
 }
 @media (prefers-reduced-motion: reduce) {
   .ht-row,
@@ -558,11 +555,11 @@ select optgroup {
   color: var(--ht-text);
 }
 select option:checked {
-  background-color: var(--ht-hover-tint);
+  background-color: var(--ht-raised);
   color: var(--ht-accent);
 }
 select:disabled {
-  color: var(--ht-muted);
+  color: var(--ht-text-secondary);
 }
 @supports (appearance: base-select) {
   select,
@@ -572,10 +569,10 @@ select:disabled {
   select::picker(select) {
     background: var(--ht-surface);
     color: var(--ht-text);
-    border: 1px solid var(--ht-slate);
+    border: 1px solid var(--ht-hairline-strong);
     border-radius: 0.5rem;
     padding: 0.25rem;
-    box-shadow: 0 8px 24px rgb(0 0 0 / 0.45);
+    box-shadow: var(--ht-shadow-overlay);
   }
   select option {
     padding: 0.4rem 0.7rem;
@@ -584,11 +581,11 @@ select:disabled {
   }
   select option:hover,
   select option:focus-visible {
-    background-color: rgb(240 163 94 / 0.22);
-    color: var(--ht-heading);
+    background-color: var(--ht-accent-tint);
+    color: var(--ht-text);
   }
   select option:checked {
-    background-color: var(--ht-hover-tint);
+    background-color: var(--ht-raised);
     color: var(--ht-accent);
     font-weight: 600;
   }
@@ -604,7 +601,7 @@ select:disabled {
   scrollbar-color: transparent transparent;
 }
 [data-scrolling] {
-  scrollbar-color: rgb(139 148 158 / 0.55) transparent;
+  scrollbar-color: color-mix(in srgb, var(--ht-text-muted) 55%, transparent) transparent;
 }
 
 /* Circular search progress: a slate ring with an orange arc. It fills as companies are checked;
@@ -626,7 +623,7 @@ select:disabled {
   stroke-width: 6;
 }
 .ht-ring-track {
-  stroke: var(--ht-divider);
+  stroke: var(--ht-hairline);
 }
 .ht-ring-arc {
   /* the colour is the SVG gradient set on the element */
@@ -647,10 +644,7 @@ select:disabled {
   justify-content: center;
   font-size: 0.8rem;
   font-weight: 700;
-  color: var(--ht-heading);
-}
-.ht-ring {
-  filter: drop-shadow(0 0 6px rgb(163 113 247 / 0.35));
+  color: var(--ht-text);
 }
 @keyframes ht-ring-spin {
   to {
@@ -675,13 +669,98 @@ select:disabled {
   }
 }
 
-/* The search box above the job list: an orange edge and a lifted look, so it reads as a control
-   panel and not as one more row of the table below it. */
-.ht-search-panel {
-  padding: 1rem 1.25rem;
-  border-radius: 0.75rem;
-  border: 1px solid var(--ht-slate);
-  border-left: 4px solid var(--ht-accent);
-  background: rgb(240 163 94 / 0.07);
-  box-shadow: 0 2px 10px rgb(0 0 0 / 0.25);
+
+/* Stage chip (DESIGN.md): the stage colour as text on the raised surface, a hairline of the same
+   colour. One rule per stage, read from theme/stages.ts keys. */
+.ht-stage-chip {
+  --stage: var(--ht-text-secondary);
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--ht-radius-chip);
+  border: 1px solid color-mix(in srgb, var(--stage) 30%, transparent);
+  background: var(--ht-raised);
+  color: var(--stage);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.25rem;
+  white-space: nowrap;
+}
+.ht-stage-chip[data-stage="inquired"] { --stage: var(--ht-stage-inquired); }
+.ht-stage-chip[data-stage="applied"] { --stage: var(--ht-stage-applied); }
+.ht-stage-chip[data-stage="scheduled"] { --stage: var(--ht-stage-interview); }
+.ht-stage-chip[data-stage="cleared"] { --stage: var(--ht-stage-cleared); }
+.ht-stage-chip[data-stage="failed"] { --stage: var(--ht-stage-failed); }
+
+/* Keyboard focus (FR-011): one accent outline on every interactive element, shown at once. */
+:focus-visible {
+  outline: 2px solid var(--ht-accent);
+  outline-offset: 2px;
+  transition: none;
+}
+
+/* Reduced motion (FR-012): everything rests. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* The page never scrolls sideways (FR-015). `clip`, unlike `hidden`, keeps sticky elements working. */
+html,
+body {
+  overflow-x: clip;
+}
+::selection {
+  background: var(--ht-accent-tint);
+  color: var(--ht-text);
+}
+
+/* Tables (DESIGN.md, Tables): 48px rows, a hairline between them. Below 768px a table with
+   `ht-table-cards` lays each row out as a card; the same DOM at every width (FR-016). */
+.ht-row > td {
+  height: 3rem;
+}
+@media (max-width: 767.98px) {
+  .ht-table-cards,
+  .ht-table-cards tbody,
+  .ht-table-cards tr,
+  .ht-table-cards td {
+    display: block;
+    width: 100%;
+  }
+  .ht-table-cards thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .ht-table-cards tr {
+    margin-bottom: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: var(--ht-surface);
+    border: 1px solid var(--ht-hairline);
+    border-radius: var(--ht-radius-card);
+  }
+  .ht-table-cards .ht-row > td {
+    height: auto;
+    padding: 0.25rem 0;
+    border: 0;
+    overflow-wrap: anywhere;
+  }
+  .ht-table-cards td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 0.75rem;
+    color: var(--ht-text-muted);
+  }
+  .ht-table-cards td:empty {
+    display: none;
+  }
 }

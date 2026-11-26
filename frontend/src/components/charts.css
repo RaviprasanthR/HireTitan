@@ -2,101 +2,73 @@
    Short, eased, and off for reduced motion. */
 
 /* ---- flow chart -------------------------------------------------------------------------- */
+/* Quiet by design: the steps fade in once, the connector is a still hairline, nothing reacts to the
+   pointer (the steps are not controls). */
 
 @keyframes ht-flow-in {
   from {
     opacity: 0;
-    transform: translateY(8px) scale(0.92);
   }
   to {
     opacity: 1;
-    transform: none;
-  }
-}
-
-@keyframes ht-flow-run {
-  to {
-    background-position: 24px 0;
-  }
-}
-
-@keyframes ht-flow-run-down {
-  to {
-    background-position: 0 24px;
   }
 }
 
 .ht-flow-step {
-  animation: ht-flow-in 460ms cubic-bezier(0.22, 1, 0.36, 1) both;
-  cursor: default;
+  animation: ht-flow-in var(--ht-dur-enter) var(--ht-ease) both;
 }
-
-.ht-flow-node {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 3.5rem;
-  height: 3.5rem;
-  border-radius: 9999px;
-  background: var(--ht-surface);
-  color: var(--ht-muted);
-  box-shadow:
-    0 0 0 2px var(--ht-slate),
-    0 2px 8px rgb(0 0 0 / 0.3);
-  transition:
-    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 220ms ease-out,
-    color 220ms ease-out;
+.ht-flow-step .ht-flow-icon {
+  color: var(--ht-text-muted);
 }
-
-.ht-flow-node-last {
+.ht-flow-step[data-stage="inquired"] .ht-flow-icon { color: var(--ht-stage-inquired); }
+.ht-flow-step[data-stage="applied"] .ht-flow-icon { color: var(--ht-stage-applied); }
+.ht-flow-step[data-stage="scheduled"] .ht-flow-icon { color: var(--ht-stage-interview); }
+.ht-flow-step[data-stage="cleared"] .ht-flow-icon { color: var(--ht-stage-cleared); }
+.ht-flow-step[data-stage="failed"] .ht-flow-icon { color: var(--ht-stage-failed); }
+.ht-flow-value {
+  color: var(--ht-text);
+}
+.ht-flow-step[data-muted] .ht-flow-value,
+.ht-flow-step[data-muted] .ht-flow-icon {
+  color: var(--ht-text-muted);
+}
+.ht-flow-step[data-emphasis] .ht-flow-value {
   color: var(--ht-accent);
-  box-shadow:
-    0 0 0 2px var(--ht-accent),
-    0 2px 8px rgb(0 0 0 / 0.3);
 }
 
-.ht-flow-step:hover .ht-flow-node {
-  transform: translateY(-3px) scale(1.06);
-  color: var(--ht-accent);
-  box-shadow:
-    0 0 0 2px var(--ht-accent),
-    0 8px 18px rgb(0 0 0 / 0.4);
-}
-
-.ht-flow-icon {
-  transition: transform 220ms ease-out;
-}
-
-.ht-flow-step:hover .ht-flow-icon {
-  transform: scale(1.1);
-}
-
-/* the connector: dashes that run along it, toward the next step */
+/* the connector: a still hairline toward the next step */
 .ht-flow-link {
   flex: none;
-  width: 2px;
-  height: 1.5rem;
-  border-radius: 1px;
-  background-image: linear-gradient(to bottom, var(--ht-slate) 50%, transparent 50%);
-  background-size: 2px 12px;
-  animation:
-    ht-flow-in 460ms cubic-bezier(0.22, 1, 0.36, 1) both,
-    ht-flow-run-down 1.2s linear infinite;
+  width: 1px;
+  height: 0.75rem;
+  margin-left: 0.5rem;
+  background: var(--ht-hairline-strong);
 }
-
 @media (min-width: 64rem) {
   .ht-flow-link {
-    flex: 1 1 0%;
+    flex: 0 1 2rem;
     min-width: 0.75rem;
     width: auto;
-    height: 2px;
-    margin-top: 1.75rem; /* the middle of a node */
-    background-image: linear-gradient(to right, var(--ht-slate) 50%, transparent 50%);
-    background-size: 12px 2px;
-    animation:
-      ht-flow-in 460ms cubic-bezier(0.22, 1, 0.36, 1) both,
-      ht-flow-run 1.2s linear infinite;
+    height: 1px;
+    margin: 0.625rem 1rem 0;
+  }
+}
+
+/* stage bar (components/StageBar.tsx) */
+.ht-stage-segment {
+  display: block;
+  min-width: 4px;
+}
+.ht-stage-swatch {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ht-flow-step {
+    animation: none;
   }
 }
 
@@ -143,7 +115,7 @@
 }
 
 .ht-donut-legend[data-state='active'] {
-  background-color: var(--ht-divider);
+  background-color: var(--ht-raised);
 }
 
 .ht-donut-legend[data-state='dimmed'] {
@@ -161,14 +133,8 @@
   .ht-donut-readout {
     animation: none;
   }
-  .ht-flow-node,
-  .ht-flow-icon,
   .ht-donut-slice,
   .ht-donut-legend {
     transition: none;
-  }
-  .ht-flow-step:hover .ht-flow-node,
-  .ht-flow-step:hover .ht-flow-icon {
-    transform: none;
   }
 }

@@ -20,7 +20,7 @@ export function Shell() {
       data-testid="app-root"
       className="flex h-screen flex-col overflow-hidden bg-background text-foreground"
     >
-      <header className="flex shrink-0 items-center justify-between gap-6 border-b border-white/[0.07] bg-[var(--ht-surface)]/80 px-6 py-2 backdrop-blur">
+      <header className="flex shrink-0 items-center justify-between gap-6 border-b border-[var(--ht-hairline)] bg-[var(--ht-surface)]/80 px-6 py-2 backdrop-blur">
         <AppName />
         <nav aria-label="Main" className="flex items-center gap-1">
           {sections.map(({ to, label, end, Icon, ...rest }) => {
@@ -43,21 +43,17 @@ export function Shell() {
                 <Icon
                   aria-hidden
                   className={cn(
-                    'size-4 transition-all duration-200',
-                    active
-                      ? 'text-[#a99ce6] drop-shadow-[0_0_6px_#a99ce6]'
-                      : 'group-hover:-translate-y-px group-hover:text-[#a99ce6]',
+                    'size-4 transition-colors duration-[var(--ht-dur-fast)]',
+                    active ? 'text-link' : 'group-hover:text-link',
                   )}
                 />
                 {label}
-                {/* the highlight bar: full and glowing under the current section, grows in on hover */}
+                {/* the highlight bar: a flat accent line under the current section, grows in on hover */}
                 <span
                   aria-hidden
                   className={cn(
-                    'absolute inset-x-3 -bottom-2 h-0.5 origin-center rounded-full bg-gradient-to-r from-[#6f7fc4] via-[#a99ce6] to-[#e6e0ff] transition-transform duration-300',
-                    active
-                      ? 'scale-x-100 shadow-[0_0_10px_#a99ce6]'
-                      : 'scale-x-0 group-hover:scale-x-60',
+                    'absolute inset-x-3 -bottom-2 h-0.5 origin-center rounded-full bg-link transition-transform duration-[var(--ht-dur-enter)]',
+                    active ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-60',
                   )}
                 />
               </Link>
@@ -72,7 +68,7 @@ export function Shell() {
         {/* a wide centred column; the chat floats over the page and may cover a little of it */}
         <div
           data-testid="page-column"
-          className="mx-auto flex w-full max-w-[1800px] flex-1 flex-col px-4 py-6 md:px-6"
+          className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col px-4 py-6 md:px-6"
         >
           <Outlet />
         </div>

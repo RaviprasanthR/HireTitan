@@ -61,9 +61,9 @@ export function QuickActions({
                 type="button"
                 disabled={disabled}
                 onClick={() => onPick(action)}
-                className="flex items-center gap-1.5 rounded-full border border-white/10 bg-background/60 px-3 py-1.5 text-xs transition-all hover:-translate-y-px hover:border-primary hover:bg-primary/15 disabled:pointer-events-none disabled:opacity-50"
+                className="flex items-center gap-1.5 rounded-full border border-slate bg-transparent px-3 py-1.5 text-xs transition-colors duration-[var(--ht-dur-fast)] hover:border-primary hover:bg-accent-tint disabled:pointer-events-none disabled:opacity-50"
               >
-                <Icon aria-hidden className="size-3.5 text-[#a99ce6]" />
+                <Icon aria-hidden className="size-3.5 text-link" />
                 {action.label}
               </button>
             </li>
