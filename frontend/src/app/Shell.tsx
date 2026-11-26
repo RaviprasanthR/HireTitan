@@ -40,7 +40,7 @@ export function Shell() {
                   'md:flex-none md:flex-row md:gap-2 md:px-3 md:py-2 md:text-sm',
                   active
                     ? 'text-link md:text-foreground'
-                    : 'text-muted-foreground hover:text-foreground',
+                    : 'text-muted-foreground hover:text-link',
                 )}
               >
                 <Icon

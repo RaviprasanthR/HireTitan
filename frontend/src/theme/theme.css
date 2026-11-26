@@ -21,6 +21,10 @@
   --ht-accent-hover: #bbb0ef;
   --ht-accent-ink: #16121f;
   --ht-accent-tint: rgb(169 156 230 / 0.12);
+  /* Violet to sky blue: the one blend, for the primary and Mikasa buttons only (Ravi,
+     2026-11-26). The ink keeps 7:1 or better on both ends. */
+  --ht-accent-gradient: linear-gradient(135deg, #c2a8f8 0%, #82aef7 100%);
+  --ht-accent-gradient-hover: linear-gradient(135deg, #d0bbfa 0%, #9dc0fa 100%);
 
   /* Stage colours (the signature; theme/stages.ts names them) */
   --ht-stage-inquired: #7fa8d8;
@@ -232,9 +236,9 @@ h1 {
     color 160ms ease;
 }
 .ht-cancel-button:hover:not(:disabled) {
-  background-color: var(--ht-raised);
-  color: var(--ht-text);
-  border-color: var(--ht-text-muted);
+  background-color: var(--ht-accent-tint);
+  color: var(--ht-accent);
+  border-color: var(--ht-accent);
 }
 @media (prefers-reduced-motion: reduce) {
   .ht-danger-button,
@@ -244,24 +248,47 @@ h1 {
 }
 
 /* Button hover states. The unlayered `.bg-background` rule above beats Tailwind's hover
-   utilities, so outline and secondary hovers are set here. Neutral buttons (Back, Up, Add)
-   light up with an orange edge; `ht-success-button` (Confirm, Continue, Save) turns green and
-   `ht-danger-button` (Discard, Remove) turns red. */
-button[data-variant="outline"],
-button[data-variant="secondary"] {
+   utilities, so they are set here, for buttons and for links drawn as buttons. Under the pointer a
+   secondary or ghost button takes the accent: lavender text and edge on the accent tint, so a
+   hover reads as colour, not as a lighter white. */
+[data-slot="button"][data-variant="outline"],
+[data-slot="button"][data-variant="secondary"] {
   background-color: transparent;
   border: 1px solid var(--ht-hairline-strong);
   color: var(--ht-text);
   transition:
-    background-color 160ms ease,
-    border-color 160ms ease,
-    color 160ms ease;
+    background-color var(--ht-dur-fast) var(--ht-ease),
+    border-color var(--ht-dur-fast) var(--ht-ease),
+    color var(--ht-dur-fast) var(--ht-ease);
 }
-button[data-variant="outline"]:hover:not(:disabled),
-button[data-variant="secondary"]:hover:not(:disabled) {
-  background-color: var(--ht-raised);
+[data-slot="button"][data-variant="outline"]:hover:not(:disabled),
+[data-slot="button"][data-variant="secondary"]:hover:not(:disabled) {
+  background-color: var(--ht-accent-tint);
   border-color: var(--ht-accent);
-  color: var(--ht-text);
+  color: var(--ht-accent);
+}
+[data-slot="button"][data-variant="ghost"] {
+  color: var(--ht-text-secondary);
+  transition:
+    background-color var(--ht-dur-fast) var(--ht-ease),
+    color var(--ht-dur-fast) var(--ht-ease);
+}
+[data-slot="button"][data-variant="ghost"]:hover:not(:disabled) {
+  background-color: var(--ht-accent-tint);
+  color: var(--ht-accent);
+}
+/* "I applied" and "I inquired" in a row move the job into that stage, so they wear its colour
+   (a stage colour still means only its stage). */
+.ht-stage-button[data-stage="applied"] { --stage: var(--ht-stage-applied); }
+.ht-stage-button[data-stage="inquired"] { --stage: var(--ht-stage-inquired); }
+[data-slot="button"].ht-stage-button {
+  color: var(--stage);
+  border-color: color-mix(in srgb, var(--stage) 40%, transparent);
+}
+[data-slot="button"].ht-stage-button:hover:not(:disabled) {
+  color: var(--stage);
+  border-color: var(--stage);
+  background-color: color-mix(in srgb, var(--stage) 14%, transparent);
 }
 .ht-success-button {
   background-color: var(--ht-accent);
@@ -273,6 +300,18 @@ button[data-variant="secondary"]:hover:not(:disabled) {
 .ht-success-button:hover:not(:disabled) {
   background-color: var(--ht-accent-hover);
   color: var(--ht-accent-ink);
+}
+/* The primary fill and the Mikasa button carry the accent gradient; the flat accent stays under
+   it as the fallback colour. */
+[data-slot="button"][data-variant="default"],
+.ht-success-button,
+.ht-gradient-fill {
+  background-image: var(--ht-accent-gradient);
+}
+[data-slot="button"][data-variant="default"]:hover:not(:disabled),
+.ht-success-button:hover:not(:disabled),
+.ht-gradient-fill:hover {
+  background-image: var(--ht-accent-gradient-hover);
 }
 @media (prefers-reduced-motion: reduce) {
   button[data-variant="outline"],
@@ -849,5 +888,30 @@ body {
     position: sticky;
     top: 0;
     z-index: 1;
+  }
+}
+
+/* The Mikasa button: her face floats a few pixels and tilts hello under the pointer. Only the face
+   moves, never the button's size (FR-012). */
+@keyframes ht-mikasa-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+@keyframes ht-mikasa-tilt {
+  0% { transform: rotate(0); }
+  30% { transform: rotate(-10deg); }
+  60% { transform: rotate(7deg); }
+  100% { transform: rotate(0); }
+}
+.ht-mikasa-float {
+  animation: ht-mikasa-float 3.2s var(--ht-ease) infinite;
+}
+.ht-mikasa-dock:hover .ht-mikasa-float {
+  animation: ht-mikasa-tilt 600ms var(--ht-ease) 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ht-mikasa-float,
+  .ht-mikasa-dock:hover .ht-mikasa-float {
+    animation: none;
   }
 }

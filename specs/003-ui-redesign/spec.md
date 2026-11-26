@@ -26,6 +26,7 @@ This feature fixes the system and the P0/P1 problems without changing what the a
 ### Session 2026-11-26
 
 - Q (Ravi): the charts above the Jobs tables push the table below the fold; can the analytics sit in a left section with the table on the right? → A: Yes. From 1280px wide the overview is a left column (about 320px) and the table fills the rest; below 1280px the table comes first and the overview follows it. The table is first in reading order at every width; the overview holds no focusable controls. Explore's actions (Search now, Check job-alert mail, history, summary) stay in a full-width bar above both columns.
+- Q (Ravi): "All the fonts and buttons are the same colour (hover effects)"; "add gradient effect in few places" → A: Hovers take the lavender accent (secondary, ghost and icon buttons, tabs, nav links); the row's "I applied" and "I inquired" wear their stage colours. Gradients only on the primary button and the Mikasa button (one violet-to-sky-blue token) and within each chart slice's own colour; DESIGN.md amended.
 - Q (Ravi): "I need a circular graph in the left pane too." → A: The overview shows the flow plus a donut (stages on In pipeline, what happened to the jobs found on Explore), in place of the stage bar. Legend entries are not tab stops.
 - Q (Ravi): "In Home the entire page is scrolling, just the table needs to scroll"; "the left pane should not have scroll, size it accordingly." → A: From 1280px the Jobs page fits the window: title, tabs, Explore's action bar and the overview stay put and only the table scrolls, its head row kept in view. The overview is sized to fit (a 112px donut with its legend beside it, a 22rem column) and never scrolls on its own.
 
@@ -83,7 +84,7 @@ Every page uses one visual system: a graphite background and surfaces, three tex
 3. **Given** any card or panel, **When** it renders, **Then** it has a hairline border on all sides, no coloured side stripe, and no card sits inside another card.
 4. **Given** the Pipeline tab with jobs in the pipeline, **When** the overview renders, **Then** the stage counts appear once in the flow, with "In pipeline" as its total and one donut of the stages beside it in place of a stage bar (clarification 2026-11-26), and no other chart repeats the numbers.
 5. **Given** the Explore page after a search or mail check, **When** the summary renders, **Then** the found / known / left out / new counts appear once.
-6. **Given** the header and the Mikasa button, **When** they render, **Then** the logo, wordmark, nav highlight, Mikasa button and Mikasa avatar use flat colours with no gradient, glow or scale-up on hover.
+6. **Given** the header and the Mikasa button, **When** they render, **Then** the logo, wordmark, nav highlight and Mikasa avatar use flat colours, the Mikasa button uses the accent gradient, and none has a glow or scale-up on hover.
 7. **Given** any text on any page, **When** its contrast is measured against what it sits on, **Then** it is at least 4.5:1 (3:1 for icons and large text).
 8. **Given** any interactive element, **When** it is reached with the keyboard, **Then** a lavender focus ring appears instantly.
 9. **Given** the person's system asks for reduced motion, **When** any page is used, **Then** nothing animates except progress shown as a static state.
@@ -127,7 +128,7 @@ The person opens Profile and sees their confirmed profile (headline, skills, exp
 
 - **FR-001**: Every colour in the interface MUST come from the named token set in DESIGN.md (neutral ramp, three text roles, one accent with its hover, ink and tint, five stage colours, three states). No component or style rule may use a colour value outside the token set.
 - **FR-002**: The single accent MUST be the flat lavender from DESIGN.md. No other hue may be used for links, the selected tab, focus rings or the primary button. Orange MUST NOT appear anywhere.
-- **FR-003**: The interface MUST contain no colour gradients, glows or coloured shadows (including the logo, wordmark, nav highlight, Mikasa button and Mikasa avatar).
+- **FR-003**: The interface MUST contain no glows or coloured shadows, and no colour gradients except the accent gradient on the primary button and the Mikasa button and each chart slice's gradient of its own colour (clarification 2026-11-26). The logo, wordmark, nav highlight and Mikasa avatar stay flat.
 - **FR-004**: Each pipeline stage MUST have exactly one colour (DESIGN.md "Stage colours"), used identically on every page, always next to the stage's name in text. Stage colours MUST NOT be used for anything other than their stage.
 - **FR-005**: Figures (dates, counts, sizes) MUST use the mono face with aligned digits; the interface face stays as today.
 - **FR-006**: All labels, table heads, tabs, chips and navigation MUST be sentence case without added letter spacing.

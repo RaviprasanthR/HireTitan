@@ -52,7 +52,15 @@ Headings use `--ht-text`; hierarchy comes from size, not from a brighter white.
 | `--ht-accent-ink` | `#16121f` | text on an accent fill (7.5:1) |
 | `--ht-accent-tint` | `rgb(169 156 230 / 0.12)` | selected row, active nav item background |
 
-Lavender is flat: no gradient, no glow, no coloured shadow anywhere. Orange is retired.
+Lavender is flat except in two places (Ravi, 2026-11-26): the primary button and the Mikasa button
+fill with `--ht-accent-gradient` (135deg, `#c2a8f8` to `#82aef7`; hover `#d0bbfa` to `#9dc0fa`;
+`--ht-accent-ink` text stays 7:1 or better), and each chart slice is a soft gradient of its own colour
+(the colour to 65% of itself mixed with white). No other gradient, no gradient text, no glow, no
+coloured shadow. Orange is retired.
+
+Hover takes the accent: secondary and ghost buttons, icon buttons, tabs and nav links turn
+`--ht-accent` on `--ht-accent-tint`. The row buttons "I applied" and "I inquired" wear their stage
+colour (text and a 40% edge, a 14% tint on hover), since they move the job into that stage.
 
 ### Stage colours (the signature)
 
@@ -126,8 +134,8 @@ always carry text, never colour alone.
   tall, in the thumb zone). The Mikasa button sits above it.
 - **Logo:** the existing mark, flat, in `--ht-accent`; the wordmark in solid `--ht-text`. The hover turn
   of the mark stays (reduced motion respected). No gradient, no drop-shadow glow.
-- **Mikasa button:** flat `--ht-accent` circle with `--ht-accent-ink` icon; hover steps to
-  `--ht-accent-hover`, press scales to 0.96. Pages reserve bottom padding so it never covers a row action.
+- **Mikasa button:** `--ht-accent-gradient` circle with `--ht-accent-ink` icon; hover steps to
+  `--ht-accent-gradient-hover`, press scales to 0.96. Pages reserve bottom padding so it never covers a row action.
 - **Mikasa avatar:** flat accent disc, no gradient.
 
 ## Data display
@@ -184,6 +192,6 @@ set, the progress rings, the logo's turn.
   Taste's app-relevant checks still apply: one system, button and link consistency, copy, contrast, tap
   size, keyboard, motion discipline.
 - **Taste, no violet or lavender:** waived. Lavender is the owner's chosen brand colour (2026-11-15),
-  kept as a single flat accent with no gradient or glow.
+  kept as a single accent; its only blend is the button gradient above, never text or a glow.
 - **Hallmark 2a and 2b, Unslop gradient-logo sign:** resolved, not waived: the wordmark and nav gradients
   and glows are removed.

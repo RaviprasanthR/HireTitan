@@ -106,6 +106,20 @@ describe('SearchPanel', () => {
     expect(await screen.findByText(/AI step skipped: the AI was not available/)).toBeInTheDocument()
   })
 
+  it('test_FR023a_overview_stays_beside_the_table_while_searching', async () => {
+    renderPanel(run())
+    // the live flow keeps the overview column, so the table does not drop below the search
+    const flow = await screen.findByRole('list', { name: 'How the search went' })
+    expect(flow).toHaveTextContent('8 of 20')
+    // the donut of what happened waits for the end
+    expect(screen.queryByRole('list', { name: 'Legend' })).not.toBeInTheDocument()
+  })
+
+  it('before any company is read the overview says the search is under way', async () => {
+    renderPanel(run({ companies_total: 0, companies_read: 0 }))
+    expect(await screen.findByText('The flow fills in as companies are read.')).toBeInTheDocument()
+  })
+
   it('US2_AS2_shows_companies_checked_and_new_jobs', async () => {
     renderPanel(run())
 

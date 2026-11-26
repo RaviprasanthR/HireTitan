@@ -26,10 +26,10 @@ describe('button colours: save is the primary, cancel is secondary, delete is re
     expect(screen.getByRole('button', { name: 'Go' })).toHaveClass(cls)
   })
 
-  it('the cancel button steps to the raised surface on hover and stays still for reduced motion', () => {
+  it('the cancel button takes the accent tint on hover and stays still for reduced motion', () => {
     const css = readFileSync('src/theme/theme.css', 'utf-8')
 
-    expect(css).toMatch(/\.ht-cancel-button:hover:not\(:disabled\)\s*\{[^}]*var\(--ht-raised\)/)
+    expect(css).toMatch(/\.ht-cancel-button:hover:not\(:disabled\)\s*\{[^}]*var\(--ht-accent-tint\)/)
     expect(css).toMatch(/prefers-reduced-motion[^}]*\{[^}]*\.ht-cancel-button/)
   })
 })

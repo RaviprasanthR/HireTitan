@@ -1,7 +1,7 @@
 import { useParams } from 'react-router'
 import { BackButton } from '@/components/BackButton'
 import { StageChip } from '@/components/StageChip'
-import { formatDate, useJob } from '@/features/explore/api'
+import { formatDate, newWorkMode, useJob } from '@/features/explore/api'
 import { JobDetails } from './JobDetails'
 import { LeaveGuard } from './interview/LeaveGuard'
 import { useUnsavedRegistry } from './interview/unsaved'
@@ -20,9 +20,7 @@ export function JobDetailPage() {
   const facts = [
     data.company_name,
     location,
-    data.work_mode && !location.toLowerCase().includes(data.work_mode.toLowerCase())
-      ? data.work_mode
-      : null,
+    newWorkMode(location, data.work_mode),
     data.posted_at ? `Posted ${formatDate(data.posted_at)}` : null,
   ].filter((fact): fact is string => Boolean(fact))
   const stage = data.state === 'applied' || data.state === 'inquired' ? data.state : null

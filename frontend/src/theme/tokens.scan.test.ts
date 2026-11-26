@@ -41,7 +41,8 @@ describe('colour guard', () => {
     const banned =
       /(?<!repeating-)linear-gradient\(|radial-gradient\(|conic-gradient\(|drop-shadow|bg-gradient-|shadow-\[0_0_[1-9]/
     const hits = files(src)
-      .filter((path) => banned.test(scanned(path)))
+      // the accent gradient tokens are the one allowed blend (Ravi, 2026-11-26)
+      .filter((path) => banned.test(scanned(path).replace(/--ht-accent-gradient(-hover)?:[^;]*;/g, '')))
       .map((path) => relative(src, path))
     expect(hits).toEqual([])
   })

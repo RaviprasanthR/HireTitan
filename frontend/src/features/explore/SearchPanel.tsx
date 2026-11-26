@@ -157,14 +157,27 @@ function Ended({ run }: { run: RunSummary }) {
   )
 }
 
-/** The last finished search or mail check as a flow and a donut of what happened to the jobs found,
- * for the overview beside the Explore list (FR-023a). Nothing while a search runs or before the
- * first. */
+/** The overview's line while a running search has nothing read yet. */
+function FillsIn({ what }: { what: 'companies' | 'emails' }) {
+  return (
+    <p className="ht-detail-card text-sm text-muted-small">
+      The flow fills in as {what} are read.
+    </p>
+  )
+}
+
+/** The latest search or mail check as a flow, for the overview beside the Explore list (FR-023a).
+ * A running search shows its flow filling in, so the overview keeps its column and the table stays
+ * beside it; the donut of what happened to the jobs found follows once it has ended. Nothing before
+ * the first search. */
 export function SearchOverview() {
   const run = useLatestRun().data ?? null
-  if (!run || run.outcome === null) return null
+  if (!run) return null
+  const live = run.outcome === null
   const mail = run.mail
   if (run.mode === 'mail_alerts' && mail) {
+    // never "0 of 9" while the first email is being read (US2 AS1)
+    if (live && mail.emails_read + mail.emails_unreadable === 0) return <FillsIn what="emails" />
     return (
       <>
         <MailFlow
@@ -179,11 +192,19 @@ export function SearchOverview() {
             merged: run.merged,
           }}
         />
-        <OutcomeDonut compact added={run.added} merged={run.merged} leftOut={run.skipped_by_rules} />
+        {!live && (
+          <OutcomeDonut
+            compact
+            added={run.added}
+            merged={run.merged}
+            leftOut={run.skipped_by_rules}
+          />
+        )}
       </>
     )
   }
-  if (run.companies_total === 0) return null
+  if (run.companies_total === 0 || (live && run.companies_read === 0))
+    return live ? <FillsIn what="companies" /> : null
   const leftOutByAi = Math.max(0, run.judged_by_ai - run.kept)
   return (
     <>
@@ -200,11 +221,14 @@ export function SearchOverview() {
           merged: run.merged,
         }}
       />
-      <OutcomeDonut compact
-        added={run.added}
-        merged={run.merged}
-        leftOut={run.skipped_by_rules + leftOutByAi}
-      />
+      {!live && (
+        <OutcomeDonut
+          compact
+          added={run.added}
+          merged={run.merged}
+          leftOut={run.skipped_by_rules + leftOutByAi}
+        />
+      )}
     </>
   )
 }

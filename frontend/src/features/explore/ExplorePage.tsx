@@ -22,6 +22,7 @@ import {
   NO_FILTERS,
   formatDate,
   isNotChecked,
+  newWorkMode,
   reasonOf,
   recheckJob,
   siteLabel,
@@ -136,11 +137,7 @@ export function JobCardItem({ job }: { job: JobCard }) {
   const source = job.sources[0]
   const href = postingLink(source?.url)
   const location = job.location_text ?? ''
-  // the work mode only when the location does not already say it (FR-007)
-  const mode =
-    job.work_mode && !location.toLowerCase().includes(job.work_mode.toLowerCase())
-      ? job.work_mode
-      : ''
+  const mode = newWorkMode(location, job.work_mode)
 
   return (
     <Fragment>

@@ -18,7 +18,7 @@ export function PageTabs({ label, tabs }: { label: string; tabs: readonly PageTa
             `-mb-px border-b-2 px-3 py-2 text-sm font-medium ${
               isActive
                 ? 'border-link text-foreground'
-                : 'border-transparent text-muted-small hover:text-foreground'
+                : 'border-transparent text-muted-small hover:text-link'
             }`
           }
         >

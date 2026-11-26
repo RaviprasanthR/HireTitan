@@ -60,9 +60,12 @@ describe('theme', () => {
   })
 
   it('SC007_no_gradient_in_the_theme', () => {
-    // Flat colours only. The one allowed exception is the moving stripes of the progress bar,
-    // an activity indicator (repeating-linear-gradient), not a colour blend.
-    const css = readFileSync(resolve(process.cwd(), 'src/theme/theme.css'), 'utf8')
+    // Flat colours, except the stripes of the progress bar (an activity indicator) and the accent
+    // gradient tokens Ravi allowed on 2026-11-26 for the primary and Mikasa buttons.
+    const css = readFileSync(resolve(process.cwd(), 'src/theme/theme.css'), 'utf8').replace(
+      /--ht-accent-gradient(-hover)?:[^;]*;/g,
+      '',
+    )
     expect(css).not.toMatch(/(?<!repeating-)linear-gradient\(/)
     expect(css).not.toMatch(/radial-gradient\(/)
     expect(css).not.toMatch(/conic-gradient\(/)

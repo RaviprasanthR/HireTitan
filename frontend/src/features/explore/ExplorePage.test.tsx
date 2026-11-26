@@ -286,9 +286,12 @@ describe('ExplorePage', () => {
       jobs: [
         card('1', 'Backend Engineer', { location_text: 'Remote, India', work_mode: 'remote' }),
         card('2', 'Data Engineer', { location_text: null, work_mode: null, posted_at: null, sources: [] }),
+        card('3', 'Platform Engineer', { location_text: 'Bengaluru (On-site)', work_mode: 'onsite' }),
       ],
     })
-    const [first, second] = await jobRows()
+    const [first, second, third] = await jobRows()
+    // spelling apart, "(On-site)" already says "onsite"
+    expect(within(third as HTMLElement).getAllByRole('cell')[2]).toHaveTextContent(/^Bengaluru \(On-site\)$/)
     const where = within(first as HTMLElement).getAllByRole('cell')[2] as HTMLElement
     expect(where).toHaveTextContent('Remote, India')
     expect(where.textContent).not.toMatch(/[·•]/)

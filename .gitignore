@@ -52,3 +52,6 @@ Thumbs.db
 
 # Design review tool records (Hallmark sloplint baseline and screenshots)
 .hallmark/
+
+# Local-only assets (third-party art for this install, never committed)
+frontend/public/local/

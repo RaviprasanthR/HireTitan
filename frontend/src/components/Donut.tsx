@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import './charts.css'
 
 export type DonutPart = { key: string; label: string; value: number; colour: string }
@@ -30,6 +30,7 @@ export function Donut({
   compact?: boolean
 }) {
   const size = compact ? 112 : SIZE
+  const gradientId = useId()
   const [grown, setGrown] = useState(false)
   const [active, setActive] = useState<string | null>(null)
   useEffect(() => {
@@ -73,6 +74,22 @@ export function Donut({
           height={size}
           className="-rotate-90"
         >
+          {/* each slice a soft gradient of its own colour, so the colour keeps its meaning */}
+          <defs>
+            {slices.map((slice) => (
+              <linearGradient
+                key={slice.key}
+                id={`${gradientId}-${slice.key}`}
+                x1="0"
+                y1="0"
+                x2="1"
+                y2="1"
+              >
+                <stop offset="0%" stopColor={slice.colour} />
+                <stop offset="100%" stopColor={`color-mix(in srgb, ${slice.colour} 65%, white)`} />
+              </linearGradient>
+            ))}
+          </defs>
           <circle
             cx={SIZE / 2}
             cy={SIZE / 2}
@@ -91,7 +108,7 @@ export function Donut({
               cy={SIZE / 2}
               r={RADIUS}
               fill="none"
-              stroke={slice.colour}
+              stroke={`url(#${gradientId}-${slice.key})`}
               strokeWidth={STROKE}
               strokeDasharray={`${grown ? slice.length : 0} ${CIRCUMFERENCE}`}
               strokeDashoffset={-slice.start}

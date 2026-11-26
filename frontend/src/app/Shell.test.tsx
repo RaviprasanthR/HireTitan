@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router'
+import { readFileSync } from 'node:fs'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { routes } from './routes'
 
@@ -141,7 +142,21 @@ describe('Shell', () => {
     // a flat accent circle: no shadow, the hover steps the colour, the press scales to 0.96
     expect(dock).toHaveClass('bg-primary', 'text-primary-foreground', 'active:scale-[0.96]')
     expect(dock.className).toMatch(/hover:bg-\[var\(--ht-accent-hover\)\]/)
-    expect(dock.className).not.toMatch(/shadow|gradient/)
+    expect(dock.className).not.toMatch(/shadow/)
+    // the one blend it may carry is the accent gradient token (Ravi, 2026-11-26)
+    expect(dock).toHaveClass('ht-gradient-fill')
+  })
+
+  it('the dock shows Mikasa, floating gently, still for reduced motion', async () => {
+    renderAt('/')
+    const dock = await screen.findByRole('button', { name: 'Mikasa' })
+    expect(dock).toHaveClass('ht-mikasa-dock')
+    const face = dock.querySelector('.ht-mikasa-float') as HTMLElement
+    expect(face.querySelector('img')).not.toBeNull()
+    const css = readFileSync('src/theme/theme.css', 'utf-8')
+    expect(css).toMatch(/@keyframes ht-mikasa-float/)
+    expect(css).toMatch(/\.ht-mikasa-dock:hover \.ht-mikasa-float[^{]*\{[^}]*ht-mikasa-tilt/)
+    expect(css).toMatch(/prefers-reduced-motion[^{]*\{[^@]*\.ht-mikasa-float[^}]*animation: none/)
   })
 
   it('test_FR012_dock_does_not_scale_up_on_hover', async () => {
