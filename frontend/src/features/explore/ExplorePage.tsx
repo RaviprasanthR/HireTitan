@@ -233,7 +233,7 @@ export function JobCardItem({ job }: { job: JobCard }) {
                 icon={CircleCheck}
                 hint="Choose the resume you used or pick another date."
               >
-                <PipelineControl id={job.id} state={job.state} title={job.title} />
+                <PipelineControl id={job.id} state={job.state} title={job.title} quiet />
               </Section>
             )}
             <ActOnJob jobId={job.id} title={job.title} />

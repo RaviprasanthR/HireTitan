@@ -33,9 +33,9 @@ describe('MikasaDock greeting', () => {
 
   it('asks if you need help a moment after the page opens, without taking the focus', () => {
     show()
-    expect(screen.queryByRole('status', { name: 'Mikasa says' })).toBeNull()
+    expect(screen.queryByTestId('mikasa-greeting')).toBeNull()
     greet()
-    const bubble = screen.getByRole('status', { name: 'Mikasa says' })
+    const bubble = screen.getByTestId('mikasa-greeting')
     // she types for a moment first, hopping to catch the eye, then the words arrive
     expect(bubble.querySelector('.mikasa-dot')).not.toBeNull()
     expect(bubble).not.toHaveTextContent('Need a hand')
@@ -49,13 +49,23 @@ describe('MikasaDock greeting', () => {
     expect(document.activeElement).toBe(document.body)
   })
 
+  it('announces the greeting through a live region that was mounted before the words', () => {
+    show()
+    const live = screen.getByRole('status')
+    expect(live).toHaveTextContent('')
+    greet()
+    typed()
+    expect(live).toHaveTextContent('Need a hand with your job search?')
+    expect(screen.getByTestId('mikasa-greeting')).toHaveAttribute('aria-hidden', 'true')
+  })
+
   it('a click on the bubble opens the chat and the bubble goes', () => {
     show()
     greet()
     typed()
-    fireEvent.click(screen.getByRole('status', { name: 'Mikasa says' }))
+    fireEvent.click(screen.getByTestId('mikasa-greeting'))
     expect(screen.getByRole('complementary', { name: 'Mikasa' })).toBeInTheDocument()
-    expect(screen.queryByRole('status', { name: 'Mikasa says' })).toBeNull()
+    expect(screen.queryByTestId('mikasa-greeting')).toBeNull()
   })
 
   it('left alone, the bubble fades out by itself and stays away for the rest of the visit', () => {
@@ -63,9 +73,9 @@ describe('MikasaDock greeting', () => {
     greet()
     typed()
     act(() => vi.advanceTimersByTime(GREETING_SHOW_MS))
-    expect(screen.getByRole('status', { name: 'Mikasa says' })).toHaveClass('ht-greeting-out')
+    expect(screen.getByTestId('mikasa-greeting')).toHaveClass('ht-greeting-out')
     act(() => vi.advanceTimersByTime(300))
-    expect(screen.queryByRole('status', { name: 'Mikasa says' })).toBeNull()
+    expect(screen.queryByTestId('mikasa-greeting')).toBeNull()
     expect(sessionStorage.getItem('ht-mikasa-greeted')).toBe('1')
   })
 
@@ -73,9 +83,9 @@ describe('MikasaDock greeting', () => {
     show()
     greet()
     typed()
-    fireEvent.click(screen.getByRole('status', { name: 'Mikasa says' }))
+    fireEvent.click(screen.getByTestId('mikasa-greeting'))
     fireEvent.click(screen.getByRole('button', { name: /close/i }))
-    expect(screen.queryByRole('status', { name: 'Mikasa says' })).toBeNull()
+    expect(screen.queryByTestId('mikasa-greeting')).toBeNull()
   })
 
   it('opening the chat moves focus into it', () => {
@@ -88,6 +98,6 @@ describe('MikasaDock greeting', () => {
     show()
     fireEvent.click(screen.getByRole('button', { name: 'Mikasa' }))
     act(() => vi.advanceTimersByTime(GREETING_DELAY_MS))
-    expect(screen.queryByRole('status', { name: 'Mikasa says' })).toBeNull()
+    expect(screen.queryByTestId('mikasa-greeting')).toBeNull()
   })
 })

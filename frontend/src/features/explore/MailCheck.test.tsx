@@ -283,7 +283,7 @@ describe('RunSummaryPage: mail run', () => {
     expect(await screen.findByRole('heading', { name: 'Mail check summary' })).toBeInTheDocument()
     const flow = screen.getByRole('list', { name: /how the mail check went/i })
     expect(within(flow).getByText('Emails read')).toBeInTheDocument()
-    expect(within(flow).getByText('8 of 9')).toBeInTheDocument()
+    expect(within(flow).getByText((_, el) => el?.tagName === 'SPAN' && el.textContent === '8 of 9')).toBeInTheDocument()
     expect(within(flow).getByText('Jobs found')).toBeInTheDocument()
     expect(within(flow).getByText('Your rules')).toBeInTheDocument()
     expect(within(flow).getByText('New jobs')).toBeInTheDocument()

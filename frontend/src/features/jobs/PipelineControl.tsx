@@ -29,6 +29,7 @@ export function PipelineControl({
   title,
   className = '',
   compact = false,
+  quiet = false,
 }: {
   id: string
   state: string
@@ -37,6 +38,8 @@ export function PipelineControl({
    * stay out of sight, but the starting resume is still sent, so nothing is lost (feature 002k).
    */
   compact?: boolean
+  /** Outline, not filled: another button on the page is the view's one primary (FR-010). */
+  quiet?: boolean
   /** Extra classes for the row of controls (a list row right-aligns them). */
   className?: string
   /** The job's title, so the choice is named for it where a page lists many jobs. */
@@ -114,7 +117,7 @@ export function PipelineControl({
       <Button
         type="button"
         // in a list every row repeats it, so it is not the view's one primary (FR-010)
-        variant={compact ? 'outline' : 'success'}
+        variant={compact || quiet ? 'outline' : 'success'}
         className={compact ? 'ht-stage-button' : undefined}
         data-stage={compact ? 'applied' : undefined}
         size="sm"

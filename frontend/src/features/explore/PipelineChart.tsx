@@ -33,6 +33,7 @@ export function PipelineChart() {
       />
       <Donut
         compact
+        quietCentre
         caption="Your jobs by status"
         totalLabel="jobs in pipeline"
         ariaLabel={STAGES.map((stage) => `${s[stage.key]} ${stage.label.toLowerCase()}`).join(', ')}

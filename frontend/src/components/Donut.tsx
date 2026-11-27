@@ -21,6 +21,7 @@ export function Donut({
   totalLabel,
   ariaLabel,
   compact = false,
+  quietCentre = false,
 }: {
   parts: DonutPart[]
   caption: string
@@ -28,6 +29,8 @@ export function Donut({
   ariaLabel: string
   /** A smaller ring with its legend beside it, for the narrow overview column (FR-023a). */
   compact?: boolean
+  /** Nothing in the centre until a slice is hovered, when the total sits elsewhere on the page. */
+  quietCentre?: boolean
 }) {
   const size = compact ? 112 : SIZE
   const gradientId = useId()
@@ -121,7 +124,11 @@ export function Donut({
           data-testid="donut-centre"
           className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center"
         >
-          <span key={shown?.key ?? 'total'} className="ht-donut-readout block">
+          <span
+            key={shown?.key ?? 'total'}
+            className="ht-donut-readout block"
+            hidden={quietCentre && !shown}
+          >
             <span className={`block font-semibold ${compact ? 'text-lg' : 'text-2xl'}`}>
               {shown ? shown.value : total}
             </span>
