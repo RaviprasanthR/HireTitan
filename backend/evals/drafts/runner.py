@@ -22,7 +22,11 @@ import hiretitan.prompts as hiretitan_prompts
 from evals.drafts.cases import SEEDED_FABRICATIONS, DraftCase, build_cases
 from hiretitan.drafts.domain.checks import TechTerms, check_text
 from hiretitan.drafts.domain.facts import drafting_facts, years_of_experience
-from hiretitan.drafts.domain.fallback import connection_fallback, referral_fallback
+from hiretitan.drafts.domain.fallback import (
+    connection_fallback,
+    email_fallback,
+    referral_fallback,
+)
 from hiretitan.drafts.domain.keywords import backed, match
 from hiretitan.drafts.domain.recipient import fill
 from hiretitan.drafts.domain.resume_doc import build_from_profile, document_text, plain_reorder
@@ -37,6 +41,8 @@ from hiretitan.platform.llm.validation import TaskSpec, ValidatedLlm
 from hiretitan.platform.untrusted.delimit import delimit
 from hiretitan.platform.untrusted.sanitize import sanitize
 from hiretitan.prompts.draft_connection_request.v1.checks import rule_errors as connection_rules
+from hiretitan.prompts.draft_email.v1.checks import assemble as assemble_email
+from hiretitan.prompts.draft_email.v1.checks import rule_errors as email_rules
 from hiretitan.prompts.draft_referral_message.v1.checks import rule_errors as referral_rules
 from hiretitan.prompts.tailor_resume.v1.checks import choice_of
 
@@ -178,9 +184,11 @@ async def _outreach_case(run: _Run, case: DraftCase, kind: str) -> None:
     chosen = select_facts(facts, [*must_have, *keywords], 12)
     names = allowed_names(case.profile, case.company, case.title)
     context = f"{case.title} {case.company}"
-    prompt_name = (
-        "draft_connection_request" if kind == "connection_request" else "draft_referral_message"
-    )
+    prompt_name = {
+        "connection_request": "draft_connection_request",
+        "referral_message": "draft_referral_message",
+        "email": "draft_email",
+    }[kind]
     prompt = run.prompts.load(prompt_name)
     schema: type[BaseModel] = prompt.output_schema
     room = 200 - (len(case.first_name) - len("{recipient_first_name}"))
@@ -223,6 +231,33 @@ async def _outreach_case(run: _Run, case: DraftCase, kind: str) -> None:
             ),
             rules=rules,
         )
+    elif kind == "email":
+        base_e = email_rules(2400)
+
+        def rules(output: Any) -> list[str]:
+            errors = base_e(output)
+            if errors:
+                return errors
+            whole = "\n".join((output.greeting, output.body, output.closing))
+            found = check_text(
+                whole, output.cited_fact_ids, facts, tech_terms=run.terms,
+                allowed_names=names, years=years, context=context,
+            )  # fmt: skip
+            return [p.message for p in found]
+
+        mail = email_fallback(case.title, case.company, chosen)
+        spec = TaskSpec(
+            fallback=lambda: schema.model_validate(
+                {
+                    "subject": mail.subject,
+                    "greeting": mail.greeting,
+                    "body": mail.body,
+                    "closing": mail.closing,
+                    "cited_fact_ids": [],
+                }
+            ),
+            rules=rules,
+        )
     else:
         base_r = referral_rules(2000)
 
@@ -259,11 +294,12 @@ async def _outreach_case(run: _Run, case: DraftCase, kind: str) -> None:
     )
     answered = await run.chain.run(request, spec)
     value: Any = answered.value
-    template = (
-        value.body
-        if kind == "connection_request"
-        else f"{value.greeting}\n\n{value.body}\n\n{value.easy_out}\n\n{value.sign_off}"
-    )
+    if kind == "connection_request":
+        template = value.body
+    elif kind == "email":
+        template = assemble_email(value.subject, value.greeting, value.body, value.closing)
+    else:
+        template = f"{value.greeting}\n\n{value.body}\n\n{value.easy_out}\n\n{value.sign_off}"
     text = fill(template, case.first_name, me)
     report.drafts += 1
     report.first_try_ok += answered.outcome == "ok"
@@ -272,15 +308,17 @@ async def _outreach_case(run: _Run, case: DraftCase, kind: str) -> None:
     if kind == "connection_request":
         report.length_total += 1
         report.length_ok += len(text) <= 200
-    else:
+    elif kind == "referral_message":
         report.referral_total += 1
         report.referral_first_try += answered.outcome == "ok"
     if case.language == "de":
         report.language_total += 1
         report.language_ok += not looks_german(text)
     if answered.outcome != "fallback":
+        # an email's subject has its own rules; its capitalised words would be read as names
+        checked = template.partition("\n\n")[2] if kind == "email" else template
         problems = check_text(
-            template, value.cited_fact_ids, facts, tech_terms=run.terms,
+            checked, value.cited_fact_ids, facts, tech_terms=run.terms,
             allowed_names=names, years=years, context=context,
         )  # fmt: skip
         if problems:
@@ -302,7 +340,7 @@ async def evaluate_outreach(
     run = _Run(llm, report, terms)
     for _ in range(repeat):
         for case in cases if cases is not None else build_cases():
-            for kind in ("connection_request", "referral_message"):
+            for kind in ("connection_request", "referral_message", "email"):
                 await _outreach_case(run, case, kind)
     return report
 

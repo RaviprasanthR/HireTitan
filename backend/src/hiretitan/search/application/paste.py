@@ -52,6 +52,9 @@ class PasteInput:
     title: str | None = None
     company: str | None = None
     location: str | None = None  # where the job is, as the person writes it
+    # The person has only the link (002m research R12): the title and company are then needed
+    # and the description may be added later. HireTitan never opens the link to fill them in.
+    link_only: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -97,7 +100,8 @@ def _check(data: PasteInput) -> tuple[str, str, str, str]:
     raw = data.description.strip()
     description = sanitize(raw).text if raw else ""
     if not raw:
-        errors.append(FieldIssue("description", "Paste the job description."))
+        if not data.link_only:
+            errors.append(FieldIssue("description", "Paste the job description."))
     elif len(raw) > DESCRIPTION_MAX:
         errors.append(
             FieldIssue(
@@ -119,6 +123,10 @@ def _check(data: PasteInput) -> tuple[str, str, str, str]:
         errors.append(
             FieldIssue("company", f"The company can be at most {COMPANY_MAX} characters.")
         )
+    if data.link_only and not title:
+        errors.append(FieldIssue("title", "Add the job title."))
+    if data.link_only and not company:
+        errors.append(FieldIssue("company", "Add the company."))
     if errors:
         raise PasteError(errors)
     # Left blank, the title is the first line of the text and the company is the link's site:

@@ -141,10 +141,10 @@ export function AddCompanyDialog({ onClose }: { onClose: () => void }) {
     return () => document.removeEventListener('keydown', onKey)
   }, [busy])
 
-  // A square card over the page; the page behind it is blurred and a click on it closes the card.
+  // A square card over the page; a solid scrim behind it (no blur, US3 AS6) closes it on a click.
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
       onMouseDown={(event) => event.target === event.currentTarget && onClose()}
     >
       <section
@@ -152,7 +152,7 @@ export function AddCompanyDialog({ onClose }: { onClose: () => void }) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="add-company-title"
-        className="aspect-square w-[min(32rem,100%)] space-y-3 overflow-y-auto rounded-xl bg-surface p-6 shadow-[var(--ht-border-panel)]"
+        className="aspect-square w-[min(32rem,100%)] space-y-3 overflow-y-auto rounded-xl bg-surface p-6 shadow-[0_0_0_1px_var(--ht-hairline)]"
       >
         <h2 id="add-company-title" className="text-lg font-semibold">
           Add a company

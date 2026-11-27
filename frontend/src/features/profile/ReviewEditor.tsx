@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Dialog } from 'radix-ui'
 import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -131,7 +131,13 @@ function ReviewForm({
   onFinished,
 }: { review: Review; debounceMs: number } & EmbeddedProps) {
   const navigate = useNavigate()
-  const finish = () => (onFinished ? onFinished() : navigate('/profile'))
+  const queryClient = useQueryClient()
+  const finish = () => {
+    // the Profile page shows the confirmed profile, so it must not show the old one from cache
+    void queryClient.invalidateQueries({ queryKey: ['profile'] })
+    if (onFinished) onFinished()
+    else navigate('/profile')
+  }
   const initial = toFormValues(review.draft ?? review.extraction)
   if (defaultName && initial.contact.name.trim() === '') initial.contact.name = defaultName
   const form = useForm<FormValues>({

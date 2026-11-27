@@ -21,7 +21,6 @@ export function ActOnJob({ jobId, title }: { jobId: string; title: string }) {
     <Section
       title="Act on this job"
       icon={Send}
-      tone="ht-section-act"
       hint="Drafts for you to copy and send yourself. HireTitan never sends anything."
       label={`Act on ${title}`}
     >

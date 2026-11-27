@@ -594,7 +594,7 @@ export function GmailSection() {
                 <div className="min-w-0 flex-1 space-y-2">
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                     <h3 className="font-medium">{step.title}</h3>
-                    <span className="text-xs uppercase tracking-wide text-muted-small">
+                    <span className="text-xs text-muted-small">
                       {step.state === 'waiting' && step.waitsFor
                         ? `Waits for ${step.waitsFor}`
                         : STEP_LABEL[step.state]}

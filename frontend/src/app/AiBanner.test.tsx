@@ -84,7 +84,7 @@ describe('AiBanner', () => {
     const user = userEvent.setup()
     const fetchMock = renderAt('/', 'out_of_credit', 'No credit.')
     await screen.findByRole('heading', { level: 1, name: 'Jobs' })
-    await user.click(await screen.findByRole('button', { name: 'Check again' }))
+    await user.click(await screen.findByRole('button', { name: 'Test key' }))
     await waitFor(() =>
       expect(
         fetchMock.mock.calls.some(

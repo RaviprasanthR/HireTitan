@@ -23,13 +23,13 @@ export function SetupLayout({
 }) {
   useWorking(step !== undefined) // the logo keeps turning through the setup steps
   return (
-    <div className="flex min-h-screen flex-col text-foreground">
+    <div className="ht-setup-page flex min-h-screen flex-col text-foreground">
       <AiBanner />
       <main className="flex flex-1 items-center justify-center px-4 py-8">
         <div
           data-setup-card
           data-wide={wide ? 'true' : 'false'}
-          className={`bg-surface relative w-full ${wide ? 'max-w-6xl' : 'max-w-2xl'} space-y-6 rounded-2xl p-6 sm:p-8`}
+          className={`ht-setup-card bg-surface relative w-full ${wide ? 'max-w-6xl' : 'max-w-2xl'} space-y-6 rounded-2xl p-6 sm:p-8`}
         >
           {closeTo && (
             <Link

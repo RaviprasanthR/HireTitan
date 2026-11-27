@@ -11,7 +11,6 @@ export function ConnectionsPage() {
         title="Import from LinkedIn"
         hint="Choose the Connections.csv from your LinkedIn data export. People who work at a company on your Companies list become its contacts; everyone else is left out. Importing the same file again adds nobody twice. The file is read on this computer and never sent to AI."
         icon={Users}
-        tone="ht-section-people"
         as="h2"
       >
         <LinkedinImport />

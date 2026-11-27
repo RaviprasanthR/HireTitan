@@ -25,9 +25,16 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.types import ASGIApp, Lifespan, Message, Receive, Scope, Send
 
+from hiretitan.assistant_wiring import action_services, assistant_routers
 from hiretitan.drafts.api.drafts import DraftsApiDeps, create_drafts_router
 from hiretitan.drafts.api.resumes import create_resumes_router as create_tailored_router
-from hiretitan.drafts_wiring import SqlContacts, SqlJobs, SqlProfileFacts, clear_drafts_for_job
+from hiretitan.drafts_wiring import (
+    SqlContacts,
+    SqlJobs,
+    SqlProfileFacts,
+    clear_drafts_for_job,
+    tech_terms,
+)
 from hiretitan.mail.api.checks import MailChecksApiDeps, create_checks_router
 from hiretitan.mail.api.connection import MailApiDeps, create_connection_router
 from hiretitan.mail.api.senders import MailSendersApiDeps, create_senders_router
@@ -346,6 +353,20 @@ def build_app(settings: Settings | None = None) -> FastAPI:
         ),
         create_review_items_router(ReviewItemsApiDeps(sessions=deps.sessions, facts=RepoFacts)),
         create_connection_router(MailApiDeps(mail_connection)),
+        *assistant_routers(
+            settings,
+            deps.sessions,
+            EventPublisher(engine).publish,
+            tech_terms(seed_tables.tech_names),
+            action_services(
+                deps.sessions,
+                queue=deps.queue,
+                clock=clock,
+                synonyms=synonyms,
+                work_areas=seed_tables.work_areas,
+                careers=build_career_ops(settings),
+            ),
+        ),
         create_data_router(
             DataApiDeps(
                 sessions=deps.sessions,

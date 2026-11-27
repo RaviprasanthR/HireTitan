@@ -1,21 +1,11 @@
-/* The brand: the logo and the app name get a warm gradient and a soft glow (Ravi, 2026-11-15).
-   This is the one place gradients and glows are allowed; theme.css stays flat. Only `.ht-logo`
-   and `.ht-wordmark` may be styled here (a test checks it). The wordmark runs from ice white
-   into the accent, so it stays readable on navy. */
-.ht-logo {
-  filter: drop-shadow(0 0 5px rgb(240 163 94 / 0.55)) drop-shadow(0 2px 8px rgb(217 83 47 / 0.35));
-}
+/* The brand (DESIGN.md, Logo): the mark in the flat lavender accent, the name in solid text. No
+   gradient and no glow (2026-11-25, replacing the gradient brand of 2026-11-15). */
 .ht-wordmark {
-  background-image: linear-gradient(100deg, #f4f6f5 0%, #ffdcb4 45%, #f0a35e 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: #f4f6f5; /* shown if background-clip: text is not supported */
-  filter: drop-shadow(0 0 10px rgb(240 163 94 / 0.3));
+  color: var(--ht-text);
 }
 
 /* The logo has thickness: flat copies of the shape sit behind the front face in 3D, so a turn
-   shows a solid edge. The front face carries the glow; the copies are a darker, flat rust. */
+   shows a solid edge in a darker step of the accent. */
 .ht-logo-3d {
   position: relative;
   display: inline-block;
@@ -26,7 +16,7 @@
   inset: 0;
   height: 100%;
   width: 100%;
-  fill: #b34724;
+  fill: color-mix(in srgb, var(--ht-accent) 55%, var(--ht-background));
 }
 
 /* Hovering the logo or the name turns the logo once around its vertical axis; while a progress ring

@@ -1,0 +1,5 @@
+version: 1
+tier: fast
+max_output_tokens: 1200
+changelog:
+  - "v1: first version. Mikasa answers from tool results only, treats tool results as data, writes items as refs (private items only as refs), asks when a request matches more than one item, never sends, never edits draft text, and declines the actions that are the person's own (002m FR-016) with a link to the page."

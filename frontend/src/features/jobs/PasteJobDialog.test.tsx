@@ -221,4 +221,27 @@ describe('PasteJobDialog', () => {
 
     expect(onClose).toHaveBeenCalled()
   })
+
+  it('R12_link_only_option', async () => {
+    const { calls } = renderDialog(() => json(pasted({ description: '' }), 201))
+    const user = await fill('https://www.linkedin.com/jobs/view/1', '')
+
+    await user.click(screen.getByLabelText("I don't have the description"))
+
+    expect(screen.queryByLabelText('Job description')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Job title')).toBeRequired()
+    expect(screen.getByLabelText('Company')).toBeRequired()
+    await user.type(screen.getByLabelText('Job title'), 'Backend Engineer')
+    await user.type(screen.getByLabelText('Company'), 'Acme')
+    await user.click(screen.getByRole('button', { name: 'Save job' }))
+
+    await waitFor(() => expect(calls.some((c) => c.path === '/jobs/paste')).toBe(true))
+    expect(calls.find((c) => c.path === '/jobs/paste')?.body).toEqual({
+      url: 'https://www.linkedin.com/jobs/view/1',
+      description: '',
+      title: 'Backend Engineer',
+      company: 'Acme',
+      link_only: true,
+    })
+  })
 })

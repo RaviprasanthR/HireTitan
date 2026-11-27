@@ -1,10 +1,8 @@
 import {
   ArrowDown,
   ArrowUp,
-  BadgeCheck,
   Building2,
   Globe,
-  MessageCircleQuestion,
   Pencil,
   Plus,
   Radar,
@@ -12,8 +10,10 @@ import {
   StickyNote,
   Users,
 } from 'lucide-react'
+import { safeHttpUrl } from '@/lib/safeUrl'
 import { useState } from 'react'
 import { ApiError } from '@/api/client'
+import { StageChip } from '@/components/StageChip'
 import { Button } from '@/components/ui/button'
 import { formatDay } from '@/features/explore/api'
 import { AddCompanyDialog } from './AddCompanyDialog'
@@ -25,29 +25,17 @@ import { Field, inputClass } from './Field'
 type SortKey = 'name' | 'city' | 'pipeline' | 'contacts' | 'note'
 type Sort = { key: SortKey; dir: 'asc' | 'desc' }
 
-/** The filled slate chip used by the toolbar buttons. */
+/** The quiet raised chip used by the toolbar buttons. */
 const TOOL_CHIP =
-  'border-transparent bg-[#243044] text-[#f0a35e] hover:bg-[#2d3b52] hover:text-[#f0a35e] aria-selected:ring-1 aria-selected:ring-[#f0a35e]/60'
+  'border-transparent bg-raised text-foreground hover:bg-raised hover:text-link aria-selected:ring-1 aria-selected:ring-link/60'
 
 const CHIP = 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs whitespace-nowrap'
 
 /** How far the person's jobs at this company have got: Applied, Inquired, or nothing. */
 function PipelineChip({ company }: { company: Company }) {
-  if (company.pipeline === 'applied')
-    return (
-      <span className={`${CHIP} w-fit bg-emerald-500/15 text-emerald-300`}>
-        <BadgeCheck aria-hidden className="size-3" />
-        Applied
-      </span>
-    )
-  if (company.pipeline === 'inquired')
-    return (
-      <span className={`${CHIP} w-fit bg-sky-500/15 text-sky-300`}>
-        <MessageCircleQuestion aria-hidden className="size-3" />
-        Inquired
-      </span>
-    )
-  return <span className="text-xs text-muted-small">—</span>
+  if (company.pipeline === 'applied' || company.pipeline === 'inquired')
+    return <StageChip stage={company.pipeline} />
+  return <span className="text-xs text-muted-small">Not set</span>
 }
 
 /** A small round icon button; each action has its own colour and a tooltip. */
@@ -141,7 +129,7 @@ const shortUrl = (url: string) => url.replace(/^https?:\/\//, '').replace(/\/$/,
 
 function ExternalLink({ url }: { url: string }) {
   return (
-    <a href={url} target="_blank" rel="noreferrer noopener" className="text-link underline">
+    <a href={safeHttpUrl(url)} target="_blank" rel="noreferrer noopener" className="text-link underline">
       {shortUrl(url)}
     </a>
   )
@@ -168,10 +156,10 @@ function Details({ company, checked }: { company: Company; checked: string | nul
     ? `Last checked ${checked}${company.last_check_result ? ` · ${company.last_check_result}` : ''}`
     : 'Not checked yet'
   const rows: [string, React.ReactNode][] = [
-    ['Location', company.city ?? '—'],
+    ['Location', company.city ?? 'Not set'],
     ['Pipeline', PIPELINE_TEXT[company.pipeline ?? 'none']],
-    ['Website', company.website ? <ExternalLink url={company.website} /> : '—'],
-    ['Careers page', company.careers_url ? <ExternalLink url={company.careers_url} /> : '—'],
+    ['Website', company.website ? <ExternalLink url={company.website} /> : 'Not set'],
+    ['Careers page', company.careers_url ? <ExternalLink url={company.careers_url} /> : 'Not set'],
     ['Job board', board],
     [
       'Source',
@@ -251,9 +239,9 @@ function CompanyRow({ company }: { company: Company }) {
   return (
     <li
       aria-label={company.name}
-      className={`relative space-y-2 px-3 py-1.5 transition-colors duration-200 after:absolute after:inset-x-3 after:bottom-0 after:h-px after:bg-border motion-reduce:transition-none ${
-        // the tint is for a resting row: an open, edited or about-to-go row is not an orange block
-        showPanel || editing || confirming ? '' : 'hover:bg-[#9c4f37]/25'
+      className={`ht-list-card relative space-y-2 px-3 py-1.5 transition-colors duration-200 after:absolute after:inset-x-3 after:bottom-0 after:h-px after:bg-border motion-reduce:transition-none ${
+        // the tint is for a resting row: an open, edited or about-to-go row stays as it is
+        showPanel || editing || confirming ? '' : 'hover:bg-raised'
       }`}
     >
       {/* A click anywhere on the row opens or closes it; the name is the same switch for the
@@ -267,13 +255,13 @@ function CompanyRow({ company }: { company: Company }) {
         }}
       >
         <div className="min-w-0">
-          <h2 className="min-w-0 truncate font-semibold">
+          <h2 className="min-w-0 font-semibold md:truncate">
             <button
               type="button"
               aria-expanded={showPanel}
               aria-label={`Details for ${company.name}`}
               onClick={() => setShowPanel(!showPanel)}
-              className="max-w-full truncate rounded text-left hover:text-orange-300 focus-visible:ring-2 focus-visible:ring-ring"
+              className="max-w-full rounded text-left hover:text-link md:truncate focus-visible:ring-2 focus-visible:ring-ring"
             >
               {company.name}
             </button>
@@ -285,20 +273,20 @@ function CompanyRow({ company }: { company: Company }) {
         <span
           className={`${CHIP} w-fit ${
             company.contact_count > 0
-              ? 'bg-fuchsia-500/15 text-fuchsia-300'
-              : 'bg-white/5 text-muted-small opacity-70'
+              ? 'bg-raised text-subtle'
+              : 'text-muted-small'
           }`}
         >
           <Users aria-hidden className="size-3" />
           {contacts}
         </span>
         <span
-          className="flex min-w-0 flex-1 items-center gap-1.5 text-xs text-amber-200/80 md:min-w-0"
+          className="flex min-w-0 flex-1 items-center gap-1.5 text-xs text-subtle md:min-w-0"
           title={company.note_preview ?? undefined}
         >
           {company.note_preview && (
             <>
-              <StickyNote aria-hidden className="size-3 shrink-0 text-amber-300" />
+              <StickyNote aria-hidden className="size-3 shrink-0" />
               <span className="truncate">{company.note_preview}</span>
             </>
           )}
@@ -311,10 +299,10 @@ function CompanyRow({ company }: { company: Company }) {
                   asChild
                   variant="ghost"
                   size="icon-sm"
-                  className="text-violet-300 hover:bg-violet-500/20 hover:text-violet-200"
+                  className="text-subtle hover:bg-raised hover:text-foreground"
                 >
                   <a
-                    href={company.website}
+                    href={safeHttpUrl(company.website)}
                     target="_blank"
                     rel="noreferrer noopener"
                     title="Company site"
@@ -329,7 +317,7 @@ function CompanyRow({ company }: { company: Company }) {
               <IconButton
                 title="Edit"
                 label={`Edit ${company.name}`}
-                tone="text-emerald-300 hover:bg-emerald-500/20 hover:text-emerald-200"
+                tone="text-subtle hover:bg-raised hover:text-foreground"
                 onClick={() => setEditing(true)}
               >
                 <Pencil aria-hidden />
@@ -452,9 +440,9 @@ function HeaderRow({ sort, onSort }: { sort: Sort; onSort: (key: SortKey) => voi
         {text}
         {active &&
           (sort.dir === 'asc' ? (
-            <ArrowUp aria-hidden className="size-3 text-amber-300" />
+            <ArrowUp aria-hidden className="size-3 text-warning" />
           ) : (
-            <ArrowDown aria-hidden className="size-3 text-amber-300" />
+            <ArrowDown aria-hidden className="size-3 text-warning" />
           ))}
       </button>
     )
@@ -532,7 +520,7 @@ export function CompaniesPage() {
             />
           </label>
           {!adding && (
-            <Button type="button" size="sm" className={TOOL_CHIP} onClick={() => setAdding(true)}>
+            <Button type="button" size="sm" variant="secondary" className={TOOL_CHIP} onClick={() => setAdding(true)}>
               <Plus aria-hidden />
               Add a company
             </Button>

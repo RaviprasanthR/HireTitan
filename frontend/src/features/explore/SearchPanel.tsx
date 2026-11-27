@@ -3,7 +3,6 @@ import { Link } from 'react-router'
 import { CircularProgress } from '@/components/CircularProgress'
 import { Button } from '@/components/ui/button'
 import { nextPhrase } from './phrases'
-import { ChartRow } from '@/components/FlowChart'
 import { MailFlow, OutcomeDonut, SearchFlow } from './SearchFlow'
 import {
   type RunSummary,
@@ -128,14 +127,13 @@ function Progress({
   )
 }
 
-/** The last search at the top of Explore: the same flow and bar as its summary page, with links
- * to the full summary and the history. A search that ended before it had companies to read only
- * says how many new jobs it found. */
+/** What the last search or mail check said when it ended, under the actions. Its flow is in the
+ * overview beside the list (`SearchOverview`). A search that ended before it had companies to
+ * read only says how many new jobs it found. */
 function Ended({ run }: { run: RunSummary }) {
-  const leftOutByAi = Math.max(0, run.judged_by_ai - run.kept)
   const mail = run.mail
   if (run.mode === 'mail_alerts' && mail) {
-    const fresh = Math.max(0, mail.emails_listed - mail.emails_skipped)
+    if (!run.stop_message && mail.ended !== 'access_ended') return null
     return (
       <div className="space-y-3">
         {run.stop_message && <p className="text-sm">{run.stop_message}</p>}
@@ -146,53 +144,92 @@ function Ended({ run }: { run: RunSummary }) {
             </Link>
           </p>
         )}
-        <ChartRow>
-          <MailFlow
-            counts={{
-              emailsRead: mail.emails_read,
-              emailsNew: fresh,
-              unreadable: mail.emails_unreadable,
-              alreadyRead: mail.emails_skipped,
-              jobsFound: run.jobs_found,
-              byRules: run.skipped_by_rules,
-              added: run.added,
-              merged: run.merged,
-            }}
-          />
-          <OutcomeDonut added={run.added} merged={run.merged} leftOut={run.skipped_by_rules} />
-        </ChartRow>
       </div>
     )
   }
+  if (!run.stop_message && run.companies_total > 0 && !run.ai_note) return null
   return (
     <div className="space-y-3">
       {run.stop_message && <p className="text-sm">{run.stop_message}</p>}
-      {run.companies_total > 0 ? (
-        <ChartRow>
-          <SearchFlow
-            counts={{
-              companiesRead: run.companies_read,
-              companiesTotal: run.companies_total,
-              toCheck: 0, // the latest-search answer has no per-company results; the summary does
-              jobsFound: run.jobs_found,
-              byRules: run.skipped_by_rules,
-              judgedByAi: run.judged_by_ai,
-              byAi: leftOutByAi,
-              added: run.added,
-              merged: run.merged,
-            }}
-          />
-          <OutcomeDonut
-            added={run.added}
-            merged={run.merged}
-            leftOut={run.skipped_by_rules + leftOutByAi}
-          />
-        </ChartRow>
-      ) : (
-        <p className="text-sm text-muted-small">{counts(run, '')}</p>
-      )}
+      {run.companies_total === 0 && <p className="text-sm text-muted-small">{counts(run, '')}</p>}
       {run.ai_note && <p className="text-sm text-warning">{run.ai_note}</p>}
     </div>
+  )
+}
+
+/** The overview's line while a running search has nothing read yet. */
+function FillsIn({ what }: { what: 'companies' | 'emails' }) {
+  return (
+    <p className="ht-detail-card text-sm text-muted-small">
+      The flow fills in as {what} are read.
+    </p>
+  )
+}
+
+/** The latest search or mail check as a flow, for the overview beside the Explore list (FR-023a).
+ * A running search shows its flow filling in, so the overview keeps its column and the table stays
+ * beside it; the donut of what happened to the jobs found follows once it has ended. Nothing before
+ * the first search. */
+export function SearchOverview() {
+  const run = useLatestRun().data ?? null
+  if (!run) return null
+  const live = run.outcome === null
+  const mail = run.mail
+  if (run.mode === 'mail_alerts' && mail) {
+    // never "0 of 9" while the first email is being read (US2 AS1)
+    if (live && mail.emails_read + mail.emails_unreadable === 0) return <FillsIn what="emails" />
+    return (
+      <>
+        <MailFlow
+          counts={{
+            emailsRead: mail.emails_read,
+            emailsNew: Math.max(0, mail.emails_listed - mail.emails_skipped),
+            unreadable: mail.emails_unreadable,
+            alreadyRead: mail.emails_skipped,
+            jobsFound: run.jobs_found,
+            byRules: run.skipped_by_rules,
+            added: run.added,
+            merged: run.merged,
+          }}
+        />
+        {!live && (
+          <OutcomeDonut
+            compact
+            added={run.added}
+            merged={run.merged}
+            leftOut={run.skipped_by_rules}
+          />
+        )}
+      </>
+    )
+  }
+  if (run.companies_total === 0 || (live && run.companies_read === 0))
+    return live ? <FillsIn what="companies" /> : null
+  const leftOutByAi = Math.max(0, run.judged_by_ai - run.kept)
+  return (
+    <>
+      <SearchFlow
+        counts={{
+          companiesRead: run.companies_read,
+          companiesTotal: run.companies_total,
+          toCheck: 0, // the latest-search answer has no per-company results; the summary does
+          jobsFound: run.jobs_found,
+          byRules: run.skipped_by_rules,
+          judgedByAi: run.judged_by_ai,
+          byAi: leftOutByAi,
+          added: run.added,
+          merged: run.merged,
+        }}
+      />
+      {!live && (
+        <OutcomeDonut
+          compact
+          added={run.added}
+          merged={run.merged}
+          leftOut={run.skipped_by_rules + leftOutByAi}
+        />
+      )}
+    </>
   )
 }
 

@@ -20,27 +20,15 @@ describe('AppName', () => {
     expect(container.firstElementChild?.firstElementChild).toBe(logo?.closest('.ht-logo-3d'))
   })
 
-  it('the logo is filled with its own gradient', () => {
-    const { container } = render(
-      <>
-        <AppName />
-        <AppName />
-      </>,
-    )
+  it('test_FR003_logo_is_flat_accent', () => {
+    const { container } = render(<AppName />)
 
-    const logos = [...container.querySelectorAll('svg[data-logo]')]
-    expect(logos).toHaveLength(2)
-    const ids = logos.map((logo) => {
-      const gradient = logo.querySelector('linearGradient')
-      expect(gradient).not.toBeNull()
-      expect(logo.querySelector('path')).toHaveAttribute('fill', `url(#${gradient?.id})`)
-      return gradient?.id
-    })
-    // two logos on one page must not share a gradient id
-    expect(new Set(ids).size).toBe(2)
+    const logo = container.querySelector('svg[data-logo]')
+    expect(logo?.querySelector('linearGradient')).toBeNull()
+    expect(logo?.querySelector('path')).toHaveAttribute('fill', 'var(--ht-accent)')
   })
 
-  it('the name has the gradient wordmark style, as one text node', () => {
+  it('test_FR003_wordmark_is_solid_text', () => {
     render(<AppName />)
 
     expect(screen.getByText('HireTitan')).toHaveClass('ht-wordmark')
@@ -51,5 +39,18 @@ describe('AppName', () => {
 
     expect(html).toContain('href="/favicon.svg"')
     expect(existsSync(resolve(process.cwd(), 'public/favicon.svg'))).toBe(true)
+  })
+})
+
+describe('brand.css', () => {
+  it('test_FR003_logo_has_no_glow', () => {
+    const css = readFileSync(resolve(process.cwd(), 'src/theme/brand.css'), 'utf8')
+    expect(css).not.toMatch(/gradient\(|drop-shadow|background-clip|text-fill-color/)
+  })
+
+  it('test_FR002_favicon_is_flat_accent', () => {
+    const svg = readFileSync(resolve(process.cwd(), 'public/favicon.svg'), 'utf8').toLowerCase()
+    expect(svg).not.toContain('gradient')
+    expect(svg).toContain('#a99ce6')
   })
 })

@@ -84,6 +84,17 @@ export function useEvents(): { connected: boolean } {
       source.addEventListener(name, draftChanged)
     // The Gmail connection changed (connected, disconnected, access ended): Settings refreshes.
     source.addEventListener('mail.connection_changed', () => invalidate(['mail']))
+    // Mikasa changed something: the pages showing it refresh, in every open tab (002m FR-004).
+    source.addEventListener('assistant.changed', (event) => {
+      let keys: QueryKey[] = []
+      try {
+        const data = JSON.parse((event as MessageEvent<string>).data) as { keys?: QueryKey[] }
+        keys = Array.isArray(data.keys) ? data.keys : []
+      } catch {
+        // fall back to the lists Mikasa can change
+      }
+      invalidate(['assistant'], ...(keys.length ? keys : [['jobs'], ['companies'], ['pipeline']]))
+    })
     source.addEventListener('search.batch_done', searchChanged)
     source.addEventListener('search.finished', searchChanged)
 

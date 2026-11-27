@@ -66,14 +66,16 @@ test('SC001_journey_completes', async ({ page, request }) => {
   await page.getByRole('link', { name: 'Explore' }).click()
   await expect(page.getByRole('button', { name: 'Search now' })).toBeVisible()
   await expect(page.getByText('Finish setup first')).toHaveCount(0)
-  await page.getByRole('link', { name: 'Home', exact: true }).click()
+  await page.getByRole('link', { name: 'Jobs', exact: true }).click()
   const menu = page.getByRole('navigation', { name: 'Main' })
-  await expect(menu.getByRole('link')).toHaveText(['Home', 'Companies', 'Profile', 'Settings'])
+  await expect(menu.getByRole('link')).toHaveText(['Jobs', 'Companies', 'Profile', 'Settings'])
   await page.goto('/preferences') // the old address opens the Profile tab
   await expect(page).toHaveURL(/\/profile\/preferences$/)
 
   // A9/A10: a newer resume opens a review with its changes.
+  // the confirmed profile is shown first; the upload area waits behind its button (003 US4)
   await page.goto('/profile')
+  await page.getByRole('button', { name: 'Update from a new resume' }).click()
   await page.locator('input[type="file"]').setInputFiles(resumes('synthetic-mid-2page-v2.docx'))
   await page.getByRole('link', { name: 'Review your profile' }).click()
   await expect(page.getByLabel('Job title 1')).toHaveValue('Staff Software Engineer')

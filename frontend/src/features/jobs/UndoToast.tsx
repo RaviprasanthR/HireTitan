@@ -20,7 +20,7 @@ export function UndoToast() {
   return (
     <div
       role="status"
-      className="fixed bottom-4 right-4 z-50 flex items-center gap-3 rounded-lg border border-divider bg-surface p-3 text-sm shadow-lg"
+      className="fixed bottom-4 left-4 z-50 flex items-center gap-3 rounded-lg border border-divider bg-surface p-3 text-sm shadow-lg"
     >
       <span>
         “{notice.title}” marked as {notice.kind}.

@@ -16,14 +16,14 @@ const COUNTS = {
 }
 
 describe('SearchFlow', () => {
-  it('draws the search as round steps joined by connectors', () => {
+  it('draws the search as steps joined by connectors', () => {
     render(<SearchFlow counts={COUNTS} />)
     const flow = screen.getByRole('list', { name: 'How the search went' })
     const steps = within(flow).getAllByRole('listitem')
     expect(steps).toHaveLength(5) // the connectors are hidden from assistive technology
-    expect(steps[0]).toHaveTextContent(/3 of 3.*Companies read.*1 to check by hand/)
-    expect(steps[4]).toHaveTextContent(/10.*New jobs.*3 already known/)
-    expect(flow.querySelectorAll('.ht-flow-node')).toHaveLength(5)
+    expect(steps[0]).toHaveTextContent(/Companies read.*3 of 3.*1 to check by hand/)
+    expect(steps[4]).toHaveTextContent(/New jobs.*10.*3 already known/)
+    expect(flow.querySelectorAll('.ht-flow-icon')).toHaveLength(5)
     expect(flow.querySelectorAll('.ht-flow-link')).toHaveLength(4)
   })
 })
@@ -46,12 +46,15 @@ describe('OutcomeDonut', () => {
     expect(centre).toHaveTextContent('42jobs found')
   })
 
-  it('the legend highlights its slice from the keyboard too', async () => {
+  it('test_FR023_legend_not_tab_stops', async () => {
     render(<OutcomeDonut added={10} merged={3} leftOut={29} />)
     const legend = screen.getByRole('list', { name: 'Legend' })
+    // the counts are already in the legend's text; the entries are not controls
+    for (const item of within(legend).getAllByRole('listitem')) {
+      expect(item).not.toHaveAttribute('tabindex')
+    }
     await userEvent.tab()
-    expect(within(legend).getAllByRole('listitem')[0]).toHaveFocus()
-    expect(screen.getByTestId('donut-centre')).toHaveTextContent('10New jobs24%')
+    expect(document.body).toHaveFocus()
   })
 
   it('a tiny slice reads below one percent, not zero', () => {

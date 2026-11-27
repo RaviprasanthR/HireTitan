@@ -134,12 +134,12 @@ describe('AiSection', () => {
     expect(await screen.findByText('Missing')).toBeInTheDocument()
   })
 
-  it('Check again asks for a fresh check', async () => {
+  it('test_US2_AS5_ai_key_button_says_test_key', async () => {
     ai = { ...ai, status: 'rejected', key_source: 'page' }
     const user = userEvent.setup()
     renderSection()
 
-    await user.click(await screen.findByRole('button', { name: 'Check again' }))
+    await user.click(await screen.findByRole('button', { name: 'Test key' }))
 
     await waitFor(() =>
       expect(calls.some((c) => c.method === 'POST' && c.path === '/status/ai/check')).toBe(true),
@@ -212,7 +212,7 @@ describe('AiSection: review fixes', () => {
     await user.click(screen.getByRole('button', { name: 'Save key' }))
     await screen.findByRole('status', { name: 'Key result' })
     ai = { ...ai, status: 'working' }
-    await user.click(screen.getByRole('button', { name: 'Check again' }))
+    await user.click(screen.getByRole('button', { name: 'Test key' }))
 
     // the answer is announced in the same status line that said "Checking"
     await waitFor(() =>

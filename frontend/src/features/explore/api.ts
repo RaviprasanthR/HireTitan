@@ -192,13 +192,13 @@ export function useStopSearch() {
   })
 }
 
+/** Ask the AI to check one job's fit again (runs in the background). */
+export const recheckJob = (id: string) =>
+  apiFetch<{ run_id: string }>(`/jobs/${id}/recheck`, { method: 'POST' })
+
 export function useRecheck() {
   const refresh = useRefreshing()
-  return useMutation({
-    mutationFn: (id: string) =>
-      apiFetch<{ run_id: string }>(`/jobs/${id}/recheck`, { method: 'POST' }),
-    onSuccess: refresh,
-  })
+  return useMutation({ mutationFn: recheckJob, onSuccess: refresh })
 }
 
 export function useRestore() {
@@ -277,6 +277,13 @@ export function isNotChecked(job: JobCard): boolean {
 }
 
 /** A plain calendar day ("2026-11-03"), shown without any time-zone shift. */
+/** The work mode, unless the location already says it in any spelling ("(On-site)" says
+ * "onsite"): a fact is never repeated in one line (FR-007). */
+export function newWorkMode(location: string | null | undefined, mode: string | null | undefined) {
+  const letters = (text: string) => text.toLowerCase().replace(/[^a-z]/g, '')
+  return mode && !letters(location ?? '').includes(letters(mode)) ? mode : ''
+}
+
 export function formatDay(value: string | null | undefined): string {
   if (!value) return ''
   const [year = 0, month = 1, day = 1] = value.split('-').map(Number)

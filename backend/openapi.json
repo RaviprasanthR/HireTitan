@@ -104,6 +104,41 @@
         "title": "AppliedIn",
         "type": "object"
       },
+      "AssistantStatusOut": {
+        "properties": {
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "provider_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Message"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "available"
+        ],
+        "title": "AssistantStatusOut",
+        "type": "object"
+      },
       "AuthorizeModel": {
         "properties": {
           "authorize_url": {
@@ -115,6 +150,24 @@
           "authorize_url"
         ],
         "title": "AuthorizeModel",
+        "type": "object"
+      },
+      "BeginIn": {
+        "properties": {
+          "kind": {
+            "enum": [
+              "connection_request",
+              "referral_message",
+              "email"
+            ],
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "BeginIn",
         "type": "object"
       },
       "Body_upload_resume_api_v1_resumes_post": {
@@ -605,6 +658,48 @@
         "title": "CompletedOut",
         "type": "object"
       },
+      "ConfirmIn": {
+        "properties": {
+          "items": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ItemEdit"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "title": "ConfirmIn",
+        "type": "object"
+      },
+      "ConfirmOut": {
+        "properties": {
+          "card_id": {
+            "format": "uuid",
+            "title": "Card Id",
+            "type": "string"
+          },
+          "results": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Results",
+            "type": "array"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "card_id",
+          "state",
+          "results"
+        ],
+        "title": "ConfirmOut",
+        "type": "object"
+      },
       "ConnectionModel": {
         "properties": {
           "address": {
@@ -965,6 +1060,52 @@
         "title": "ContactsOut",
         "type": "object"
       },
+      "ConversationOut": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_used_at": {
+            "format": "date-time",
+            "title": "Last Used At",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "last_used_at"
+        ],
+        "title": "ConversationOut",
+        "type": "object"
+      },
+      "CreatedOut": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "CreatedOut",
+        "type": "object"
+      },
       "CredentialsBody": {
         "additionalProperties": false,
         "properties": {
@@ -1138,6 +1279,28 @@
           "description"
         ],
         "title": "DescriptionIn",
+        "type": "object"
+      },
+      "DetailsIn": {
+        "properties": {
+          "company": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Company",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "company"
+        ],
+        "title": "DetailsIn",
         "type": "object"
       },
       "DisconnectModel": {
@@ -1425,7 +1588,8 @@
           "kind": {
             "enum": [
               "connection_request",
-              "referral_message"
+              "referral_message",
+              "email"
             ],
             "title": "Kind",
             "type": "string"
@@ -1499,7 +1663,8 @@
           "kind": {
             "enum": [
               "connection_request",
-              "referral_message"
+              "referral_message",
+              "email"
             ],
             "title": "Kind",
             "type": "string"
@@ -2005,6 +2170,27 @@
           "round"
         ],
         "title": "InterviewSummaryOut",
+        "type": "object"
+      },
+      "ItemEdit": {
+        "properties": {
+          "args": {
+            "additionalProperties": true,
+            "title": "Args",
+            "type": "object"
+          },
+          "index": {
+            "maximum": 24.0,
+            "minimum": 0.0,
+            "title": "Index",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "index",
+          "args"
+        ],
+        "title": "ItemEdit",
         "type": "object"
       },
       "JobCardOut": {
@@ -2717,6 +2903,94 @@
         "title": "MailUnreadableOut",
         "type": "object"
       },
+      "MessageOut": {
+        "properties": {
+          "author": {
+            "title": "Author",
+            "type": "string"
+          },
+          "cards": {
+            "default": [],
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Cards",
+            "type": "array"
+          },
+          "changes": {
+            "default": [],
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Changes",
+            "type": "array"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "refs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Refs",
+            "type": "array"
+          },
+          "seq": {
+            "title": "Seq",
+            "type": "integer"
+          },
+          "signals": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Signals",
+            "type": "array"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "seq",
+          "author",
+          "text",
+          "status",
+          "refs",
+          "signals",
+          "error",
+          "created_at"
+        ],
+        "title": "MessageOut",
+        "type": "object"
+      },
       "MissingOut": {
         "properties": {
           "keyword": {
@@ -2901,56 +3175,6 @@
           "active_run_id"
         ],
         "title": "OnboardingOut",
-        "type": "object"
-      },
-      "PasteIn": {
-        "properties": {
-          "company": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Company"
-          },
-          "description": {
-            "default": "",
-            "title": "Description",
-            "type": "string"
-          },
-          "location": {
-            "anyOf": [
-              {
-                "maxLength": 500,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Location"
-          },
-          "title": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Title"
-          },
-          "url": {
-            "default": "",
-            "title": "Url",
-            "type": "string"
-          }
-        },
-        "title": "PasteIn",
         "type": "object"
       },
       "PasteOut": {
@@ -3504,6 +3728,21 @@
           }
         },
         "title": "PlaceRuleModel",
+        "type": "object"
+      },
+      "PostIn": {
+        "properties": {
+          "text": {
+            "maxLength": 40000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "PostIn",
         "type": "object"
       },
       "PreferencesModel-Input": {
@@ -4069,6 +4308,96 @@
         "title": "QuestionPatch",
         "type": "object"
       },
+      "QuickActionOut": {
+        "properties": {
+          "draft_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "connection_request",
+                  "referral_message",
+                  "email"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draft Kind"
+          },
+          "form": {
+            "enum": [
+              "draft",
+              "status",
+              "paste"
+            ],
+            "title": "Form",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "form",
+          "draft_kind"
+        ],
+        "title": "QuickActionOut",
+        "type": "object"
+      },
+      "QuickRunOut": {
+        "properties": {
+          "cards": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Cards",
+            "type": "array"
+          },
+          "changes": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Changes",
+            "type": "array"
+          },
+          "message_id": {
+            "format": "uuid",
+            "title": "Message Id",
+            "type": "string"
+          },
+          "refs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Refs",
+            "type": "array"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message_id",
+          "text",
+          "refs",
+          "changes",
+          "cards"
+        ],
+        "title": "QuickRunOut",
+        "type": "object"
+      },
       "RecipientContactOut": {
         "properties": {
           "contact_id": {
@@ -4230,6 +4559,59 @@
           "kinds"
         ],
         "title": "RecipientsOut",
+        "type": "object"
+      },
+      "RefCardOut": {
+        "properties": {
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "lines": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Link"
+          },
+          "ref": {
+            "title": "Ref",
+            "type": "string"
+          },
+          "subtitle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subtitle"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ref",
+          "kind",
+          "title"
+        ],
+        "title": "RefCardOut",
         "type": "object"
       },
       "ResumeChoiceOut": {
@@ -5012,20 +5394,6 @@
         "title": "RunRef",
         "type": "object"
       },
-      "SavedOut": {
-        "properties": {
-          "saved_at": {
-            "format": "date-time",
-            "title": "Saved At",
-            "type": "string"
-          }
-        },
-        "required": [
-          "saved_at"
-        ],
-        "title": "SavedOut",
-        "type": "object"
-      },
       "SearchRulesModel-Input": {
         "additionalProperties": false,
         "properties": {
@@ -5665,6 +6033,96 @@
         "title": "SourceIn",
         "type": "object"
       },
+      "StagedOut": {
+        "properties": {
+          "already_saved": {
+            "title": "Already Saved",
+            "type": "boolean"
+          },
+          "draft_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draft Ref"
+          },
+          "job_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Ref"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "connection_request",
+                  "referral_message",
+                  "email"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "step": {
+            "enum": [
+              "need_post",
+              "need_details",
+              "need_kind",
+              "drafting",
+              "ask_save",
+              "done"
+            ],
+            "title": "Step",
+            "type": "string"
+          }
+        },
+        "required": [
+          "step",
+          "kind",
+          "label",
+          "job_ref",
+          "draft_ref",
+          "already_saved"
+        ],
+        "title": "StagedOut",
+        "type": "object"
+      },
+      "StartCheckBody": {
+        "properties": {
+          "reread_last_day": {
+            "default": false,
+            "title": "Reread Last Day",
+            "type": "boolean"
+          }
+        },
+        "title": "StartCheckBody",
+        "type": "object"
+      },
       "StartIn": {
         "properties": {
           "mode": {
@@ -5712,6 +6170,31 @@
           "run_id"
         ],
         "title": "StartedOut",
+        "type": "object"
+      },
+      "StatusIn": {
+        "properties": {
+          "job": {
+            "maxLength": 60,
+            "title": "Job",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "applied",
+              "inquired",
+              "not_applied",
+              "not_inquired"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job",
+          "status"
+        ],
+        "title": "StatusIn",
         "type": "object"
       },
       "StatusOut": {
@@ -5967,6 +6450,45 @@
         "title": "TextIn",
         "type": "object"
       },
+      "TurnIn": {
+        "properties": {
+          "page": {
+            "default": "/",
+            "maxLength": 500,
+            "title": "Page",
+            "type": "string"
+          },
+          "text": {
+            "maxLength": 10000,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "TurnIn",
+        "type": "object"
+      },
+      "UndoneOut": {
+        "properties": {
+          "change_id": {
+            "format": "uuid",
+            "title": "Change Id",
+            "type": "string"
+          },
+          "undone": {
+            "default": true,
+            "title": "Undone",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "change_id"
+        ],
+        "title": "UndoneOut",
+        "type": "object"
+      },
       "ValidationError": {
         "properties": {
           "ctx": {
@@ -6144,6 +6666,89 @@
         "title": "YearMonthModel",
         "type": "object"
       },
+      "hiretitan__assistant__api__changes__PasteIn": {
+        "properties": {
+          "company": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company"
+          },
+          "description": {
+            "maxLength": 40000,
+            "title": "Description",
+            "type": "string"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "url": {
+            "maxLength": 2000,
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "description"
+        ],
+        "title": "PasteIn",
+        "type": "object"
+      },
+      "hiretitan__assistant__api__staged__SavedOut": {
+        "properties": {
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "summary"
+        ],
+        "title": "SavedOut",
+        "type": "object"
+      },
+      "hiretitan__preferences__api__router__SavedOut": {
+        "properties": {
+          "saved_at": {
+            "format": "date-time",
+            "title": "Saved At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "saved_at"
+        ],
+        "title": "SavedOut",
+        "type": "object"
+      },
       "hiretitan__search__api__contacts__ContactIn": {
         "properties": {
           "confidence": {
@@ -6310,6 +6915,61 @@
         "title": "SourceOut",
         "type": "object"
       },
+      "hiretitan__search__api__jobs__PasteIn": {
+        "properties": {
+          "company": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company"
+          },
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "link_only": {
+            "default": false,
+            "title": "Link Only",
+            "type": "boolean"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "url": {
+            "default": "",
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "title": "PasteIn",
+        "type": "object"
+      },
       "hiretitan__search__api__models__SourceOut": {
         "properties": {
           "alert_date": {
@@ -6359,6 +7019,833 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/assistant/cards/{card_id}/cancel": {
+      "post": {
+        "operationId": "cancel_api_v1_assistant_cards__card_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "card_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Card Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfirmOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cancel",
+        "tags": [
+          "assistant"
+        ]
+      }
+    },
+    "/api/v1/assistant/cards/{card_id}/confirm": {
+      "post": {
+        "operationId": "confirm_api_v1_assistant_cards__card_id__confirm_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "card_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Card Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ConfirmIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfirmOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Confirm",
+        "tags": [
+          "assistant"
+        ]
+      }
+    },
+    "/api/v1/assistant/changes/{change_id}/undo": {
+      "post": {
+        "operationId": "undo_api_v1_assistant_changes__change_id__undo_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "change_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Change Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UndoneOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Undo",
+        "tags": [
+          "assistant"
+        ]
+      }
+    },
+    "/api/v1/assistant/conversations": {
+      "get": {
+        "operationId": "recent_api_v1_assistant_conversations_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ConversationOut"
+                  },
+                  "title": "Response Recent Api V1 Assistant Conversations Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Recent",
+        "tags": [
+          "assistant"
+        ]
+      },
+      "post": {
+        "operationId": "start_api_v1_assistant_conversations_post",
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Start",
+        "tags": [
+          "assistant"
+        ]
+      }
+    },
+    "/api/v1/assistant/conversations/{conversation_id}/messages": {
+      "get": {
+        "operationId": "messages_api_v1_assistant_conversations__conversation_id__messages_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MessageOut"
+                  },
+                  "title": "Response Messages Api V1 Assistant Conversations  Conversation Id  Messages Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Messages",
+        "tags": [
+          "assistant"
+        ]
+      }
+    },
+    "/api/v1/assistant/conversations/{conversation_id}/paste": {
+      "post": {
+        "description": "The composer's Paste a job description: the text goes to the paste use case and is\nnever sent to the AI (FR-021). The job is added with an Undo, like a small change.",
+        "operationId": "paste_api_v1_assistant_conversations__conversation_id__paste_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/hiretitan__assistant__api__changes__PasteIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Paste Api V1 Assistant Conversations  Conversation Id  Paste Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Paste",
+        "tags": [
+          "assistant"
+        ]
+      }
+    },
+    "/api/v1/assistant/conversations/{conversation_id}/quick/status": {
+      "post": {
+        "operationId": "status_api_v1_assistant_conversations__conversation_id__quick_status_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StatusIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuickRunOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Status",
+        "tags": [
+          "assistant"
+        ]
+      }
+    },
+    "/api/v1/assistant/conversations/{conversation_id}/staged": {
+      "get": {
+        "operationId": "view_api_v1_assistant_conversations__conversation_id__staged_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/StagedOut"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response View Api V1 Assistant Conversations  Conversation Id  Staged Get"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "View",
+        "tags": [
+          "assistant"
+        ]
+      }
+    },
+    "/api/v1/assistant/conversations/{conversation_id}/staged/begin": {
+      "post": {
+        "operationId": "begin_api_v1_assistant_conversations__conversation_id__staged_begin_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BeginIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StagedOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Begin",
+        "tags": [
+          "assistant"
+        ]
+      }
+    },
+    "/api/v1/assistant/conversations/{conversation_id}/staged/choose": {
+      "post": {
+        "operationId": "choose_api_v1_assistant_conversations__conversation_id__staged_choose_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BeginIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StagedOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Choose",
+        "tags": [
+          "assistant"
+        ]
+      }
+    },
+    "/api/v1/assistant/conversations/{conversation_id}/staged/details": {
+      "post": {
+        "operationId": "details_api_v1_assistant_conversations__conversation_id__staged_details_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DetailsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StagedOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Details",
+        "tags": [
+          "assistant"
+        ]
+      }
+    },
+    "/api/v1/assistant/conversations/{conversation_id}/staged/discard": {
+      "post": {
+        "operationId": "discard_api_v1_assistant_conversations__conversation_id__staged_discard_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Discard",
+        "tags": [
+          "assistant"
+        ]
+      }
+    },
+    "/api/v1/assistant/conversations/{conversation_id}/staged/post": {
+      "post": {
+        "operationId": "post_api_v1_assistant_conversations__conversation_id__staged_post_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StagedOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post",
+        "tags": [
+          "assistant"
+        ]
+      }
+    },
+    "/api/v1/assistant/conversations/{conversation_id}/staged/save": {
+      "post": {
+        "operationId": "save_api_v1_assistant_conversations__conversation_id__staged_save_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/hiretitan__assistant__api__staged__SavedOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Save",
+        "tags": [
+          "assistant"
+        ]
+      }
+    },
+    "/api/v1/assistant/conversations/{conversation_id}/turns": {
+      "post": {
+        "operationId": "send_api_v1_assistant_conversations__conversation_id__turns_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TurnIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Send",
+        "tags": [
+          "assistant"
+        ]
+      }
+    },
+    "/api/v1/assistant/quick-actions": {
+      "get": {
+        "operationId": "quick_actions_api_v1_assistant_quick_actions_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/QuickActionOut"
+                  },
+                  "title": "Response Quick Actions Api V1 Assistant Quick Actions Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Quick Actions",
+        "tags": [
+          "assistant"
+        ]
+      }
+    },
+    "/api/v1/assistant/refs/{ref}": {
+      "get": {
+        "operationId": "card_api_v1_assistant_refs__ref__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ref",
+            "required": true,
+            "schema": {
+              "title": "Ref",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefCardOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Card",
+        "tags": [
+          "assistant"
+        ]
+      }
+    },
+    "/api/v1/assistant/status": {
+      "get": {
+        "operationId": "status_api_v1_assistant_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistantStatusOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Status",
+        "tags": [
+          "assistant"
+        ]
+      }
+    },
     "/api/v1/companies": {
       "get": {
         "operationId": "companies_api_v1_companies_get",
@@ -7026,6 +8513,48 @@
           "drafts"
         ]
       },
+      "get": {
+        "description": "One draft, for Mikasa's chat (002m quick actions) to show as it is written.",
+        "operationId": "get_draft_api_v1_drafts__draft_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "draft_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Draft Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DraftOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Draft",
+        "tags": [
+          "drafts"
+        ]
+      },
       "put": {
         "operationId": "edit_draft_api_v1_drafts__draft_id__put",
         "parameters": [
@@ -7628,7 +9157,7 @@
     },
     "/api/v1/jobs/duplicates/{pair_id}/merge": {
       "post": {
-        "description": "Keep the older job (A) and move the other's sources onto it; the other is deleted.\n\nThe kept job takes the stronger of the two pipeline states, with that job's date.",
+        "description": "Keep the older job (A) and move the other's sources onto it; the other is deleted.\nThe kept job takes the stronger of the two pipeline states, with that job's date.",
         "operationId": "merge_api_v1_jobs_duplicates__pair_id__merge_post",
         "parameters": [
           {
@@ -7677,7 +9206,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PasteIn"
+                "$ref": "#/components/schemas/hiretitan__search__api__jobs__PasteIn"
               }
             }
           },
@@ -8871,6 +10400,23 @@
     "/api/v1/mail/checks": {
       "post": {
         "operationId": "start_check_api_v1_mail_checks_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/StartCheckBody"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
           "202": {
             "content": {
@@ -8881,6 +10427,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "Start Check",
@@ -9339,7 +10895,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SavedOut"
+                  "$ref": "#/components/schemas/hiretitan__preferences__api__router__SavedOut"
                 }
               }
             },

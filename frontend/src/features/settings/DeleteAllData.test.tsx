@@ -74,7 +74,7 @@ describe('DeleteAllData', () => {
     const css = readFileSync(resolve(process.cwd(), 'src/theme/theme.css'), 'utf8')
     const start = css.indexOf('.ht-danger-button:hover')
     expect(start).toBeGreaterThan(-1)
-    expect(css.slice(start, css.indexOf('}', start))).toMatch(/background[^;]*(#f85149|#ff6b63)/)
+    expect(css.slice(start, css.indexOf('}', start))).toMatch(/background[^;]*var\(--ht-danger\)/)
   })
 
   it('US4_AS2_requires_typed_word', async () => {

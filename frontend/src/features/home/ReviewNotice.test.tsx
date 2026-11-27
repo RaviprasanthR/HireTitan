@@ -58,13 +58,13 @@ function renderAt(path: string) {
 describe('ReviewNotice', () => {
   afterEach(() => vi.unstubAllGlobals())
 
-  it('SC001 menu has four entries: Home, Companies, Profile, Settings', async () => {
+  it('SC001 menu has four entries: Jobs, Companies, Profile, Settings', async () => {
     stub([])
     renderAt('/')
     const nav = await screen.findByRole('navigation', { name: 'Main' })
 
     expect(Array.from(nav.querySelectorAll('a')).map((a) => a.textContent)).toEqual([
-      'Home',
+      'Jobs',
       'Companies',
       'Profile',
       'Settings',
@@ -93,7 +93,7 @@ describe('ReviewNotice', () => {
   it('US5 AS3 no notice when nothing waits', async () => {
     stub([])
     renderAt('/')
-    await screen.findByRole('navigation', { name: 'Home tabs' })
+    await screen.findByRole('navigation', { name: 'Jobs tabs' })
 
     expect(screen.queryByText(/your review/)).not.toBeInTheDocument()
   })

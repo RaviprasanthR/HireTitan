@@ -113,7 +113,10 @@ export function PipelineControl({
       )}
       <Button
         type="button"
-        variant="success"
+        // in a list every row repeats it, so it is not the view's one primary (FR-010)
+        variant={compact ? 'outline' : 'success'}
+        className={compact ? 'ht-stage-button' : undefined}
+        data-stage={compact ? 'applied' : undefined}
         size="sm"
         disabled={blocked}
         aria-describedby={forId}
@@ -128,6 +131,8 @@ export function PipelineControl({
         <Button
           type="button"
           variant="outline"
+          className={compact ? 'ht-stage-button' : undefined}
+          data-stage={compact ? 'inquired' : undefined}
           size="sm"
           disabled={blocked}
           aria-describedby={forId}

@@ -44,7 +44,7 @@ export function AiBanner() {
           disabled={recheck.isPending}
           onClick={() => recheck.mutate()}
         >
-          Check again
+          Test key
         </Button>
       </div>
     )

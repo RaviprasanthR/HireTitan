@@ -87,6 +87,14 @@ describe('PipelineControl compact (feature 002k)', () => {
     expect(screen.queryByRole('button', { name: /date/i })).not.toBeInTheDocument()
   })
 
+  it('the row buttons carry the colour of the stage they record (DESIGN.md stage colours)', async () => {
+    renderControl({ last: 'f2', compact: true })
+    const applied = await screen.findByRole('button', { name: 'I applied' })
+    expect(applied).toHaveClass('ht-stage-button')
+    expect(applied).toHaveAttribute('data-stage', 'applied')
+    expect(screen.getByRole('button', { name: 'I inquired' })).toHaveAttribute('data-stage', 'inquired')
+  })
+
   it('FR003 compact one click records today and the starting resume', async () => {
     const user = userEvent.setup()
     const calls = renderControl({ last: 'f2', compact: true })

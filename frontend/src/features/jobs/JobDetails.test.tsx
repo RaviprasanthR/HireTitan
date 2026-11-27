@@ -70,22 +70,22 @@ describe('JobDetails', () => {
     expect(screen.getByRole('list', { name: 'Sources' })).toHaveTextContent(
       'https://jobs.example.com/acme/1',
     )
-    expect(screen.getByRole('link', { name: 'Open original posting' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Open posting (opens in a new tab)' })).toHaveAttribute(
       'href',
       'https://jobs.example.com/acme/1',
     )
   })
 
-  it('has_the_actions_by_default', async () => {
+  it('test_US2_AS5_job_page_says_recheck_fit', async () => {
     renderDetails()
-    expect(await screen.findByRole('button', { name: 'Check again' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Re-check fit' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /I applied/i })).toBeInTheDocument()
   })
 
   it('FR025_leaves_out_the_buttons_when_the_surrounding_row_has_them', async () => {
     renderDetails(false)
     await screen.findByText('Build APIs with Python.')
-    expect(screen.queryByRole('button', { name: 'Check again' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Re-check fit' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /I applied/i })).not.toBeInTheDocument()
   })
 

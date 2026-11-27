@@ -4,6 +4,317 @@
  */
 
 export interface paths {
+    "/api/v1/assistant/cards/{card_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel */
+        post: operations["cancel_api_v1_assistant_cards__card_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assistant/cards/{card_id}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm */
+        post: operations["confirm_api_v1_assistant_cards__card_id__confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assistant/changes/{change_id}/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Undo */
+        post: operations["undo_api_v1_assistant_changes__change_id__undo_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assistant/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Recent */
+        get: operations["recent_api_v1_assistant_conversations_get"];
+        put?: never;
+        /** Start */
+        post: operations["start_api_v1_assistant_conversations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assistant/conversations/{conversation_id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Messages */
+        get: operations["messages_api_v1_assistant_conversations__conversation_id__messages_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assistant/conversations/{conversation_id}/paste": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Paste
+         * @description The composer's Paste a job description: the text goes to the paste use case and is
+         *     never sent to the AI (FR-021). The job is added with an Undo, like a small change.
+         */
+        post: operations["paste_api_v1_assistant_conversations__conversation_id__paste_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assistant/conversations/{conversation_id}/quick/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Status */
+        post: operations["status_api_v1_assistant_conversations__conversation_id__quick_status_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assistant/conversations/{conversation_id}/staged": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** View */
+        get: operations["view_api_v1_assistant_conversations__conversation_id__staged_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assistant/conversations/{conversation_id}/staged/begin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Begin */
+        post: operations["begin_api_v1_assistant_conversations__conversation_id__staged_begin_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assistant/conversations/{conversation_id}/staged/choose": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Choose */
+        post: operations["choose_api_v1_assistant_conversations__conversation_id__staged_choose_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assistant/conversations/{conversation_id}/staged/details": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Details */
+        post: operations["details_api_v1_assistant_conversations__conversation_id__staged_details_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assistant/conversations/{conversation_id}/staged/discard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Discard */
+        post: operations["discard_api_v1_assistant_conversations__conversation_id__staged_discard_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assistant/conversations/{conversation_id}/staged/post": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post */
+        post: operations["post_api_v1_assistant_conversations__conversation_id__staged_post_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assistant/conversations/{conversation_id}/staged/save": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Save */
+        post: operations["save_api_v1_assistant_conversations__conversation_id__staged_save_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assistant/conversations/{conversation_id}/turns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send */
+        post: operations["send_api_v1_assistant_conversations__conversation_id__turns_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assistant/quick-actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Quick Actions */
+        get: operations["quick_actions_api_v1_assistant_quick_actions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assistant/refs/{ref}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Card */
+        get: operations["card_api_v1_assistant_refs__ref__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assistant/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Status */
+        get: operations["status_api_v1_assistant_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/companies": {
         parameters: {
             query?: never;
@@ -185,7 +496,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Get Draft
+         * @description One draft, for Mikasa's chat (002m quick actions) to show as it is written.
+         */
+        get: operations["get_draft_api_v1_drafts__draft_id__get"];
         /** Edit Draft */
         put: operations["edit_draft_api_v1_drafts__draft_id__put"];
         post?: never;
@@ -346,7 +661,6 @@ export interface paths {
         /**
          * Merge
          * @description Keep the older job (A) and move the other's sources onto it; the other is deleted.
-         *
          *     The kept job takes the stronger of the two pipeline states, with that job's date.
          */
         post: operations["merge_api_v1_jobs_duplicates__pair_id__merge_post"];
@@ -1446,10 +1760,27 @@ export interface components {
             /** Resume File Id */
             resume_file_id?: string | null;
         };
+        /** AssistantStatusOut */
+        AssistantStatusOut: {
+            /** Available */
+            available: boolean;
+            /** Provider Message */
+            provider_message?: string | null;
+            /** Reason */
+            reason?: string | null;
+        };
         /** AuthorizeModel */
         AuthorizeModel: {
             /** Authorize Url */
             authorize_url: string;
+        };
+        /** BeginIn */
+        BeginIn: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "connection_request" | "referral_message" | "email";
         };
         /** Body_upload_resume_api_v1_resumes_post */
         Body_upload_resume_api_v1_resumes_post: {
@@ -1610,6 +1941,28 @@ export interface components {
              */
             setup_completed_at: string;
         };
+        /** ConfirmIn */
+        ConfirmIn: {
+            /**
+             * Items
+             * @default []
+             */
+            items: components["schemas"]["ItemEdit"][];
+        };
+        /** ConfirmOut */
+        ConfirmOut: {
+            /**
+             * Card Id
+             * Format: uuid
+             */
+            card_id: string;
+            /** Results */
+            results: {
+                [key: string]: unknown;
+            }[];
+            /** State */
+            state: string;
+        };
         /** ConnectionModel */
         ConnectionModel: {
             /** Address */
@@ -1711,6 +2064,29 @@ export interface components {
             items: components["schemas"]["ContactOut"][];
             note: components["schemas"]["NoteOut"] | null;
         };
+        /** ConversationOut */
+        ConversationOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Last Used At
+             * Format: date-time
+             */
+            last_used_at: string;
+            /** Title */
+            title: string | null;
+        };
+        /** CreatedOut */
+        CreatedOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+        };
         /** CredentialsBody */
         CredentialsBody: {
             /** Client Id */
@@ -1771,6 +2147,13 @@ export interface components {
         DescriptionIn: {
             /** Description */
             description: string;
+        };
+        /** DetailsIn */
+        DetailsIn: {
+            /** Company */
+            company: string;
+            /** Title */
+            title: string;
         };
         /** DisconnectModel */
         DisconnectModel: {
@@ -1867,7 +2250,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "connection_request" | "referral_message";
+            kind: "connection_request" | "referral_message" | "email";
             recipient: components["schemas"]["RecipientIn"];
             /** Recipient Kind */
             recipient_kind?: ("recruiter" | "hiring_manager" | "engineer" | "other") | null;
@@ -1896,7 +2279,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "connection_request" | "referral_message";
+            kind: "connection_request" | "referral_message" | "email";
             /** Over Limit */
             over_limit: boolean;
             /** Paused Reason */
@@ -2048,6 +2431,15 @@ export interface components {
             round: number;
             /** State */
             state: string;
+        };
+        /** ItemEdit */
+        ItemEdit: {
+            /** Args */
+            args: {
+                [key: string]: unknown;
+            };
+            /** Index */
+            index: number;
         };
         /** JobCardOut */
         JobCardOut: {
@@ -2288,6 +2680,51 @@ export interface components {
             /** Why */
             why: string;
         };
+        /** MessageOut */
+        MessageOut: {
+            /** Author */
+            author: string;
+            /**
+             * Cards
+             * @default []
+             */
+            cards: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Changes
+             * @default []
+             */
+            changes: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Error */
+            error: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Refs */
+            refs: string[];
+            /** Seq */
+            seq: number;
+            /** Signals */
+            signals: {
+                [key: string]: unknown;
+            }[];
+            /** Status */
+            status: string;
+            /** Text */
+            text: string;
+        };
         /** MissingOut */
         MissingOut: {
             /** Keyword */
@@ -2340,25 +2777,6 @@ export interface components {
              * @enum {unknown}
              */
             step: 1 | 2 | 3 | 4 | "done";
-        };
-        /** PasteIn */
-        PasteIn: {
-            /** Company */
-            company?: string | null;
-            /**
-             * Description
-             * @default
-             */
-            description: string;
-            /** Location */
-            location?: string | null;
-            /** Title */
-            title?: string | null;
-            /**
-             * Url
-             * @default
-             */
-            url: string;
         };
         /** PasteOut */
         PasteOut: {
@@ -2509,6 +2927,11 @@ export interface components {
              * @default user
              */
             origin: string;
+        };
+        /** PostIn */
+        PostIn: {
+            /** Text */
+            text: string;
         };
         /** PreferencesModel */
         "PreferencesModel-Input": {
@@ -2661,6 +3084,40 @@ export interface components {
             /** Question */
             question?: string | null;
         };
+        /** QuickActionOut */
+        QuickActionOut: {
+            /** Draft Kind */
+            draft_kind: ("connection_request" | "referral_message" | "email") | null;
+            /**
+             * Form
+             * @enum {string}
+             */
+            form: "draft" | "status" | "paste";
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+        };
+        /** QuickRunOut */
+        QuickRunOut: {
+            /** Cards */
+            cards: {
+                [key: string]: unknown;
+            }[];
+            /** Changes */
+            changes: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Message Id
+             * Format: uuid
+             */
+            message_id: string;
+            /** Refs */
+            refs: string[];
+            /** Text */
+            text: string;
+        };
         /** RecipientContactOut */
         RecipientContactOut: {
             /**
@@ -2707,6 +3164,24 @@ export interface components {
             contacts: components["schemas"]["RecipientContactOut"][];
             /** Kinds */
             kinds: ("recruiter" | "hiring_manager" | "engineer" | "other")[];
+        };
+        /** RefCardOut */
+        RefCardOut: {
+            /** Kind */
+            kind: string;
+            /**
+             * Lines
+             * @default []
+             */
+            lines: string[];
+            /** Link */
+            link?: string | null;
+            /** Ref */
+            ref: string;
+            /** Subtitle */
+            subtitle?: string | null;
+            /** Title */
+            title: string;
         };
         /**
          * ResumeChoiceOut
@@ -2975,14 +3450,6 @@ export interface components {
              */
             run_id: string;
         };
-        /** SavedOut */
-        SavedOut: {
-            /**
-             * Saved At
-             * Format: date-time
-             */
-            saved_at: string;
-        };
         /** SearchRulesModel */
         "SearchRulesModel-Input": {
             /**
@@ -3182,6 +3649,32 @@ export interface components {
             /** Kind */
             kind?: string | null;
         };
+        /** StagedOut */
+        StagedOut: {
+            /** Already Saved */
+            already_saved: boolean;
+            /** Draft Ref */
+            draft_ref: string | null;
+            /** Job Ref */
+            job_ref: string | null;
+            /** Kind */
+            kind: ("connection_request" | "referral_message" | "email") | null;
+            /** Label */
+            label: string | null;
+            /**
+             * Step
+             * @enum {string}
+             */
+            step: "need_post" | "need_details" | "need_kind" | "drafting" | "ask_save" | "done";
+        };
+        /** StartCheckBody */
+        StartCheckBody: {
+            /**
+             * Reread Last Day
+             * @default false
+             */
+            reread_last_day: boolean;
+        };
         /** StartIn */
         StartIn: {
             /**
@@ -3211,6 +3704,16 @@ export interface components {
              * Format: uuid
              */
             search_run_id: string;
+        };
+        /** StatusIn */
+        StatusIn: {
+            /** Job */
+            job: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "applied" | "inquired" | "not_applied" | "not_inquired";
         };
         /** StatusOut */
         StatusOut: {
@@ -3299,6 +3802,29 @@ export interface components {
             /** Text */
             text: string;
         };
+        /** TurnIn */
+        TurnIn: {
+            /**
+             * Page
+             * @default /
+             */
+            page: string;
+            /** Text */
+            text: string;
+        };
+        /** UndoneOut */
+        UndoneOut: {
+            /**
+             * Change Id
+             * Format: uuid
+             */
+            change_id: string;
+            /**
+             * Undone
+             * @default true
+             */
+            undone: boolean;
+        };
         /** ValidationError */
         ValidationError: {
             /** Context */
@@ -3366,6 +3892,32 @@ export interface components {
             /** Year */
             year: number;
         };
+        /** PasteIn */
+        hiretitan__assistant__api__changes__PasteIn: {
+            /** Company */
+            company?: string | null;
+            /** Description */
+            description: string;
+            /** Location */
+            location?: string | null;
+            /** Title */
+            title?: string | null;
+            /** Url */
+            url: string;
+        };
+        /** SavedOut */
+        hiretitan__assistant__api__staged__SavedOut: {
+            /** Summary */
+            summary: string;
+        };
+        /** SavedOut */
+        hiretitan__preferences__api__router__SavedOut: {
+            /**
+             * Saved At
+             * Format: date-time
+             */
+            saved_at: string;
+        };
         /** ContactIn */
         hiretitan__search__api__contacts__ContactIn: {
             /** Confidence */
@@ -3412,6 +3964,30 @@ export interface components {
              */
             kind: "direct" | "hiring_firm";
         };
+        /** PasteIn */
+        hiretitan__search__api__jobs__PasteIn: {
+            /** Company */
+            company?: string | null;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /**
+             * Link Only
+             * @default false
+             */
+            link_only: boolean;
+            /** Location */
+            location?: string | null;
+            /** Title */
+            title?: string | null;
+            /**
+             * Url
+             * @default
+             */
+            url: string;
+        };
         /** SourceOut */
         hiretitan__search__api__models__SourceOut: {
             /** Alert Date */
@@ -3432,6 +4008,583 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    cancel_api_v1_assistant_cards__card_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                card_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfirmOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_api_v1_assistant_cards__card_id__confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                card_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ConfirmIn"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfirmOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    undo_api_v1_assistant_changes__change_id__undo_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                change_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UndoneOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    recent_api_v1_assistant_conversations_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationOut"][];
+                };
+            };
+        };
+    };
+    start_api_v1_assistant_conversations_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreatedOut"];
+                };
+            };
+        };
+    };
+    messages_api_v1_assistant_conversations__conversation_id__messages_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    paste_api_v1_assistant_conversations__conversation_id__paste_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["hiretitan__assistant__api__changes__PasteIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    status_api_v1_assistant_conversations__conversation_id__quick_status_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StatusIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuickRunOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    view_api_v1_assistant_conversations__conversation_id__staged_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StagedOut"] | null;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    begin_api_v1_assistant_conversations__conversation_id__staged_begin_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BeginIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StagedOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    choose_api_v1_assistant_conversations__conversation_id__staged_choose_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BeginIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StagedOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    details_api_v1_assistant_conversations__conversation_id__staged_details_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DetailsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StagedOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    discard_api_v1_assistant_conversations__conversation_id__staged_discard_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_api_v1_assistant_conversations__conversation_id__staged_post_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PostIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StagedOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_api_v1_assistant_conversations__conversation_id__staged_save_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["hiretitan__assistant__api__staged__SavedOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    send_api_v1_assistant_conversations__conversation_id__turns_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TurnIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    quick_actions_api_v1_assistant_quick_actions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuickActionOut"][];
+                };
+            };
+        };
+    };
+    card_api_v1_assistant_refs__ref__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ref: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefCardOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    status_api_v1_assistant_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistantStatusOut"];
+                };
+            };
+        };
+    };
     companies_api_v1_companies_get: {
         parameters: {
             query?: {
@@ -3884,6 +5037,37 @@ export interface operations {
             };
         };
     };
+    get_draft_api_v1_drafts__draft_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DraftOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     edit_draft_api_v1_drafts__draft_id__put: {
         parameters: {
             query?: never;
@@ -4299,7 +5483,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["PasteIn"];
+                "application/json": components["schemas"]["hiretitan__search__api__jobs__PasteIn"];
             };
         };
         responses: {
@@ -5143,7 +6327,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["StartCheckBody"] | null;
+            };
+        };
         responses: {
             /** @description Successful Response */
             202: {
@@ -5152,6 +6340,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StartedCheckOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -5547,7 +6744,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SavedOut"];
+                    "application/json": components["schemas"]["hiretitan__preferences__api__router__SavedOut"];
                 };
             };
             /** @description Validation Error */

@@ -127,6 +127,7 @@ function Saved({
 export function PasteJobDialog({ onClose }: { onClose: () => void }) {
   const [url, setUrl] = useState('')
   const [description, setDescription] = useState('')
+  const [linkOnly, setLinkOnly] = useState(false)
   const [title, setTitle] = useState('')
   const [company, setCompany] = useState('')
   const [location, setLocation] = useState('')
@@ -150,6 +151,7 @@ export function PasteJobDialog({ onClose }: { onClose: () => void }) {
           onAnother={() => {
             setUrl('')
             setDescription('')
+            setLinkOnly(false)
             setTitle('')
             setCompany('')
             setLocation('')
@@ -177,10 +179,11 @@ export function PasteJobDialog({ onClose }: { onClose: () => void }) {
             try {
               job = await paste.mutateAsync({
                 url,
-                description,
+                description: linkOnly ? '' : description,
                 ...(title.trim() ? { title } : {}),
                 ...(company.trim() ? { company } : {}),
                 ...(location.trim() ? { location } : {}),
+                ...(linkOnly ? { link_only: true } : {}),
               })
             } catch {
               return // the form shows the error
@@ -231,21 +234,40 @@ export function PasteJobDialog({ onClose }: { onClose: () => void }) {
             />
           )}
         </Field>
-        <Field label="Job description" error={error?.fieldError('description')}>
-          {(props) => (
-            <textarea
-              {...props}
-              className={`${input} min-h-40`}
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-            />
-          )}
-        </Field>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={linkOnly}
+            onChange={(event) => setLinkOnly(event.target.checked)}
+          />
+          I don't have the description
+        </label>
+        {linkOnly ? (
+          <p className="text-sm text-muted-small">
+            The job is saved with its link, title and company. You can add the description later
+            from the job. HireTitan never opens the link.
+          </p>
+        ) : (
+          <Field label="Job description" error={error?.fieldError('description')}>
+            {(props) => (
+              <textarea
+                {...props}
+                className={`${input} min-h-40`}
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+              />
+            )}
+          </Field>
+        )}
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Job title (optional)" error={error?.fieldError('title')}>
+          <Field
+            label={linkOnly ? 'Job title' : 'Job title (optional)'}
+            error={error?.fieldError('title')}
+          >
             {(props) => (
               <input
                 {...props}
+                required={linkOnly}
                 className={input}
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
@@ -263,10 +285,14 @@ export function PasteJobDialog({ onClose }: { onClose: () => void }) {
               />
             )}
           </Field>
-          <Field label="Company (optional)" error={error?.fieldError('company')}>
+          <Field
+            label={linkOnly ? 'Company' : 'Company (optional)'}
+            error={error?.fieldError('company')}
+          >
             {(props) => (
               <input
                 {...props}
+                required={linkOnly}
                 className={input}
                 value={company}
                 onChange={(event) => setCompany(event.target.value)}
@@ -274,7 +300,7 @@ export function PasteJobDialog({ onClose }: { onClose: () => void }) {
             )}
           </Field>
         </div>
-        <fieldset className="ht-detail-card ht-section-record space-y-3">
+        <fieldset className="ht-detail-card space-y-3">
           <legend className="sr-only">Already applied or inquired</legend>
           <p className="ht-detail-heading !mb-0">Already applied or inquired?</p>
           <div className="flex flex-wrap gap-4 text-sm">

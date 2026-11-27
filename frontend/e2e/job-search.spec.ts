@@ -111,11 +111,12 @@ test('SC002_job_search_journey', async ({ page, request }) => {
     .click()
   // the opened details are the next row of the table
   await expect(table.getByText(/Mentor engineers and own reliability/)).toBeVisible()
-  const titleLink = withReadText.getByRole('link', {
-    name: 'Senior Backend Engineer',
-  })
-  await expect(titleLink).toHaveAttribute('target', '_blank')
-  await expect(titleLink).toHaveAttribute('href', /alpha\.example\.test\/jobs\/102/)
+  // the title opens the job page; the posting has its own link, in a new tab (FR-019, FR-020)
+  const titleLink = withReadText.getByRole('link', { name: 'Senior Backend Engineer', exact: true })
+  await expect(titleLink).toHaveAttribute('href', /^\/jobs\//)
+  const postingLink = withReadText.getByRole('link', { name: /^Open posting for Senior Backend/ })
+  await expect(postingLink).toHaveAttribute('target', '_blank')
+  await expect(postingLink).toHaveAttribute('href', /alpha\.example\.test\/jobs\/102/)
   await withReadText
     .getByRole('button', { name: /hide details of senior backend engineer/i })
     .click()
@@ -147,7 +148,7 @@ test('SC002_job_search_journey', async ({ page, request }) => {
   await expect(page.getByText('Applied', { exact: true }).first()).toBeVisible()
   await page.getByRole('link', { name: 'Companies' }).click()
   await expect(page.getByText('Applied', { exact: true }).first()).toBeVisible()
-  await page.getByRole('link', { name: 'Home', exact: true }).click() // the toast stays (Home is In pipeline)
+  await page.getByRole('link', { name: 'Jobs', exact: true }).click() // the toast stays (Jobs is In pipeline)
   await page.getByRole('button', { name: 'Undo' }).click()
   await expect.poll(async () => (await exploreJobs(request)).length).toBe(3)
 
@@ -233,7 +234,10 @@ test('SC002_job_search_journey', async ({ page, request }) => {
   const resumeChoice = page.getByRole('combobox', { name: /^Resume used/ }).first()
   await expect(resumeChoice).toBeVisible()
   await resumeChoice.selectOption(stored[0].id)
-  await page.locator('section.ht-section-record').getByRole('button', { name: 'I applied' }).click()
+  await page
+    .locator('section.ht-detail-card', { has: page.getByRole('heading', { name: 'Record it' }) })
+    .getByRole('button', { name: 'I applied' })
+    .click()
   await expect.poll(async () => (await exploreJobs(request)).length).toBe(1)
   await page.getByRole('link', { name: 'In pipeline' }).click()
   const withResume = page.getByRole('row').filter({ hasText: fileName })

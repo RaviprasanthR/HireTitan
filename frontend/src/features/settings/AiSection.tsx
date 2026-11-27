@@ -19,7 +19,7 @@ const STATUS_PILL: Record<string, string> = {
   rejected: 'ht-pill-red',
   unreachable: 'ht-pill-yellow',
   out_of_credit: 'ht-pill-orange',
-  unknown: 'ht-pill-blue',
+  unknown: 'ht-pill-grey',
 }
 
 const SOURCE: Record<string, string> = {
@@ -190,7 +190,7 @@ export function AiSection() {
     <section
       id="ai-settings"
       aria-labelledby="ai-heading"
-      className="ht-detail-card ht-settings-ai space-y-4 scroll-mt-6"
+      className="ht-detail-card space-y-4 scroll-mt-6"
     >
       <header className="space-y-1">
         <h2 id="ai-heading" className="text-lg font-semibold">
@@ -263,7 +263,7 @@ export function AiSection() {
               disabled={recheck.isPending}
               onClick={() => recheck.mutate()}
             >
-              Check again
+              Test key
             </Button>
             {editable && source === 'page' && !confirming && (
               <Button

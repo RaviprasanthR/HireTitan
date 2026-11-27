@@ -1,0 +1,5 @@
+version: 1
+tier: fast
+max_output_tokens: 900
+changelog:
+  - "v1: first version (002m). A short email to someone at the company about a job, from the person's own profile facts: a subject, a greeting, a body, a polite closing and a sign-off, returned separately so the app can check each. Names are placeholders filled in by the app."

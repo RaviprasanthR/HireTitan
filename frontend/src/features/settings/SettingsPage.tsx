@@ -47,11 +47,9 @@ export function SettingsPage() {
         </p>
       </header>
       <PageTabs label="Settings tabs" tabs={TABS} />
-      <div className="max-w-3xl">
-        {tab === 'ai' && <AiSection />}
-        {tab === 'gmail' && <GmailSection />}
-        {tab === 'data' && <DataSection />}
-      </div>
+      {tab === 'ai' && <AiSection />}
+      {tab === 'gmail' && <GmailSection />}
+      {tab === 'data' && <DataSection />}
     </section>
   )
 }

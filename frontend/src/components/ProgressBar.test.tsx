@@ -3,13 +3,13 @@ import { describe, expect, it } from 'vitest'
 import { ProgressBar } from './ProgressBar'
 
 describe('ProgressBar', () => {
-  it('shows a known value to assistive technology and as the fill width', () => {
+  it('test_FR012_progress_uses_scale: shows a known value to assistive technology and scales the fill', () => {
     render(<ProgressBar label="Resume progress" value={40} />)
     const bar = screen.getByRole('progressbar', { name: 'Resume progress' })
     expect(bar).toHaveAttribute('aria-valuemin', '0')
     expect(bar).toHaveAttribute('aria-valuemax', '100')
     expect(bar).toHaveAttribute('aria-valuenow', '40')
-    expect(screen.getByTestId('progress-fill')).toHaveStyle({ width: '40%' })
+    expect(screen.getByTestId('progress-fill')).toHaveStyle({ transform: 'scaleX(0.4)' })
   })
 
   it('clamps values outside 0 to 100', () => {

@@ -55,8 +55,8 @@ export function EditJobDialog({
   const undo = data?.state === 'applied' ? undoApplied : undoInquired
 
   return (
-    <tr>
-      <td colSpan={colSpan} className="bg-surface px-4 py-3">
+    <tr role="row">
+      <td role="cell" colSpan={colSpan} className="bg-surface px-4 py-3">
       <section
         ref={card}
         aria-label={`Edit ${title}`}

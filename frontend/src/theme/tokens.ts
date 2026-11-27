@@ -1,19 +1,26 @@
-/** The colour palette (architecture §10). theme.css repeats these as CSS variables. */
+/** The design tokens (DESIGN.md, "Colour"). theme.css repeats these as `--ht-*` CSS variables; a
+ * test keeps the two in step. */
 export const tokens = {
-  background: '#131a24',
-  surface: '#18202b',
-  divider: '#2a3444',
-  slate: '#3a465a',
-  muted: '#8c97a9',
-  mutedSmall: '#8c97a9',
-  primary: '#243044',
-  onPrimary: '#f0a35e',
-  accent: '#f0a35e',
-  heading: '#f1f3f7',
-  text: '#e3e7ee',
-  success: '#3fb950',
-  warning: '#d29922',
-  danger: '#f85149',
+  background: '#12151b',
+  surface: '#181c23',
+  raised: '#1f242c',
+  hairline: 'rgb(230 232 236 / 0.08)',
+  hairlineStrong: 'rgb(230 232 236 / 0.14)',
+  text: '#e6e8ec',
+  textSecondary: '#a8aeb8',
+  textMuted: '#8b929d',
+  accent: '#a99ce6',
+  accentHover: '#bbb0ef',
+  accentInk: '#16121f',
+  accentTint: 'rgb(169 156 230 / 0.12)',
+  stageInquired: '#7fa8d8',
+  stageApplied: '#6fc08d',
+  stageInterview: '#d6b25e',
+  stageCleared: '#5ec4b6',
+  stageFailed: '#e2837a',
+  success: '#6fc08d',
+  warning: '#d6b25e',
+  danger: '#e2837a',
 } as const
 
 function channel(value: number): number {

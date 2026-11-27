@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router'
+import { readFileSync } from 'node:fs'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { routes } from './routes'
 
@@ -46,16 +47,16 @@ describe('Shell', () => {
     const nav = await screen.findByRole('navigation', { name: 'Main' })
     const links = within(nav).getAllByRole('link')
     expect(links.map((link) => link.textContent)).toEqual([
-      'Home',
+      'Jobs',
       'Companies',
       'Profile',
       'Settings',
     ])
   })
 
-  it('Home opens on the In pipeline tab, and Explore lives at /explore with Home still lit', async () => {
+  it('Jobs opens on the In pipeline tab, and Explore lives at /explore with Jobs still lit', async () => {
     renderAt('/')
-    const tabs = await screen.findByRole('navigation', { name: 'Home tabs' })
+    const tabs = await screen.findByRole('navigation', { name: 'Jobs tabs' })
     expect(within(tabs).getByRole('link', { name: 'In pipeline' })).toHaveAttribute(
       'aria-current',
       'page',
@@ -63,21 +64,21 @@ describe('Shell', () => {
     expect(within(tabs).getByRole('link', { name: 'Explore' })).toHaveAttribute('href', '/explore')
   })
 
-  it('the Explore tab keeps Home active in the menu', async () => {
+  it('the Explore tab keeps Jobs active in the menu', async () => {
     renderAt('/explore')
-    const tabs = await screen.findByRole('navigation', { name: 'Home tabs' })
+    const tabs = await screen.findByRole('navigation', { name: 'Jobs tabs' })
     expect(within(tabs).getByRole('link', { name: 'Explore' })).toHaveAttribute(
       'aria-current',
       'page',
     )
     const main = screen.getByRole('navigation', { name: 'Main' })
-    expect(within(main).getByRole('link', { name: 'Home' })).toHaveAttribute('aria-current', 'page')
+    expect(within(main).getByRole('link', { name: 'Jobs' })).toHaveAttribute('aria-current', 'page')
   })
 
   it('US1 AS4 an old applied link opens the pipeline tab', async () => {
     renderAt('/applied')
 
-    const tabs = await screen.findByRole('navigation', { name: 'Home tabs' })
+    const tabs = await screen.findByRole('navigation', { name: 'Jobs tabs' })
 
     expect(within(tabs).getByRole('link', { name: 'In pipeline' })).toHaveAttribute(
       'aria-current',
@@ -85,12 +86,110 @@ describe('Shell', () => {
     )
   })
 
-  it('the window does not scroll: the menu stays put and the page area scrolls on its own', async () => {
+  it('test_FR015_shell_root_not_overflow_hidden', async () => {
     renderAt('/')
     await screen.findByRole('navigation', { name: 'Main' })
 
-    expect(screen.getByTestId('app-root')).toHaveClass('h-screen', 'overflow-hidden')
+    // the page area scrolls on its own; the root clips nothing (overflow is clipped on html/body)
+    expect(screen.getByTestId('app-root')).not.toHaveClass('overflow-hidden')
+    expect(screen.getByTestId('app-root')).toHaveClass('h-dvh', 'flex-col')
     expect(screen.getByRole('main')).toHaveClass('overflow-y-auto')
+  })
+
+  it('test_FR021a_nav_says_jobs', async () => {
+    renderAt('/explore')
+    const nav = await screen.findByRole('navigation', { name: 'Main' })
+    expect(within(nav).getByRole('link', { name: 'Jobs' })).toHaveAttribute('aria-current', 'page')
+    expect(await screen.findByRole('heading', { name: 'Jobs', level: 1 })).toBeInTheDocument()
+    expect(screen.getByRole('navigation', { name: 'Jobs tabs' })).toBeInTheDocument()
+  })
+
+  it('test_FR021a_no_home_label', async () => {
+    for (const path of ['/', '/explore']) {
+      const { unmount } = renderAt(path)
+      await screen.findByRole('navigation', { name: 'Main' })
+      expect(screen.queryByRole('link', { name: 'Home' })).toBeNull()
+      expect(screen.queryByRole('heading', { name: 'Home' })).toBeNull()
+      unmount()
+    }
+  })
+
+  it('test_US1_AS1_one_main_nav_with_four_links', async () => {
+    renderAt('/')
+    const nav = await screen.findByRole('navigation', { name: 'Main' })
+
+    expect(screen.getAllByRole('navigation', { name: 'Main' })).toHaveLength(1)
+    expect(
+      within(nav)
+        .getAllByRole('link')
+        .map((a) => a.textContent),
+    ).toEqual(['Jobs', 'Companies', 'Profile', 'Settings'])
+  })
+
+  it('test_US1_AS5_dock_uses_bottom_bar_offset', async () => {
+    renderAt('/')
+    const dock = await screen.findByRole('button', { name: 'Mikasa' })
+    expect(dock).toHaveClass('bottom-[calc(var(--ht-bottom-bar)+0.75rem)]', 'md:bottom-5')
+
+    fireEvent.click(dock)
+    const panel = await screen.findByRole('complementary', { name: 'Mikasa' })
+    expect(panel).toHaveClass('bottom-[calc(var(--ht-bottom-bar)+5rem)]', 'md:bottom-24')
+  })
+
+  it('test_US3_AS6_dock_is_flat', async () => {
+    renderAt('/')
+    const dock = await screen.findByRole('button', { name: 'Mikasa' })
+    // closed, the button is her cut-out face alone (Ravi, 2026-11-26): no circle, no fill
+    expect(dock).toHaveClass('active:scale-[0.96]')
+    expect(dock.className).not.toMatch(/shadow|bg-primary|ht-gradient-fill/)
+    // open, it is the round accent-gradient button with the close cross
+    fireEvent.click(dock)
+    expect(dock).toHaveClass('ht-gradient-fill', 'bg-primary', 'rounded-full')
+  })
+
+  it('the dock shows Mikasa, floating gently, still for reduced motion', async () => {
+    renderAt('/')
+    const dock = await screen.findByRole('button', { name: 'Mikasa' })
+    expect(dock).toHaveClass('ht-mikasa-dock')
+    const face = dock.querySelector('.ht-mikasa-float') as HTMLElement
+    expect(face.querySelector('img')).not.toBeNull()
+    const css = readFileSync('src/theme/theme.css', 'utf-8')
+    expect(css).toMatch(/@keyframes ht-mikasa-float/)
+    expect(css).toMatch(/\.ht-mikasa-dock:hover \.ht-mikasa-float[^{]*\{[^}]*ht-mikasa-tilt/)
+    expect(css).toMatch(/prefers-reduced-motion[^{]*\{[^@]*\.ht-mikasa-float[^}]*animation: none/)
+  })
+
+  it('test_FR012_dock_does_not_scale_up_on_hover', async () => {
+    renderAt('/')
+    const dock = await screen.findByRole('button', { name: 'Mikasa' })
+    expect(dock.className).not.toMatch(/hover:scale/)
+    expect(dock.className).not.toMatch(/transition-all/)
+  })
+
+  it('test_FR018_main_reserves_space_for_the_dock', async () => {
+    renderAt('/')
+    await screen.findByRole('navigation', { name: 'Main' })
+    // the round button (56px and its margin) never covers the end of a page
+    expect(screen.getByRole('main')).toHaveClass(
+      'pb-[calc(var(--ht-bottom-bar)+5rem)]',
+      'md:pb-20',
+      // a focused control is scrolled clear of the bar and the button, not just to the edge (2.4.11)
+      'scroll-pb-[calc(var(--ht-bottom-bar)+5rem)]',
+      'md:scroll-pb-20',
+    )
+  })
+
+  it('test_FR014_nav_has_bottom_bar_class_below_md', async () => {
+    renderAt('/')
+    const nav = await screen.findByRole('navigation', { name: 'Main' })
+
+    // below 768px the nav is a bar fixed at the bottom; from md up it sits in the top bar
+    expect(nav).toHaveClass('ht-bottom-bar', 'fixed', 'bottom-0', 'md:static')
+    // a backdrop filter would make the header the containing block of the fixed bar
+    expect(nav.closest('header')).not.toHaveClass('backdrop-blur')
+    for (const link of within(nav).getAllByRole('link')) {
+      expect(link).toHaveClass('flex-col', 'md:flex-row')
+    }
   })
 
   it('FR022 every menu item has an outline icon', async () => {
@@ -104,26 +203,91 @@ describe('Shell', () => {
     }
   })
 
-  it('FR022 the logo and the app name are at the top of the sidebar', async () => {
+  it('FR022 the logo and the app name are at the left of the top bar, before the menu', async () => {
     renderAt('/')
     const nav = await screen.findByRole('navigation', { name: 'Main' })
-    const sidebar = nav.closest('aside') as HTMLElement
+    const bar = nav.closest('header') as HTMLElement
 
-    expect(within(sidebar).getAllByText('HireTitan')).toHaveLength(1)
-    expect(sidebar.firstElementChild).toHaveTextContent('HireTitan')
-    expect(sidebar.firstElementChild?.querySelector('svg[data-logo]')).not.toBeNull()
-    // the other graphics in the sidebar are the menu icons
-    expect(sidebar.querySelectorAll('svg:not([data-logo], .ht-logo-edge, .ht-logo-back)')).toHaveLength(
-      within(nav).getAllByRole('link').length,
-    )
-    expect(sidebar.querySelector('img')).toBeNull()
+    expect(within(bar).getAllByText('HireTitan')).toHaveLength(1)
+    expect(bar.firstElementChild).toHaveTextContent('HireTitan')
+    expect(bar.firstElementChild?.querySelector('svg[data-logo]')).not.toBeNull()
+    expect(bar.querySelector('img')).toBeNull()
+    // the menu runs in a row beside the name, not down the left edge
+    expect(nav).toHaveClass('flex', 'items-center')
+    expect(nav.closest('aside')).toBeNull()
   })
 
-  it('FR022 the sidebar has a thin divider on its right edge', async () => {
+  it('FR022 the top bar has a thin divider on its bottom edge', async () => {
     renderAt('/')
     const nav = await screen.findByRole('navigation', { name: 'Main' })
 
-    expect(nav.closest('aside')).toHaveClass('border-r')
+    expect(nav.closest('header')).toHaveClass('border-b')
+  })
+
+  it('002m the chat button is at the bottom right of every page and opens a popup', async () => {
+    renderAt('/companies')
+    const launcher = await screen.findByRole('button', { name: 'Mikasa' })
+    expect(launcher).toHaveClass('fixed', 'md:bottom-5', 'md:right-5')
+    expect(launcher).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByRole('complementary', { name: 'Mikasa' })).not.toBeInTheDocument()
+
+    fireEvent.click(launcher)
+
+    const popup = screen.getByRole('complementary', { name: 'Mikasa' })
+    expect(popup).toHaveClass('fixed', 'md:bottom-24', 'right-5', 'mikasa-pop')
+    expect(launcher).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('main')).toBeInTheDocument() // the page stays under it
+    fireEvent.click(launcher)
+    expect(screen.queryByRole('complementary', { name: 'Mikasa' })).not.toBeInTheDocument()
+  })
+
+  it('002m Ctrl+/ toggles the popup and Escape closes it', async () => {
+    renderAt('/')
+    await screen.findByRole('button', { name: 'Mikasa' })
+
+    fireEvent.keyDown(window, { key: '/', ctrlKey: true })
+    expect(screen.getByRole('complementary', { name: 'Mikasa' })).toBeInTheDocument()
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(screen.queryByRole('complementary', { name: 'Mikasa' })).not.toBeInTheDocument()
+    fireEvent.keyDown(window, { key: '/', ctrlKey: true })
+    expect(screen.getByRole('complementary', { name: 'Mikasa' })).toBeInTheDocument()
+  })
+
+  it('the logo sits alone at the left of the top bar and the menu at the right', async () => {
+    renderAt('/')
+    const nav = await screen.findByRole('navigation', { name: 'Main' })
+    const bar = nav.closest('header') as HTMLElement
+
+    expect(bar).toHaveClass('justify-between')
+    expect(bar.firstElementChild).not.toContainElement(nav)
+    expect(bar.lastElementChild).toBe(nav)
+  })
+
+  it('the current section is marked by a glowing bar, not a filled button', async () => {
+    renderAt('/companies')
+    const nav = await screen.findByRole('navigation', { name: 'Main' })
+    const current = within(nav).getByRole('link', { name: 'Companies' })
+
+    expect(current).not.toHaveClass('bg-primary')
+    expect(current.querySelector('span[aria-hidden]')).toHaveClass('scale-x-100')
+    const other = within(nav).getByRole('link', { name: 'Profile' })
+    expect(other.querySelector('span[aria-hidden]')).toHaveClass('scale-x-0')
+  })
+
+  it('pages sit in a wide centred column with a little room on both sides', async () => {
+    renderAt('/')
+    const column = await screen.findByTestId('page-column')
+    expect(column).toHaveClass('ht-page-column', 'mx-auto', 'max-w-[1440px]', 'px-4', 'md:px-6')
+  })
+
+  it('the chat floats over the page: opening it does not move the page', async () => {
+    renderAt('/')
+    const column = await screen.findByTestId('page-column')
+    const before = column.className
+
+    fireEvent.click(screen.getByRole('button', { name: 'Mikasa' }))
+
+    expect(column.className).toBe(before)
   })
 
   it('marks_the_current_section', async () => {
@@ -133,7 +297,7 @@ describe('Shell', () => {
       'aria-current',
       'page',
     )
-    expect(within(nav).getByRole('link', { name: 'Home' })).not.toHaveAttribute('aria-current')
+    expect(within(nav).getByRole('link', { name: 'Jobs' })).not.toHaveAttribute('aria-current')
   })
 
   it.each([

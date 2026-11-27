@@ -27,6 +27,7 @@ VARS = {
         ("extract_job_keywords", "fast"),
         ("draft_connection_request", "fast"),
         ("draft_referral_message", "fast"),
+        ("draft_email", "fast"),
     ],
 )
 def test_R1_prompt_serves_v1_at_its_tier(name: str, tier: str) -> None:
@@ -47,7 +48,9 @@ def test_FR006_keywords_schema_limits() -> None:
         schema.model_validate({"role_summary": "x", "keywords": [], "must_have": ["m"] * 11})
 
 
-@pytest.mark.parametrize("name", ["draft_connection_request", "draft_referral_message"])
+@pytest.mark.parametrize(
+    "name", ["draft_connection_request", "draft_referral_message", "draft_email"]
+)
 def test_FR022_message_prompts_render_without_recipient_or_person_fields(name: str) -> None:
     rendered = REGISTRY.load(name).render(**VARS)
     text = rendered.system + rendered.user
@@ -138,3 +141,32 @@ def test_FR021_keyword_items_that_look_like_instructions_are_dropped() -> None:
     assert cleaned.role_summary == ""
     assert list(cleaned.keywords) == ["Python", "Kafka"]
     assert list(cleaned.must_have) == ["Go"]
+
+
+def test_002m_email_schema_has_subject_and_the_parts() -> None:
+    schema = REGISTRY.load("draft_email").output_schema
+    assert set(schema.model_fields) == {
+        "subject",
+        "greeting",
+        "body",
+        "closing",
+        "cited_fact_ids",
+    }
+
+
+def test_002m_email_rules_reject_links_and_unknown_placeholders() -> None:
+    from hiretitan.prompts.draft_email.v1.checks import rule_errors
+
+    schema = REGISTRY.load("draft_email").output_schema
+    bad = schema.model_validate(
+        {
+            "subject": "Role at {company}",
+            "greeting": "Hi {recipient_first_name},",
+            "body": "See my work at https://example.com.",
+            "closing": "Thanks for reading.",
+            "cited_fact_ids": [],
+        }
+    )
+    errors = rule_errors(2400)(bad)
+    assert any("{company}" in e for e in errors)
+    assert any("links" in e for e in errors)

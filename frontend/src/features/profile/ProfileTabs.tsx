@@ -10,7 +10,7 @@ const TABS = [
 /** Profile, Preferences, Search rules and Connections: what describes you to a search. */
 export function ProfileTabs() {
   return (
-    <nav aria-label="Profile tabs" className="flex gap-2 border-b border-divider">
+    <nav aria-label="Profile tabs" className="flex flex-wrap gap-2 border-b border-divider">
       {TABS.map((tab) => (
         <NavLink
           key={tab.to}
@@ -19,7 +19,7 @@ export function ProfileTabs() {
           className={({ isActive }) =>
             `-mb-px border-b-2 px-3 py-2 text-sm font-medium ${
               isActive
-                ? 'border-[#f0a35e] text-[#f0a35e]'
+                ? 'border-link text-foreground'
                 : 'border-transparent text-muted-small hover:text-foreground'
             }`
           }

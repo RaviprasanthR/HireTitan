@@ -36,14 +36,15 @@ function SkippedJobs({ runId }: { runId: string }) {
         {items.map((job) => (
           <li
             key={job.id}
-            className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-surface p-3"
+            className="flex flex-wrap items-center justify-between gap-3 border-t border-divider py-3 first:border-t-0"
           >
             <span className="min-w-0">
               <Link to={`/jobs/${job.id}`} className="font-medium text-link underline">
                 {job.title}
               </Link>
-              <span className="block text-sm text-muted-small">
-                {job.company_name} · {job.decision?.reason}
+              <span className="flex flex-wrap gap-x-4 text-sm text-muted-small">
+                <span>{job.company_name}</span>
+                <span>{job.decision?.reason}</span>
               </span>
             </span>
             {job.state === 'skipped' ? (
@@ -138,9 +139,10 @@ export function RunSummaryPage() {
           <h1 className="text-2xl font-semibold">
             {mail ? 'Mail check summary' : 'Search summary'}
           </h1>
-          <p className="text-muted-small">
-            {formatDate(data.started_at)} · {outcome}
-            {took ? ` · ${took}` : ''}
+          <p className="flex flex-wrap gap-x-4 text-muted-small">
+            <span>{formatDate(data.started_at)}</span>
+            <span>{outcome}</span>
+            {took && <span>{took}</span>}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -232,8 +234,8 @@ export function RunSummaryPage() {
                   <li key={job.job_id} className="rounded-md bg-surface px-3 py-2 text-sm">
                     <Link to={`/jobs/${job.job_id}`} className="font-medium text-link underline">
                       {job.title}
-                    </Link>{' '}
-                    · {job.company}
+                    </Link>
+                    <span className="ml-4 text-muted-small">{job.company}</span>
                   </li>
                 ))}
               </ul>
@@ -248,8 +250,9 @@ export function RunSummaryPage() {
                     key={`${email.sender}:${email.received_at}:${index}`}
                     className="flex flex-wrap justify-between gap-3 rounded-md bg-surface px-3 py-2 text-sm"
                   >
-                    <span>
-                      {email.sender} · {formatDate(email.received_at)}
+                    <span className="flex flex-wrap gap-x-4">
+                      <span>{email.sender}</span>
+                      <span className="text-muted-small">{formatDate(email.received_at)}</span>
                     </span>
                     <span className="text-warning">{UNREADABLE_WHY[email.why] ?? email.why}</span>
                   </li>

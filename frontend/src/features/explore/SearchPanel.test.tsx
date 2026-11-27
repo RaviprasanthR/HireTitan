@@ -1,10 +1,10 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { type Call, problem, stubApi } from '@/test/api'
-import { SearchPanel } from './SearchPanel'
+import { SearchOverview, SearchPanel } from './SearchPanel'
 
 function run(over: Record<string, unknown> = {}) {
   return {
@@ -58,6 +58,7 @@ function renderPanel(latest: unknown, extra?: (call: Call) => unknown) {
     <QueryClientProvider client={client}>
       <MemoryRouter>
         <SearchPanel />
+        <SearchOverview />
       </MemoryRouter>
     </QueryClientProvider>,
   )
@@ -103,6 +104,20 @@ describe('SearchPanel', () => {
       }),
     )
     expect(await screen.findByText(/AI step skipped: the AI was not available/)).toBeInTheDocument()
+  })
+
+  it('test_FR023a_overview_stays_beside_the_table_while_searching', async () => {
+    renderPanel(run())
+    // the live flow keeps the overview column, so the table does not drop below the search
+    const flow = await screen.findByRole('list', { name: 'How the search went' })
+    expect(flow).toHaveTextContent('8 of 20')
+    // the donut of what happened waits for the end
+    expect(screen.queryByRole('list', { name: 'Legend' })).not.toBeInTheDocument()
+  })
+
+  it('before any company is read the overview says the search is under way', async () => {
+    renderPanel(run({ companies_total: 0, companies_read: 0 }))
+    expect(await screen.findByText('The flow fills in as companies are read.')).toBeInTheDocument()
   })
 
   it('US2_AS2_shows_companies_checked_and_new_jobs', async () => {
@@ -354,12 +369,24 @@ describe('SearchPanel', () => {
       }),
     )
     expect(await screen.findByText(/Search finished/)).toBeInTheDocument()
-    // the last search is shown as the summary's flow chart and donut, at the top of Explore
+    // test_FR023a: the last search's flow sits in the overview beside the list, outside the
+    // action bar, with no donut (FR-023: the counts once)
     const flow = screen.getByRole('list', { name: 'How the search went' })
-    expect(flow).toHaveTextContent(/20 of 20\s*Companies read/)
-    expect(flow).toHaveTextContent(/6\s*New jobs/)
-    expect(screen.getByRole('img', { name: /6 new/ })).toBeInTheDocument()
+    expect(flow).toHaveTextContent(/Companies read\s*20 of 20/)
+    expect(flow).toHaveTextContent(/New jobs\s*6/)
+    expect(screen.getByRole('img', { name: /6 new/ })).toHaveAttribute('width', '112')
+    expect(within(screen.getByRole('region', { name: 'Search' })).queryByRole('list')).toBeNull()
     expect(screen.queryByText(/batch/i)).not.toBeInTheDocument()
+  })
+
+  it('test_US2_AS2_search_summary_uses_no_stage_colour', async () => {
+    renderPanel(run({ outcome: 'finished', companies_read: 20, added: 6 }))
+    const donut = await screen.findByRole('img', { name: /6 new/ })
+    for (const slice of donut.querySelectorAll('[data-part]')) {
+      expect(slice.getAttribute('stroke')).not.toMatch(/stage/)
+    }
+    const flow = screen.getByRole('list', { name: 'How the search went' })
+    expect(flow.querySelector('[data-stage]')).toBeNull()
   })
 
   it('US2_AS5_a_stopped_search_says_jobs_so_far_are_kept', async () => {

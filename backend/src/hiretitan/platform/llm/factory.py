@@ -14,7 +14,7 @@ from hiretitan.platform.llm.fake import FakeLlm
 from hiretitan.platform.llm.key_store import KeyStore, key_store_for
 from hiretitan.platform.llm.models import ModelCatalog
 from hiretitan.platform.llm.openai_adapter import PROVIDER, KeyCheck, OpenAiAdapter
-from hiretitan.platform.llm.port import LlmPort
+from hiretitan.platform.llm.port import ConversePort, LlmPort
 from hiretitan.platform.llm.provider_status import ProviderStatusService, Publish
 
 
@@ -38,6 +38,8 @@ class BuiltLlm:
     llm: LlmPort
     provider_status: ProviderStatusService
     keys: KeyStore | None = None  # the key saved from Settings; None for the fake
+    chat: ConversePort | None = None  # the same adapter's streaming, tool-calling side (002m)
+    fake: FakeLlm | None = None  # set when HIRETITAN_LLM=fake, so its key file can be read
 
 
 def build_llm(
@@ -80,5 +82,5 @@ def build_llm(
             provider=PROVIDER,
         )
         holder.append(status)
-        return BuiltLlm(adapter, status, keys)
-    return BuiltLlm(inner, status)
+        return BuiltLlm(adapter, status, keys, chat=adapter)
+    return BuiltLlm(inner, status, chat=fake, fake=fake)

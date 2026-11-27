@@ -27,9 +27,10 @@ from hiretitan.drafts.domain.fallback import (
     CONNECTION_LIMIT,
     PLACEHOLDER_LEN,
     connection_fallback,
+    email_fallback,
     referral_fallback,
 )
-from hiretitan.drafts.domain.recipient import fill, first_name
+from hiretitan.drafts.domain.recipient import fill, greeting_name
 from hiretitan.drafts.domain.selection import allowed_names, select_facts
 from hiretitan.drafts.infra.models import OutreachDraftRow
 from hiretitan.drafts.infra.repos import DraftsRepo
@@ -42,16 +43,20 @@ from hiretitan.platform.runtime.runner import WorkflowDef
 from hiretitan.platform.untrusted.delimit import delimit
 from hiretitan.platform.untrusted.sanitize import sanitize
 from hiretitan.prompts.draft_connection_request.v1.checks import rule_errors as connection_rules
+from hiretitan.prompts.draft_email.v1.checks import assemble as assemble_email
+from hiretitan.prompts.draft_email.v1.checks import rule_errors as email_rules
 from hiretitan.prompts.draft_referral_message.v1.checks import rule_errors as referral_rules
 
 OUTREACH_WORKFLOW: Final = "outreach_draft"
 REFERRAL_LIMIT: Final = 2000
+EMAIL_LIMIT: Final = 2400
 NO_PROFILE: Final = "Finish your profile first, then write a draft."
 JOB_GONE: Final = "This job is no longer in your list."
 WENT_WRONG: Final = "Something went wrong while writing this draft. You can write it again."
 PROMPT_FOR: Final = {
     "connection_request": "draft_connection_request",
     "referral_message": "draft_referral_message",
+    "email": "draft_email",
 }
 
 
@@ -124,7 +129,7 @@ async def write_draft(deps: DraftDeps, state: dict[str, Any]) -> dict[str, Any]:
     all_facts = drafting_facts(profile.view)
     years = years_of_experience(profile.view, deps.clock.now().date())
     chosen = select_facts(all_facts, [*keywords.must_have, *keywords.keywords], 12)
-    first = first_name(snapshot.recipient_name)
+    first = greeting_name(snapshot.recipient_name)
     me = profile.view.contact.name
 
     prompt = deps.prompts.load(PROMPT_FOR[snapshot.kind])
@@ -160,6 +165,35 @@ async def write_draft(deps: DraftDeps, state: dict[str, Any]) -> dict[str, Any]:
             rules=rules,
         )
         limit = CONNECTION_LIMIT
+    elif snapshot.kind == "email":
+        prompt_rules_e = email_rules(EMAIL_LIMIT)
+
+        def rules(output: Any) -> list[str]:
+            errors = prompt_rules_e(output)
+            if errors:
+                return errors
+            # the subject has its own rules (no numbers, links or placeholders); its capitalised
+            # words would be read as names
+            whole = "\n".join((output.greeting, output.body, output.closing))
+            found = _truth_problems(
+                whole, list(output.cited_fact_ids), all_facts, profile, job, deps, years
+            )
+            return [p.message for p in found]
+
+        mail = email_fallback(job.title, job.company_name, chosen)
+        spec = TaskSpec(
+            fallback=lambda: schema.model_validate(
+                {
+                    "subject": mail.subject,
+                    "greeting": mail.greeting,
+                    "body": mail.body,
+                    "closing": mail.closing,
+                    "cited_fact_ids": [],
+                }
+            ),
+            rules=rules,
+        )
+        limit = EMAIL_LIMIT
     else:
         prompt_rules_r = referral_rules(REFERRAL_LIMIT)
 
@@ -199,6 +233,8 @@ async def write_draft(deps: DraftDeps, state: dict[str, Any]) -> dict[str, Any]:
     value = answered.value
     if snapshot.kind == "connection_request":
         template = value.body
+    elif snapshot.kind == "email":
+        template = assemble_email(value.subject, value.greeting, value.body, value.closing)
     else:
         template = _assemble(value.greeting, value.body, value.easy_out, value.sign_off)
     text = fill(template, first, me)
@@ -206,6 +242,11 @@ async def write_draft(deps: DraftDeps, state: dict[str, Any]) -> dict[str, Any]:
         # the fallback fits by construction; this only guards an unexpected overrun
         if snapshot.kind == "connection_request":
             template = connection_fallback(job.title, job.company_name, chosen, first)
+        elif snapshot.kind == "email":
+            plain_mail = email_fallback(job.title, job.company_name, chosen)
+            template = assemble_email(
+                plain_mail.subject, plain_mail.greeting, plain_mail.body, plain_mail.closing
+            )
         else:
             plain = referral_fallback(job.title, job.company_name, chosen)
             template = _assemble(plain.greeting, plain.body, plain.easy_out, plain.sign_off)

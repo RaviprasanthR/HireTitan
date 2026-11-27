@@ -192,14 +192,14 @@ describe('AddCompanyDialog', () => {
     )
   })
 
-  it('FR026 it is a square card over a blurred backdrop, and Escape closes it', async () => {
+  it('FR026 it is a square card over a solid backdrop, and Escape closes it', async () => {
     const user = userEvent.setup()
     const { onClose } = renderDialog(() => undefined)
     const dialog = screen.getByRole('dialog', { name: 'Add a company' })
 
     expect(dialog).toHaveAttribute('aria-modal', 'true')
     expect(dialog).toHaveClass('aspect-square')
-    expect(dialog.parentElement).toHaveClass('backdrop-blur-sm')
+    expect(dialog.parentElement).toHaveClass('bg-black/60')
 
     await user.keyboard('{Escape}')
 

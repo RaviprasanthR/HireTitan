@@ -3,6 +3,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { readFileSync } from 'node:fs'
 import { problem, stubApi, type Call } from '@/test/api'
 import { CompaniesPage } from './CompaniesPage'
 
@@ -68,6 +69,21 @@ describe('CompaniesPage', () => {
     expect(acme).toHaveTextContent('Pune') // its own Location column
     expect(acme).not.toHaveTextContent('Job board') // the board status is in the details
     expect(keka).not.toHaveTextContent('Check manually')
+  })
+
+  it('test_FR016_companies_rows_are_cards', async () => {
+    renderPage((call) =>
+      call.path.startsWith('/companies') ? { items: [ACME, KEKA], next_cursor: null } : undefined,
+    )
+    const list = await screen.findByRole('list', { name: 'Companies' })
+    for (const row of within(list).getAllByRole('listitem')) {
+      // below 768px each company is a card (theme.css `ht-list-card`); names wrap there
+      expect(row).toHaveClass('ht-list-card')
+      expect(row.querySelector('h2')).toHaveClass('md:truncate')
+      expect(row.querySelector('h2')).not.toHaveClass('truncate')
+    }
+    const css = (await import('node:fs')).readFileSync('src/theme/theme.css', 'utf8')
+    expect(css.slice(css.indexOf('@media (max-width: 767.98px)'))).toContain('.ht-list-card')
   })
 
   it('the board status and every other detail show when a row is expanded', async () => {
@@ -349,7 +365,7 @@ describe('CompaniesPage', () => {
       renderPage(all)
       await screen.findByRole('list', { name: 'Companies' })
 
-      expect(within(rowOf('Busy')).getByText('Applied')).toBeInTheDocument()
+      expect(within(rowOf('Busy')).getByText('Applied')).toHaveAttribute('data-stage', 'applied')
       expect(within(rowOf('Quiet')).queryByText('Applied')).toBeNull()
     })
 
@@ -362,7 +378,8 @@ describe('CompaniesPage', () => {
       expect(chip).toBeInTheDocument()
       expect(within(rowOf('Asked')).queryByText('Applied')).toBeNull()
       const applied = within(rowOf('Busy')).getByText('Applied')
-      expect(chip.className).not.toEqual(applied.className) // distinct colours
+      expect(chip).toHaveAttribute('data-stage', 'inquired') // each in its own stage colour
+      expect(applied).toHaveAttribute('data-stage', 'applied')
     })
 
     it('FR009 applied wins over inquired', async () => {
@@ -518,7 +535,7 @@ describe('CompaniesPage', () => {
       expect(row).not.toHaveClass('bg-surface')
     })
 
-    it('FR024 action icons keep their own colours', async () => {
+    it('test_SC002_action_icons_are_one_colour (003, was FR024 own colours)', async () => {
       renderPage(list)
       const row = await screen.findByRole('listitem', { name: 'Acme' })
 
@@ -528,8 +545,8 @@ describe('CompaniesPage', () => {
             name,
           }),
         ).toHaveClass(colour)
-      tone('Open Acme website', 'text-violet-300')
-      tone('Edit Acme', 'text-emerald-300')
+      tone('Open Acme website', 'text-subtle')
+      tone('Edit Acme', 'text-subtle')
       expect(within(row).queryByRole('button', { name: /^Hide / })).toBeNull()
     })
 
@@ -537,13 +554,13 @@ describe('CompaniesPage', () => {
       const user = userEvent.setup()
       renderPage(list)
       const row = await screen.findByRole('listitem', { name: 'Acme' })
-      expect(row).toHaveClass('hover:bg-[#9c4f37]/25') // closed: the tint under the pointer
+      expect(row).toHaveClass('hover:bg-raised') // closed: the tint under the pointer
 
       await user.click(within(row).getByRole('button', { name: 'Details for Acme' }))
 
-      expect(row).not.toHaveClass('hover:bg-[#9c4f37]/25')
+      expect(row).not.toHaveClass('hover:bg-raised')
       await user.click(within(row).getByRole('button', { name: 'Details for Acme' }))
-      expect(row).toHaveClass('hover:bg-[#9c4f37]/25') // closed again: the tint is back
+      expect(row).toHaveClass('hover:bg-raised') // closed again: the tint is back
     })
 
     it('a row being edited or asked about deleting has no orange tint', async () => {
@@ -552,13 +569,13 @@ describe('CompaniesPage', () => {
       const row = await screen.findByRole('listitem', { name: 'Acme' })
 
       await user.click(within(row).getByRole('button', { name: 'Edit Acme' }))
-      expect(row).not.toHaveClass('hover:bg-[#9c4f37]/25')
+      expect(row).not.toHaveClass('hover:bg-raised')
       await user.click(within(row).getByRole('button', { name: 'Cancel' }))
-      expect(row).toHaveClass('hover:bg-[#9c4f37]/25')
+      expect(row).toHaveClass('hover:bg-raised')
 
       await user.click(within(row).getByRole('button', { name: 'Edit Acme' }))
       await user.click(within(row).getByRole('button', { name: 'Delete Acme' }))
-      expect(row).not.toHaveClass('hover:bg-[#9c4f37]/25')
+      expect(row).not.toHaveClass('hover:bg-raised')
     })
 
     it('the edit form saves in green, cancels in orange; the delete question is red', async () => {
@@ -573,7 +590,9 @@ describe('CompaniesPage', () => {
 
       await user.click(within(row).getByRole('button', { name: 'Edit Acme' }))
       await user.click(within(row).getByRole('button', { name: 'Delete Acme' }))
-      expect(within(row).getByRole('button', { name: 'Yes, delete' })).toHaveClass('ht-danger-button')
+      expect(within(row).getByRole('button', { name: 'Yes, delete' })).toHaveClass(
+        'ht-danger-button',
+      )
       expect(within(row).getByRole('button', { name: 'Keep it' })).toHaveClass('ht-cancel-button')
     })
 
@@ -602,7 +621,7 @@ describe('CompaniesPage', () => {
       renderPage(list)
       const row = await screen.findByRole('listitem', { name: 'Acme' })
 
-      expect(row).toHaveClass('hover:bg-[#9c4f37]/25')
+      expect(row).toHaveClass('hover:bg-raised')
     })
 
     it('the header has the same look as the pipeline table header', async () => {
@@ -728,6 +747,44 @@ describe('CompaniesPage', () => {
       expect(screen.queryByRole('form', { name: 'Company filters' })).toBeNull()
     })
 
+    it('test_SC002_companies_text_uses_text_roles', async () => {
+      renderPage((call) =>
+        call.path.startsWith('/companies')
+          ? {
+              items: [
+                company('a', 'Acme', {
+                  contact_count: 2,
+                  has_note: true,
+                  note_preview: 'Call Tue',
+                  city: null,
+                }),
+                company('k', 'Keka'),
+              ],
+              next_cursor: null,
+            }
+          : undefined,
+      )
+      const list = await screen.findByRole('list', { name: 'Companies' })
+      // no faded text, no raw palette colours, no stage colour on a note (FR-004, SC-002)
+      const classes = [...list.querySelectorAll('[class]')].map((el) => el.getAttribute('class'))
+      for (const cls of classes)
+        expect(cls).not.toMatch(/(^|\s)opacity-|fuchsia|(^|\s)text-warning|(^|\s)text-[a-z-]+\/\d+/)
+      expect(list).not.toHaveTextContent('—')
+      expect(within(list).getByText('Call Tue')).toBeInTheDocument()
+      const css = readFileSync('src/theme/theme.css', 'utf-8')
+      expect(css).toMatch(/::placeholder\s*\{[^}]*var\(--ht-text-muted\)/)
+    })
+
+    it('test_US3_AS6_dialog_backdrop_has_no_blur', async () => {
+      const user = userEvent.setup()
+      renderPage(list)
+      await screen.findByRole('listitem', { name: 'Acme' })
+      await user.click(screen.getByRole('button', { name: 'Add a company' }))
+      const backdrop = screen.getByRole('dialog', { name: 'Add a company' }).parentElement
+      expect(backdrop?.className).not.toMatch(/blur/)
+      expect(backdrop).toHaveClass('bg-black/60')
+    })
+
     it('FR025 the Add a company button is a filled chip with an icon', async () => {
       renderPage(list)
       await screen.findByRole('listitem', { name: 'Acme' })
@@ -735,8 +792,8 @@ describe('CompaniesPage', () => {
       const button = screen.getByRole('button', { name: 'Add a company' })
 
       expect(button.querySelector('svg')).not.toBeNull()
-      expect(button).toHaveClass('bg-[#243044]')
-      expect(button).toHaveClass('text-[#f0a35e]')
+      expect(button).toHaveClass('bg-raised')
+      expect(button).toHaveClass('text-foreground')
     })
 
     it('FR026 Add a company opens a dialog over the list, and Cancel closes it', async () => {

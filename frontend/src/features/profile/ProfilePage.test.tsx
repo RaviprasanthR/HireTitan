@@ -84,11 +84,99 @@ const pdf = (name = 'resume.pdf', size = 1000) =>
 
 async function upload(file: File) {
   const user = userEvent.setup({ applyAccept: false })
-  await user.upload(screen.getByLabelText(/resume file/i), file)
+  await user.upload(await screen.findByLabelText('Resume file'), file)
   return user
 }
 
 describe('ProfilePage', () => {
+  const confirmed = {
+    current: {
+      id: 'v1',
+      number: 2,
+      is_current: true,
+      created_at: '2026-11-01T00:00:00Z',
+      created_by: 'person',
+      source_deleted: false,
+      source_file_name: 'resume.pdf',
+      content: {
+        contact: { name: 'Sam Example', email: 'sam@example.com', phone: null, location: 'Pune' },
+        headline: 'Backend engineer',
+        summary: null,
+        experience: [
+          {
+            id: 'e1',
+            employer: 'Example Corp',
+            title: 'Engineer',
+            start: { year: 2022, month: 3 },
+            end: null,
+            current: true,
+            bullets: ['Built APIs'],
+          },
+        ],
+        education: [],
+        skills: ['Python', 'FastAPI'],
+      },
+    },
+  }
+
+  it('test_US4_AS1_confirmed_profile_shown', async () => {
+    routes['GET /api/v1/profile'] = () => json(confirmed)
+    routes['GET /api/v1/resumes'] = () => json([])
+    renderPage()
+    // while the profile loads, the upload area does not flash up
+    expect(screen.getByRole('status')).toHaveTextContent('Loading your profile…')
+    expect(screen.queryByLabelText('Resume file')).not.toBeInTheDocument()
+
+    const summary = await screen.findByRole('region', { name: 'Your profile' })
+    expect(within(summary).getByText('Backend engineer')).toBeInTheDocument()
+    expect(within(summary).getByText('Example Corp')).toBeInTheDocument()
+    expect(within(summary).getByText('Python')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Edit profile' })).toHaveAttribute('href', '/profile/edit')
+    // the upload area waits behind its button, and the page uses the full width
+    expect(screen.queryByLabelText('Resume file')).not.toBeInTheDocument()
+    expect(summary.closest('section.space-y-6')?.className).not.toMatch(/max-w-/)
+  })
+
+  it('test_US4_AS2_no_profile_shows_upload', async () => {
+    routes['GET /api/v1/profile'] = () => json({ current: null })
+    routes['GET /api/v1/resumes'] = () => json([])
+    renderPage()
+
+    expect(await screen.findByRole('link', { name: 'Fill in by hand' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Resume file')).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Your profile' })).not.toBeInTheDocument()
+  })
+
+  it('test_US4_AS3_update_reveals_existing_upload_flow', async () => {
+    routes['GET /api/v1/profile'] = () => json(confirmed)
+    routes['GET /api/v1/resumes'] = () => json([])
+    routes['POST /api/v1/resumes'] = () => json({ resume_file_id: FILE_ID, run_id: RUN_ID }, 202)
+    routes[`GET /api/v1/runs/${RUN_ID}`] = () => json(run())
+    renderPage()
+
+    const update = await screen.findByRole('button', { name: 'Update from a new resume' })
+    expect(update).toHaveAttribute('data-variant', 'outline')
+    await userEvent.setup().click(update)
+    // the button goes, so the focus moves on to the revealed file field (WCAG 2.4.3)
+    expect(screen.getByLabelText('Resume file')).toHaveFocus()
+    await upload(pdf())
+
+    await waitFor(() =>
+      expect(calls.some((c) => c.method === 'POST' && c.url.endsWith('/resumes'))).toBe(true),
+    )
+  })
+
+  it('test_US4_AS4_empty_tailored_resumes_text', async () => {
+    routes['GET /api/v1/profile'] = () => json({ current: null })
+    routes['GET /api/v1/resumes'] = () => json([])
+    routes['GET /api/v1/tailored-resumes'] = () => json([])
+    renderPage()
+
+    expect(
+      await screen.findByText('None yet. Open a job and choose Tailor my resume.'),
+    ).toBeInTheDocument()
+  })
+
   it('US1_AS1_shows_progress_then_links_review', async () => {
     let polls = 0
     routes['GET /api/v1/resumes'] = () => json([resumeItem()])
@@ -290,18 +378,18 @@ describe('ProfilePage', () => {
     routes['GET /api/v1/resumes'] = () => json([])
     renderPage()
     const user = userEvent.setup({ applyAccept: false })
-    await user.upload(screen.getByLabelText(/resume file/i), pdf('big.pdf', 5 * 1024 * 1024 + 1))
+    await user.upload(await screen.findByLabelText('Resume file'), pdf('big.pdf', 5 * 1024 * 1024 + 1))
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/larger than 5 MB/i)
     expect(calls.some((c) => c.method === 'POST')).toBe(false)
   })
 
-  it('there_is_no_paste_option_only_upload', () => {
+  it('there_is_no_paste_option_only_upload', async () => {
     routes['GET /api/v1/resumes'] = () => json([])
     renderPage()
 
+    expect(await screen.findByLabelText('Resume file')).toBeInTheDocument()
     expect(screen.queryByRole('tab', { name: /paste/i })).not.toBeInTheDocument()
-    expect(screen.getByLabelText(/resume file/i)).toBeInTheDocument()
   })
 
   it('409_offers_to_replace_the_open_review', async () => {
@@ -367,7 +455,7 @@ describe('ProfilePage', () => {
     await upload(pdf())
 
     expect(await screen.findByText(/out of credit/i)).toBeInTheDocument()
-    expect(screen.getByText(/check again/i)).toBeInTheDocument()
+    expect(screen.getByText(/test key/i)).toBeInTheDocument()
   })
 
   it('a_failed_decision_shows_a_message_and_keeps_the_dialog', async () => {
@@ -417,7 +505,7 @@ describe('ProfilePage', () => {
     const user = await upload(pdf())
     await waitFor(() => expect(posts).toBe(1))
 
-    const zone = screen.getByLabelText(/resume file/i).closest('label') as HTMLElement
+    const zone = screen.getByLabelText('Resume file').closest('label') as HTMLElement
     const file = pdf('second.pdf')
     const { fireEvent } = await import('@testing-library/react')
     fireEvent.drop(zone, { dataTransfer: { files: [file] } })

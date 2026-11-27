@@ -5,7 +5,7 @@ const TABS = [
   { to: '/explore', label: 'Explore' },
 ]
 
-/** The two tabs of Home: the jobs already applied to or asked about (the default), and new jobs to look at. */
+/** The two tabs of Jobs: the jobs already applied to or asked about (the default), and new jobs to look at. */
 export function HomeTabs() {
-  return <PageTabs label="Home tabs" tabs={TABS} />
+  return <PageTabs label="Jobs tabs" tabs={TABS} />
 }

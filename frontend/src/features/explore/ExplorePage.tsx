@@ -1,5 +1,5 @@
 import { ChevronRight, CircleCheck } from 'lucide-react'
-import { Fragment, useId, useState } from 'react'
+import { Fragment, useEffect, useId, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { useStatus } from '@/api/useStatus'
 import { Button } from '@/components/ui/button'
@@ -13,20 +13,112 @@ import { DuplicatesPanel } from './DuplicatesPanel'
 import { ReviewNotice } from '@/features/home/ReviewNotice'
 import { HomeTabs } from './HomeTabs'
 import { Pill } from './Pill'
-import { SOURCE_TONE } from './pillTones'
-import { SearchPanel } from './SearchPanel'
+import { SearchOverview, SearchPanel } from './SearchPanel'
+import { OpenPosting } from '@/components/OpenPosting'
+import { OverviewLayout } from '@/components/OverviewLayout'
 import {
   type JobCard,
   type JobFilters,
   NO_FILTERS,
   formatDate,
   isNotChecked,
+  newWorkMode,
   reasonOf,
+  recheckJob,
   siteLabel,
   sourceLabel,
   useJobs,
-  useRecheck,
+  useRefreshing,
 } from './api'
+
+const jobsWord = (n: number) => `${n} ${n === 1 ? 'job' : 'jobs'}`
+
+/**
+ * The jobs the AI could not check for fit, gathered into one notice with one "Re-check fit" that
+ * asks for each of them in turn and refreshes the list once at the end (FR-022). Rows only say why.
+ */
+function RecheckNotice({ jobs }: { jobs: JobCard[] }) {
+  const refresh = useRefreshing()
+  const section = useRef<HTMLElement>(null)
+  // `total` is fixed when the run starts: the list may refetch while it runs
+  const [state, setState] = useState<{
+    running: boolean
+    total: number
+    failed: number
+  } | null>(null)
+  const none = jobs.length === 0
+  useEffect(() => {
+    // the button goes once every job is checked; keep focus in the notice, not on the page
+    if (none && state && !state.running && document.activeElement === document.body)
+      section.current?.focus()
+  }, [none, state])
+  if (none && state === null) return null
+  const run = async () => {
+    if (state?.running) return
+    const batch = [...jobs]
+    setState({ running: true, total: batch.length, failed: 0 })
+    let failed = 0
+    for (const job of batch) {
+      try {
+        await recheckJob(job.id)
+      } catch {
+        failed += 1
+      }
+    }
+    try {
+      await refresh()
+    } catch {
+      // a failed refresh is not fatal: the list refetches on its own later
+    } finally {
+      // never leave the button disabled, even if the refresh fails
+      setState({ running: false, total: batch.length, failed })
+    }
+  }
+  const total = state?.total ?? 0
+  const sent = total - (state?.failed ?? 0)
+  return (
+    <section
+      ref={section}
+      tabIndex={-1}
+      aria-label="Jobs not checked for fit"
+      className="ht-card flex flex-wrap items-center gap-x-4 gap-y-2 p-4 text-sm"
+    >
+      {jobs.length > 0 && (
+        <p className="min-w-0 flex-1">
+          {jobsWord(jobs.length)} could not be checked for fit: no description yet
+        </p>
+      )}
+      {jobs.length > 0 && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          // aria-disabled, not disabled: the button keeps keyboard focus while the run goes on
+          aria-disabled={state?.running || undefined}
+          className="aria-disabled:opacity-50"
+          onClick={() => void run()}
+        >
+          Re-check fit
+        </Button>
+      )}
+      {/* both lines stay in the page so screen readers hear the text when it changes */}
+      <div className="basis-full space-y-1">
+        <p role="status" className="text-muted-small">
+          {state?.running
+            ? `Asking the AI to check ${jobsWord(total)}…`
+            : state && sent > 0
+              ? `Asked the AI to check ${jobsWord(sent)}. Their fit shows here once checked.`
+              : ''}
+        </p>
+        <p role="alert" className="text-danger">
+          {state && !state.running && state.failed > 0
+            ? `${state.failed} of ${jobsWord(total)} could not be sent for a check. Try again later.`
+            : ''}
+        </p>
+      </div>
+    </section>
+  )
+}
 
 const input = 'rounded-md border border-muted-foreground bg-background px-3 py-1.5 text-sm'
 
@@ -41,83 +133,66 @@ const COLUMNS = ['Company', 'Role', 'Location', 'Posted', 'Source'] as const
  * where it was found, with "I applied" and "I inquired" on the right. The arrow opens the row in
  * place to show the job's description and people; the role opens the posting itself in a new tab.
  */
-export function JobCardItem({ job, showCheck = true }: { job: JobCard; showCheck?: boolean }) {
-  const recheck = useRecheck()
+export function JobCardItem({ job }: { job: JobCard }) {
   const [open, setOpen] = useState(false)
   const panelId = useId()
   const source = job.sources[0]
   const href = postingLink(source?.url)
-  const where = [job.location_text, job.work_mode].filter(Boolean).join(' · ')
+  const location = job.location_text ?? ''
+  const mode = newWorkMode(location, job.work_mode)
 
   return (
     <Fragment>
-      <tr className="ht-row border-t border-divider align-top">
-        <td className="px-3 py-2">{job.company_name}</td>
-        <td className="px-3 py-2">
-          {href ? (
-            <a
-              href={href}
-              target="_blank"
-              rel="noreferrer noopener"
-              title={job.title}
-              className="block max-w-[22rem] truncate font-semibold text-link underline"
-            >
-              {job.title}
-            </a>
-          ) : (
-            <span title={job.title} className="block max-w-[22rem] truncate font-semibold">
-              {job.title}
-            </span>
-          )}
+      <tr role="row" className="ht-row border-t border-divider align-top">
+        <td role="cell" className="px-3 py-2">
+          {job.company_name}
+        </td>
+        <td role="cell" className="px-3 py-2">
+          {/* the title opens the job page; the posting has its own link with the actions (FR-019) */}
+          <Link
+            to={`/jobs/${job.id}`}
+            title={job.title}
+            className="block font-semibold text-link underline md:max-w-[22rem] xl:max-w-[13rem] min-[85rem]:max-w-[18rem] md:truncate"
+          >
+            {job.title}
+          </Link>
           {job.may_have_closed && (
             <p className="mt-0.5">
               <Pill tone="yellow">May have closed</Pill>
             </p>
           )}
           {reasonOf(job) && (
-            <p className="mt-0.5 max-w-[22rem] text-xs text-muted-small">{reasonOf(job)}</p>
-          )}
-          {showCheck && isNotChecked(job) && (
-            <div className="mt-1 flex items-center gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={recheck.isPending || recheck.isSuccess}
-                onClick={() => recheck.mutate(job.id)}
-              >
-                Check again
-              </Button>
-              {recheck.isSuccess && (
-                <span className="text-sm text-muted-small">Checking with the AI…</span>
-              )}
-              {recheck.isError && (
-                <span role="alert" className="text-sm text-danger">
-                  {recheck.error.message}
-                </span>
-              )}
-            </div>
+            <p className="mt-0.5 max-w-[22rem] xl:max-w-[13rem] min-[85rem]:max-w-[18rem] text-xs text-muted-small">
+              {reasonOf(job)}
+            </p>
           )}
         </td>
-        <td className="px-3 py-2">{where || '—'}</td>
-        <td className="px-3 py-2 whitespace-nowrap">
-          {job.posted_at ? formatDate(job.posted_at) : '—'}
+        <td role="cell" data-label="Location" className="px-3 py-2">
+          {location || mode ? (
+            <>
+              {location && <span className="block">{location}</span>}
+              {mode && <span className="block text-muted-small">{mode}</span>}
+            </>
+          ) : (
+            <span className="text-muted-small">Not set</span>
+          )}
         </td>
-        <td className="px-3 py-2">
+        <td role="cell" data-label="Posted" className="px-3 py-2 whitespace-nowrap">
+          {job.posted_at ? formatDate(job.posted_at) : <span className="text-muted-small">Not set</span>}
+        </td>
+        <td role="cell" data-label="Source" className="px-3 py-2">
           {source ? (
             <>
-              <Pill tone={SOURCE_TONE[sourceLabel(source.kind).toLowerCase()] ?? 'grey'}>
-                {sourceLabel(source.kind)}
-              </Pill>
+              <Pill tone="grey">{sourceLabel(source.kind)}</Pill>
               {source.kind === 'email_alert' && source.site && (
                 <span className="block text-xs text-muted-small">{siteLabel(source.site)}</span>
               )}
             </>
           ) : (
-            '—'
+            <span className="text-muted-small">Not set</span>
           )}
         </td>
-        <td className="px-3 py-2">
+        <td role="cell" className="px-3 py-2">
           <div className="flex items-start justify-end gap-2">
             <PipelineControl
               id={job.id}
@@ -126,6 +201,7 @@ export function JobCardItem({ job, showCheck = true }: { job: JobCard; showCheck
               className="justify-end"
               compact
             />
+            {href && <OpenPosting href={href} title={job.title} iconOnly />}
             <button
               type="button"
               className="ht-icon-button"
@@ -144,13 +220,17 @@ export function JobCardItem({ job, showCheck = true }: { job: JobCard; showCheck
         </td>
       </tr>
       {open && (
-        <tr>
-          <td id={panelId} colSpan={COLUMNS.length + 1} className="space-y-4 bg-surface px-4 py-3">
+        <tr role="row">
+          <td
+            role="cell"
+            id={panelId}
+            colSpan={COLUMNS.length + 1}
+            className="space-y-4 bg-surface px-4 py-3"
+          >
             {(job.state === 'explore' || job.state === 'inquired') && (
               <Section
                 title="Record it"
                 icon={CircleCheck}
-                tone="ht-section-record"
                 hint="Choose the resume you used or pick another date."
               >
                 <PipelineControl id={job.id} state={job.state} title={job.title} />
@@ -170,7 +250,7 @@ function Filters({ value, onChange }: { value: JobFilters; onChange: (next: JobF
   return (
     <form
       aria-label="Filters"
-      className="flex flex-wrap items-end gap-3"
+      className="grid grid-cols-1 gap-3 md:flex md:flex-wrap md:items-end"
       onSubmit={(e) => e.preventDefault()}
     >
       <label className="flex flex-col gap-1 text-sm">
@@ -268,19 +348,19 @@ export function ExplorePage() {
   } else {
     list = (
       <>
-        <div className="overflow-x-auto rounded-lg bg-surface">
-          <table aria-label="Jobs" className="w-full text-left text-sm">
-            <thead className="ht-thead">
-              <tr>
+        <div className="ht-table-scroll overflow-x-auto md:rounded-lg md:bg-surface">
+          <table role="table" aria-label="Jobs" className="ht-table-cards w-full text-left text-sm">
+            <thead role="rowgroup" className="ht-thead">
+              <tr role="row">
                 {COLUMNS.map((name) => (
-                  <th key={name} scope="col" className="px-3 py-3">
+                  <th role="columnheader" key={name} scope="col" className="px-3 py-3">
                     {name}
                   </th>
                 ))}
-                <th scope="col" aria-label="Actions" className="px-3 py-2" />
+                <th role="columnheader" scope="col" aria-label="Actions" className="px-3 py-2" />
               </tr>
             </thead>
-            <tbody>
+            <tbody role="rowgroup">
               {items.map((job) => (
                 <JobCardItem key={job.id} job={job} />
               ))}
@@ -302,7 +382,7 @@ export function ExplorePage() {
   }
 
   return (
-    <section className="space-y-4">
+    <section className="ht-fit-page space-y-4">
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold">Jobs</h1>
         {!adding && (
@@ -332,8 +412,11 @@ export function ExplorePage() {
           </Button>
         </p>
       )}
-      <Filters value={filters} onChange={setFilters} />
-      {list}
+      <OverviewLayout label="Search overview" overview={setupDone ? <SearchOverview /> : null}>
+        <RecheckNotice jobs={items.filter(isNotChecked)} />
+        <Filters value={filters} onChange={setFilters} />
+        {list}
+      </OverviewLayout>
     </section>
   )
 }

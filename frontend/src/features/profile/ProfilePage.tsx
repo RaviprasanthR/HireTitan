@@ -1,8 +1,8 @@
 import { type UseQueryResult, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Dialog } from 'radix-ui'
-import { type DragEvent, useState } from 'react'
+import { type DragEvent, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
-import { ApiError } from '@/api/client'
+import { ApiError, apiFetch } from '@/api/client'
 import { ProgressBar, type ProgressTone } from '@/components/ProgressBar'
 import { Button } from '@/components/ui/button'
 import {
@@ -19,6 +19,8 @@ import {
   uploadResume,
 } from './api'
 import { TailoredResumesList } from '@/features/drafts/TailoredResumesList'
+import type { components } from '@/api/schema'
+import { ProfileSummary } from './ProfileSummary'
 import { ResumeFiles } from './ResumeFiles'
 
 const PAUSE_MESSAGES: Record<string, string> = {
@@ -27,7 +29,7 @@ const PAUSE_MESSAGES: Record<string, string> = {
   key_rejected:
     'The AI provider rejected your key. Fix OPENAI_API_KEY in your .env file and restart; this will continue by itself.',
   out_of_credit:
-    'Your AI account is out of credit. Add credit with your provider, then press Check again in the banner at the top; this will continue.',
+    'Your AI account is out of credit. Add credit with your provider, then press Test key in the banner at the top; this will continue.',
 }
 
 const FINAL = new Set(['done', 'failed', 'cancelled'])
@@ -91,6 +93,21 @@ export function ProfilePage({
   const [accepted, setAccepted] = useState<Accepted | null>(null)
   const [conflict, setConflict] = useState<Conflict | null>(null)
   const [busy, setBusy] = useState(false)
+  const [updating, setUpdating] = useState(false)
+  // the confirmed profile, shown in place of the upload area (R10); setup has none yet
+  const profileQuery = useQuery({
+    queryKey: ['profile'],
+    queryFn: () => apiFetch<components['schemas']['ProfileOut']>('/profile'),
+    enabled: !embedded,
+  })
+  const confirmed = embedded ? null : (profileQuery.data?.current ?? null)
+  // until it is known whether there is a profile, show neither it nor the upload area
+  const waiting = !embedded && profileQuery.isPending
+  const fileInput = useRef<HTMLInputElement>(null)
+  // the update button goes away when pressed, so the focus moves on to the file field
+  useEffect(() => {
+    if (updating) fileInput.current?.focus()
+  }, [updating])
 
   const resumesQuery: UseQueryResult<ResumeFile[]> = useQuery({
     queryKey: ['resumes'],
@@ -185,44 +202,66 @@ export function ProfilePage({
   const progress = run ? runProgress(run) : null
 
   return (
-    <section className={embedded ? 'space-y-6' : 'max-w-2xl space-y-6'}>
-      {!embedded && (
-        <>
-          <h1 className="text-2xl font-semibold">Profile</h1>
+    <section className="space-y-6">
+      {!embedded && <h1 className="text-2xl font-semibold">Profile</h1>}
+      {confirmed ? (
+        <section aria-label="Your profile" className="ht-detail-card space-y-4">
+          <ProfileSummary content={confirmed.content} />
+          <div className="flex flex-wrap items-center gap-3">
+            <Link to="/profile/edit" className="text-link underline">
+              Edit profile
+            </Link>
+            {!updating && (
+              <Button type="button" variant="outline" size="sm" onClick={() => setUpdating(true)}>
+                Update from a new resume
+              </Button>
+            )}
+          </div>
+        </section>
+      ) : (
+        !embedded &&
+        !waiting && (
           <p className="text-muted-small">
             Add your resume and HireTitan turns it into a profile you can check and edit. Nothing is
             saved as your profile until you confirm it.
           </p>
-        </>
+        )
       )}
 
-      <label
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={onDrop}
-        className="flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground p-8 text-center focus-within:ring-2 focus-within:ring-ring"
-      >
-        <span className="font-medium">Resume file</span>
-        <span className="text-sm text-muted-small">
-          PDF or DOCX, up to 5 MB. Drop it here or click to choose.
-        </span>
-        <input
-          type="file"
-          aria-label="Resume file"
-          accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-          className="sr-only"
-          disabled={busy}
-          onChange={(e) => {
-            chooseFile(e.target.files?.[0])
-            e.target.value = ''
-          }}
-        />
-      </label>
+      {waiting && <p role="status">Loading your profile…</p>}
+
+      {!waiting && (!confirmed || updating) && (
+        <label
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={onDrop}
+          className="flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground p-8 text-center focus-within:ring-2 focus-within:ring-ring"
+        >
+          <span className="font-medium">Resume file</span>
+          <span className="text-sm text-muted-small">
+            PDF or DOCX, up to 5 MB. Drop it here or click to choose.
+          </span>
+          <input
+            ref={fileInput}
+            type="file"
+            aria-label="Resume file"
+            accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            className="sr-only"
+            disabled={busy}
+            onChange={(e) => {
+              chooseFile(e.target.files?.[0])
+              e.target.value = ''
+            }}
+          />
+        </label>
+      )}
 
       {!embedded && (
         <p className="space-x-4">
-          <Link to="/profile/edit" className="text-link underline">
-            Fill in by hand
-          </Link>
+          {!confirmed && !waiting && (
+            <Link to="/profile/edit" className="text-link underline">
+              Fill in by hand
+            </Link>
+          )}
           <Link to="/profile/versions" className="text-link underline">
             Version history
           </Link>

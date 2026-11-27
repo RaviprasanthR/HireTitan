@@ -115,11 +115,11 @@ describe('RunSummaryPage', () => {
     const flow = await screen.findByRole('list', { name: 'How the search went' })
     const steps = within(flow).getAllByRole('listitem')
     expect(steps.map((step) => step.textContent)).toEqual([
-      expect.stringMatching(/3 of 3.*Companies read.*3 to check by hand/),
-      expect.stringMatching(/40.*Jobs found/),
-      expect.stringMatching(/25 left out.*Your rules/),
-      expect.stringMatching(/12 checked.*AI check.*4 left out/),
-      expect.stringMatching(/10.*New jobs.*3 already known/),
+      expect.stringMatching(/Companies read.*3 of 3.*3 to check by hand/),
+      expect.stringMatching(/Jobs found.*40/),
+      expect.stringMatching(/Your rules.*25 left out/),
+      expect.stringMatching(/AI check.*12 checked.*4 left out/),
+      expect.stringMatching(/New jobs.*10.*3 already known/),
     ])
     expect(screen.queryByText(/cost/i)).not.toBeInTheDocument() // SC003
     expect(screen.queryByText(/batch/i)).not.toBeInTheDocument()
@@ -154,6 +154,28 @@ describe('RunSummaryPage', () => {
     const all = screen.getByText('All 4 companies').closest('details') as HTMLElement
     expect(within(all).getByText('Acme').closest('li')).toHaveTextContent('12 jobs')
     expect(screen.getByRole('button', { name: 'Hide details' })).toBeInTheDocument()
+  })
+
+  it('test_US3_AS5_summary_counts_once', async () => {
+    renderPage()
+    await screen.findByRole('list', { name: 'How the search went' })
+    // the funnel once and one donut, nothing else repeating the counts
+    expect(screen.getAllByRole('list', { name: 'How the search went' })).toHaveLength(1)
+    expect(screen.getAllByRole('img')).toHaveLength(1)
+    expect(screen.getByRole('heading', { level: 1 }).parentElement?.textContent).not.toMatch(/[·•]/)
+  })
+
+  it('test_US3_AS3_no_nested_card', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await user.click(await screen.findByRole('button', { name: 'Show details' }))
+    await user.click(screen.getByText('Jobs left out (29)'))
+    const skipped = await screen.findByRole('list', { name: 'Skipped jobs' })
+    // rows inside the left-out card are divided by lines, not drawn as cards of their own
+    for (const item of within(skipped).getAllByRole('listitem')) {
+      expect(item).not.toHaveClass('bg-surface')
+      expect(item.textContent).not.toMatch(/[·•]/)
+    }
   })
 
   it('has_back_and_search_history_at_the_top', async () => {

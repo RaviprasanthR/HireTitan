@@ -145,9 +145,10 @@ describe('JobDetailPage', () => {
     ).toBeInTheDocument()
     expect(screen.getByText(/Build APIs\./)).toBeInTheDocument()
     expect(screen.getByText('Matches your Python skills')).toBeInTheDocument()
-    const original = screen.getByRole('link', { name: 'Open original posting' })
+    const original = screen.getByRole('link', { name: 'Open posting (opens in a new tab)' })
     expect(original).toHaveAttribute('href', 'https://jobs.example.com/acme/1')
     expect(original).toHaveAttribute('rel', expect.stringContaining('noopener'))
+    expect(original).toHaveAttribute('target', '_blank')
     const sources = screen.getByRole('list', { name: 'Sources' })
     expect(within(sources).getAllByRole('link')).toHaveLength(2)
     expect(screen.getByRole('link', { name: /first found/i })).toHaveAttribute(
@@ -156,6 +157,47 @@ describe('JobDetailPage', () => {
     )
     const history = screen.getByRole('list', { name: 'Decision history' })
     expect(within(history).getAllByRole('listitem')).toHaveLength(2)
+  })
+
+  it('test_FR004_job_page_shows_stage_chip', async () => {
+    renderPage(detail({ state: 'applied', applied_on: '2026-11-06' }))
+    const title = await screen.findByRole('heading', { level: 1, name: 'Backend Engineer' })
+    // the chip sits in the page's header, before any section
+    const chip = (title.parentElement as HTMLElement).querySelector('.ht-stage-chip')
+    expect(chip).toHaveTextContent('Applied')
+    expect(chip).toHaveAttribute('data-stage', 'applied')
+    expect(document.querySelectorAll('.ht-stage-chip')).toHaveLength(1)
+    // the day is a figure
+    const day = screen.getByText(
+      (_, el) => el?.textContent === 'Applied on 6 Nov 2026' && el.tagName === 'SPAN',
+    )
+    expect(within(day).getByText('6 Nov 2026')).toHaveClass('ht-figure')
+  })
+
+  it('test_US3_AS2_job_facts_without_dots_or_repeats', async () => {
+    renderPage(detail({ location_text: 'Remote, India', work_mode: 'remote' }))
+    const title = await screen.findByRole('heading', { level: 1, name: 'Backend Engineer' })
+    const facts = title.nextElementSibling as HTMLElement
+    expect(facts).toHaveTextContent('Remote, India')
+    expect(facts.textContent).not.toMatch(/[·•]/)
+    expect(facts.textContent?.match(/remote/gi)).toHaveLength(1)
+    const history = screen.getByRole('list', { name: 'Decision history' })
+    expect(history.textContent).not.toMatch(/[·•]/)
+  })
+
+  it('test_US3_AS3_job_cards_have_no_stripe', async () => {
+    renderPage()
+    await screen.findByRole('heading', { level: 1, name: 'Backend Engineer' })
+    expect(document.querySelector('[class*="ht-section-"]')).toBeNull()
+  })
+
+  it('test_FR010_one_primary_per_view', async () => {
+    renderPage(detail({ company_id: 'c1' }))
+    await screen.findByLabelText('Note about Acme')
+    const primaries = document.querySelectorAll(
+      '[data-variant="default"], [data-variant="success"]',
+    )
+    expect([...primaries].map((b) => b.textContent)).toEqual(['I applied'])
   })
 
   it('US2 AS5 job detail shows company contacts and note', async () => {
@@ -212,15 +254,15 @@ describe('JobDetailPage', () => {
       }),
     )
 
-    await user.click(await screen.findByRole('button', { name: /check again/i }))
+    await user.click(await screen.findByRole('button', { name: /re-check fit/i }))
 
     await waitFor(() => expect(calls.some((c) => c.path === '/jobs/j1/recheck')).toBe(true))
   })
 
-  it('does_not_unwrap_the_original_link_when_there_is_none', async () => {
+  it('test_FR020_no_open_posting_without_url', async () => {
     renderPage(detail({ canonical_url: null, sources: [] }))
     await screen.findByRole('heading', { level: 1, name: 'Backend Engineer' })
-    expect(screen.queryByRole('link', { name: 'Open original posting' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Open posting/ })).not.toBeInTheDocument()
   })
 
   it('US5_AS1_i_applied_marks_the_job_with_today', async () => {
@@ -287,7 +329,9 @@ describe('JobDetailPage', () => {
   it('an_applied_job_shows_its_date_and_undo_instead', async () => {
     renderPage(detail({ state: 'applied', applied_on: '2026-11-03' }))
 
-    expect(await screen.findByText('Applied on 3 Nov 2026')).toBeInTheDocument()
+    expect(await screen.findByText(
+      (_, el) => el?.textContent === 'Applied on 3 Nov 2026' && el.tagName === 'SPAN',
+    )).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Undo' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'I applied' })).not.toBeInTheDocument()
   })
@@ -384,7 +428,9 @@ describe('JobDetailPage', () => {
     const user = userEvent.setup()
     const calls = renderPage(detail({ state: 'inquired', inquired_on: '2026-11-03' }))
 
-    expect(await screen.findByText('Inquired on 3 Nov 2026')).toBeInTheDocument()
+    expect(await screen.findByText(
+      (_, el) => el?.textContent === 'Inquired on 3 Nov 2026' && el.tagName === 'SPAN',
+    )).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'I inquired' })).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'I applied' }))
 
@@ -421,7 +467,9 @@ describe('JobDetailPage', () => {
   it('FR007 no I inquired on an applied job', async () => {
     renderPage(detail({ state: 'applied', applied_on: '2026-11-03' }))
 
-    await screen.findByText('Applied on 3 Nov 2026')
+    await screen.findByText(
+      (_, el) => el?.textContent === 'Applied on 3 Nov 2026' && el.tagName === 'SPAN',
+    )
 
     expect(screen.queryByRole('button', { name: 'I inquired' })).not.toBeInTheDocument()
   })

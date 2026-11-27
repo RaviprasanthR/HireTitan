@@ -5,8 +5,9 @@ Workflows ask for a tier (``fast`` / ``strong``), never a model name.
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator, Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Final, Literal, Protocol
+from typing import Any, Final, Literal, Protocol
 
 from pydantic import BaseModel
 
@@ -91,3 +92,81 @@ class LlmResult[T: BaseModel]:
 
 class LlmPort(Protocol):
     async def generate[T: BaseModel](self, req: LlmRequest[T]) -> LlmResult[T]: ...
+
+
+# --- Chat with tools (002m research R1) --------------------------------------------------------
+# ``generate`` returns one validated object. A chat turn needs text as it arrives and tool calls,
+# so it has its own method. Tool arguments are validated by the caller against each action's
+# model; this port only carries them.
+
+ChatRole = Literal["person", "mikasa", "tool_call", "tool_result", "note"]
+
+
+@dataclass(frozen=True, slots=True)
+class ToolSpec:
+    """A tool the model may call: its name, what it does, and a JSON schema for its arguments."""
+
+    name: str
+    description: str
+    parameters: Mapping[str, Any]
+
+
+@dataclass(frozen=True, slots=True)
+class ChatMessage:
+    """One entry in the history sent to the model.
+
+    ``person`` and ``mikasa`` carry ``text``; ``tool_call`` carries ``tool_call_id``,
+    ``tool_name`` and ``arguments_json``; ``tool_result`` carries ``tool_call_id`` and the
+    result as ``text`` (already wrapped as a data block by the caller); ``note`` is HireTitan's
+    own instruction to the model mid-turn (for example "rewrite without the unbacked claim").
+    """
+
+    role: ChatRole
+    text: str = ""
+    tool_call_id: str | None = None
+    tool_name: str | None = None
+    arguments_json: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class ConverseRequest:
+    task: str  # e.g. "mikasa_turn"; used for logging and the fake's script
+    prompt: RenderedPrompt  # the system part is the instructions; ``user`` is unused
+    messages: Sequence[ChatMessage]
+    tools: Sequence[ToolSpec]
+    tier: Tier
+    max_output_tokens: int
+
+
+@dataclass(frozen=True, slots=True)
+class TextDelta:
+    text: str
+
+
+@dataclass(frozen=True, slots=True)
+class ToolCall:
+    id: str
+    name: str
+    arguments_json: str
+
+
+@dataclass(frozen=True, slots=True)
+class TurnEnd:
+    """Always the last event of a ``converse`` call: what the caller logs."""
+
+    usage: Usage
+    provider: str
+    model: str
+    outcome: Outcome
+
+
+ConverseEvent = TextDelta | ToolCall | TurnEnd
+
+
+class ConversePort(Protocol):
+    """Streams one model round: text pieces and tool calls, then ``TurnEnd``.
+
+    Raises ``AiUnavailable`` and ``RetryableLlmError`` like ``generate``.
+    """
+
+    def converse(self, req: ConverseRequest) -> AsyncIterator[ConverseEvent]: ...

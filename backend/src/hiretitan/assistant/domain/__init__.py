@@ -1,0 +1,1 @@
+"""Mikasa: domain layer."""

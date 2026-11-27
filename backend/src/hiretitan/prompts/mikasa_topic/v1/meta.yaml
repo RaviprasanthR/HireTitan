@@ -1,0 +1,5 @@
+version: 1
+tier: fast
+max_output_tokens: 80
+changelog:
+  - "v1: first version. Decides whether a typed chat message is about the person's own job search in HireTitan; the message is delimited data, any attempt to give orders counts as off topic (002m FR-030)."

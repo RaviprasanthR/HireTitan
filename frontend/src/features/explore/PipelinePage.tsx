@@ -1,5 +1,7 @@
 import { Fragment, useState } from 'react'
+import { safeHttpUrl } from '@/lib/safeUrl'
 import { PipelineChart } from './PipelineChart'
+import { OverviewLayout } from '@/components/OverviewLayout'
 import { Link } from 'react-router'
 import {
   ArrowUpRight,
@@ -17,18 +19,13 @@ import { ReviewNotice } from '@/features/home/ReviewNotice'
 import { InterviewPanel } from '@/features/jobs/interview/InterviewPanel'
 import { LeaveGuard } from '@/features/jobs/interview/LeaveGuard'
 import { roundStatus } from '@/features/jobs/interview/roundStatus'
+import { StageChip } from '@/components/StageChip'
 import { useUnsavedRegistry, type UnsavedRegistry } from '@/features/jobs/interview/unsaved'
 import { EditJobDialog } from '@/features/jobs/EditJobDialog'
 import { resumeName } from '@/features/jobs/resume/resumeApi'
 import { HomeTabs } from './HomeTabs'
 import { Pill } from './Pill'
-import { SOURCE_TONE, type Tone } from './pillTones'
 import { formatDay, sourceLabel, usePipelineJobs, useJob, type JobCard } from './api'
-
-const STATUS_TONE: Record<string, Tone> = {
-  Applied: 'green',
-  Inquired: 'blue',
-}
 
 const COLUMNS = ['Company', 'Role', 'Date', 'Status', 'Resume', 'Source'] as const
 
@@ -46,13 +43,13 @@ function Details({ id, colSpan }: { id: string; colSpan: number }) {
           <div className="flex flex-wrap gap-2">
             {location && (
               <span aria-label="Location" className="ht-fact">
-                <MapPin aria-hidden className="size-4 text-[#f0a35e]" />
+                <MapPin aria-hidden className="size-4 text-subtle" />
                 {location}
               </span>
             )}
             {mode && (
               <span aria-label="Work mode" className="ht-fact">
-                <Laptop aria-hidden className="size-4 text-[#4cc9f0]" />
+                <Laptop aria-hidden className="size-4 text-subtle" />
                 {mode}
               </span>
             )}
@@ -80,11 +77,9 @@ function Details({ id, colSpan }: { id: string; colSpan: number }) {
                 key={`${source.kind}-${source.url}`}
                 className="flex flex-wrap items-center gap-2"
               >
-                <Pill tone={SOURCE_TONE[sourceLabel(source.kind).toLowerCase()] ?? 'grey'}>
-                  {sourceLabel(source.kind)}
-                </Pill>
+                <Pill tone="grey">{sourceLabel(source.kind)}</Pill>
                 <a
-                  href={source.url}
+                  href={safeHttpUrl(source.url)}
                   target="_blank"
                   rel="noreferrer noopener"
                   className="inline-flex min-w-0 items-center gap-1.5 text-link underline"
@@ -113,19 +108,19 @@ function Details({ id, colSpan }: { id: string; colSpan: number }) {
     )
   }
   return (
-    <tr>
-      <td colSpan={colSpan} className="bg-surface px-4 py-3">
+    <tr role="row">
+      <td role="cell" colSpan={colSpan} className="bg-surface px-4 py-3">
         {content}
       </td>
     </tr>
   )
 }
 
-/** The resume used: its name, cut to fit with the whole name on hover, or a dash. A removed
+/** The resume used: its name, cut to fit with the whole name on hover, or "Not set". A removed
  *  file's name is followed by a "(removed)" marker that is never cut off. */
 function ResumeCell({ resume }: { resume: JobCard['resume'] }) {
   const name = resumeName(resume)
-  if (name === '') return <>—</>
+  if (name === '') return <span className="text-muted-small">Not set</span>
   if (resume?.state !== 'removed')
     return (
       <span title={name} className="block max-w-[12rem] truncate">
@@ -148,38 +143,40 @@ function Row({ job, registry }: { job: JobCard; registry: UnsavedRegistry }) {
   const status = job.interview
     ? roundStatus(job.interview.state as 'scheduled' | 'cleared' | 'failed', job.interview.round)
     : job.state === 'inquired'
-      ? { label: 'Inquired', tone: STATUS_TONE.Inquired }
-      : { label: 'Applied', tone: STATUS_TONE.Applied }
+      ? { label: 'Inquired', stage: 'inquired' as const }
+      : { label: 'Applied', stage: 'applied' as const }
   return (
     <Fragment>
-      <tr className="ht-row border-t border-divider align-top">
-        <td className="px-3 py-2">{job.company_name}</td>
-        <td className="px-3 py-2">
+      <tr role="row" className="ht-row border-t border-divider align-top">
+        <td role="cell" className="px-3 py-2">
+          {job.company_name}
+        </td>
+        <td role="cell" className="px-3 py-2">
           <Link
             to={`/jobs/${job.id}`}
             title={job.title}
-            className="block max-w-[18rem] truncate font-semibold text-link underline"
+            className="block font-semibold text-link underline md:max-w-[18rem] md:truncate"
           >
             {job.role}
           </Link>
         </td>
-        <td className="px-3 py-2">{formatDay(job.applied_on ?? job.inquired_on)}</td>
-        <td className="px-3 py-2">
-          <Pill tone={status.tone ?? 'grey'}>{status.label}</Pill>
+        <td role="cell" data-label="Date" className="px-3 py-2">
+          <span className="ht-figure">{formatDay(job.applied_on ?? job.inquired_on)}</span>
         </td>
-        <td className="px-3 py-2">
+        <td role="cell" data-label="Status" className="px-3 py-2">
+          <StageChip stage={status.stage}>{status.label}</StageChip>
+        </td>
+        <td role="cell" data-label="Resume" className="px-3 py-2">
           <ResumeCell resume={job.resume} />
         </td>
-        <td className="px-3 py-2">
+        <td role="cell" data-label="Source" className="px-3 py-2">
           {source ? (
-            <Pill tone={SOURCE_TONE[sourceLabel(source.kind).toLowerCase()] ?? 'grey'}>
-              {sourceLabel(source.kind)}
-            </Pill>
+            <Pill tone="grey">{sourceLabel(source.kind)}</Pill>
           ) : (
-            '—'
+            <span className="text-muted-small">Not set</span>
           )}
         </td>
-        <td className="px-3 py-2">
+        <td role="cell" className="px-3 py-2">
           <div className="flex gap-1">
             <button
               type="button"
@@ -234,19 +231,23 @@ export function PipelinePage() {
   else
     body = (
       <>
-        <div className="overflow-x-auto rounded-lg bg-surface">
-          <table aria-label="Pipeline jobs" className="w-full text-left text-sm">
-            <thead className="ht-thead">
-              <tr>
+        <div className="ht-table-scroll overflow-x-auto md:rounded-lg md:bg-surface">
+          <table
+            role="table"
+            aria-label="Pipeline jobs"
+            className="ht-table-cards w-full text-left text-sm"
+          >
+            <thead role="rowgroup" className="ht-thead">
+              <tr role="row">
                 {COLUMNS.map((name) => (
-                  <th key={name} scope="col" className="px-3 py-3">
+                  <th role="columnheader" key={name} scope="col" className="px-3 py-3">
                     {name}
                   </th>
                 ))}
-                <th scope="col" aria-label="Actions" className="px-3 py-2" />
+                <th role="columnheader" scope="col" aria-label="Actions" className="px-3 py-2" />
               </tr>
             </thead>
-            <tbody>
+            <tbody role="rowgroup">
               {items.map((job) => (
                 <Row key={job.id} job={job} registry={registry} />
               ))}
@@ -267,13 +268,14 @@ export function PipelinePage() {
     )
 
   return (
-    <section className="space-y-4">
+    <section className="ht-fit-page space-y-4">
       <h1 className="text-2xl font-semibold">Jobs</h1>
       <ReviewNotice />
       <LeaveGuard when={registry.any} />
       <HomeTabs />
-      <PipelineChart />
-      {body}
+      <OverviewLayout label="Pipeline overview" overview={<PipelineChart />}>
+        {body}
+      </OverviewLayout>
     </section>
   )
 }
