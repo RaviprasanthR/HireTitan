@@ -67,6 +67,8 @@ function RecheckNotice({ jobs }: { jobs: JobCard[] }) {
     }
     try {
       await refresh()
+    } catch {
+      // a failed refresh is not fatal: the list refetches on its own later
     } finally {
       // never leave the button disabled, even if the refresh fails
       setState({ running: false, total: batch.length, failed })

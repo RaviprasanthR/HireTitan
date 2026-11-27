@@ -44,6 +44,8 @@ export function MikasaDock() {
   useEffect(() => {
     if (open) sessionStorage.setItem(GREETED, '1')
   }, [open])
+  // opening the chat ends the offer, so it cannot pop back when the chat closes
+  if (open && greeting !== 'hidden') setGreeting('hidden')
   // left alone, the greeting fades out by itself after a while
   useEffect(() => {
     if (greeting !== 'shown') return
@@ -107,7 +109,7 @@ export function MikasaDock() {
         type="button"
         aria-label="Mikasa"
         aria-expanded={open}
-        aria-haspopup="dialog"
+        aria-controls="mikasa-panel"
         aria-keyshortcuts="Control+/"
         title="Ask Mikasa (Ctrl+/)"
         onClick={toggle}

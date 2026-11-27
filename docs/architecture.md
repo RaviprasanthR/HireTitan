@@ -367,6 +367,8 @@ Cross-cutting rules: UUID primary keys; `created_at`/`updated_at`; AI-produced r
 
 React (current stable; exact version pinned in the 001 plan) + Vite + TypeScript strict. React Router; **TanStack Query** for server state; **Tailwind + shadcn/ui** components; react-hook-form + zod for forms; a TypeScript API client generated from FastAPI's OpenAPI schema (`openapi-typescript`), so types match the backend; EventSource for SSE. Tests: Vitest + Testing Library; Playwright end-to-end for the main journeys.
 
+**The visual source of truth is `DESIGN.md` (feature 003, 2026-11-27): graphite ramp, one lavender accent, five stage colours, Geist. The token table below is the earlier palette and is superseded by it.**
+
 **Theme: dark only in R1**, built from Ravi's palette. All colours are theme variables (Tailwind/shadcn CSS variables), so a light theme can be added later without touching components. Contrast meets WCAG AA (verified in implementation).
 
 | Token | Colour | Use |

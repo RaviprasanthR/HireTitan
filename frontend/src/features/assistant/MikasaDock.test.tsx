@@ -69,6 +69,21 @@ describe('MikasaDock greeting', () => {
     expect(sessionStorage.getItem('ht-mikasa-greeted')).toBe('1')
   })
 
+  it('closing the chat again does not bring the bubble back', () => {
+    show()
+    greet()
+    typed()
+    fireEvent.click(screen.getByRole('status', { name: 'Mikasa says' }))
+    fireEvent.click(screen.getByRole('button', { name: /close/i }))
+    expect(screen.queryByRole('status', { name: 'Mikasa says' })).toBeNull()
+  })
+
+  it('opening the chat moves focus into it', () => {
+    show()
+    fireEvent.click(screen.getByRole('button', { name: 'Mikasa' }))
+    expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'Mikasa' }))
+  })
+
   it('opening the chat from the button first means no greeting later', () => {
     show()
     fireEvent.click(screen.getByRole('button', { name: 'Mikasa' }))

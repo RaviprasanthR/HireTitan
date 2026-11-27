@@ -905,7 +905,7 @@ body {
   100% { transform: rotate(0); }
 }
 .ht-mikasa-float {
-  animation: ht-mikasa-float 3.2s var(--ht-ease) infinite;
+  animation: ht-mikasa-float 3.2s var(--ht-ease) 3;
 }
 .ht-mikasa-dock:hover .ht-mikasa-float {
   animation: ht-mikasa-tilt 600ms var(--ht-ease) 1;
@@ -956,4 +956,9 @@ body {
   .ht-greeting-out {
     animation: none;
   }
+}
+
+/* Muted explanatory paragraphs stay readable on a wide screen (SC-002 line length). */
+p.text-muted-small {
+  max-width: 75ch;
 }

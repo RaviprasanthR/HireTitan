@@ -149,6 +149,11 @@ export function MikasaPanel({ onClose }: { onClose: () => void }) {
   const [form, setForm] = useState<QuickAction | null>(null) // the status form, when it is open
   const abort = useRef<AbortController | null>(null)
   const bottom = useRef<HTMLDivElement | null>(null)
+  const heading = useRef<HTMLHeadingElement | null>(null)
+  // opening the chat moves focus into it, so a keyboard user does not tab past it (WCAG 2.4.3)
+  useEffect(() => {
+    heading.current?.focus()
+  }, [])
 
   useEffect(() => {
     bottom.current?.scrollIntoView?.({ block: 'end' })
@@ -263,6 +268,7 @@ export function MikasaPanel({ onClose }: { onClose: () => void }) {
 
   return (
     <aside
+      id="mikasa-panel"
       aria-label="Mikasa"
       className="mikasa-pop fixed bottom-[calc(var(--ht-bottom-bar)+5rem)] right-5 z-40 flex h-[min(640px,calc(100dvh-var(--ht-bottom-bar)-9rem))] md:bottom-24 md:h-[min(640px,calc(100dvh-8rem))] w-[min(420px,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-2xl bg-surface shadow-[var(--ht-shadow-overlay)] max-sm:inset-x-2 max-sm:w-auto"
     >
@@ -270,7 +276,9 @@ export function MikasaPanel({ onClose }: { onClose: () => void }) {
         <div className="flex items-center gap-2.5">
           <MikasaAvatar className="size-9" />
           <div>
-            <h2 className="text-sm font-semibold leading-tight">Mikasa</h2>
+            <h2 ref={heading} tabIndex={-1} className="text-sm font-semibold leading-tight outline-none">
+              Mikasa
+            </h2>
             <p className="text-xs leading-tight text-muted-small">Your job-search assistant</p>
           </div>
         </div>
@@ -296,7 +304,11 @@ export function MikasaPanel({ onClose }: { onClose: () => void }) {
           </Button>
         </div>
       </header>
-      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-3" aria-live="polite">
+      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-3" aria-busy={live !== null}>
+        {/* one short announcement instead of every streamed word (WCAG 4.1.3) */}
+        <p role="status" className="sr-only">
+          {live ? 'Mikasa is replying' : ''}
+        </p>
         {status.data && !available && (
           <div role="alert" className="rounded-md border border-divider p-3 text-sm">
             <p>{UNAVAILABLE[reason ?? ''] ?? 'Mikasa cannot answer right now.'}</p>

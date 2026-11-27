@@ -1,3 +1,4 @@
+import { safeHttpUrl } from '@/lib/safeUrl'
 import { ExternalLink } from 'lucide-react'
 
 /**
@@ -17,7 +18,7 @@ export function OpenPosting({
   const name = title ? `Open posting for ${title}` : 'Open posting'
   return (
     <a
-      href={href}
+      href={safeHttpUrl(href)}
       target="_blank"
       rel="noreferrer noopener"
       aria-label={`${name} (opens in a new tab)`}

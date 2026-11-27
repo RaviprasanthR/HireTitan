@@ -1,4 +1,5 @@
 import { Link2, Mail, Pencil, Phone, StickyNote, Trash2, Users } from 'lucide-react'
+import { safeHttpUrl } from '@/lib/safeUrl'
 import { useState } from 'react'
 import { ApiError } from '@/api/client'
 import { Button } from '@/components/ui/button'
@@ -198,7 +199,7 @@ function ContactItem({ contact, companyId }: { contact: Contact; companyId: stri
             <span className="ht-fact">
               <Link2 aria-hidden className="size-4 text-stage-inquired" />
               <a
-                href={contact.linkedin_url}
+                href={safeHttpUrl(contact.linkedin_url)}
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={`LinkedIn profile of ${contact.name}`}

@@ -18,7 +18,7 @@ export function ProfileSummary({ content: c }: { content: Content }) {
         {c.contact.location && <p>{c.contact.location}</p>}
       </section>
       {c.headline && <p className="text-lg">{c.headline}</p>}
-      {c.summary && <p>{c.summary}</p>}
+      {c.summary && <p className="max-w-[50ch]">{c.summary}</p>}
       {(c.experience ?? []).length > 0 && (
         <section className="space-y-3">
           <h2 className="text-lg font-semibold">Experience</h2>
@@ -27,11 +27,11 @@ export function ProfileSummary({ content: c }: { content: Content }) {
               <p className="font-medium">{e.employer}</p>
               <p>{e.title}</p>
               <p className="ht-figure text-sm text-muted-small">
-                {ym(e.start)} to {e.current ? 'Present' : ym(e.end)}
+                {[ym(e.start), e.current ? 'Present' : ym(e.end)].filter(Boolean).join(' to ')}
               </p>
               <ul className="list-disc pl-5">
                 {e.bullets?.map((b, j) => (
-                  <li key={j}>{b}</li>
+                  <li key={j} className="max-w-[50ch]">{b}</li>
                 ))}
               </ul>
             </div>

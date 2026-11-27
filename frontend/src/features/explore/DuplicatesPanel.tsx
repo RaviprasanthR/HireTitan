@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button'
+import { safeHttpUrl } from '@/lib/safeUrl'
 import { type JobCard, formatDate, useDecideDuplicate, useDuplicates } from './api'
 
 function Side({ job }: { job: JobCard }) {
@@ -15,7 +16,7 @@ function Side({ job }: { job: JobCard }) {
       {job.sources.map((source) => (
         <a
           key={source.url}
-          href={source.url}
+          href={safeHttpUrl(source.url)}
           target="_blank"
           rel="noreferrer noopener"
           className="block truncate text-sm text-link underline"

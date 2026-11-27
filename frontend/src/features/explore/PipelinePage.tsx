@@ -1,4 +1,5 @@
 import { Fragment, useState } from 'react'
+import { safeHttpUrl } from '@/lib/safeUrl'
 import { PipelineChart } from './PipelineChart'
 import { OverviewLayout } from '@/components/OverviewLayout'
 import { Link } from 'react-router'
@@ -78,7 +79,7 @@ function Details({ id, colSpan }: { id: string; colSpan: number }) {
               >
                 <Pill tone="grey">{sourceLabel(source.kind)}</Pill>
                 <a
-                  href={source.url}
+                  href={safeHttpUrl(source.url)}
                   target="_blank"
                   rel="noreferrer noopener"
                   className="inline-flex min-w-0 items-center gap-1.5 text-link underline"

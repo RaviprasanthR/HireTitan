@@ -10,6 +10,7 @@ import {
   StickyNote,
   Users,
 } from 'lucide-react'
+import { safeHttpUrl } from '@/lib/safeUrl'
 import { useState } from 'react'
 import { ApiError } from '@/api/client'
 import { StageChip } from '@/components/StageChip'
@@ -128,7 +129,7 @@ const shortUrl = (url: string) => url.replace(/^https?:\/\//, '').replace(/\/$/,
 
 function ExternalLink({ url }: { url: string }) {
   return (
-    <a href={url} target="_blank" rel="noreferrer noopener" className="text-link underline">
+    <a href={safeHttpUrl(url)} target="_blank" rel="noreferrer noopener" className="text-link underline">
       {shortUrl(url)}
     </a>
   )
@@ -301,7 +302,7 @@ function CompanyRow({ company }: { company: Company }) {
                   className="text-subtle hover:bg-raised hover:text-foreground"
                 >
                   <a
-                    href={company.website}
+                    href={safeHttpUrl(company.website)}
                     target="_blank"
                     rel="noreferrer noopener"
                     title="Company site"
@@ -519,7 +520,7 @@ export function CompaniesPage() {
             />
           </label>
           {!adding && (
-            <Button type="button" size="sm" className={TOOL_CHIP} onClick={() => setAdding(true)}>
+            <Button type="button" size="sm" variant="secondary" className={TOOL_CHIP} onClick={() => setAdding(true)}>
               <Plus aria-hidden />
               Add a company
             </Button>
