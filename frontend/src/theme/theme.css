@@ -23,7 +23,8 @@
   --ht-accent-tint: rgb(169 156 230 / 0.12);
   /* Violet to sky blue: the one blend, for the primary and Mikasa buttons only (Ravi,
      2026-11-26). The ink keeps 7:1 or better on both ends. */
-  --ht-accent-gradient: linear-gradient(135deg, #c2a8f8 0%, #82aef7 100%);
+  --ht-accent-gradient-end: #82aef7;
+  --ht-accent-gradient: linear-gradient(135deg, #c2a8f8 0%, var(--ht-accent-gradient-end) 100%);
   --ht-accent-gradient-hover: linear-gradient(135deg, #d0bbfa 0%, #9dc0fa 100%);
 
   /* Stage colours (the signature; theme/stages.ts names them) */
@@ -909,9 +910,50 @@ body {
 .ht-mikasa-dock:hover .ht-mikasa-float {
   animation: ht-mikasa-tilt 600ms var(--ht-ease) 1;
 }
+/* Her greeting: the bubble springs out of her face (bottom right), a small tail points at her, and
+   it fades down and away when dismissed; she hops once as she starts to speak. */
+@keyframes ht-greeting-in {
+  0% { opacity: 0; transform: translate(10px, 14px) scale(0.6); }
+  60% { opacity: 1; transform: translate(0, -3px) scale(1.04); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes ht-greeting-out {
+  to { opacity: 0; transform: translate(6px, 10px) scale(0.92); }
+}
+@keyframes ht-mikasa-hop {
+  0%, 100% { transform: translateY(0); }
+  35% { transform: translateY(-9px) rotate(-4deg); }
+  60% { transform: translateY(0) rotate(0); }
+  78% { transform: translateY(-3px); }
+}
+.ht-greeting {
+  transform-origin: calc(100% - 1.5rem) calc(100% + 0.5rem);
+}
+.ht-greeting::after {
+  content: '';
+  position: absolute;
+  right: 1.75rem;
+  bottom: -0.375rem;
+  width: 0.75rem;
+  height: 0.75rem;
+  background: var(--ht-accent-gradient-end);
+  transform: rotate(45deg);
+}
+.ht-greeting-in {
+  animation: ht-greeting-in 420ms var(--ht-ease) both;
+}
+.ht-greeting-out {
+  animation: ht-greeting-out 180ms ease-in both;
+}
+.ht-mikasa-float.ht-mikasa-hop {
+  animation: ht-mikasa-hop 700ms var(--ht-ease) 1;
+}
 @media (prefers-reduced-motion: reduce) {
   .ht-mikasa-float,
-  .ht-mikasa-dock:hover .ht-mikasa-float {
+  .ht-mikasa-dock:hover .ht-mikasa-float,
+  .ht-mikasa-float.ht-mikasa-hop,
+  .ht-greeting-in,
+  .ht-greeting-out {
     animation: none;
   }
 }

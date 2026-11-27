@@ -52,8 +52,8 @@ Headings use `--ht-text`; hierarchy comes from size, not from a brighter white.
 | `--ht-accent-ink` | `#16121f` | text on an accent fill (7.5:1) |
 | `--ht-accent-tint` | `rgb(169 156 230 / 0.12)` | selected row, active nav item background |
 
-Lavender is flat except in two places (Ravi, 2026-11-26): the primary button and the Mikasa button
-fill with `--ht-accent-gradient` (135deg, `#c2a8f8` to `#82aef7`; hover `#d0bbfa` to `#9dc0fa`;
+Lavender is flat except in two places (Ravi, 2026-11-26): the primary button, the Mikasa button (open)
+and her greeting bubble fill with `--ht-accent-gradient` (135deg, `#c2a8f8` to `#82aef7`; hover `#d0bbfa` to `#9dc0fa`;
 `--ht-accent-ink` text stays 7:1 or better), and each chart slice is a soft gradient of its own colour
 (the colour to 65% of itself mixed with white). No other gradient, no gradient text, no glow, no
 coloured shadow. Orange is retired.
@@ -136,7 +136,10 @@ always carry text, never colour alone.
   of the mark stays (reduced motion respected). No gradient, no drop-shadow glow.
 - **Mikasa button:** `--ht-accent-gradient` circle with `--ht-accent-ink` icon; hover steps to
   `--ht-accent-gradient-hover`, press scales to 0.96. Pages reserve bottom padding so it never covers a row action.
-- **Mikasa avatar:** flat accent disc, no gradient.
+- **Mikasa avatar and button:** her cut-out face (local art, `frontend/public/local/`, gitignored),
+  floating gently and tilting on hover; without the file, a flat accent disc with a spark. Her
+  greeting bubble (no buttons) springs out of the face once per visit, types for a moment, opens the
+  chat on a click and fades away by itself; all motion stops for reduced motion.
 
 ## Data display
 

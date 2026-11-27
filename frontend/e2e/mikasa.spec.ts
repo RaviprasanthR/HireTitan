@@ -106,7 +106,8 @@ test('SC001_mikasa_journey', async ({ page, request }) => {
   await panel.getByRole('button', { name: 'Ask something else' }).click()
   const message = 'I applied to https://jobs.example.com/acme/e2e-1, Backend Engineer at Acme'
   await ask(page, message)
-  const notice = panel.getByRole('status').filter({ hasText: 'marked it applied' })
+  // the streamed reply and its saved copy can both show the notice for a moment, as below
+  const notice = panel.getByRole('status').filter({ hasText: 'marked it applied' }).last()
   await expect(notice).toBeVisible({ timeout: 30_000 })
   await expect.poll(async () => (await jobs(request, 'pipeline')).length).toBe(1)
 

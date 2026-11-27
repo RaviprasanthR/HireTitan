@@ -139,12 +139,12 @@ describe('Shell', () => {
   it('test_US3_AS6_dock_is_flat', async () => {
     renderAt('/')
     const dock = await screen.findByRole('button', { name: 'Mikasa' })
-    // a flat accent circle: no shadow, the hover steps the colour, the press scales to 0.96
-    expect(dock).toHaveClass('bg-primary', 'text-primary-foreground', 'active:scale-[0.96]')
-    expect(dock.className).toMatch(/hover:bg-\[var\(--ht-accent-hover\)\]/)
-    expect(dock.className).not.toMatch(/shadow/)
-    // the one blend it may carry is the accent gradient token (Ravi, 2026-11-26)
-    expect(dock).toHaveClass('ht-gradient-fill')
+    // closed, the button is her cut-out face alone (Ravi, 2026-11-26): no circle, no fill
+    expect(dock).toHaveClass('active:scale-[0.96]')
+    expect(dock.className).not.toMatch(/shadow|bg-primary|ht-gradient-fill/)
+    // open, it is the round accent-gradient button with the close cross
+    fireEvent.click(dock)
+    expect(dock).toHaveClass('ht-gradient-fill', 'bg-primary', 'rounded-full')
   })
 
   it('the dock shows Mikasa, floating gently, still for reduced motion', async () => {

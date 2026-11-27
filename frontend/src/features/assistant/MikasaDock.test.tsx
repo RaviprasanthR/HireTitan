@@ -2,7 +2,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { GREETING_DELAY_MS, MikasaDock } from './MikasaDock'
+import { GREETING_DELAY_MS, GREETING_SHOW_MS, GREETING_TYPING_MS, MikasaDock } from './MikasaDock'
+
+const greet = () => act(() => vi.advanceTimersByTime(GREETING_DELAY_MS))
+const typed = () => act(() => vi.advanceTimersByTime(GREETING_TYPING_MS))
 
 function show() {
   vi.stubGlobal(
@@ -31,24 +34,37 @@ describe('MikasaDock greeting', () => {
   it('asks if you need help a moment after the page opens, without taking the focus', () => {
     show()
     expect(screen.queryByRole('status', { name: 'Mikasa says' })).toBeNull()
-    act(() => vi.advanceTimersByTime(GREETING_DELAY_MS))
+    greet()
     const bubble = screen.getByRole('status', { name: 'Mikasa says' })
+    // she types for a moment first, hopping to catch the eye, then the words arrive
+    expect(bubble.querySelector('.mikasa-dot')).not.toBeNull()
+    expect(bubble).not.toHaveTextContent('Need a hand')
+    expect(document.querySelector('.ht-mikasa-hop')).not.toBeNull()
+    typed()
     expect(bubble).toHaveTextContent('Need a hand with your job search?')
+    expect(bubble).toHaveClass('ht-greeting-in')
+    // no buttons (Ravi, 2026-11-26), in the contrasting Mikasa fill
+    expect(bubble.querySelector('button')).toBeNull()
+    expect(bubble).toHaveClass('ht-gradient-fill', 'text-primary-foreground')
     expect(document.activeElement).toBe(document.body)
   })
 
-  it('Yes opens the chat and the bubble goes', () => {
+  it('a click on the bubble opens the chat and the bubble goes', () => {
     show()
-    act(() => vi.advanceTimersByTime(GREETING_DELAY_MS))
-    fireEvent.click(screen.getByRole('button', { name: 'Yes, help me' }))
+    greet()
+    typed()
+    fireEvent.click(screen.getByRole('status', { name: 'Mikasa says' }))
     expect(screen.getByRole('complementary', { name: 'Mikasa' })).toBeInTheDocument()
     expect(screen.queryByRole('status', { name: 'Mikasa says' })).toBeNull()
   })
 
-  it('a dismissed greeting stays away for the rest of the visit', () => {
+  it('left alone, the bubble fades out by itself and stays away for the rest of the visit', () => {
     show()
-    act(() => vi.advanceTimersByTime(GREETING_DELAY_MS))
-    fireEvent.click(screen.getByRole('button', { name: 'Not now' }))
+    greet()
+    typed()
+    act(() => vi.advanceTimersByTime(GREETING_SHOW_MS))
+    expect(screen.getByRole('status', { name: 'Mikasa says' })).toHaveClass('ht-greeting-out')
+    act(() => vi.advanceTimersByTime(300))
     expect(screen.queryByRole('status', { name: 'Mikasa says' })).toBeNull()
     expect(sessionStorage.getItem('ht-mikasa-greeted')).toBe('1')
   })

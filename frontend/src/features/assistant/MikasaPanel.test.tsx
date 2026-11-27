@@ -165,9 +165,10 @@ describe('MikasaPanel', () => {
   it('test_US3_AS6_avatar_is_flat', async () => {
     show()
     const panel = screen.getByRole('complementary', { name: 'Mikasa' })
-    const avatar = panel.querySelector('header [aria-hidden].rounded-full') as HTMLElement
-    expect(avatar).toHaveClass('bg-primary')
-    expect(avatar.className).not.toMatch(/gradient|shadow/)
+    // her cut-out face as it is (Ravi, 2026-11-26): no circle, no gradient, no shadow
+    const face = panel.querySelector('header img') as HTMLImageElement
+    expect(face).toHaveClass('object-contain')
+    expect((face.parentElement as HTMLElement).className).not.toMatch(/rounded-full|gradient|shadow/)
     // the panel: one neutral shadow from the tokens, not a border plus a soft shadow
     expect(panel).toHaveClass('shadow-[var(--ht-shadow-overlay)]')
     expect(panel.className).not.toMatch(/(^|\s)border(\s|$)|shadow-2xl|shadow-black/)

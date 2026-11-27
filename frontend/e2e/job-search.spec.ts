@@ -234,7 +234,10 @@ test('SC002_job_search_journey', async ({ page, request }) => {
   const resumeChoice = page.getByRole('combobox', { name: /^Resume used/ }).first()
   await expect(resumeChoice).toBeVisible()
   await resumeChoice.selectOption(stored[0].id)
-  await page.locator('section.ht-section-record').getByRole('button', { name: 'I applied' }).click()
+  await page
+    .locator('section.ht-detail-card', { has: page.getByRole('heading', { name: 'Record it' }) })
+    .getByRole('button', { name: 'I applied' })
+    .click()
   await expect.poll(async () => (await exploreJobs(request)).length).toBe(1)
   await page.getByRole('link', { name: 'In pipeline' }).click()
   const withResume = page.getByRole('row').filter({ hasText: fileName })

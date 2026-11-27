@@ -73,7 +73,9 @@ test('SC001_journey_completes', async ({ page, request }) => {
   await expect(page).toHaveURL(/\/profile\/preferences$/)
 
   // A9/A10: a newer resume opens a review with its changes.
+  // the confirmed profile is shown first; the upload area waits behind its button (003 US4)
   await page.goto('/profile')
+  await page.getByRole('button', { name: 'Update from a new resume' }).click()
   await page.locator('input[type="file"]').setInputFiles(resumes('synthetic-mid-2page-v2.docx'))
   await page.getByRole('link', { name: 'Review your profile' }).click()
   await expect(page.getByLabel('Job title 1')).toHaveValue('Staff Software Engineer')
