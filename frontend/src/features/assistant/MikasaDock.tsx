@@ -23,6 +23,8 @@ const stillMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)'
  * Closed, it is her cut-out face; open, a round button with the close cross. Ctrl+/ (or Cmd+/)
  * toggles it; Escape closes it. A moment after a page opens she offers help once per visit.
  */
+const GREETING_TEXT = 'Hi, I’m Mikasa. Need a hand with your job search?'
+
 export function MikasaDock() {
   const [open, setOpen] = useState(false)
   const [greeting, setGreeting] = useState<Greeting>('hidden')
@@ -79,13 +81,17 @@ export function MikasaDock() {
   const toggle = () => setOpen((was) => !was)
   return (
     <>
+      {/* always mounted, so the text is announced when it arrives; the bubble itself is for the eye */}
+      <p role="status" className="sr-only">
+        {greeting === 'shown' && !open ? GREETING_TEXT : ''}
+      </p>
       {open && <MikasaPanel onClose={() => setOpen(false)} />}
       {greeting !== 'hidden' && !open && (
         // no buttons (Ravi, 2026-11-26): a click on it opens the chat (the Mikasa button does the
         // same for the keyboard), and it fades away by itself
         <div
-          role="status"
-          aria-label="Mikasa says"
+          aria-hidden
+          data-testid="mikasa-greeting"
           onClick={() => {
             dismiss()
             setOpen(true)
@@ -101,7 +107,7 @@ export function MikasaDock() {
               <TypingDots />
             </span>
           ) : (
-            <p className="mikasa-rise">Hi, I’m Mikasa. Need a hand with your job search?</p>
+            <p className="mikasa-rise">{GREETING_TEXT}</p>
           )}
         </div>
       )}

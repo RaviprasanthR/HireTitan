@@ -60,7 +60,7 @@ export function FlowChart({
                     {step.title}
                   </span>
                   <span className="ht-figure ht-flow-value text-xl leading-tight @3xl:mt-1 @3xl:block @3xl:text-2xl">
-                    {step.value}
+                    <Figure text={step.value} />
                   </span>
                   {step.note && (
                   <span className="block basis-full text-xs text-muted-small">{step.note}</span>
@@ -79,4 +79,17 @@ export function FlowChart({
 /** A flow chart and what goes with it, side by side on a wide screen, stacked otherwise. */
 export function ChartRow({ children }: { children: React.ReactNode }) {
   return <div className="grid items-stretch gap-4">{children}</div>
+}
+
+/** Mono only on the leading number: "0 left out" keeps its words in the body font. */
+function Figure({ text }: { text: string }) {
+  const m = /^(\d+)(.*)$/.exec(text)
+  return m ? (
+    <>
+      <span className="ht-figure">{m[1]}</span>
+      {m[2]}
+    </>
+  ) : (
+    <>{text}</>
+  )
 }

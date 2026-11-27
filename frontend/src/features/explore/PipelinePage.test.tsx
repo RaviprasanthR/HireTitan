@@ -93,7 +93,10 @@ describe('PipelinePage', () => {
     // the stages as a donut in their own colours (clarification 2026-11-26), no stage bar
     const donut = within(overview).getByRole('img', { name: /3 inquired, 2 applied/ })
     expect(donut.querySelectorAll('[data-part]')).toHaveLength(5)
-    expect(within(overview).getByTestId('donut-centre')).toHaveTextContent('9jobs in pipeline')
+    // the total sits beside the flow, so the ring's centre stays quiet until a slice is hovered
+    expect(
+      within(overview).getByTestId('donut-centre').querySelector('.ht-donut-readout'),
+    ).not.toBeVisible()
     expect(overview.querySelector('[data-segment]')).toBeNull()
     // sized to fit the column without scrolling: a small ring with its legend beside it
     expect(donut).toHaveAttribute('width', '112')
