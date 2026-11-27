@@ -10,13 +10,6 @@ from hiretitan.actions.catalogue import EXCLUDED, EXCLUDED_NAMES
 from hiretitan.actions.registry import build_catalogue
 
 OPENAPI = Path(__file__).resolve().parents[3] / "openapi.json"
-# The drafts and tailored resume actions arrive with T032 (US3).
-PENDING_T032 = {
-    "POST /jobs/{job_id}/drafts",
-    "DELETE /drafts/{draft_id}",
-    "POST /jobs/{job_id}/tailored-resume",
-    "DELETE /jobs/{job_id}/tailored-resume",
-}
 
 
 def _change_endpoints() -> set[str]:
@@ -32,7 +25,7 @@ def _change_endpoints() -> set[str]:
 
 def test_FR005_every_ui_endpoint_is_mapped_or_excluded() -> None:
     mirrored = {m for spec in build_catalogue().specs() for m in spec.mirrors}
-    missing = _change_endpoints() - mirrored - set(EXCLUDED) - PENDING_T032
+    missing = _change_endpoints() - mirrored - set(EXCLUDED)
     assert missing == set()
 
 
@@ -63,4 +56,8 @@ def test_US3_AS3_send_has_no_action() -> None:
     for spec in build_catalogue().specs():
         handler_name = getattr(spec.handler, "__name__", "")
         for name in (spec.name, handler_name):
-            assert banned.isdisjoint(name.split("_")), name
+            words = name.split("_")
+            # "draft_referral_message" writes text for the person to send themselves; any other
+            # name with one of these words could be a send
+            allowed = {"message"} if words[0] == "draft" else set()
+            assert (banned - allowed).isdisjoint(words), name

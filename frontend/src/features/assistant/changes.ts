@@ -22,11 +22,12 @@ export function useAssistantChanges(conversationId: string | null) {
   }
   return {
     confirm: async (cardId: string, edits: CardEdit[]) => {
-      const done = await apiFetch<{ results: { invalidate?: string[][] }[] }>(
+      const done = await apiFetch<{ results: { invalidate?: string[][]; refs?: string[] }[] }>(
         `/assistant/cards/${cardId}/confirm`,
         { method: 'POST', json: { items: edits } },
       )
       await refresh(done.results.flatMap((result) => result.invalidate ?? []))
+      return done.results.flatMap((result) => result.refs ?? [])
     },
     cancel: async (cardId: string) => {
       await apiFetch(`/assistant/cards/${cardId}/cancel`, { method: 'POST' })

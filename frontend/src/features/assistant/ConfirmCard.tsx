@@ -4,10 +4,11 @@ import { ApiError } from '@/api/client'
 import { Button } from '@/components/ui/button'
 import type { CardData } from './stream'
 import type { CardEdit } from './changes'
+import { RefCard } from './RefCard'
 
 type Props = {
   card: CardData
-  onConfirm: (cardId: string, edits: CardEdit[]) => Promise<void>
+  onConfirm: (cardId: string, edits: CardEdit[]) => Promise<unknown>
   onCancel: (cardId: string) => Promise<void>
 }
 
@@ -25,6 +26,10 @@ export function ConfirmCard({ card, onConfirm, onCancel }: Props) {
   )
   const [state, setState] = useState(card.state ?? 'proposed')
   const [busy, setBusy] = useState(false)
+  // what a confirmed card made (a draft, a tailored resume), shown below it as a card
+  const [made, setMade] = useState<string[]>(
+    () => card.result?.flatMap((r) => r.refs ?? []) ?? [],
+  )
   const [problem, setProblem] = useState<string | null>(null)
   const [shownAt] = useState(() => Date.now()) // the server checks expiry again on confirm
   const open = state === 'proposed' && new Date(card.expires_at).getTime() > shownAt
@@ -38,7 +43,9 @@ export function ConfirmCard({ card, onConfirm, onCancel }: Props) {
           const args = Object.fromEntries(item.editable.map((key) => [key, values[index]?.[key]]))
           return item.editable.length ? [{ index, args }] : []
         })
-        await onConfirm(card.card_id, edits)
+        const refs = await onConfirm(card.card_id, edits)
+        // a confirm that made something answers with its refs
+        if (Array.isArray(refs)) setMade(refs as string[])
         setState('applied')
       } else {
         await onCancel(card.card_id)
@@ -105,6 +112,7 @@ export function ConfirmCard({ card, onConfirm, onCancel }: Props) {
       ) : (
         <p className="mt-1 text-xs text-muted-small">{DONE[state] ?? DONE.expired}</p>
       )}
+      {state === 'applied' && made.map((ref) => <RefCard key={ref} refText={ref} />)}
       {problem && (
         <p role="alert" className="mt-1 text-xs text-danger">
           {problem}

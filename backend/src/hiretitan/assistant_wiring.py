@@ -64,10 +64,19 @@ from hiretitan.assistant.domain.fingerprints import fingerprint
 from hiretitan.assistant.infra.models import CARD_ITEMS_MAX
 from hiretitan.assistant.infra.repos import CardsRepo, ChangesRepo, MessagesRepo, NewChange
 from hiretitan.assistant.infra.turn_store import SqlTurnStore
+from hiretitan.drafts.api.drafts import DraftIn, DraftsApiDeps, RecipientIn, start_draft
+from hiretitan.drafts.api.resumes import start_tailor
 from hiretitan.drafts.domain.checks import TechTerms, check_text
 from hiretitan.drafts.domain.facts import drafting_facts, years_of_experience
+from hiretitan.drafts.domain.recipient import HIRING_TEAM
 from hiretitan.drafts.domain.selection import allowed_names
-from hiretitan.drafts_wiring import SqlProfileFacts, clear_drafts_for_job
+from hiretitan.drafts.infra.repos import TailoredRepo
+from hiretitan.drafts_wiring import (
+    SqlContacts,
+    SqlJobs,
+    SqlProfileFacts,
+    clear_drafts_for_job,
+)
 from hiretitan.mail_wiring import SqlCheckRuns
 from hiretitan.platform.clock import SystemClock
 from hiretitan.platform.config.settings import Settings
@@ -88,6 +97,7 @@ from hiretitan.platform.llm.prompts import PromptRegistry
 from hiretitan.platform.llm.provider_status import Publish
 from hiretitan.platform.untrusted.delimit import delimit
 from hiretitan.platform.untrusted.sanitize import sanitize
+from hiretitan.platform.web.problems import ProblemError
 from hiretitan.search.application.paste import PasteError, PasteInput, paste_job
 from hiretitan.search.application.rules import RulesService
 from hiretitan.search.application.search import start_search
@@ -388,6 +398,7 @@ class SqlCardUnit:
                 "summary": result.summary,
                 "change_id": str(record.id),
                 "undoable": spec.undo is not None,
+                "refs": list(result.refs),
                 "invalidate": [[key] for key in spec.invalidate],
             }
         )
@@ -762,6 +773,7 @@ def action_services(
     synonyms: Mapping[str, tuple[str, ...]],
     work_areas: Any,
     careers: Any,
+    provider: str = "openai",
 ) -> ActionServices:
     """The services some actions need, made from the same objects the routes use (FR-006)."""
 
@@ -786,9 +798,52 @@ def action_services(
         started = await runs.start(trigger="button", now=now, reread=reread)
         return started.search_run_id
 
+    drafts = DraftsApiDeps(
+        sessions=sessions,
+        queue=queue,
+        jobs=SqlJobs(sessions),
+        profile=SqlProfileFacts(sessions),
+        contacts=SqlContacts(sessions),
+        provider=provider,
+    )
+
+    def refused(error: ProblemError) -> ActionRefusedError:
+        return ActionRefusedError(str(error.extra.get("reason", "refused")), error.detail)
+
+    async def write_draft(
+        job_id: UUID, kind: str, contact: UUID | None, name: str | None, role: str | None
+    ) -> UUID:
+        body = DraftIn.model_validate(
+            {
+                "kind": kind,
+                "recipient": RecipientIn(
+                    contact_id=contact, name=None if contact else (name or HIRING_TEAM), role=role
+                ),
+                "recipient_kind": "hiring_manager" if contact is None and not name else None,
+                "regenerate": True,
+            }
+        )
+        try:
+            started = await start_draft(drafts, job_id, body)
+        except ProblemError as error:
+            raise refused(error) from error
+        return started.id
+
+    async def tailor(job_id: UUID) -> UUID:
+        try:
+            await start_tailor(drafts, job_id, True)
+        except ProblemError as error:
+            raise refused(error) from error
+        async with sessions() as session:
+            row = await TailoredRepo(session).get_for_job(job_id)
+        assert row is not None  # start_tailor just wrote it
+        return row.id
+
     return ActionServices(
         queue=queue,
         job_cleanups=(clear_drafts_for_job,),
+        start_draft=write_draft,
+        start_tailor=tailor,
         start_search=start,
         start_mail_check=check_mail,
         careers=careers,
