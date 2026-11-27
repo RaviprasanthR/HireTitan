@@ -1,6 +1,8 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { MemoryRouter } from 'react-router'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '@/api/client'
 import { ChangeNotice } from './ChangeNotice'
 import { ConfirmCard } from './ConfirmCard'
@@ -103,5 +105,95 @@ describe('ChangeNotice', () => {
     )
     await user.click(screen.getByRole('button', { name: 'Undo' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('This item changed after that.')
+  })
+})
+
+describe('ConfirmCard: what a confirmed card made (US3)', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  const reply = (body: Record<string, unknown>) =>
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify(body), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          }),
+      ),
+    )
+
+  const wrap = (node: React.ReactNode) => (
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <MemoryRouter>{node}</MemoryRouter>
+    </QueryClientProvider>
+  )
+
+  it('US3_AS1_draft_card_links_to_job', async () => {
+    reply({
+      ref: 'draft:d1',
+      kind: 'draft',
+      title: 'LinkedIn connection message',
+      subtitle: 'For Hiring team',
+      lines: [],
+      link: '/jobs/j1',
+    })
+    const user = userEvent.setup()
+    render(
+      wrap(<ConfirmCard card={card} onConfirm={async () => ['draft:d1']} onCancel={vi.fn()} />),
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Confirm' }))
+
+    expect(await screen.findByText('LinkedIn connection message')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Open the job' })).toHaveAttribute('href', '/jobs/j1')
+  })
+
+  it('US3_AS2_resume_card_links_to_preview', async () => {
+    reply({
+      ref: 'tailored_resume:r1',
+      kind: 'tailored_resume',
+      title: 'Tailored resume',
+      subtitle: 'Backend Engineer at Acme',
+      lines: [],
+      link: '/jobs/j1/resume',
+    })
+    const user = userEvent.setup()
+    render(
+      wrap(
+        <ConfirmCard
+          card={card}
+          onConfirm={async () => ['tailored_resume:r1']}
+          onCancel={vi.fn()}
+        />,
+      ),
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Confirm' }))
+
+    const link = await screen.findByRole('link', { name: /Tailored resume/ })
+    expect(link).toHaveAttribute('href', '/jobs/j1/resume')
+  })
+
+  it('US3_a_reloaded_card_shows_what_it_made', async () => {
+    reply({
+      ref: 'draft:d1',
+      kind: 'draft',
+      title: 'Email',
+      subtitle: 'For Dana',
+      lines: ['Hi Dana'],
+      link: '/jobs/j1',
+    })
+    render(
+      wrap(
+        <ConfirmCard
+          card={{ ...card, state: 'applied', result: [{ refs: ['draft:d1'] }] }}
+          onConfirm={vi.fn()}
+          onCancel={vi.fn()}
+        />,
+      ),
+    )
+
+    expect(await screen.findByText('Hi Dana')).toBeInTheDocument()
   })
 })

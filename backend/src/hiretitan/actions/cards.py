@@ -14,7 +14,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from hiretitan.actions.refs import Ref
-from hiretitan.drafts.infra.models import OutreachDraftRow
+from hiretitan.drafts.infra.models import OutreachDraftRow, TailoredResumeRow
 from hiretitan.profile.infra.repos import ResumeFilesRepo
 from hiretitan.search.infra.interviews_repo import InterviewsRepo
 from hiretitan.search.infra.models import (
@@ -128,6 +128,27 @@ async def describe(session: AsyncSession, text: str) -> RefCard | None:
                 f"/jobs/{draft.job_id}",
             )
         return RefCard(key, "draft", title, who, [draft.text or ""], f"/jobs/{draft.job_id}")
+    if ref.kind == "tailored_resume":
+        resume = await session.get(TailoredResumeRow, ref.id)
+        if resume is None:
+            return None
+        job = await session.get(JobRow, resume.job_id)
+        who = f"{job.title} at {job.company_name}" if job else "a job"
+        link = f"/jobs/{resume.job_id}/resume"
+        if resume.status == "writing":
+            return RefCard(key, "tailored_resume", "Tailored resume", f"{who} · writing…", [], link)
+        if resume.status == "failed":
+            reason = resume.failure_reason or "You can tailor it again from the job's page."
+            return RefCard(
+                key,
+                "tailored_resume",
+                "Tailored resume",
+                f"{who} · could not be made",
+                [reason],
+                link,
+            )
+        made = _day(resume.updated_at)
+        return RefCard(key, "tailored_resume", "Tailored resume", f"{who} · {made}", [], link)
     if ref.kind == "search_run":
         run = await session.get(SearchRunRow, ref.id)
         if run is None:

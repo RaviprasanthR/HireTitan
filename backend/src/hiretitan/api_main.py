@@ -365,6 +365,7 @@ def build_app(settings: Settings | None = None) -> FastAPI:
                 synonyms=synonyms,
                 work_areas=seed_tables.work_areas,
                 careers=build_career_ops(settings),
+                provider=provider,
             ),
         ),
         create_data_router(

@@ -50,6 +50,13 @@ class ActionServices:
     careers: Any = None
     # session -> the RulesService the Search rules page uses (its synonyms and work areas)
     rules_service: Callable[[AsyncSession], Any] | None = None
+    # (job, draft kind, contact, typed name, typed role) -> the draft's id, through the drafts
+    # use case the job page uses; raises ActionRefusedError (no profile, no key, in progress)
+    start_draft: (
+        Callable[[UUID, str, UUID | None, str | None, str | None], Awaitable[UUID]] | None
+    ) = None
+    # job -> the tailored resume's id, through the use case of the job page's Tailor button
+    start_tailor: Callable[[UUID], Awaitable[UUID]] | None = None
 
 
 @dataclass(frozen=True, slots=True)

@@ -6,6 +6,7 @@ from hiretitan.actions import (
     companies,
     company_changes,
     contacts,
+    drafts,
     interview_changes,
     interviews,
     job_changes,
@@ -30,6 +31,7 @@ def build_catalogue() -> Catalogue:
         *companies.READS,
         *contacts.READS,
         *interviews.READS,
+        *drafts.READS,
         *profile.READS,
         *settings.READS,
         *job_changes.CHANGES,
@@ -38,6 +40,7 @@ def build_catalogue() -> Catalogue:
         *risky_jobs.CHANGES,
         *risky_companies.CHANGES,
         *risky_profile.CHANGES,
+        *drafts.CHANGES,
     ):
         catalogue.register(spec)
     return catalogue

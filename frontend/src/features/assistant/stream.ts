@@ -30,6 +30,8 @@ export type CardData = {
   items: { action: string; args: Record<string, unknown>; editable: string[] }[]
   expires_at: string
   state?: string
+  // what the confirmed card made (refs), kept so a reload shows it again
+  result?: { refs?: string[] }[] | null
 }
 
 const KNOWN = new Set(['text', 'ref', 'notice', 'error', 'done', 'change', 'card'])

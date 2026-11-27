@@ -92,6 +92,48 @@ def safe_filename(*parts: str) -> str:
     return (cleaned or "resume")[:100]
 
 
+async def start_tailor(
+    deps: DraftsApiDeps, job_id: UUID, regenerate: bool = False
+) -> TailorStarted | TailoredResumeRow:
+    """Start tailoring the resume for a job (or return the ready one when not asked to redo it).
+
+    Shared by the endpoint and Mikasa's actions (002m). Raises ``ProblemError``.
+    """
+    job = await deps.jobs.get(job_id)
+    if job is None:
+        raise ProblemError(404, "That job was not found.")
+    profile = await deps.profile.current()
+    async with deps.sessions() as session:
+        repo = TailoredRepo(session)
+        await lock_job_drafts(session, job_id)
+        current = await repo.get_for_job(job_id)
+        if current is not None and current.status == "writing":
+            raise ProblemError(
+                409, "This resume is still being written.", reason="resume_in_progress"
+            )
+        if current is not None and current.status == "ready" and not regenerate:
+            return current
+        if len(job.description.strip()) < DESCRIPTION_MIN:
+            raise ProblemError(
+                409,
+                "This job has no description yet. Add it, then tailor the resume.",
+                reason="no_description",
+            )
+        if profile is None:
+            raise ProblemError(
+                409,
+                "Finish your profile first, then tailor a resume.",
+                reason="no_confirmed_profile",
+            )
+        await require_ai(session, deps.provider)
+        await repo.start_writing(job_id)
+        run = await RunsRepo(session).create(TAILOR_WORKFLOW, subject_id=job_id)
+        await repo.set_run(job_id, run.id)
+        await session.commit()
+    await deps.queue.enqueue(run.id)
+    return TailorStarted(job_id=job_id, status="writing")
+
+
 def create_resumes_router(deps: DraftsApiDeps) -> APIRouter:
     router = APIRouter(tags=["tailored-resumes"])
 
@@ -135,40 +177,12 @@ def create_resumes_router(deps: DraftsApiDeps) -> APIRouter:
 
     @router.post("/jobs/{job_id}/tailored-resume", response_model=None, status_code=202)
     async def start_resume(job_id: UUID, body: TailorIn, response: Response) -> Any:
-        job = await deps.jobs.get(job_id)
-        if job is None:
-            raise ProblemError(404, "That job was not found.")
-        profile = await deps.profile.current()
+        started = await start_tailor(deps, job_id, body.regenerate)
+        if isinstance(started, TailorStarted):
+            return started
+        response.status_code = 200
         async with deps.sessions() as session:
-            repo = TailoredRepo(session)
-            await lock_job_drafts(session, job_id)
-            current = await repo.get_for_job(job_id)
-            if current is not None and current.status == "writing":
-                raise ProblemError(
-                    409, "This resume is still being written.", reason="resume_in_progress"
-                )
-            if current is not None and current.status == "ready" and not body.regenerate:
-                response.status_code = 200
-                return await row_out(session, current, job_id)
-            if len(job.description.strip()) < DESCRIPTION_MIN:
-                raise ProblemError(
-                    409,
-                    "This job has no description yet. Add it, then tailor the resume.",
-                    reason="no_description",
-                )
-            if profile is None:
-                raise ProblemError(
-                    409,
-                    "Finish your profile first, then tailor a resume.",
-                    reason="no_confirmed_profile",
-                )
-            await require_ai(session, deps.provider)
-            await repo.start_writing(job_id)
-            run = await RunsRepo(session).create(TAILOR_WORKFLOW, subject_id=job_id)
-            await repo.set_run(job_id, run.id)
-            await session.commit()
-        await deps.queue.enqueue(run.id)
-        return TailorStarted(job_id=job_id, status="writing")
+            return await row_out(session, started, job_id)
 
     @router.put("/jobs/{job_id}/tailored-resume", response_model=TailoredOut)
     async def save_resume(job_id: UUID, body: DocumentIn) -> TailoredOut:
