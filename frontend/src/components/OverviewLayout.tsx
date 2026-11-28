@@ -7,14 +7,16 @@
 export function OverviewLayout({
   label,
   overview,
+  overviewFirst = false,
   children,
 }: {
   label: string
   overview: React.ReactNode
+  overviewFirst?: boolean // below 1280px draw the overview above the list (DOM order is kept)
   children: React.ReactNode
 }) {
   return (
-    <div className="ht-overview-layout grid gap-4">
+    <div className={`ht-overview-layout grid gap-4${overviewFirst ? ' ht-overview-first' : ''}`}>
       <div className="ht-overview-main min-w-0 space-y-4">{children}</div>
       {overview != null && (
         <aside aria-label={label} className="ht-overview min-w-0 space-y-4">

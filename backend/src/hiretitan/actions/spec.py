@@ -169,10 +169,36 @@ class ActionSpec:
             raise InvalidActionSpecError(f"{self.name}: a read action changes nothing")
 
 
+def _lean(node: Any) -> Any:
+    """Drop what the model does not need from a JSON schema: titles, null defaults and the
+    ``anyOf [X, null]`` wrapper of an optional field (it is simply left out when not given)."""
+    if isinstance(node, list):
+        return [_lean(item) for item in node]
+    if not isinstance(node, dict):
+        return node
+    any_of = node.get("anyOf")
+    if isinstance(any_of, list) and len(any_of) == 2 and {"type": "null"} in any_of:
+        inner = next(item for item in any_of if item != {"type": "null"})
+        node = {**{k: v for k, v in node.items() if k != "anyOf"}, **inner}
+    out: dict[str, Any] = {}
+    for key, value in node.items():
+        if key == "default" and value is None:
+            continue
+        if key == "title" and isinstance(value, str):
+            continue
+        if key in ("properties", "$defs") and isinstance(value, dict):
+            out[key] = {name: _lean(sub) for name, sub in value.items()}
+        else:
+            out[key] = _lean(value)
+    return out
+
+
 def to_tool_spec(spec: ActionSpec) -> ToolSpec:
     """What the model is told about an action: its name, purpose and arguments, nothing more."""
     return ToolSpec(
-        name=spec.name, description=spec.description, parameters=spec.args.model_json_schema()
+        name=spec.name,
+        description=spec.description,
+        parameters=_lean(spec.args.model_json_schema()),
     )
 
 

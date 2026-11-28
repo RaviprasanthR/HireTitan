@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { Plus, X } from 'lucide-react'
+import { History, Plus, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router'
 import { ApiError } from '@/api/client'
@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import {
   assistantKeys,
   useAssistantStatus,
+  useClearConversations,
   useConversations,
   useMessages,
   useStaged,
@@ -18,6 +19,7 @@ import { ChangeNotice } from './ChangeNotice'
 import { useAssistantChanges } from './changes'
 import { Composer } from './Composer'
 import { ConfirmCard } from './ConfirmCard'
+import { ConversationList } from './ConversationList'
 import { PasteForm } from './PasteForm'
 import { MikasaAvatar } from './MikasaAvatar'
 import { QuickActions, StatusForm } from './QuickActions'
@@ -134,6 +136,8 @@ export function MikasaPanel({ onClose }: { onClose: () => void }) {
   const status = useAssistantStatus(true)
   const conversations = useConversations(true)
   const start = useStartConversation()
+  const clear = useClearConversations()
+  const [history, setHistory] = useState(false)
   const [chosenId, setConversationId] = useState<string | null>(savedConversation)
   // with no saved conversation, carry on with the most recent one
   const conversationId = chosenId ?? conversations.data?.[0]?.id ?? null
@@ -252,7 +256,28 @@ export function MikasaPanel({ onClose }: { onClose: () => void }) {
     await acts.staged.post(await ensureConversation(), text)
   }
 
+  function openConversation(id: string) {
+    abort.current?.abort()
+    setConversationId(id)
+    saveConversation(id)
+    setLive(null)
+    setHistory(false)
+  }
+
+  function clearAll() {
+    clear.mutate(undefined, {
+      onSuccess: () => {
+        abort.current?.abort()
+        setConversationId(null)
+        saveConversation(null)
+        setLive(null)
+        setHistory(false)
+      },
+    })
+  }
+
   function newConversation() {
+    setHistory(false)
     abort.current?.abort()
     setConversationId(null)
     saveConversation(null)
@@ -286,6 +311,16 @@ export function MikasaPanel({ onClose }: { onClose: () => void }) {
           <Button
             type="button"
             variant="ghost"
+            size="icon-sm"
+            aria-label="History"
+            aria-pressed={history}
+            onClick={() => setHistory((open) => !open)}
+          >
+            <History aria-hidden />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
             size="sm"
             onClick={newConversation}
             disabled={live !== null}
@@ -304,6 +339,15 @@ export function MikasaPanel({ onClose }: { onClose: () => void }) {
           </Button>
         </div>
       </header>
+      {history && (
+        <ConversationList
+          conversations={conversations.data ?? []}
+          openId={conversationId}
+          onOpen={openConversation}
+          onClearAll={clearAll}
+        />
+      )}
+      <div className={history ? 'hidden' : 'contents'}>
       <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-3" aria-busy={live !== null}>
         {/* one short announcement instead of every streamed word (WCAG 4.1.3) */}
         <p role="status" className="sr-only">
@@ -418,6 +462,9 @@ export function MikasaPanel({ onClose }: { onClose: () => void }) {
       {typing && (
         <Composer
           disabled={!available}
+          unavailable={
+            status.data ? (UNAVAILABLE[reason ?? ''] ?? 'Mikasa cannot answer right now.') : undefined
+          }
           streaming={live !== null}
           draft={draft}
           onDraftChange={setDraft}
@@ -425,6 +472,7 @@ export function MikasaPanel({ onClose }: { onClose: () => void }) {
           onStop={() => abort.current?.abort()}
         />
       )}
+      </div>
     </aside>
   )
 }

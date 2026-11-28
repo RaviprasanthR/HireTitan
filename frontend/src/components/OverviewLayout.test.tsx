@@ -26,6 +26,20 @@ describe('OverviewLayout', () => {
     expect(css).toMatch(/\.ht-overview:empty\s*\{\s*display: none/)
   })
 
+  it('overviewFirst draws the overview above the list on small screens, DOM order unchanged', () => {
+    render(
+      <OverviewLayout label="Pipeline overview" overview={<p>chart</p>} overviewFirst>
+        <table aria-label="Jobs" />
+      </OverviewLayout>,
+    )
+    const overview = screen.getByRole('complementary', { name: 'Pipeline overview' })
+    expect(overview.parentElement).toHaveClass('ht-overview-first')
+    const table = screen.getByRole('table', { name: 'Jobs' })
+    expect(table.compareDocumentPosition(overview) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    const css = readFileSync(resolve(process.cwd(), 'src/theme/theme.css'), 'utf8')
+    expect(css).toMatch(/\.ht-overview-first > \.ht-overview\s*\{\s*order: -1/)
+  })
+
   it('without an overview there is no overview landmark', () => {
     render(
       <OverviewLayout label="Pipeline overview" overview={null}>

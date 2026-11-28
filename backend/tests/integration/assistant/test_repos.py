@@ -347,13 +347,13 @@ async def test_FR027_conversation_delete_cascades(
         other = await _conversation(session)
         await session.commit()
 
-        await ConversationsRepo(session).remove(conv.id)
+        await ConversationsRepo(session).remove(conv.id, now=NOW)
         await session.commit()
         for model in (MessageRow, CardRow, ChangeRow):
             assert (await session.scalars(select(model))).all() == []
         assert [c.id for c in await ConversationsRepo(session).list_recent()] == [other.id]
 
-        await ConversationsRepo(session).clear()
+        await ConversationsRepo(session).clear(now=NOW)
         await session.commit()
         assert await ConversationsRepo(session).list_recent() == []
 

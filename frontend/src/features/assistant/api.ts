@@ -48,6 +48,14 @@ export function useStartConversation() {
   })
 }
 
+export function useClearConversations() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: () => apiFetch<undefined>('/assistant/conversations', { method: 'DELETE' }),
+    onSuccess: () => client.invalidateQueries({ queryKey: assistantKeys.conversations }),
+  })
+}
+
 /** The person's own view of an item Mikasa named; private details stay in the browser. */
 export function useRefCard(ref: string) {
   return useQuery({

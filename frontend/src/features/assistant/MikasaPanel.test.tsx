@@ -84,9 +84,13 @@ function stubApi() {
         quick.push({ url, body: JSON.parse(String(init.body)) })
         return json({ message_id: 'm9', draft_id: 'd1', text: 'Writing', refs: [] })
       }
+      if (url.includes('/assistant/conversations') && init.method === 'DELETE') {
+        deletes.push(url)
+        return new Response(null, { status: 204 })
+      }
       if (url.endsWith('/assistant/conversations') && init.method === 'POST')
         return json({ id: 'c1' }, 201)
-      if (url.endsWith('/assistant/conversations')) return json([])
+      if (url.endsWith('/assistant/conversations')) return json(convs)
       if (url.endsWith('/messages')) return json(stored)
       if (url.endsWith('/turns')) return turn(init)
       return json({}, 404)
@@ -116,6 +120,8 @@ const JOBS = [
   { id: 'j2', title: 'Data Engineer', company_name: 'Globex', state: 'applied' },
 ]
 let quick: { url: string; body: unknown }[] = []
+let convs: unknown[] = []
+let deletes: string[] = []
 let staged: { name: string; body: unknown }[] = []
 let stagedUrls: string[] = []
 let stagedNow: unknown = null
@@ -145,6 +151,8 @@ describe('MikasaPanel', () => {
     status = { available: true, reason: null, provider_message: null }
     stored = []
     quick = []
+    convs = []
+    deletes = []
     staged = []
     stagedUrls = []
     stagedNow = null
@@ -193,6 +201,53 @@ describe('MikasaPanel', () => {
     expect(screen.getByRole('link', { name: 'Open Settings' })).toHaveAttribute('href', '/settings')
     await userEvent.setup().click(screen.getByRole('button', { name: 'Ask something else' }))
     expect(screen.getByLabelText('Message to Mikasa')).toBeDisabled()
+  })
+
+  it('US4_AS2_composer_disabled_with_reason', async () => {
+    status = { available: false, reason: 'model_lacks_tools', provider_message: null }
+    show()
+    await userEvent.setup().click(await screen.findByRole('button', { name: 'Ask something else' }))
+    const box = screen.getByLabelText('Message to Mikasa')
+    expect(box).toBeDisabled()
+    const why = document.getElementById(box.getAttribute('aria-describedby') ?? '')
+    expect(why).toHaveTextContent('needs a model that can use tools')
+    expect(within(why as HTMLElement).getByRole('link', { name: 'Settings' })).toHaveAttribute(
+      'href',
+      '/settings',
+    )
+  })
+
+  it('US5_AS1_history_after_reload', async () => {
+    convs = [
+      { id: 'c2', title: 'Where is my search', last_used_at: '2026-11-28T10:00:00Z' },
+      { id: 'c1', title: null, last_used_at: '2026-11-27T10:00:00Z' },
+    ]
+    show()
+    const user = userEvent.setup()
+    await user.click(await screen.findByRole('button', { name: 'History' }))
+    // with nothing saved the most recent one is open; the list shows both, an untitled one by a name
+    const list = screen.getByRole('list', { name: 'Conversations' })
+    expect(within(list).getByRole('button', { name: 'Where is my search' })).toBeInTheDocument()
+    await user.click(within(list).getByRole('button', { name: 'Untitled conversation' }))
+    expect(localStorage.getItem(CONVERSATION_KEY)).toBe('c1')
+    expect(screen.queryByRole('list', { name: 'Conversations' })).not.toBeInTheDocument()
+  })
+
+  it('US5_AS2_new_and_clear', async () => {
+    convs = [{ id: 'c1', title: 'Hello', last_used_at: '2026-11-28T10:00:00Z' }]
+    localStorage.setItem(CONVERSATION_KEY, 'c1')
+    show()
+    const user = userEvent.setup()
+    await user.click(await screen.findByRole('button', { name: 'History' }))
+    await user.click(screen.getByRole('button', { name: 'Clear all' }))
+    // asks first; cancelling deletes nothing
+    expect(screen.getByText(/Delete all your conversations with Mikasa/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Keep them' }))
+    expect(deletes).toEqual([])
+    await user.click(screen.getByRole('button', { name: 'Clear all' }))
+    await user.click(screen.getByRole('button', { name: 'Yes, delete them' }))
+    await waitFor(() => expect(deletes).toEqual(['/api/v1/assistant/conversations']))
+    expect(localStorage.getItem(CONVERSATION_KEY)).not.toBe('c1')
   })
 
   it('US1_AS5_text_streams_and_stop', async () => {

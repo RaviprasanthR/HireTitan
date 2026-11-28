@@ -480,6 +480,50 @@ def _main_read_alert(
     return 0 if all(r.passes for r in reports) else 3
 
 
+def _main_mikasa(
+    args: argparse.Namespace,
+    specs: list[tuple[str, str]],
+    catalog: ModelCatalog,
+    llm_for: Callable[[str], LlmPort] | None,
+    today: Callable[[], str],
+) -> int:
+    """SC-002 to SC-006 and SC-011: Mikasa's turns over a synthetic world, no database."""
+    from evals.mikasa import cases as mikasa_cases
+    from evals.mikasa.runner import evaluate as evaluate_mikasa
+    from evals.mikasa.runner import render_report as render_mikasa
+
+    turns = sum(
+        len(group)
+        for group in (
+            mikasa_cases.ACTIONS,
+            mikasa_cases.PLANTED,
+            mikasa_cases.NO_DATA,
+            mikasa_cases.DECLINES,
+            mikasa_cases.OFF_TOPIC,
+            mikasa_cases.TYPED_INJECTIONS,
+        )
+    )
+    print(f"This run uses your AI credit (about {turns} chat turns per model, several calls each).")
+    if not args.yes:
+        print("Nothing was sent. Re-run with --yes to run the eval.")
+        return 2
+    build = llm_for or _real_llm_for(catalog)
+    try:
+        reports = [
+            asyncio.run(evaluate_mikasa(build(model), tier=label, model=model))  # type: ignore[arg-type]
+            for label, model in specs
+        ]
+    except AiUnavailable as exc:
+        print(f"Stopped: the AI is unavailable ({exc}). Check OPENAI_API_KEY in .env.")
+        print("No report was written.")
+        return 1
+    args.reports_dir.mkdir(parents=True, exist_ok=True)
+    out = args.reports_dir / f"mikasa-{today()}.md"
+    out.write_text(render_mikasa(reports, day=today()), encoding="utf-8")
+    print(f"Report written to {out}")
+    return 0 if all(r.passes for r in reports) else 3
+
+
 def _main_mail_alerts(args: argparse.Namespace, today: Callable[[], str]) -> int:
     """No AI and no credit: the fixed readers over the synthetic alert emails (SC-002)."""
     report = evaluate_mail_alerts()
@@ -507,6 +551,7 @@ def main(
             "tailor_resume",
             "mail_alerts",
             "read_job_alert",
+            "mikasa",
         ],
     )
     parser.add_argument("--models", default="fast", help="comma list of tiers or model names")
@@ -547,6 +592,8 @@ def main(
         return _main_drafts(args, specs, catalog, llm_for, today)
     if args.eval == "read_job_alert":
         return _main_read_alert(args, specs, catalog, llm_for, today)
+    if args.eval == "mikasa":
+        return _main_mikasa(args, specs, catalog, llm_for, today)
 
     print(f"This run uses your AI credit ({len(cases)} resumes per model).")
     if not args.yes:
