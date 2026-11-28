@@ -72,13 +72,17 @@ def create_conversations_router(deps: AssistantApiDeps) -> APIRouter:
             repo = ConversationsRepo(session)
             if await repo.get(conversation_id) is None:
                 raise not_found()
-            await repo.remove(conversation_id)  # its messages, cards and changes go with it
+            # its messages, cards and changes go with it
+            if not await repo.remove(conversation_id, now=deps.now()):
+                raise ProblemError(
+                    409, "Mikasa is still answering in that conversation.", reason="turn_running"
+                )
             await session.commit()
 
     @router.delete("", status_code=204)
     async def clear() -> None:
         async with deps.sessions() as session:
-            await ConversationsRepo(session).clear()
+            await ConversationsRepo(session).clear(now=deps.now())
             await session.commit()
 
     @router.get("/{conversation_id}/messages", response_model=list[MessageOut])

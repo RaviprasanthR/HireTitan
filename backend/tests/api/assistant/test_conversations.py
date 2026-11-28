@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
-from tests.api.assistant.test_changes_api import Api, api  # noqa: F401 (the api fixture)
+from uuid import UUID
 
+from tests.api.assistant.test_changes_api import NOW, Api, api  # noqa: F401 (the api fixture)
+
+from hiretitan.assistant.infra.repos import ConversationsRepo
 from hiretitan.platform.llm.port import TextDelta
 
 URL = "/api/v1/assistant/conversations"
@@ -40,3 +43,18 @@ async def test_US5_AS2_clear(api: Api) -> None:  # noqa: F811
     assert (await api.client.delete(URL)).status_code == 204
     assert (await api.client.get(URL)).json() == []
     assert (await api.client.get(f"{URL}/{keep}/messages")).status_code == 404
+
+
+async def test_US5_a_conversation_with_a_running_turn_is_not_deleted(api: Api) -> None:  # noqa: F811
+    busy = await api.conversation()
+    idle = await api.conversation()
+    async with api.sessions() as session:
+        await ConversationsRepo(session).claim_turn(UUID(busy), now=NOW)
+        await session.commit()
+
+    refused = await api.client.delete(f"{URL}/{busy}")
+    assert (refused.status_code, refused.json()["reason"]) == (409, "turn_running")
+
+    assert (await api.client.delete(URL)).status_code == 204
+    assert [c["id"] for c in (await api.client.get(URL)).json()] == [busy]
+    assert idle not in {c["id"] for c in (await api.client.get(URL)).json()}

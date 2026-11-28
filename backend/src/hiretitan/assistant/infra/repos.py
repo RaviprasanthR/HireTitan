@@ -73,13 +73,25 @@ class ConversationsRepo:
             .values(turn_running=False, turn_started_at=None)
         )
 
-    async def remove(self, conversation_id: UUID) -> None:
-        await self._session.execute(
-            delete(ConversationRow).where(ConversationRow.id == conversation_id)
+    async def remove(self, conversation_id: UUID, *, now: datetime) -> bool:
+        """Delete it unless a turn is running in it (that turn would lose its reply)."""
+        gone = await self._session.scalar(
+            delete(ConversationRow)
+            .where(ConversationRow.id == conversation_id, _idle(now))
+            .returning(ConversationRow.id)
         )
+        return gone is not None
 
-    async def clear(self) -> None:
-        await self._session.execute(delete(ConversationRow))
+    async def clear(self, *, now: datetime) -> None:
+        """Delete every conversation that has no turn running."""
+        await self._session.execute(delete(ConversationRow).where(_idle(now)))
+
+
+def _idle(now: datetime) -> Any:
+    return or_(
+        ConversationRow.turn_running.is_(False),
+        ConversationRow.turn_started_at < now - STALE_TURN,
+    )
 
 
 class MessagesRepo:

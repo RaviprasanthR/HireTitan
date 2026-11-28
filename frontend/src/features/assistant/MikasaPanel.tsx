@@ -257,6 +257,7 @@ export function MikasaPanel({ onClose }: { onClose: () => void }) {
   }
 
   function openConversation(id: string) {
+    abort.current?.abort()
     setConversationId(id)
     saveConversation(id)
     setLive(null)
@@ -264,9 +265,9 @@ export function MikasaPanel({ onClose }: { onClose: () => void }) {
   }
 
   function clearAll() {
-    abort.current?.abort()
     clear.mutate(undefined, {
       onSuccess: () => {
+        abort.current?.abort()
         setConversationId(null)
         saveConversation(null)
         setLive(null)

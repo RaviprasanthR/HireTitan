@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import type { Conversation } from './api'
 
@@ -15,6 +15,15 @@ export function ConversationList({
   onClearAll: () => void
 }) {
   const [asking, setAsking] = useState(false)
+  const keep = useRef<HTMLButtonElement>(null)
+  const clearBtn = useRef<HTMLButtonElement>(null)
+  useEffect(() => {
+    if (asking) keep.current?.focus() // the safe choice gets focus
+  }, [asking])
+  function cancel() {
+    setAsking(false)
+    requestAnimationFrame(() => clearBtn.current?.focus())
+  }
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3">
       {conversations.length === 0 ? (
@@ -39,19 +48,25 @@ export function ConversationList({
       )}
       {conversations.length > 0 &&
         (asking ? (
-          <div role="alertdialog" aria-label="Clear all" className="rounded-md border border-divider p-3 text-sm">
-            <p>Delete all your conversations with Mikasa? This cannot be undone.</p>
+          <div
+            role="alertdialog"
+            aria-label="Clear all"
+            aria-describedby="clear-all-text"
+            onKeyDown={(e) => e.key === 'Escape' && cancel()}
+            className="rounded-md border border-divider p-3 text-sm"
+          >
+            <p id="clear-all-text">Delete all your conversations with Mikasa? This cannot be undone.</p>
             <div className="mt-2 flex gap-2">
               <Button type="button" size="sm" variant="destructive" onClick={onClearAll}>
                 Yes, delete them
               </Button>
-              <Button type="button" size="sm" variant="outline" onClick={() => setAsking(false)}>
+              <Button ref={keep} type="button" size="sm" variant="outline" onClick={cancel}>
                 Keep them
               </Button>
             </div>
           </div>
         ) : (
-          <Button type="button" size="sm" variant="outline" onClick={() => setAsking(true)}>
+          <Button ref={clearBtn} type="button" size="sm" variant="outline" onClick={() => setAsking(true)}>
             Clear all
           </Button>
         ))}
