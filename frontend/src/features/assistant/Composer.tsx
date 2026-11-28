@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { SendHorizontal, Square } from 'lucide-react'
+import { Link } from 'react-router'
 import { Button } from '@/components/ui/button'
 
 export const MESSAGE_MAX = 2000
 
 type Props = {
   disabled: boolean
+  unavailable?: string // why the box is disabled, with a Settings link
   streaming: boolean
   draft: string
   onDraftChange: (text: string) => void
@@ -14,7 +16,7 @@ type Props = {
 }
 
 /** The message box: a 2,000-character limit with a count, Send or Stop, and what is sent where. */
-export function Composer({ disabled, streaming, draft, onDraftChange, onSend, onStop }: Props) {
+export function Composer({ disabled, unavailable, streaming, draft, onDraftChange, onSend, onStop }: Props) {
   const [touched, setTouched] = useState(false)
   const over = draft.length > MESSAGE_MAX
   const canSend = !disabled && !streaming && draft.trim().length > 0 && !over
@@ -39,6 +41,7 @@ export function Composer({ disabled, streaming, draft, onDraftChange, onSend, on
         value={draft}
         rows={3}
         disabled={disabled}
+        aria-describedby={disabled && unavailable ? 'mikasa-unavailable' : undefined}
         placeholder="Ask Mikasa about your job search"
         onChange={(event) => {
           setTouched(true)
@@ -53,6 +56,14 @@ export function Composer({ disabled, streaming, draft, onDraftChange, onSend, on
         aria-invalid={over || undefined}
         className="w-full resize-none rounded-xl border border-slate bg-background p-2.5 text-sm outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-primary/60"
       />
+      {disabled && unavailable && (
+        <p id="mikasa-unavailable" className="text-xs text-muted-small">
+          {unavailable}{' '}
+          <Link to="/settings" className="text-link">
+            Settings
+          </Link>
+        </p>
+      )}
       <div className="flex items-center justify-between gap-2">
         <span className={over ? 'text-xs text-danger' : 'text-xs text-muted-small'}>
           {touched || draft ? `${draft.length} / ${MESSAGE_MAX}` : ''}
