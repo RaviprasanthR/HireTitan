@@ -834,6 +834,10 @@ body {
 .ht-overview:empty {
   display: none;
 }
+/* below 1280px the pipeline's overview is drawn above the table; the DOM order stays */
+.ht-overview-first > .ht-overview {
+  order: -1;
+}
 @media (min-width: 80rem) {
   .ht-overview-layout:has(> .ht-overview:not(:empty)) {
     grid-template-columns: 22rem minmax(0, 1fr);

@@ -273,7 +273,7 @@ export function PipelinePage() {
       <ReviewNotice />
       <LeaveGuard when={registry.any} />
       <HomeTabs />
-      <OverviewLayout label="Pipeline overview" overview={<PipelineChart />}>
+      <OverviewLayout label="Pipeline overview" overview={<PipelineChart />} overviewFirst>
         {body}
       </OverviewLayout>
     </section>
