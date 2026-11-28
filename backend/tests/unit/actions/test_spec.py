@@ -142,3 +142,19 @@ def test_FR016_every_excluded_endpoint_names_its_page() -> None:
     for endpoint, excluded in EXCLUDED.items():
         assert excluded.page.startswith("/"), endpoint
         assert excluded.why, endpoint
+
+
+def test_T039_tool_schemas_carry_no_noise() -> None:
+    """Titles, null defaults and optional-null wrappers cost tokens on every model call."""
+    import json
+
+    from hiretitan.actions.registry import build_catalogue
+
+    tools = build_catalogue().tool_specs()
+    text = json.dumps([t.parameters for t in tools])
+
+    assert '"title": "' not in text.replace('"title": {', "")  # a title string, not a field
+    assert '"default": null' not in text
+    assert '{"type": "null"}' not in text
+    assert len(text) + sum(len(t.description) for t in tools) < 21_000
+    assert tools[0].parameters["type"] == "object"
