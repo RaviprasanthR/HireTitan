@@ -394,6 +394,16 @@ Palette changed 2026-11-12 (feature 002d, user story 6) to a **flat** theme from
 
 Later screens, each added by its feature: Search rules · Companies · Jobs (match / maybe / hidden with reasons, job detail) · Applications · Drafts · Tailored resumes · Export.
 
+## 10a. Mikasa, the chat assistant (feature 002m)
+
+- **Module** `hiretitan.assistant` (domain, application, infra, api) imports no feature module and not `hiretitan.actions`; `assistant_wiring.py` joins them (import contract 9). The panel is `frontend/src/features/assistant/`.
+- **Turn loop** (`assistant/application/turn.py`): `begin` checks and stores the message (length, posting-looking text, injection screen), `run_turn` streams events (`text`, `ref`, `notice`, `change`, `card`, `error`, `done`) from a `ConversePort` (a port method, so the provider stays swappable). Up to six rounds of tool calls; one repair of a bad call, then a fixed refusal. Every round is logged. A reply is replaced by the fixed refusal if no action ran (FR-031).
+- **Actions layer** (`hiretitan.actions`): about 60 actions in one catalogue, each with a Pydantic argument model and a kind: `read`, `small` (applied at once with an Undo) or `risky` (only a confirm card is created). Actions call the same use cases as the REST endpoints (parity tests). Results sent to the model are bounded and structured; private data (contacts, notes, interviews, resume choices) is returned as refs only.
+- **Cards and changes**: a risky call stores a card that expires; confirming runs it. Small changes are stored with their undo. Both hang on the person's message and survive a reload.
+- **Replies are checked**: unknown `[[ref]]`s and links to pages that are not routes are removed; replies that read the profile go through the claim check (Constitution II).
+- **Conversations** live in the local database (`assistant_*` tables, cascade delete); `DELETE /assistant/conversations[/{id}]` and Delete all remove them.
+- **Evaluation**: `backend/evals/mikasa/` runs the real loop and catalogue over a synthetic in-memory world (`python -m evals.run mikasa --models fast,strong --yes`).
+
 ## 11. Testing strategy (constitution V)
 
 | Level | What | Tools |

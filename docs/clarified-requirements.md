@@ -132,6 +132,8 @@ This replaces the assumptions in `docs/archive/specs-v0/01`–`05` wherever they
 | 006 | `interviews`: paste-and-split, answer review, weak-topic analysis | R2 |
 | 007 | `mcp-access`: Claude Code / MCP over the backend | later |
 
+Later idea (002m R12): Mikasa could read a single posting from a public ATS link (Greenhouse, Lever and similar) to fill a job's title, company and description. Today she only stores the link, title and company the person gives.
+
 ## 13. Still open
 
 1. ~~Which sources~~ decided (§4). Sheet received 2026-11-03 (62 companies, seeds the built-in list). Remaining: fill in the 10 missing careers URLs; dedup across sources (same job via a board API and a Naukri alert) needs a fuzzy company + title + city match with user confirmation; verify Adzuna/Jooble/Careerjet terms and India coverage in the plan phase; Gmail access for self-hosters needs each user to create their own Google OAuth client (setup-guide step).
