@@ -92,11 +92,18 @@ class World:
     def refs(self) -> set[str]:
         return {*KNOWN_REFS, *(j["ref"] for j in self.jobs)}
 
-    def read(self, name: str) -> dict[str, Any]:
+    def read(self, name: str, args: dict[str, Any] | None = None) -> dict[str, Any]:
         if self.empty:
             return {"items": [], "note": "nothing found"}
         if name == "search_jobs":
-            return {"items": self.jobs}
+            args = args or {}
+            found = [
+                j
+                for j in self.jobs
+                if str(args.get("company") or "").casefold() in j["company"].casefold()
+                and str(args.get("title") or "").casefold() in j["title"].casefold()
+            ]
+            return {"items": found}
         if name == "get_job":
             return {"items": self.jobs[:1]}
         if name in ("search_companies", "get_company"):
@@ -166,7 +173,7 @@ class WorldCatalog:
             )
         self.calls.append(Call(name, spec.kind, dumped, True))
         if spec.kind == "read":
-            return ToolOutcome(kind="read", valid=True, payload=self._world.read(name))
+            return ToolOutcome(kind="read", valid=True, payload=self._world.read(name, dumped))
         if spec.kind == "small":
             summary = f"Done: {name}."
             change = ChangeNotice(uuid4(), name, summary, None)
