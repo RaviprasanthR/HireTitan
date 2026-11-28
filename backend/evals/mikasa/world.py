@@ -103,13 +103,15 @@ class World:
             return {"items": self.companies}
         if name == "get_pipeline_summary":
             return {"applied": 1, "inquired": 1, "explore": 3}
-        if name == "list_contacts":
+        if name in ("find_contact", "list_contacts"):
             return {"items": [{"ref": CT_PRIYA, "name": "Priya Rao", "role": "Recruiter"}]}
         if name == "list_rounds":
             return {"items": [{"ref": R_GLOBEX, "kind": "technical", "job": J_GLOBEX}]}
         if name == "list_drafts":
             return {"items": [{"ref": D_ACME, "kind": "connection_request", "job": J_ACME}]}
-        if name == "list_search_runs":
+        if name == "get_mail_status":
+            return {"senders": [{"ref": SD_ALERTS, "address": "alerts@example.com"}]}
+        if name in ("list_search_runs", "get_latest_search"):
             return {"items": [{"ref": SR_RUNNING, "state": "running"}]}
         return {"items": [], "note": "nothing stored"}
 
