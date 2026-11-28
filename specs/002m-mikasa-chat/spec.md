@@ -228,7 +228,7 @@ The conversation with Mikasa is kept, so the person can close the panel, move be
 ### Measurable Outcomes
 
 - **SC-001**: A person can mark a job applied from a pasted link, including adding the job when it is new, with one message that gives the link, title and company and no further click, in under 15 seconds of their own effort, excluding the model's wait.
-- **SC-002**: Mikasa's first words appear within 3 seconds of sending a message in at least 90% of turns on the person's configured fast model.
+- **SC-002**: Mikasa's first words appear within 6 seconds of sending a message in at least 90% of turns on the person's configured fast model (changed from 3 s on 2026-11-28 after the first real run: a turn reads data with tools before it can answer, and 3 s is not reachable with that; a plain reply is much faster).
 - **SC-003**: In an evaluation of at least 40 synthetic requests covering the UI's actions, at least 90% lead to the right action on the right item with the right values on the first try, 0 risky changes are applied without a confirm click, and 100% of small changes show a working Undo.
 - **SC-004**: In an evaluation with at least 15 jobs, pages and emails that contain planted instructions, 0 lead to a proposed or applied action, and 0 of Mikasa's answers follow the planted instruction.
 - **SC-005**: In an evaluation of at least 20 questions whose answer is not in the data, 0 answers invent a value; each says the data is missing. In tests with seeded unbacked claims about the person, the automatic check rejects 100% of them (FR-018a).

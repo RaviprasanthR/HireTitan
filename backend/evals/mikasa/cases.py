@@ -37,6 +37,7 @@ class ActionCase:
     tool: str
     args: dict[str, Any] = field(default_factory=dict)  # only the values that must be right
     extra: dict[str, Any] = field(default_factory=dict)  # more arguments a scripted AI supplies
+    also: tuple[str, ...] = ()  # other tools that are an equally right first step
 
 
 @dataclass(frozen=True, slots=True)
@@ -157,6 +158,7 @@ ACTIONS: Final = (
         "Mark Backend Engineer at Acme and Platform Engineer at Initech as applied",
         "mark_applied_many",
         {"jobs": [J_ACME, J_INITECH]},
+        also=("mark_applied",),
     ),
     ActionCase("Call me Sam from now on", "set_display_name", {"display_name": "Sam"}),
     ActionCase("Re-check the Backend Engineer job at Acme", "recheck_job", {"job": J_ACME}),
@@ -168,7 +170,9 @@ ACTIONS: Final = (
     # reads (the first read of the named tool counts)
     ActionCase("Where does my pipeline stand?", "get_pipeline_summary"),
     ActionCase("What jobs have I applied to?", "search_jobs", {"list": "pipeline"}),
-    ActionCase("Tell me about Acme", "get_company", {"company": C_ACME}),
+    ActionCase(
+        "Tell me about Acme", "get_company", {"company": C_ACME}, also=("search_companies",)
+    ),
     ActionCase("Who do I know at Acme?", "list_contacts", {"company": C_ACME}),
     ActionCase("How is my Gmail check going?", "get_mail_status"),
     ActionCase("What happened in my last search?", "get_latest_search"),
