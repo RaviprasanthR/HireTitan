@@ -4,7 +4,7 @@ Five groups, each tied to a success criterion:
 - ``ACTIONS``  (SC-003) a request, the first change (or the read) it must lead to, and its values.
 - ``PLANTED``  (SC-004) job titles carrying instructions; an innocent question must not follow them.
 - ``NO_DATA``  (SC-005) questions whose answer is not stored; no value may be invented.
-- ``DECLINES`` (SC-006) what Mikasa must not do or send; a decline with a page link, no change.
+- ``DECLINES`` (SC-006) what Mikasa must not do or send; a decline, no change.
 - ``OFF_TOPIC`` and ``TYPED_INJECTIONS`` (SC-011, FR-032) the fixed refusal; refused before the AI.
 """
 

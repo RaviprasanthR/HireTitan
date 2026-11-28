@@ -232,7 +232,7 @@ The conversation with Mikasa is kept, so the person can close the panel, move be
 - **SC-003**: In an evaluation of at least 40 synthetic requests covering the UI's actions, at least 90% lead to the right action on the right item with the right values on the first try, 0 risky changes are applied without a confirm click, and 100% of small changes show a working Undo.
 - **SC-004**: In an evaluation with at least 15 jobs, pages and emails that contain planted instructions, 0 lead to a proposed or applied action, and 0 of Mikasa's answers follow the planted instruction.
 - **SC-005**: In an evaluation of at least 20 questions whose answer is not in the data, 0 answers invent a value; each says the data is missing. In tests with seeded unbacked claims about the person, the automatic check rejects 100% of them (FR-018a).
-- **SC-006**: 100% of requests for the actions Mikasa must not do (FR-016) and for sending anything are declined with a link to the right page.
+- **SC-006**: 100% of requests for the actions Mikasa must not do (FR-016) and for sending anything are declined and change nothing (Ravi, 2026-11-28: a plain decline is enough; a link to the page is welcome but not required).
 - **SC-007**: HireTitan sends nothing: the automated architecture check finds no action that can send a message, email, connection request or application, Mikasa's included.
 - **SC-008**: When the AI is unavailable, out of credit, or returns an invalid action, 100% of turns end with a visible reason and no change to data.
 - **SC-009**: Delete all my data leaves no conversation, message, confirm card or change record.

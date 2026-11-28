@@ -7,7 +7,7 @@
 | SC-003 | Eval `mikasa`: 43 action requests, right action and values on the first try; risky changes only ever reach a card (`tests/api/assistant/test_changes_api.py`, `tests/workflow/assistant/test_cards.py`); Undo on every small change (`test_changes_api.py::test_US2_AS1_*`) |
 | SC-004 | Eval `mikasa`: 15 planted titles; `tests/workflow/assistant/test_guardrails.py::test_FR015_*` |
 | SC-005 | Eval `mikasa`: 20 questions with no stored answer; `tests/workflow/assistant/test_turn.py::test_SC005_seeded_unbacked_claims_all_rejected` |
-| SC-006 | Eval `mikasa`: 14 declines (FR-016 and sending); `tests/workflow/assistant/test_limits.py::test_US4_AS1_declines_with_link` |
+| SC-006 | Eval `mikasa`: 14 declines (FR-016 and sending; a plain decline passes); `tests/workflow/assistant/test_limits.py::test_US4_AS1_declines_with_link` |
 | SC-007 | `tests/architecture/test_no_send.py` (includes `test_SC007_planted_sender_in_mikasa_is_caught`) |
 | SC-008 | `tests/workflow/assistant/test_turn.py::test_SC008_*`, `test_limits.py` (every status reason), `MikasaPanel.test.tsx::US4_AS2_composer_disabled_with_reason` |
 | SC-009 | `tests/integration/assistant/test_repos.py::test_SC009_delete_all_truncates_assistant_tables`; `tests/api/assistant/test_conversations.py::test_US5_AS2_clear` |
